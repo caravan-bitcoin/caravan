@@ -1,5 +1,5 @@
 {
-  "name": "caravan-monorepo",
+  "name": "caravan",
   "private": true,
   "scripts": {
     "build": "turbo build",
