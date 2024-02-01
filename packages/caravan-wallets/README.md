@@ -279,8 +279,8 @@ discouraged.
 If you would like to develop unchained-wallets locally while also developing an app that depends on unchained-wallets, you'll need to do a few steps:
 
 1. Change `"main": "lib/index.js"` in package.json to `"main": "src/index.ts"` This step is temporary while we convert this package to ESM.
-1. In the root of this project run `npm link`
-1. In the root of the project that depends on this package run `npm link unchained-wallets`
+2. In the root of this project run `npm link`
+3. In the root of the project that depends on this package run `npm link unchained-wallets`
 
 Now when you start up your app, whatever bundler you're using (Vite, Webpack, etc.) should compile this package as well.
 

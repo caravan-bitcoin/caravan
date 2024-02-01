@@ -39,7 +39,7 @@ This is still a work in progress. Before we're ready to release,
 the following need to be resolved
 
 - [x] Setup the readme for how to install, build, manage workspaces, etc.
-- [ ] Setup global precommit hooks for linting and type checks
+- [ ] Setup global pre-commit hooks for linting and type checks
 - [x] Setup with all latest versions of repos with typescript
 - [x] Coordinate/centralize engines and npmrcs
 - [ ] Setup automation: changeset, CI, release process, etc.
@@ -89,7 +89,7 @@ Rough steps to implement:
 - [Intro to using changesets](https://github.com/changesets/changesets/blob/main/docs/intro-to-using-changesets.md)
 - [Example project](https://github.com/vercel/turbo/tree/main/examples/with-changesets)
 - Add [changeset bot](https://github.com/apps/changeset-bot) - gets CI to check for changesets
-- Automate versioning and publishing in CI with [github action](https://github.com/changesets/action)
+- Automate versioning and publishing in CI with [GitHub Actions](https://github.com/changesets/action)
 
 
 ## Getting started
@@ -112,7 +112,7 @@ about running tasks in Turborepo [here](https://turbo.build/repo/docs/core-conce
 
 Note:
 
-> After you've declared a task in turbo.json, it's up to you to implement it in your package.json manifests. You can add scripts all at once, or one workspace at at a time. Turborepo will gracefully skip workspaces that don't include the task in their respective package.json manifest.
+> After you've declared a task in turbo.json, it's up to you to implement it in your package.json manifests. You can add scripts all at once, or one workspace at a time. Turborepo will gracefully skip workspaces that don't include the task in their respective package.json manifest.
 
 The main scripts to be run are defined in this config file:
 build, lint, test, and dev.

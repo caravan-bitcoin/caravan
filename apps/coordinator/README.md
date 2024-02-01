@@ -58,13 +58,13 @@ $ npm run dev
 ...
 ```
 
-Now visit `https://localhost:5137` to interact with your local copy of
+Now visit http://localhost:5173 to interact with your local copy of
 Caravan.
 
 ### Host Remotely
 
 Once you have downloaded the source code and used `npm` to install
-dependences (see section above), you can pre-build the React
+dependencies (see section above), you can pre-build the React
 application for a production deployment and then host the contents of
 the resulting `build` directory via a webserver such as `nginx`.
 
@@ -73,7 +73,7 @@ $ npm run build
 ...
 ```
 
-You can test the production build locally at `http://localhost:4173/` by running:
+You can test the production build locally at http://localhost:4173 by running:
 
 ```bash
 $ npm start
@@ -170,9 +170,9 @@ brew install nginx
 sudo apt install nginx
 ```
 
-Copy the server conifiguration file, `bitcoind.proxy`, to the appropriate location with the following
+Copy the server configuration file, `bitcoind.proxy`, to the appropriate location with the following
 commands. Note, these commands assume that you are in the base `caravan` directory. An example configuration
-file is included with the `caravan` source code called `bitcoind.proxy` which will, by defualt, enable a mainnet
+file is included with the `caravan` source code called `bitcoind.proxy` which will, by default, enable a mainnet
 proxy. The testnet proxy is included, but is commented out.
 
 ```bash
@@ -181,17 +181,17 @@ mkdir -p /usr/local/etc/nginx/sites-available
 cp bitcoind.proxy /usr/local/etc/nginx/sites-available/
 ln -s /usr/local/etc/nginx/sites-available/bitcoind.proxy /usr/local/etc/nginx/servers/bitcoind.proxy
 
-# Debain Linux
+# Debian Linux
 sudo mkdir -p /etc/nginx/sites-available
 sudo cp bitcoind.proxy /etc/nginx/sites-available/
 sudo ln -s /etc/nginx/sites-available/bitcoind.proxy /etc/nginx/sites-enabled/bitcoind.proxy
 ```
 
 Different linux distributions follow different conventions for the `/etc/nginx/` directory structure.
-As an example, MacOS uses `etc/nginx/servers` and Debian distributions use `/etc/nginx/sites-enabled/`
+As an example, macOS uses `etc/nginx/servers` and Debian distributions use `/etc/nginx/sites-enabled/`
 for the website configuration files. You will need to check the `/etc/nginx/nginx.conf` file to see what
-the convention is. This snipet is from a machine using Ubuntu 18.04 LTS. Note the two directories
-that are included. Whereas on MacOS there is only one `include` directory, `include servers/*;`.
+the convention is. This snippet is from a machine using Ubuntu 18.04 LTS. Note the two directories
+that are included. Whereas on macOS there is only one `include` directory, `include servers/*;`.
 
 ```nginx
 http {
@@ -230,13 +230,13 @@ brew services start nginx
 # or if nginx is already running
 brew services reload nginx
 
-# Debain Linux
+# Debian Linux
 sudo systemctl start nginx
 # or if nginx is already running
 sudo systemctl restart nginx
 ```
 
-On MacOS, starting the `nginx` daemon will prompt a popup window asking if you want `ngingx`
+On macOS, starting the `nginx` daemon will prompt a popup window asking if you want `ngingx`
 to allow incoming network connections, which you will want to allow.
 
 Test the different ports where `my_uname` is the user specified in the `bitcoin.conf` line
@@ -264,11 +264,11 @@ on port 8332, and you run `nginx` with the default settings,
 you should be able to point Caravan at 'http://bitcoind.localhost:8080'
 to communicate with your node. If you have bitcoind running on a different machine,
 you will need to adjust the `upstream` block in `bitcoind.proxy` for the correct
-network address:port. Don't forget to add the the correct `rpcallowip=LOCAL_MACHINE_IP`
+network address:port. Don't forget to add the correct `rpcallowip=LOCAL_MACHINE_IP`
 to the remote machine's `bitcoin.conf`.
 
 Because the `nginx` configuration depends entirely on what is specified in
-the `upstream` block it is STRONGLY reccommended to keep `bitcoind` reserved
+the `upstream` block it is STRONGLY recommended to keep `bitcoind` reserved
 for the mainnet and `testnet` for the testnet. In this way, `nginx` could be
 configured to simultaneously provide a reverse proxy to the mainnet via
 'http://bitcoind.localhost:8080' and to the testnet via 'http://testnet.localhost:8080'.
