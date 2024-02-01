@@ -94,6 +94,7 @@
   ],
   "dependencies": {
     "@caravan/bitcoin": "*",
+    "@caravan/clients": "*",
     "@caravan/wallets": "*",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
