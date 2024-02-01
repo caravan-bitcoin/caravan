@@ -6,7 +6,7 @@ import {
   ACTIVE,
   ERROR,
   ExportExtendedPublicKey,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Button, TextField, FormHelperText, Box, Grid } from "@mui/material";
 import InteractionMessages from "../InteractionMessages";
 
@@ -145,8 +145,8 @@ class DirectExtendedPublicKeyImporter extends React.Component {
     const bip32Path = event.target.value;
     validateAndSetBIP32Path(
       bip32Path,
-      () => {},
-      () => {}
+      () => { },
+      () => { }
     );
   };
 
