@@ -141,12 +141,15 @@ If you want to break this coupling, a published package version can be reference
 using `*` (this is not recommended however).
 
 ### Adding a new package
-**TODO:** should maybe consider adding a boilerplate that can be copied
-or a script that can autogenerate.
+NOTE: Turborepo provides [code generator capability](https://turbo.build/repo/docs/core-concepts/monorepos/code-generation)
+for bootstrapping a new project. You can run `turbo gen` or `npm run gen`
+from the root of the project and you will be prompted through some
+bootstrapping questions.
 
-NOTE: Turborepo has tooling for code generation:
-https://turbo.build/repo/docs/core-concepts/monorepos/code-generation
+You can keep reading this section to understand what's being built out
+and write a fully functioning package yourself.
 
+#### Manually adding a new package
 `packages/caravan-psbt` is a good starting point for a simple package.
 
 #### Example Walk-thru

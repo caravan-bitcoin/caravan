@@ -6,7 +6,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "gen": "turbo gen workspace"
+    "gen": "turbo gen run"
   },
   "devDependencies": {
     "@caravan/eslint-config": "*",
