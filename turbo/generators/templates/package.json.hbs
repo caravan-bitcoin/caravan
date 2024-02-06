@@ -1,0 +1,13 @@
+{
+  "name": "@caravan/{{name}}",
+  "version": "1.0.0",
+  "author": "{{author}}",
+  "description": "{{description}}",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "npm run build -- --watch",
+    "test": "jest src",
+    "test:watch": "jest --watch src",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+  }
+}
