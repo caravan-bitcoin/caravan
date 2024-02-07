@@ -18,7 +18,7 @@ const EditableName = ({ name, setName, number }: EditableNameProps) => {
   };
 
   const startEditing = (
-    event: React.MouseEvent<HTMLSpanElement | HTMLButtonElement>
+    event: React.MouseEvent<HTMLSpanElement | HTMLButtonElement>,
   ) => {
     event.preventDefault();
     setEditing(true);

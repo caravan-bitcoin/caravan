@@ -52,7 +52,7 @@ describe("wallet selectors", () => {
       const actualConfirmed = getConfirmedBalance(state);
       // confirmed deposit and all change count towards confirmed balance
       expect(actualConfirmed.toFixed()).toEqual(
-        pendingChange.plus(confirmedBalance).toFixed()
+        pendingChange.plus(confirmedBalance).toFixed(),
       );
     });
   });
@@ -66,7 +66,7 @@ describe("wallet selectors", () => {
       const actuallySpendable = getSpendableSlices(state);
       const actualSpendableTotal = actuallySpendable.reduce(
         (total, slice) => total.plus(slice.balanceSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
       const expectedSpendableTotal = pendingChange.plus(confirmedBalance);
       expect(actualSpendableTotal).toEqual(expectedSpendableTotal);

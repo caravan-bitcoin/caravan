@@ -142,12 +142,12 @@ class Node extends React.Component {
       });
       // then add all ours back
       newInputs = newInputs.concat(
-        utxos.map((utxo) => ({ ...utxo, multisig, bip32Path }))
+        utxos.map((utxo) => ({ ...utxo, multisig, bip32Path })),
       );
       this.setState({ indeterminate: false, checked: true });
     } else if (e.target.checked) {
       newInputs = inputs.concat(
-        utxos.map((utxo) => ({ ...utxo, multisig, bip32Path }))
+        utxos.map((utxo) => ({ ...utxo, multisig, bip32Path })),
       );
     } else {
       newInputs = inputs.filter((input) => {
@@ -179,7 +179,7 @@ Node.propTypes = {
     PropTypes.shape({
       index: PropTypes.number,
       txid: PropTypes.string,
-    })
+    }),
   ).isRequired,
   multisig: PropTypes.shape({}),
   present: PropTypes.bool,

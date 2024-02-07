@@ -24,14 +24,14 @@ const ColdcardExtendedPublicKeyImporter = ({
   };
 
   const [coldcardMultisigBIP32Path, setColdcardMultisigBIP32Path] = useState(
-    getColdcardBip32Path()
+    getColdcardBip32Path(),
   );
 
   const resetColdcardBIP32Path = () => {
     validateAndSetBIP32Path(
       coldcardMultisigBIP32Path,
       () => {},
-      () => {}
+      () => {},
     );
   };
 
@@ -41,7 +41,7 @@ const ColdcardExtendedPublicKeyImporter = ({
         coldcardMultisigBIP32Path,
         () => {},
         () => {},
-        {}
+        {},
       );
     }
   }, []);
@@ -53,7 +53,7 @@ const ColdcardExtendedPublicKeyImporter = ({
     validateAndSetBIP32Path(
       newColdcardBIP32Path,
       () => {},
-      () => {}
+      () => {},
     );
     // Any updates to the network/addressType we should set the BIP32Path
   }, [network, addressType]);

@@ -52,7 +52,7 @@ const ColdcardFileReaderBase = ({
       }
     } else if (rejectedFiles.length === 1) {
       setError(
-        `The file you attempted to upload was unacceptable. File type must be .${fileType.toLowerCase()}.`
+        `The file you attempted to upload was unacceptable. File type must be .${fileType.toLowerCase()}.`,
       );
     } else if (rejectedFiles.length > 1) {
       setError(`This dropzone only accepts a single file.`);

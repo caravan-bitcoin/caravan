@@ -47,7 +47,7 @@ function updateSignatureImporterState(state, action, field) {
   };
   newState[action.number] = updateState(
     state[action.number],
-    signatureImporterChange
+    signatureImporterChange,
   );
   return newState;
 }

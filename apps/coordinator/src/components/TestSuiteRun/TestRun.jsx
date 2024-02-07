@@ -94,7 +94,7 @@ Derivation: ${test.params.derivation}
 `;
     // We need to loop over xpubs and output `xfp: xpub` for each
     const xpubs = test.params.extendedPublicKeys.map(
-      (xpub) => `${xpub.rootFingerprint}: ${xpub.base58String}`
+      (xpub) => `${xpub.rootFingerprint}: ${xpub.base58String}`,
     );
     output += xpubs.join("\r\n");
     output += "\r\n";

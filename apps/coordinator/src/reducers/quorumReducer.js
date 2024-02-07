@@ -20,7 +20,8 @@ function fingerprint(state) {
   const timestamp = new Date().getTime().toString();
   const extendedPublicKeys = Object.values(state.extendedPublicKeyImporters)
     .map(
-      (extendedPublicKeyImporter) => extendedPublicKeyImporter.extendedPublicKey
+      (extendedPublicKeyImporter) =>
+        extendedPublicKeyImporter.extendedPublicKey,
     )
     .join("");
   return `${timestamp}-${extendedPublicKeys}`;
@@ -44,7 +45,7 @@ function createInitialState() {
       return {
         ...importers,
         [index]: initialExtendedPublicKeyImporterState(
-          `Extended Public Key ${index}`
+          `Extended Public Key ${index}`,
         ),
       };
     }, {});
@@ -81,19 +82,19 @@ function updateExtendedPublicKeyImporterState(state, action, field) {
   };
   newState.extendedPublicKeyImporters[action.number] = updateState(
     state.extendedPublicKeyImporters[action.number],
-    extendedPublicKeyImporterChange
+    extendedPublicKeyImporterChange,
   );
   const importCount = Object.values(newState.extendedPublicKeyImporters).reduce(
     (sum, current) => {
       return sum + current.finalized;
     },
-    0
+    0,
   );
   if (
     importCount === Object.keys(newState.extendedPublicKeyImporters).length &&
     field === "finalized" &&
     Object.values(newState.extendedPublicKeyImporters).every(
-      (xpub) => !xpub.conflict
+      (xpub) => !xpub.conflict,
     )
   ) {
     newState.configuring = false;
@@ -113,7 +114,7 @@ function updateTotalSigners(state, action) {
     extendedPublicKeyImporters[extendedPublicKeyImporterNum] =
       state.extendedPublicKeyImporters[extendedPublicKeyImporterNum] ||
       initialExtendedPublicKeyImporterState(
-        `Extended Public Key ${extendedPublicKeyImporterNum}`
+        `Extended Public Key ${extendedPublicKeyImporterNum}`,
       );
   }
   let finalizedCount = 0;
@@ -175,7 +176,7 @@ function updateFinalizedSettings(state, action) {
     newState.finalizedAddressType = state.addressType;
   } else if (action.value === false && state.finalizedNetwork !== "") {
     const finalizedCount = Object.values(
-      state.extendedPublicKeyImporters
+      state.extendedPublicKeyImporters,
     ).reduce((count, importer) => {
       if (importer.finalized === true) return count + 1;
       return count;
@@ -186,7 +187,7 @@ function updateFinalizedSettings(state, action) {
       newState.finalizedAddressType = "";
       Object.values(newState.extendedPublicKeyImporters).forEach(
         // eslint-disable-next-line no-param-reassign,no-return-assign
-        (importer) => (importer.conflict = false)
+        (importer) => (importer.conflict = false),
       );
     }
   }
@@ -207,17 +208,17 @@ export default (state = createInitialState(), action) => {
       return updateExtendedPublicKeyImporterState(
         updateExtendedPublicKeyImporterState(state, action, "bip32Path"),
         { number: action.number, value: true },
-        "bip32PathModified"
+        "bip32PathModified",
       );
     case RESET_EXTENDED_PUBLIC_KEY_IMPORTER_BIP32_PATH:
       return updateExtendedPublicKeyImporterState(
         updateExtendedPublicKeyImporterState(
           state,
           { number: action.number, value: state.defaultBIP32Path },
-          "bip32Path"
+          "bip32Path",
         ),
         { number: action.number, value: false },
-        "bip32PathModified"
+        "bip32PathModified",
       );
     case SET_EXTENDED_PUBLIC_KEY_IMPORTER_METHOD:
       return updateExtendedPublicKeyImporterState(state, action, "method");
@@ -225,7 +226,7 @@ export default (state = createInitialState(), action) => {
       return updateExtendedPublicKeyImporterState(
         state,
         action,
-        "extendedPublicKey"
+        "extendedPublicKey",
       );
     case SET_EXTENDED_PUBLIC_KEY_IMPORTER_EXTENDED_PUBLIC_KEY_ROOT_FINGERPRINT:
       return updateExtendedPublicKeyImporterState(state, action, "rootXfp");
@@ -233,7 +234,7 @@ export default (state = createInitialState(), action) => {
       return updateExtendedPublicKeyImporterState(
         updateFinalizedSettings(state, action),
         action,
-        "finalized"
+        "finalized",
       );
     case SET_EXTENDED_PUBLIC_KEY_IMPORTER_VISIBLE:
       return { ...state, ...{ configuring: action.value } };

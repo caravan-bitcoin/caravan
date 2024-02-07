@@ -253,7 +253,7 @@ class ScriptEntry extends React.Component {
     const addressData = await fetchAddressUTXOs(
       multisig.address,
       network,
-      client
+      client,
     );
 
     return addressData;
@@ -309,7 +309,7 @@ class ScriptEntry extends React.Component {
             this.handleScriptChange(redeemScriptHex);
           } else {
             const redeemScriptHex = toHexString(
-              psbt.data.globalMap.unknownKeyVals[0].value
+              psbt.data.globalMap.unknownKeyVals[0].value,
             );
             this.handleScriptChange(redeemScriptHex);
           }

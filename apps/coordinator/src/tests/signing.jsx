@@ -55,9 +55,9 @@ class SignMultisigTransactionTest extends Test {
                 {externalLink(
                   blockExplorerAddressURL(
                     this.outputAddress(),
-                    this.params.network
+                    this.params.network,
                   ),
-                  <code>{this.outputAddress()}</code>
+                  <code>{this.outputAddress()}</code>,
                 )}
               </TableCell>
             </TableRow>
@@ -129,7 +129,7 @@ class SignMultisigTransactionTest extends Test {
       const unsignedTransactionPSBT = unsignedMultisigPSBT(
         this.params.network,
         this.params.inputs,
-        this.params.outputs
+        this.params.outputs,
       );
       unsignedTx = unsignedTransactionObjectFromPSBT(unsignedTransactionPSBT);
     } catch (e) {
@@ -137,7 +137,7 @@ class SignMultisigTransactionTest extends Test {
       unsignedTx = unsignedMultisigTransaction(
         this.params.network,
         this.params.inputs,
-        this.params.outputs
+        this.params.outputs,
       ); // bitcoinjs-lib will throw a Deprecation warning for using TransactionBuilder
     }
     return unsignedTx;
@@ -149,7 +149,7 @@ class SignMultisigTransactionTest extends Test {
         this.params.network,
         this.params.inputs,
         this.params.outputs,
-        true
+        true,
       ).toBase64();
       return SignMultisigTransaction({
         keystore: this.params.keystore,
@@ -188,7 +188,7 @@ export function signingTests(keystore) {
             new SignMultisigTransactionTest({
               ...fixture,
               ...{ keystore },
-            })
+            }),
           );
         }
       });
@@ -202,7 +202,7 @@ export function signingTests(keystore) {
               ...fixture,
               ...{ keystore },
               returnSignatureArray: true,
-            })
+            }),
         );
     default:
       return TEST_FIXTURES.transactions.map(
@@ -210,7 +210,7 @@ export function signingTests(keystore) {
           new SignMultisigTransactionTest({
             ...fixture,
             ...{ keystore },
-          })
+          }),
       );
   }
 }

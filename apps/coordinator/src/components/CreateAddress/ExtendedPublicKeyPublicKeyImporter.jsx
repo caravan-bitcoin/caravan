@@ -28,7 +28,7 @@ const ExtendedPublicKeyPublicKeyImporter = ({
     const publicKey = deriveChildPublicKey(
       extendedPublicKey,
       bip32Path,
-      network
+      network,
     );
 
     const error = validatePublicKey(publicKey);
@@ -72,14 +72,14 @@ const ExtendedPublicKeyPublicKeyImporter = ({
   const handleExtendedPublicKeyChange = (event) => {
     const networkError = validateExtendedPublicKeyForNetwork(
       extendedPublicKey,
-      network
+      network,
     );
     let actualExtendedPublicKey = extendedPublicKey;
     if (networkError !== "") {
       try {
         actualExtendedPublicKey = convertExtendedPublicKey(
           extendedPublicKey,
-          network === "testnet" ? "tpub" : "xpub"
+          network === "testnet" ? "tpub" : "xpub",
         );
       } catch (error) {
         setExtendedPublicKey(event.target.value);
@@ -92,7 +92,7 @@ const ExtendedPublicKeyPublicKeyImporter = ({
 
     const validationError = validateExtendedPublicKey(
       actualExtendedPublicKey,
-      network
+      network,
     );
     if (validationError !== "") {
       setExtendedPublicKey(event.target.value);
@@ -106,7 +106,7 @@ const ExtendedPublicKeyPublicKeyImporter = ({
         ? ""
         : `Your extended public key has been converted from ${extendedPublicKey.slice(
             0,
-            4
+            4,
           )} to ${actualExtendedPublicKey.slice(0, 4)}`;
     setExtendedPublicKey(actualExtendedPublicKey);
     setExtendedPublicKeyError("");

@@ -56,7 +56,7 @@ class SlicesTableContainer extends React.PureComponent {
 
   filterAddresses = (event, checked) => {
     this.setState({ [event.target.value]: checked }, () =>
-      this.setDisplaySlices()
+      this.setDisplaySlices(),
     );
   };
 

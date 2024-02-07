@@ -20,7 +20,7 @@ class RegisterWalletPolicyTest extends Test {
 
   description() {
     const keyOrigins = this.params.braidDetails.extendedPublicKeys.sort(
-      (a, b) => a.base58String.localeCompare(b.base58String)
+      (a, b) => a.base58String.localeCompare(b.base58String),
     );
     return (
       <Box>
@@ -103,7 +103,7 @@ const registrationTests = (keystore) =>
           ...fixture,
           ...{ keystore },
           walletConfig: braidDetailsToWalletConfig(fixture.braidDetails),
-        })
+        }),
     );
 
 export default registrationTests;

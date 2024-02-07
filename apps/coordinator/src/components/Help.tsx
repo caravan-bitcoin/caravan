@@ -175,7 +175,7 @@ const Help = () => (
                   <ListItemText>
                     {externalLink(
                       "https://unchained-capital.com/blog/gearing-up-the-caravan/",
-                      "Blog Post"
+                      "Blog Post",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -187,7 +187,7 @@ const Help = () => (
                   <ListItemText>
                     {externalLink(
                       "https://www.youtube.com/playlist?list=PLUM8mrUjWoPRsVGEZ1gTntqPd4xrQZoiH",
-                      "Video Tutorials"
+                      "Video Tutorials",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -199,7 +199,7 @@ const Help = () => (
                   <ListItemText>
                     {externalLink(
                       "https://github.com/unchained-capital/caravan",
-                      "Source Code"
+                      "Source Code",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -218,31 +218,31 @@ const Help = () => (
                 <li>
                   {externalLink(
                     "https://shop.trezor.io/product/trezor-one-white",
-                    "Trezor One"
+                    "Trezor One",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://shop.trezor.io/product/trezor-model-t",
-                    "Trezor Model T"
+                    "Trezor Model T",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://www.ledger.com/products/ledger-nano-s",
-                    "Ledger Nano S"
+                    "Ledger Nano S",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://www.ledger.com/products/ledger-nano-x",
-                    "Ledger Nano X"
+                    "Ledger Nano X",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://coldcardwallet.com",
-                    "Coldcard Mk2, Mk3, & Mk4"
+                    "Coldcard Mk2, Mk3, & Mk4",
                   )}
                 </li>
               </ul>
@@ -254,7 +254,7 @@ const Help = () => (
                 <li>
                   {externalLink(
                     "https://www.mozilla.org/en-US/firefox/new/",
-                    "Firefox"
+                    "Firefox",
                   )}
                 </li>
               </ul>

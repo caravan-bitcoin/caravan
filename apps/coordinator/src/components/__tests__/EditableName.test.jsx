@@ -13,7 +13,7 @@ describe("EditableName", () => {
   beforeEach(() => {
     spy = jest.fn();
     const element = render(
-      <EditableName number={0} name={nameValue} setName={spy} />
+      <EditableName number={0} name={nameValue} setName={spy} />,
     );
     getByDataCy = element.getByDataCy;
     queryByDataCy = element.queryByDataCy;
@@ -63,7 +63,7 @@ describe("EditableName", () => {
       fireEvent.change(input, { target: { value: "" } });
       expect(screen.getByText("Name cannot be blank.")).toBeVisible();
       expect(screen.getByText("Name", { selector: "label" })).toHaveClass(
-        "Mui-error"
+        "Mui-error",
       );
     });
 

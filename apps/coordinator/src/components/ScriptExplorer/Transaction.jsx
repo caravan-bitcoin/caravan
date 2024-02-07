@@ -38,8 +38,8 @@ class Transaction extends React.Component {
       inputs,
       outputs,
       Object.values(signatureImporters).map(
-        (signatureImporter) => signatureImporter.signature
-      )
+        (signatureImporter) => signatureImporter.signature,
+      ),
     );
   };
 
@@ -53,7 +53,7 @@ class Transaction extends React.Component {
       txid = await broadcastTransaction(
         signedTransaction.toHex(),
         network,
-        client
+        client,
       );
     } catch (e) {
       // eslint-disable-next-line no-console

@@ -228,7 +228,7 @@ const TestSuiteRunBase = ({
               100 *
               (testSuiteRun.testRuns.filter(
                 (testRun) =>
-                  testRun.status !== PENDING && testRun.status !== ACTIVE
+                  testRun.status !== PENDING && testRun.status !== ACTIVE,
               ).length /
                 testSuiteRun.testRuns.length)
             }
@@ -260,7 +260,7 @@ const mapDispatchToProps = {
 
 const TestSuiteRun = connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(TestSuiteRunBase);
 
 export default TestSuiteRun;

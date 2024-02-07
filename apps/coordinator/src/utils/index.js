@@ -104,12 +104,12 @@ export function naiveCoinSelection(options) {
     {
       count: 0,
       balance: new BigNumber(0),
-    }
+    },
   );
 
   const outputTotal = outputs.reduce(
     (total, output) => total.plus(output.amountSats),
-    new BigNumber(0)
+    new BigNumber(0),
   );
 
   const selectedUtxos = [];

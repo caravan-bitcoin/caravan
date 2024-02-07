@@ -74,7 +74,7 @@ class HermitSignatureImporter extends React.Component {
         network,
         inputs,
         outputs,
-        true
+        true,
       ).toBase64();
 
       setUnsignedPSBT(psbtToSign);
@@ -89,7 +89,7 @@ class HermitSignatureImporter extends React.Component {
       unsignedPsbt === "" ? unsignedPsbtFromState : unsignedPsbt,
       {
         network: networkData(network),
-      }
+      },
     );
 
     // if the unsignedPsbt doesn't have any inputs/outputs, that means we're in the ppk recovery case
@@ -121,13 +121,13 @@ class HermitSignatureImporter extends React.Component {
               pubkey: pk,
             };
           }),
-        }))
+        })),
       );
       psbt.addOutputs(
         Object.values(outputs).map((o) => ({
           address: o.address,
           value: Number(o.amountSats),
-        }))
+        })),
       );
 
       psbtToSign = psbt.toBase64();
@@ -253,18 +253,18 @@ class HermitSignatureImporter extends React.Component {
       network: networkData(network),
     });
     const reconstitutedPsbt = unsignedPsbtStateObject.combine(
-      Psbt.fromBase64(signedPsbt, { network: networkData(network) })
+      Psbt.fromBase64(signedPsbt, { network: networkData(network) }),
     );
 
     const signatureArray = parseSignatureArrayFromPSBT(
-      reconstitutedPsbt.toBase64()
+      reconstitutedPsbt.toBase64(),
     );
     validateAndSetSignature(
       signatureArray,
       (signatureError) => {
         this.setState({ signatureError });
       },
-      reconstitutedPsbt.toBase64()
+      reconstitutedPsbt.toBase64(),
     );
   };
 
@@ -287,7 +287,7 @@ class HermitSignatureImporter extends React.Component {
       () => {},
       (bip32PathError) => {
         this.setState({ bip32PathError });
-      }
+      },
     );
   };
 
@@ -335,5 +335,5 @@ const mapDispatchToProps = {
 
 export default connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(HermitSignatureImporter);

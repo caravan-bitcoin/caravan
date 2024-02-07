@@ -94,7 +94,7 @@ class IndirectExtendedPublicKeyImporter extends React.Component {
     validateAndSetBIP32Path(
       bip32Path,
       () => {},
-      () => {}
+      () => {},
     );
   };
 
@@ -131,7 +131,7 @@ class IndirectExtendedPublicKeyImporter extends React.Component {
         () => {
           validateAndSetExtendedPublicKey(xpub, this.setError);
         },
-        this.setError
+        this.setError,
       );
     } catch (e) {
       this.setError(e.message);

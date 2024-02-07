@@ -38,7 +38,7 @@ const HardwareWalletPublicKeyImporter = ({
   }, [network, method, bip32Path]);
 
   const [status, setStatus] = useState(
-    interaction().isSupported() ? PENDING : UNSUPPORTED
+    interaction().isSupported() ? PENDING : UNSUPPORTED,
   );
 
   const importData = async () => {

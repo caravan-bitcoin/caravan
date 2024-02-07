@@ -62,7 +62,7 @@ class WalletSign extends React.Component {
       keySelectors.push(
         <Box key={keySelectorNum} mt={2}>
           <ExtendedPublicKeySelector number={keySelectorNum} />
-        </Box>
+        </Box>,
       );
     }
     return keySelectors;
@@ -73,7 +73,7 @@ class WalletSign extends React.Component {
     return (
       Object.values(signatureImporters).length > 0 &&
       Object.values(signatureImporters).every(
-        (signatureImporter) => signatureImporter.finalized
+        (signatureImporter) => signatureImporter.finalized,
       )
     );
   };

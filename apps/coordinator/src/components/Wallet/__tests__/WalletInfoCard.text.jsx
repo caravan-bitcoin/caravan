@@ -12,7 +12,7 @@ describe("WalletInfoCard", () => {
     const { getByText, getByDataCy } = render(
       <ThemeProvider theme={theme}>
         <WalletInfoCard {...passedProps} />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     return { getByText, getByDataCy };
   };
@@ -66,7 +66,7 @@ describe("WalletInfoCard", () => {
 
       const pendingBalance = getByDataCy("pending-balance");
       expect(pendingBalance).toHaveTextContent(
-        `+${props.pendingBalance} BTC (unconfirmed)`
+        `+${props.pendingBalance} BTC (unconfirmed)`,
       );
     });
   });

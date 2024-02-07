@@ -123,7 +123,7 @@ class ExtendedPublicKeySelector extends React.Component {
       const derivedKey = deriveChildPublicKey(
         extendedPublicKeyImporter.extendedPublicKey,
         input.bip32Path,
-        network
+        network,
       );
       for (
         let importerIndex = 1;
@@ -161,7 +161,7 @@ class ExtendedPublicKeySelector extends React.Component {
             key={extendedPublicKeyImporterNum}
           >
             {extendedPublicKeyImporter.name}
-          </MenuItem>
+          </MenuItem>,
         );
       }
     }
@@ -202,7 +202,7 @@ ExtendedPublicKeySelector.propTypes = {
   inputs: PropTypes.arrayOf(
     PropTypes.shape({
       bip32Path: PropTypes.string,
-    })
+    }),
   ).isRequired,
   onChange: PropTypes.func,
   network: PropTypes.string.isRequired,
@@ -243,5 +243,5 @@ const mapDispatchToProps = {
 
 export default connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(ExtendedPublicKeySelector);

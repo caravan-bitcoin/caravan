@@ -65,7 +65,7 @@ class HermitExtendedPublicKeyImporter extends React.Component {
       () => {
         validateAndSetExtendedPublicKey(xpub, this.setError);
       },
-      this.setError
+      this.setError,
     );
   };
 

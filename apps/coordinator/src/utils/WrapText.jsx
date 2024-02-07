@@ -6,7 +6,7 @@ export default function wrapText(text, columns) {
   let element = 0;
   while (index <= text.length) {
     lines.push(
-      <span key={element}>{text.slice(index, (index += columns || 64))}</span>
+      <span key={element}>{text.slice(index, (index += columns || 64))}</span>,
     );
     lines.push(<br key={element + 1} />);
     element += 2;

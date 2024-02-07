@@ -104,7 +104,7 @@ export const initialState = () => ({
 function updateInputs(state, action) {
   const inputsTotalSats = action.value.reduce(
     (accumulator, input) => accumulator.plus(input.amountSats),
-    new BigNumber(0)
+    new BigNumber(0),
   );
   return updateState(state, {
     inputs: action.value.sort(sortInputs),
@@ -116,7 +116,7 @@ function calcOutputTotalSats(state) {
   return state.outputs.reduce(
     (accumulator, { amount }) =>
       accumulator.plus(bitcoinsToSatoshis(new BigNumber(amount || 0))),
-    new BigNumber(0)
+    new BigNumber(0),
   );
 }
 
@@ -129,7 +129,7 @@ function setFeeForRate(state, feeRateString, nout) {
       m: state.requiredSigners,
       n: state.totalSigners,
       feesPerByteInSatoshis: feeRateString,
-    })
+    }),
   );
 }
 
@@ -283,17 +283,17 @@ function finalizeOutputs(state, action) {
     const unsignedTransactionPSBT = unsignedMultisigPSBT(
       state.network,
       state.inputs,
-      state.outputs
+      state.outputs,
     );
     unsignedTransaction = unsignedTransactionObjectFromPSBT(
-      unsignedTransactionPSBT
+      unsignedTransactionPSBT,
     );
   } catch (e) {
     // probably has an input that isn't braid aware.
     unsignedTransaction = unsignedMultisigTransaction(
       state.network,
       state.inputs,
-      state.outputs
+      state.outputs,
     ); // bitcoinjs-lib will throw a Deprecation warning for using TransactionBuilder
   }
   return {
@@ -343,7 +343,7 @@ function validateTransaction(state) {
   // TODO: need less hacky way to suppress error
   if (
     newState.outputs.find(
-      (output) => output.addressError !== "" || output.amountError !== ""
+      (output) => output.addressError !== "" || output.amountError !== "",
     ) ||
     newState.feeError !== "" ||
     newState.feeRateError !== "" ||
@@ -365,7 +365,7 @@ function validateTransaction(state) {
       newState = updateState(newState, { updatesComplete: true });
       const action = diff.isLessThan(0) ? "Increase" : "Decrease";
       balanceError = `${action} by ${satoshisToBitcoins(
-        diff.absoluteValue()
+        diff.absoluteValue(),
       )}.`;
     }
     return {
@@ -379,7 +379,7 @@ function validateTransaction(state) {
     return {
       ...newState,
       balanceError: `Fee is too small. Should be no less than ${bitcoinsToSatoshis(
-        minFee
+        minFee,
       )} satoshis.`,
     };
   }

@@ -76,11 +76,11 @@ const mapDispatchToTestRunNoteProps = {
 
 const KeystoreNote = connect(
   mapStateToKeystoreNoteProps,
-  mapDispatchToKeystoreNoteProps
+  mapDispatchToKeystoreNoteProps,
 )(NoteBase);
 const TestRunNote = connect(
   mapStateToTestRunNoteProps,
-  mapDispatchToTestRunNoteProps
+  mapDispatchToTestRunNoteProps,
 )(NoteBase);
 
 export { KeystoreNote, TestRunNote };

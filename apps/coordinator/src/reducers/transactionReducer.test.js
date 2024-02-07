@@ -35,7 +35,7 @@ describe("Test transactionReducer", () => {
         },
         {
           type: CHOOSE_PERFORM_SPEND,
-        }
+        },
       );
       expect(r.chosen).toBe(true);
     });
@@ -52,7 +52,7 @@ describe("Test transactionReducer", () => {
           {
             type: SET_REQUIRED_SIGNERS,
             value: m,
-          }
+          },
         );
         expect(r.requiredSigners).toEqual(m);
         expect(r.signingKeys).toHaveLength(m);
@@ -70,7 +70,7 @@ describe("Test transactionReducer", () => {
           {
             type: SET_TOTAL_SIGNERS,
             value: m,
-          }
+          },
         );
         expect(r.totalSigners).toEqual(m);
       });
@@ -94,7 +94,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_INPUTS,
           value: [expected],
-        }
+        },
       );
       expect(r.inputs).toEqual([expected]);
       expect(r.inputsTotalSats).toStrictEqual(BigNumber(sats));
@@ -117,7 +117,7 @@ describe("Test transactionReducer", () => {
         },
         {
           type: ADD_OUTPUT,
-        }
+        },
       );
       expect(r.outputs).toEqual([expected]);
     });
@@ -136,7 +136,7 @@ describe("Test transactionReducer", () => {
           type: SET_OUTPUT_ADDRESS,
           value: address,
           number: 1,
-        }
+        },
       );
       expect(r.outputs[0].address).toEqual(address);
     });
@@ -155,7 +155,7 @@ describe("Test transactionReducer", () => {
           type: SET_OUTPUT_ADDRESS,
           value: address,
           number: 2,
-        }
+        },
       );
       expect(r.outputs[1].addressError).toEqual("Duplicate output address.");
     });
@@ -175,10 +175,10 @@ describe("Test transactionReducer", () => {
           type: SET_OUTPUT_ADDRESS,
           value: address,
           number: 1,
-        }
+        },
       );
       expect(r.outputs[0].addressError).toEqual(
-        "Output address cannot equal input address."
+        "Output address cannot equal input address.",
       );
     });
   });
@@ -195,7 +195,7 @@ describe("Test transactionReducer", () => {
           type: SET_OUTPUT_AMOUNT,
           value: "0.00001234",
           number: 1,
-        }
+        },
       );
       expect(r.outputs[0].amountSats).toEqual("1234");
     });
@@ -216,7 +216,7 @@ describe("Test transactionReducer", () => {
         {
           type: DELETE_OUTPUT,
           number: 1,
-        }
+        },
       );
       // test txid for reference:
       // e5d35e77a9177e52eb2e908d133faa3c8f9dc0d5a947f25568a55f711f0ee87b
@@ -239,7 +239,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_FEE_RATE,
           value: "3",
-        }
+        },
       );
       expect(r.feeRate).toEqual("3");
       const estimatedSize = estimateMultisigP2WSHTransactionVSize({
@@ -272,7 +272,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_FEE,
           value: "0.00000504",
-        }
+        },
       );
 
       expect(r.fee).toEqual("0.00000504");
@@ -311,7 +311,7 @@ describe("Test transactionReducer", () => {
           feeRate: 1,
           finalizedOutputs: false,
         },
-        action
+        action,
       );
       expect(r.finalizedOutputs).toBe(action.value);
     });
@@ -328,7 +328,7 @@ describe("Test transactionReducer", () => {
         },
         {
           type: RESET_OUTPUTS,
-        }
+        },
       );
       expect(r.outputs).toEqual([initialOutputState()]);
       expect(r.fee).toEqual("");
@@ -345,7 +345,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_ADDRESS_TYPE,
           value: "P2WSH",
-        }
+        },
       );
       expect(r.addressType).toEqual("P2WSH");
     });
@@ -360,7 +360,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_NETWORK,
           value: "TESTNET",
-        }
+        },
       );
       expect(r.network).toEqual("TESTNET");
     });
@@ -377,7 +377,7 @@ describe("Test transactionReducer", () => {
         {
           type: SET_TXID,
           value: txid,
-        }
+        },
       );
       expect(r.txid).toEqual(txid);
     });

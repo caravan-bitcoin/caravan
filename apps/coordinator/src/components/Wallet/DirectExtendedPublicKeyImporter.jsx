@@ -145,8 +145,8 @@ class DirectExtendedPublicKeyImporter extends React.Component {
     const bip32Path = event.target.value;
     validateAndSetBIP32Path(
       bip32Path,
-      () => { },
-      () => { }
+      () => {},
+      () => {},
     );
   };
 

@@ -67,7 +67,7 @@ class WalletGenerator extends React.Component {
     this.debouncedTestConnection = debounce(
       (args) => this.testConnection(args),
       500,
-      { trailing: true, leading: false }
+      { trailing: true, leading: false },
     );
     refreshNodes(this.refreshNodes);
     if (nodesLoaded) setGenerating(true);
@@ -129,7 +129,7 @@ class WalletGenerator extends React.Component {
     const multisigUpdates = await this.generateMultisig(
       isChange,
       bip32Path,
-      attemptToKeepGenerating
+      attemptToKeepGenerating,
     );
     this.updateNode(isChange, { bip32Path, ...multisigUpdates });
   };
@@ -143,7 +143,7 @@ class WalletGenerator extends React.Component {
     } = this.props;
 
     const extendedPublicKeys = this.generateRichExtendedPublicKeys(
-      extendedPublicKeyImporters
+      extendedPublicKeyImporters,
     );
     const index = isChange ? "1" : "0";
     const braid = generateBraid(
@@ -151,7 +151,7 @@ class WalletGenerator extends React.Component {
       addressType,
       extendedPublicKeys,
       requiredSigners,
-      index
+      index,
     );
     const multisig = deriveMultisigByPath(braid, bip32Path);
 
@@ -163,7 +163,7 @@ class WalletGenerator extends React.Component {
     const utxoUpdates = await this.fetchUTXOs(
       isChange,
       multisig,
-      attemptToKeepGenerating
+      attemptToKeepGenerating,
     );
     return { multisig, ...utxoUpdates };
   };
@@ -209,7 +209,7 @@ class WalletGenerator extends React.Component {
       return p1Index - p2Index;
     });
     const pathSegments = (allBIP32Paths[allBIP32Paths.length - 1] || "").split(
-      "/"
+      "/",
     ); // m, 0, 1
     const maxIndex = parseInt(pathSegments[2], 10);
     const nextBIP32Path = `m/${pathSegments[1]}/${maxIndex + 1}`;
@@ -255,7 +255,7 @@ class WalletGenerator extends React.Component {
   extendedPublicKeyCount = () => {
     const { extendedPublicKeyImporters } = this.props;
     return Object.values(extendedPublicKeyImporters).filter(
-      (extendedPublicKeyImporter) => extendedPublicKeyImporter.finalized
+      (extendedPublicKeyImporter) => extendedPublicKeyImporter.finalized,
     ).length;
   };
 
@@ -273,7 +273,7 @@ class WalletGenerator extends React.Component {
       this.setState({ connectSuccess: false });
       if (e.response && e.response.status === 401)
         setPasswordError(
-          "Unauthorized: Incorrect username and password combination"
+          "Unauthorized: Incorrect username and password combination",
         );
       else setPasswordError(e.message);
     }
@@ -294,11 +294,11 @@ class WalletGenerator extends React.Component {
   refreshNodes = async () => {
     const { change, deposits, resetNodesFetchErrors } = this.props;
     const allNodes = Object.values(deposits.nodes).concat(
-      Object.values(change.nodes)
+      Object.values(change.nodes),
     );
     const previousFetchErrors = Math.max(
       change.fetchUTXOsErrors,
-      deposits.fetchUTXOsErrors
+      deposits.fetchUTXOsErrors,
     );
 
     resetNodesFetchErrors();
@@ -306,13 +306,13 @@ class WalletGenerator extends React.Component {
       allNodes.map(async (node) => {
         const utxos = await this.fetchUTXOs(node.change, node.multisig);
         this.updateNode(node.change, { bip32Path: node.bip32Path, ...utxos });
-      })
+      }),
     );
 
     if (previousFetchErrors >= MAX_FETCH_UTXOS_ERRORS) {
       const currentFetchErrors = Math.max(
         change.fetchUTXOsErrors,
-        deposits.fetchUTXOsErrors
+        deposits.fetchUTXOsErrors,
       );
       if (currentFetchErrors < 5) {
         // eslint-disable-next-line no-console
@@ -325,18 +325,18 @@ class WalletGenerator extends React.Component {
   generateRichExtendedPublicKeys(extendedPublicKeyImporters) {
     return Object.values(extendedPublicKeyImporters).map((importer) => {
       const extendedPublicKey = ExtendedPublicKey.fromBase58(
-        importer.extendedPublicKey
+        importer.extendedPublicKey,
       );
       extendedPublicKey.setRootFingerprint(
         importer.rootXfp && !importer.rootXfp.toLowerCase().includes("unknown")
           ? importer.rootXfp
-          : "00000000"
+          : "00000000",
       );
       extendedPublicKey.setBip32Path(
         importer.bip32Path &&
           !importer.bip32Path.toLowerCase().includes("unknown")
           ? importer.bip32Path
-          : `m${"/0".repeat(extendedPublicKey.depth)}`
+          : `m${"/0".repeat(extendedPublicKey.depth)}`,
       );
       extendedPublicKey.addBase58String();
       return extendedPublicKey;
@@ -354,7 +354,7 @@ class WalletGenerator extends React.Component {
     } = this.props;
     const { connectSuccess, unknownClient } = this.state;
     const hasConflict = Object.values(extendedPublicKeyImporters).some(
-      (xpub) => xpub.conflict
+      (xpub) => xpub.conflict,
     );
     if (this.extendedPublicKeyCount() === totalSigners) {
       if (generating && !configuring) {

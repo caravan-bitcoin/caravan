@@ -213,5 +213,5 @@ export default connect(
     setUrlError: SET_CLIENT_URL_ERROR,
     setUsernameError: SET_CLIENT_USERNAME_ERROR,
     setPasswordError: SET_CLIENT_PASSWORD_ERROR,
-  })
+  }),
 )(ClientPicker);

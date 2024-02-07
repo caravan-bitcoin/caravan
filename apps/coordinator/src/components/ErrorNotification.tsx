@@ -55,7 +55,7 @@ const mapDispatchToProps = {
 
 const ErrorNotification = connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(ErrorNotificationBase);
 
 export default ErrorNotification;

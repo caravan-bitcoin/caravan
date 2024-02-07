@@ -53,7 +53,7 @@ class DirectSignatureImporter extends React.Component {
       return `${signatureImporter.bip32Path}${input.bip32Path.slice(1)}`; // xpub/pubkey slice away the m, keep /
     });
     const policyHmac = walletConfig.ledgerPolicyHmacs.find(
-      (hmac) => hmac.xfp === extendedPublicKeyImporter.rootXfp
+      (hmac) => hmac.xfp === extendedPublicKeyImporter.rootXfp,
     )?.policyHmac;
 
     return SignMultisigTransaction({

@@ -52,12 +52,12 @@ class UTXOSet extends React.Component {
       const prevMyInputsBeingSpent = this.filterInputs(
         localInputs,
         prevProps.existingTransactionInputs,
-        true
+        true,
       ).length;
       const myInputsBeingSpent = this.filterInputs(
         localInputs,
         existingTransactionInputs,
-        true
+        true,
       ).length;
 
       const isFullSpend = myInputsBeingSpent === localInputs.length;
@@ -126,7 +126,7 @@ class UTXOSet extends React.Component {
     }
     const satsSelected = inputsToSpend.reduce(
       (accumulator, input) => accumulator.plus(input.amountSats),
-      new BigNumber(0)
+      new BigNumber(0),
     );
     this.setState({
       inputsSatsSelected: satsSelected,
@@ -144,7 +144,7 @@ class UTXOSet extends React.Component {
       const notMyInputs = this.filterInputs(
         existingTransactionInputs,
         localInputs,
-        false
+        false,
       );
 
       if (notMyInputs.length > 0) {
@@ -206,7 +206,7 @@ class UTXOSet extends React.Component {
           <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
-              <OpenInNew />
+              <OpenInNew />,
             )}
           </TableCell>
         </TableRow>

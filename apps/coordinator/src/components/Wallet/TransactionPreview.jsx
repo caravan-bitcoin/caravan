@@ -146,8 +146,8 @@ class TransactionPreview extends React.Component {
     return satoshisToBitcoins(
       outputs.reduce(
         (total, output) => total.plus(BigNumber(output.amountSats || 0)),
-        BigNumber(0)
-      )
+        BigNumber(0),
+      ),
     );
   };
 

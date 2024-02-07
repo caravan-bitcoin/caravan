@@ -205,7 +205,7 @@ class IndirectSignatureImporter extends React.Component {
       () => {},
       (bip32PathError) => {
         this.setState({ bip32PathError });
-      }
+      },
     );
   };
 

@@ -38,9 +38,9 @@ class ConfirmMultisigAddressTest extends Test {
                 {externalLink(
                   blockExplorerAddressURL(
                     this.params.address,
-                    this.params.network
+                    this.params.network,
                   ),
-                  <code>{this.params.address}</code>
+                  <code>{this.params.address}</code>,
                 )}
               </TableCell>
             </TableRow>
@@ -66,7 +66,7 @@ class ConfirmMultisigAddressTest extends Test {
       // only used with ledgers, version 2.1 and above
       policyHmac: this.params.policyHmac,
       ...braidDetailsToWalletConfig(
-        JSON.parse(this.params.multisig.braidDetails)
+        JSON.parse(this.params.multisig.braidDetails),
       ),
     });
   }
