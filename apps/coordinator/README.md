@@ -96,7 +96,7 @@ To run the built docker image:
 docker run -p 80:8000 caravan:latest
 ```
 
-Caravan should then be accessible at http://localhost:8000/caravan
+Caravan should then be accessible at http://localhost:8000/caravan/#
 
 ## Usage
 

@@ -45,7 +45,7 @@ the following need to be resolved
 - [ ] Setup automation: changeset, CI, release process, etc.
 - [x] Finish cleanup of old build related dependencies
 - [ ] Lock in old repos and deploy first versions of @caravan packages
-- [ ] Get prettier auto formatting working
+- [x] Get prettier auto formatting working
 - [x] Make sure all tests pass
 - [x] Improve sharing of configs for jest, tsconfig, and eslint
 - [ ] Cleanup package.jsons
