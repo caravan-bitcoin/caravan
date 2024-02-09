@@ -28,7 +28,7 @@ export function getMockState(walletBalance) {
           confirmed: false,
           amountSats: new BigNumber(
             Math.floor(pendingBalance / numPending),
-            10
+            10,
           ),
         })
       : [];
@@ -45,7 +45,7 @@ export function getMockState(walletBalance) {
           },
           {
             utxos: utxosUnconfirmed.slice(
-              Math.floor(utxosUnconfirmed.length / 2)
+              Math.floor(utxosUnconfirmed.length / 2),
             ),
             change: false,
           },
@@ -59,7 +59,7 @@ export function getMockState(walletBalance) {
           },
           {
             utxos: utxosUnconfirmed.slice(
-              Math.ceil(utxosUnconfirmed.length / 2)
+              Math.ceil(utxosUnconfirmed.length / 2),
             ),
             change: true,
           },
@@ -72,14 +72,14 @@ export function getMockState(walletBalance) {
   state.wallet.deposits.nodes.forEach((slice) => {
     slice.balanceSats = slice.utxos.reduce(
       (balance, utxo) => balance.plus(utxo.amountSats),
-      new BigNumber(0)
+      new BigNumber(0),
     );
   });
 
   state.wallet.change.nodes.forEach((slice) => {
     slice.balanceSats = slice.utxos.reduce(
       (balance, utxo) => balance.plus(utxo.amountSats),
-      new BigNumber(0)
+      new BigNumber(0),
     );
   });
   return state;

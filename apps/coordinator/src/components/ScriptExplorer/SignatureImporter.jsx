@@ -352,7 +352,7 @@ class SignatureImporter extends React.Component {
 
     if (inputsSignatures.length < inputs.length) {
       errback(
-        "Not enough signatures (must be at least one signature for each input)."
+        "Not enough signatures (must be at least one signature for each input).",
       );
       return;
     }
@@ -366,14 +366,14 @@ class SignatureImporter extends React.Component {
 
     if (numSignatureSets > Object.values(signatureImporters).length) {
       errback(
-        "Too many signatures. Max one set of signatures per required signer."
+        "Too many signatures. Max one set of signatures per required signer.",
       );
       return;
     }
     const publicKeys = [];
     if (numSignatureSets === 1) {
       const finalizedSignatureImporters = Object.values(
-        signatureImporters
+        signatureImporters,
       ).filter((signatureImporter) => signatureImporter.finalized);
       for (
         let inputIndex = 0;
@@ -394,7 +394,7 @@ class SignatureImporter extends React.Component {
             inputs,
             outputs,
             inputIndex,
-            inputSignature
+            inputSignature,
           );
         } catch (e) {
           errback(`Signature for input ${inputNumber} is invalid.`);
@@ -415,7 +415,7 @@ class SignatureImporter extends React.Component {
               finalizedSignatureImporter.publicKeys[inputIndex] === publicKey
             ) {
               errback(
-                `Signature for input ${inputNumber} is a duplicate of a previously provided signature.`
+                `Signature for input ${inputNumber} is a duplicate of a previously provided signature.`,
               );
               return;
             }
@@ -477,7 +477,7 @@ class SignatureImporter extends React.Component {
             const inputSignature = signaturesToCheck[i];
             if (validateHex(inputSignature) !== "") {
               errback(
-                `Signature for input at index ${inputIndex} is not valid hex.`
+                `Signature for input at index ${inputIndex} is not valid hex.`,
               );
               return;
             }
@@ -488,7 +488,7 @@ class SignatureImporter extends React.Component {
                 inputs,
                 outputs,
                 inputIndex,
-                inputSignature
+                inputSignature,
               );
             } catch (e) {
               // eslint-disable-next-line no-console
@@ -532,7 +532,7 @@ class SignatureImporter extends React.Component {
   filterKnownSignatures = (inputsSignatures) => {
     const { inputs, signatureImporters } = this.props;
     const finalizedSignatureImporters = Object.values(
-      signatureImporters
+      signatureImporters,
     ).filter((signatureImporter) => signatureImporter.finalized);
     const knownSignatures = [];
     for (let inputIndex = 0; inputIndex < inputs.length; inputIndex += 1) {
@@ -576,7 +576,7 @@ SignatureImporter.propTypes = {
       path: PropTypes.string,
       rootFingerprint: PropTypes.string,
       base58String: PropTypes.string,
-    })
+    }),
   ).isRequired,
   fee: PropTypes.string.isRequired,
   inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,

@@ -60,7 +60,7 @@ describe("utils", () => {
         assert.equal(
           isSpendAll({ ...config, walletBalance }),
           true,
-          `Should be true for ${addressType}, ${numInputs} inputs and ${numOutputs} outputs`
+          `Should be true for ${addressType}, ${numInputs} inputs and ${numOutputs} outputs`,
         );
         // check for a difference that is less than dust amount
         walletBalance = walletBalance.plus(Math.ceil(DUST_IN_SATOSHIS / 2));
@@ -68,7 +68,7 @@ describe("utils", () => {
         assert.equal(
           isSpendAll({ ...config, walletBalance }),
           true,
-          `Should be true for ${addressType}, ${numInputs} inputs and ${numOutputs} outputs when difference is dust`
+          `Should be true for ${addressType}, ${numInputs} inputs and ${numOutputs} outputs when difference is dust`,
         );
       });
     });
@@ -80,7 +80,7 @@ describe("utils", () => {
         assert.equal(
           isSpendAll({ ...config, walletBalance }),
           false,
-          `Should be false for ${config.addressType}, ${walletBalance} wallet balance and ${config.outputTotal} output value`
+          `Should be false for ${config.addressType}, ${walletBalance} wallet balance and ${config.outputTotal} output value`,
         );
       });
     });
@@ -109,11 +109,11 @@ describe("utils", () => {
       slices = getSpendableSlices(state);
       walletBalance = slices.reduce(
         (balance, slice) => balance.plus(slice.balanceSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
       totalUtxoCount = slices.reduce(
         (count, slice) => count + slice.utxos.length,
-        0
+        0,
       );
       output = {
         // testnet faucet address
@@ -179,7 +179,7 @@ describe("utils", () => {
       let [inputs, changeRequired] = naiveCoinSelection(options);
       let inputsTotal = inputs.reduce(
         (total, input) => total.plus(input.amountSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
 
       expect(inputs).toHaveLength(utxoCount);
@@ -199,7 +199,7 @@ describe("utils", () => {
       expect(changeRequired).toBe(false);
       inputsTotal = inputs.reduce(
         (total, input) => total.plus(input.amountSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
 
       // confirm that the inputs add up to the expected amount
@@ -231,7 +231,7 @@ describe("utils", () => {
           .minus(output.amountSats)
           .isGreaterThan(DUST_IN_SATOSHIS),
         `Test slices balance amount minus fee and output
- should be greater than dust so that change is required`
+ should be greater than dust so that change is required`,
       );
 
       options.outputs = [output];
@@ -240,7 +240,7 @@ describe("utils", () => {
 
       // should be using all utxos
       expect(inputs).toHaveLength(
-        slices[0].utxos.length + slices[1].utxos.length
+        slices[0].utxos.length + slices[1].utxos.length,
       );
       expect(changeRequired).toBe(true);
     });

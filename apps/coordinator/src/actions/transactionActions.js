@@ -259,7 +259,7 @@ export function setMaxSpendOnOutput(outputIndex) {
     } = getState();
     const numInputs = spendableSlices.reduce(
       (count, slice) => count + slice.utxos.length,
-      0
+      0,
     );
     const estimatedFee = estimateMultisigTransactionFee({
       addressType,
@@ -273,7 +273,7 @@ export function setMaxSpendOnOutput(outputIndex) {
     const totalOutputValue = outputs.reduce(
       (total, output) =>
         total.plus(output.amount.length ? output.amountSats : 0),
-      new BigNumber(0)
+      new BigNumber(0),
     );
 
     const spendAllAmount = new BigNumber(
@@ -281,8 +281,8 @@ export function setMaxSpendOnOutput(outputIndex) {
         new BigNumber(confirmedBalance)
           .minus(outputs.length > 1 ? totalOutputValue : 0)
           .minus(estimatedFee)
-          .toFixed(8)
-      )
+          .toFixed(8),
+      ),
     );
 
     if (
@@ -292,8 +292,8 @@ export function setMaxSpendOnOutput(outputIndex) {
     )
       return dispatch(
         setBalanceError(
-          "Not enough available funds for max spend. Clear other outputs or wait for incoming deposits to confirm."
-        )
+          "Not enough available funds for max spend. Clear other outputs or wait for incoming deposits to confirm.",
+        ),
       );
     return dispatch(setOutputAmount(outputIndex, spendAllAmount.toString()));
   };
@@ -324,7 +324,7 @@ export function importPSBT(psbtText) {
       psbt.txInputs.map((input) => {
         const txid = reverseBuffer(input.hash).toString("hex");
         return createInputIdentifier(txid, input.index);
-      })
+      }),
     );
 
     const inputs = [];
@@ -348,7 +348,7 @@ export function importPSBT(psbtText) {
     }
     if (inputs.length !== psbt.txInputs.length) {
       throw new Error(
-        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`
+        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
       );
     }
 

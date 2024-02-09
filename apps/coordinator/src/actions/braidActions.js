@@ -59,7 +59,7 @@ export const fetchSliceData = async (slices) => {
       // eslint-disable-next-line no-console
       console.error(
         "There was a problem getting updated braid data:",
-        e.message
+        e.message,
       );
       dispatch(setErrorNotification(e.message));
     }

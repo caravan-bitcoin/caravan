@@ -297,7 +297,7 @@ class ExtendedPublicKeyImporter extends React.Component {
       try {
         actualExtendedPublicKey = convertExtendedPublicKey(
           extendedPublicKey,
-          network === "testnet" ? "tpub" : "xpub"
+          network === "testnet" ? "tpub" : "xpub",
         );
       } catch (error) {
         errback(error.message);
@@ -308,7 +308,7 @@ class ExtendedPublicKeyImporter extends React.Component {
 
     const validationError = validateExtendedPublicKey(
       actualExtendedPublicKey,
-      network
+      network,
     );
     if (validationError !== "") {
       errback(validationError);
@@ -323,7 +323,7 @@ class ExtendedPublicKeyImporter extends React.Component {
         (extendedPublicKeyImporter, extendedPublicKeyImporterIndex) =>
           extendedPublicKeyImporterIndex !== number - 1 &&
           extendedPublicKeyImporter.extendedPublicKey ===
-            actualExtendedPublicKey
+            actualExtendedPublicKey,
       )
     ) {
       errback("This extended public key has already been imported.");
@@ -334,7 +334,7 @@ class ExtendedPublicKeyImporter extends React.Component {
           ? ""
           : `Your extended public key has been converted from ${extendedPublicKey.slice(
               0,
-              4
+              4,
             )} to ${actualExtendedPublicKey.slice(0, 4)}`;
       this.setState({ conversionMessage });
       this.finalize();
@@ -433,10 +433,10 @@ const mapDispatchToProps = {
 };
 
 const ExtendedPublicKeyImporterWithStyles = withStyles(useStyles)(
-  ExtendedPublicKeyImporter
+  ExtendedPublicKeyImporter,
 );
 
 export default connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(ExtendedPublicKeyImporterWithStyles);

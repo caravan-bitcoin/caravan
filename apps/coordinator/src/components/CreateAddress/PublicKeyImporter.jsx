@@ -165,7 +165,7 @@ const PublicKeyImporter = ({
       Object.values(publicKeyImporters).find(
         (publicKeyImp, publicKeyImporterIndex) =>
           publicKeyImporterIndex !== number - 1 &&
-          publicKeyImp.publicKey === publicKey
+          publicKeyImp.publicKey === publicKey,
       )
         ? "This public key has already been imported."
         : null;
@@ -290,7 +290,7 @@ const PublicKeyImporter = ({
             <Conflict message="Warning, BIP32 path is in conflict with the network and address type settings.  Do not proceed unless you are absolutely sure you know what you are doing!" />
           )}
         {publicKeyError.includes(
-          "does not support uncompressed public keys"
+          "does not support uncompressed public keys",
         ) && <Conflict message={publicKeyError} />}
         {publicKeyImporter.finalized ? renderPublicKey() : renderImport()}
       </CardContent>

@@ -84,14 +84,14 @@ class CreateWallet extends React.Component {
     const validProperties = CreateWallet.validateProperties(
       config,
       configProperties,
-      ""
+      "",
     );
     if (validProperties !== "") return validProperties;
 
     if (config.startingAddressIndex !== undefined) {
       const startingAddressIndexError = validateBIP32Index(
         String(config.startingAddressIndex),
-        { mode: "unhardened " }
+        { mode: "unhardened " },
       ).replace("BIP32", "Starting Address");
       if (startingAddressIndexError !== "") return startingAddressIndexError;
     }
@@ -104,7 +104,7 @@ class CreateWallet extends React.Component {
       const validClient = CreateWallet.validateProperties(
         config,
         clientProperties,
-        "client"
+        "client",
       );
       if (validClient !== "") return validClient;
     }
@@ -113,13 +113,13 @@ class CreateWallet extends React.Component {
     const validQuorum = CreateWallet.validateProperties(
       config,
       quorumProperties,
-      "quorum"
+      "quorum",
     );
     if (validQuorum !== "") return validQuorum;
 
     return CreateWallet.validateExtendedPublicKeys(
       config.extendedPublicKeys,
-      config.network
+      config.network,
     );
   }
 
@@ -306,33 +306,33 @@ class CreateWallet extends React.Component {
 
         setExtendedPublicKeyImporterBIP32Path(
           number,
-          extendedPublicKey.bip32Path
+          extendedPublicKey.bip32Path,
         );
         setExtendedPublicKeyImporterExtendedPublicKey(
           number,
-          extendedPublicKey.xpub
+          extendedPublicKey.xpub,
         );
         if (extendedPublicKey.xfp) {
           setExtendedPublicKeyImporterExtendedPublicKeyRootFingerprint(
             number,
-            extendedPublicKey.xfp
+            extendedPublicKey.xfp,
           );
         } else {
           setExtendedPublicKeyImporterExtendedPublicKeyRootFingerprint(
             number,
-            "unknown"
+            "unknown",
           );
         }
 
         setExtendedPublicKeyImporterFinalized(number, true);
-      }
+      },
     );
 
     // config might not have this field at all, so need to account for it
     // being empty
     if (walletConfiguration.ledgerPolicyHmacs) {
       walletConfiguration.ledgerPolicyHmacs.forEach(
-        updateWalletPolicyRegistrations
+        updateWalletPolicyRegistrations,
       );
     }
   };
@@ -416,7 +416,7 @@ class CreateWallet extends React.Component {
             key={extendedPublicKeyImporterNum}
             number={extendedPublicKeyImporterNum}
           />
-        </Box>
+        </Box>,
       );
     }
     return extendedPublicKeyImporters;

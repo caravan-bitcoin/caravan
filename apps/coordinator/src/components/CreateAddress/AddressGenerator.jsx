@@ -41,7 +41,7 @@ const AddressGenerator = ({
 }) => {
   const isInConflict = () => {
     return Object.values(publicKeyImporters).some(
-      (importer) => importer.conflict
+      (importer) => importer.conflict,
     );
   };
 
@@ -49,7 +49,7 @@ const AddressGenerator = ({
     return Object.values(publicKeyImporters).filter(
       ({ publicKey, finalized }) => {
         return finalized && !validatePublicKey(publicKey, addressType);
-      }
+      },
     ).length;
   };
 
@@ -86,7 +86,7 @@ const AddressGenerator = ({
       network,
       addressType,
       requiredSigners,
-      ...publicKeys
+      ...publicKeys,
     );
     setMultisigAddress(multisig.address);
     return multisig;
@@ -113,7 +113,7 @@ const AddressGenerator = ({
       publicKeyImporterNum += 1
     ) {
       formattedReturnArray.push(
-        publicKeyImporterBIP32Path(publicKeyImporterNum)
+        publicKeyImporterBIP32Path(publicKeyImporterNum),
       );
     }
     return formattedReturnArray.join("\n");
@@ -182,7 +182,7 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
                   WARNING: These public keys are not in the standard{" "}
                   {externalLink(
                     "https://github.com/bitcoin/bips/blob/master/bip-0067.mediawiki",
-                    "BIP67 order"
+                    "BIP67 order",
                   )}
                   .
                 </FormHelperText>

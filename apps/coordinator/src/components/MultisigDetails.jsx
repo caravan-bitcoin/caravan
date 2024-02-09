@@ -53,7 +53,7 @@ const MultisigDetails = ({ network, multisig, showAddress }) => {
               &nbsp;
               {externalLink(
                 blockExplorerAddressURL(address, network),
-                <OpenInNew />
+                <OpenInNew />,
               )}
             </Grid>
           )}
@@ -70,7 +70,7 @@ const MultisigDetails = ({ network, multisig, showAddress }) => {
             <Grid item>
               <Chip
                 label={`${multisigRequiredSigners(
-                  multisig
+                  multisig,
                 )}-of-${multisigTotalSigners(multisig)}`}
               />
             </Grid>

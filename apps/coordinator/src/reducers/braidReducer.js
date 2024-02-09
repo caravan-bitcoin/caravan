@@ -74,7 +74,7 @@ function updateSlice(state, action) {
       ? state.nodes[slice.bip32Path].balanceSats
       : BigNumber(0);
     updatedState.balanceSats = state.balanceSats.plus(
-      slice.balanceSats.minus(currentNodeBalance)
+      slice.balanceSats.minus(currentNodeBalance),
     );
   }
 

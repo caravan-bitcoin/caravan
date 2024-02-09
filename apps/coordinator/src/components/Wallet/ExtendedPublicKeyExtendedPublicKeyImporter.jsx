@@ -103,7 +103,7 @@ class ExtendedPublicKeyExtendedPublicKeyImporter extends React.Component {
     const childExtendedPublicKey = deriveChildExtendedPublicKey(
       extendedPublicKey,
       extendedPublicKeyImporter.bip32Path,
-      network
+      network,
     );
     validateAndSetExtendedPublicKey(childExtendedPublicKey, (error) => {
       this.setState({ error });
@@ -115,7 +115,7 @@ class ExtendedPublicKeyExtendedPublicKeyImporter extends React.Component {
     validateAndSetBIP32Path(
       DEFAULT_BIP32_PATH,
       () => {},
-      () => {}
+      () => {},
     );
   };
 
@@ -158,13 +158,13 @@ class ExtendedPublicKeyExtendedPublicKeyImporter extends React.Component {
     const extendedPublicKey = event.target.value;
     let extendedPublicKeyError = validateExtendedPublicKey(
       extendedPublicKey,
-      network
+      network,
     );
     if (extendedPublicKeyError === "") {
       if (
         Object.values(extendedPublicKeyImporters).find(
           (extendedPublicKeyImporter) =>
-            extendedPublicKeyImporter.extendedPublicKey === extendedPublicKey
+            extendedPublicKeyImporter.extendedPublicKey === extendedPublicKey,
         )
       ) {
         extendedPublicKeyError =

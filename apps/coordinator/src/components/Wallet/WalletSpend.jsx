@@ -309,7 +309,7 @@ WalletSpend.propTypes = {
       amount: PropTypes.string,
       addressError: PropTypes.string,
       amountError: PropTypes.string,
-    })
+    }),
   ).isRequired,
   resetNodesSpend: PropTypes.func.isRequired,
   setSpendStep: PropTypes.func.isRequired,

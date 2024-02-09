@@ -89,7 +89,7 @@ class AddressExpander extends React.Component {
           </Copyable>
           {externalLink(
             blockExplorerAddressURL(multisig.address, network),
-            <LaunchIcon onClick={(e) => e.stopPropagation()} />
+            <LaunchIcon onClick={(e) => e.stopPropagation()} />,
           )}
         </Typography>
         <MoreVertIcon
@@ -160,7 +160,7 @@ class AddressExpander extends React.Component {
     const { extendedPublicKeyImporters } = this.props;
     return (
       Object.values(extendedPublicKeyImporters).filter(
-        (importer) => importer.method === "trezor"
+        (importer) => importer.method === "trezor",
       ).length > 0
     );
   };

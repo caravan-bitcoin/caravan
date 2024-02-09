@@ -68,7 +68,7 @@ class OutputsForm extends React.Component {
     const { signatureImporters, isWallet } = this.props;
     const finalizedCount = Object.keys(signatureImporters).reduce(
       (o, k) => o + signatureImporters[k].finalized,
-      0
+      0,
     );
     if (finalizedCount === 0 && !isWallet)
       this.titleRef.current.scrollIntoView({ behavior: "smooth" });
@@ -103,7 +103,7 @@ class OutputsForm extends React.Component {
       })
       .reduce(
         (accumulator, currentValue) => accumulator.plus(currentValue),
-        new BigNumber(0)
+        new BigNumber(0),
       );
 
     // only care to add fee if we have inputs
@@ -192,7 +192,7 @@ class OutputsForm extends React.Component {
       setFeeRate(
         !Number.isNaN(feeEstimate)
           ? feeEstimate.toString()
-          : MIN_SATS_PER_BYTE_FEE.toString()
+          : MIN_SATS_PER_BYTE_FEE.toString(),
       );
       this.setState({ feeRateFetchError });
     }
@@ -477,7 +477,7 @@ OutputsForm.propTypes = {
       addressError: PropTypes.string,
       amount: PropTypes.string,
       amountError: PropTypes.string,
-    })
+    }),
   ).isRequired,
   resetOutputs: PropTypes.func.isRequired,
   setFeeRate: PropTypes.func.isRequired,

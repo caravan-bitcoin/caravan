@@ -50,7 +50,7 @@ const PolicyRegistrationTable = ({ hmacs }) => {
 
 PolicyRegistrationTable.propTypes = {
   hmacs: PropTypes.arrayOf(
-    PropTypes.shape({ xfp: PropTypes.string, policyHmac: PropTypes.string })
+    PropTypes.shape({ xfp: PropTypes.string, policyHmac: PropTypes.string }),
   ).isRequired,
 };
 

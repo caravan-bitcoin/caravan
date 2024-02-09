@@ -72,7 +72,7 @@ export async function fetchAddressUTXOs(address, network, client) {
     .map((utxo) => utxo.amountSats)
     .reduce(
       (accumulator, currentValue) => accumulator.plus(currentValue),
-      new BigNumber(0)
+      new BigNumber(0),
     );
 
   return {

@@ -66,7 +66,7 @@ const getExtendedPublicKeysBIP32Paths = (state) => {
     extendedPublicKeyImporterBIP32Paths.push(
       `${extendedPublicKeyImporterBIP32Path(state, i)}${
         i < totalSigners ? "," : ""
-      }`
+      }`,
     );
   }
   return extendedPublicKeyImporterBIP32Paths.join("\n");
@@ -103,7 +103,7 @@ export const getPendingBalance = createSelector(
       // add slice's pending balance to aggregated balance
       return sliceBalance + balance;
     }, 0);
-  }
+  },
 );
 
 /**
@@ -112,7 +112,7 @@ export const getPendingBalance = createSelector(
  */
 export const getConfirmedBalance = createSelector(
   [getTotalBalance, getPendingBalance],
-  (totalBalance, pendingBalance) => totalBalance - pendingBalance
+  (totalBalance, pendingBalance) => totalBalance - pendingBalance,
 );
 
 /**
@@ -145,7 +145,7 @@ export const getSlicesWithLastUsed = createSelector(
         lastUsedTime: maxtime,
       };
     });
-  }
+  },
 );
 
 /**
@@ -160,9 +160,9 @@ export const getSpendableSlices = createSelector(
         // pending change is considered spendable
         (slice.lastUsed !== "Pending" || slice.change) &&
         slice.lastUsed !== "Spent" &&
-        slice.utxos.length
+        slice.utxos.length,
     );
-  }
+  },
 );
 
 /**
@@ -170,7 +170,7 @@ export const getSpendableSlices = createSelector(
  * All slices that have been used but have no balance left.
  */
 export const getSpentSlices = createSelector(getSlicesWithLastUsed, (slices) =>
-  slices.filter((slice) => slice.addressUsed && slice.balanceSats.isEqualTo(0))
+  slices.filter((slice) => slice.addressUsed && slice.balanceSats.isEqualTo(0)),
 );
 
 /**
@@ -178,7 +178,7 @@ export const getSpentSlices = createSelector(getSlicesWithLastUsed, (slices) =>
  */
 export const getSlicesWithBalance = createSelector(
   getSlicesWithLastUsed,
-  (slices) => slices.filter((slice) => slice.balanceSats.isGreaterThan(0))
+  (slices) => slices.filter((slice) => slice.balanceSats.isGreaterThan(0)),
 );
 
 /**
@@ -189,8 +189,8 @@ export const getZeroBalanceSlices = createSelector(
   getSlicesWithLastUsed,
   (slices) =>
     slices.filter(
-      (slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed
-    )
+      (slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
+    ),
 );
 
 /**
@@ -199,7 +199,7 @@ export const getZeroBalanceSlices = createSelector(
  */
 export const getUnknownAddressSlices = createSelector(
   getWalletSlices,
-  (slices) => slices.filter((slice) => !slice.addressKnown)
+  (slices) => slices.filter((slice) => !slice.addressKnown),
 );
 
 /**
@@ -208,7 +208,7 @@ export const getUnknownAddressSlices = createSelector(
  */
 export const getUnknownAddresses = createSelector(
   [getWalletSlices, getUnknownAddressSlices],
-  (slices) => slices.map((slice) => slice.multisig.address)
+  (slices) => slices.map((slice) => slice.multisig.address),
 );
 
 /**
@@ -216,7 +216,9 @@ export const getUnknownAddresses = createSelector(
  * where the address hasn't been used yet.
  */
 export const getDepositableSlices = createSelector(getDepositSlices, (slices) =>
-  slices.filter((slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed)
+  slices.filter(
+    (slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
+  ),
 );
 
 /**
@@ -246,7 +248,7 @@ export const getWalletDetailsText = createSelector(
     totalSigners,
     extendedPublicKeys,
     startingAddressIndex,
-    ledgerPolicyHmacs = []
+    ledgerPolicyHmacs = [],
   ) => {
     return `{
   "name": "${walletName}",
@@ -264,12 +266,12 @@ export const getWalletDetailsText = createSelector(
   "startingAddressIndex": ${startingAddressIndex},
   "ledgerPolicyHmacs": [${ledgerPolicyHmacs.map(JSON.stringify).join(", ")}]
 }`;
-  }
+  },
 );
 
 export const getWalletConfig = createSelector(
   [getWalletDetailsText],
-  JSON.parse
+  JSON.parse,
 );
 
 export const getHmacsWithName = createSelector(
@@ -279,10 +281,10 @@ export const getHmacsWithName = createSelector(
     return Object.values(extendedPublicKeys)
       .map((importer) => {
         const policyHmac = policyHmacs.find(
-          (hmac) => hmac.xfp === importer.rootXfp
+          (hmac) => hmac.xfp === importer.rootXfp,
         )?.policyHmac;
         return { policyHmac, name: importer.name };
       })
       .filter((registration) => registration.policyHmac);
-  }
+  },
 );

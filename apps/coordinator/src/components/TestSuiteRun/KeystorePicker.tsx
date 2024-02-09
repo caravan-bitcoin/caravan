@@ -142,7 +142,7 @@ const mapDispatchToProps = {
 
 const KeystorePicker = connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(KeystorePickerBase);
 
 export default KeystorePicker;

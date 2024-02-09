@@ -41,7 +41,7 @@ const WalletRegistrations = () => {
   const missingXfps = useMemo(() => {
     if (!walletConfig?.extendedPublicKeys) return false;
     return !walletConfig.extendedPublicKeys.every(
-      (xpub) => xpub?.xfp.length === 8
+      (xpub) => xpub?.xfp.length === 8,
     );
   }, [walletConfig]);
 

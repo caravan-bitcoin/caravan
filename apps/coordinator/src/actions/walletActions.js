@@ -122,11 +122,11 @@ export function autoSelectCoins() {
       // calculate output, input, and fee totals to determine change amount
       const outputsTotal = outputs.reduce(
         (total, output) => total.plus(output.amountSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
       const inputsTotalSats = selectedUtxos.reduce(
         (total, utxo) => total.plus(utxo.amountSats),
-        new BigNumber(0)
+        new BigNumber(0),
       );
       fee = estimateMultisigTransactionFee({
         ...options,
@@ -142,7 +142,7 @@ export function autoSelectCoins() {
         setChangeOutput({
           address: changeAddress,
           value: satoshisToBitcoins(changeAmount),
-        })
+        }),
       );
     } else {
       fee = estimateMultisigTransactionFee({
@@ -168,7 +168,7 @@ export function autoSelectCoins() {
 export function updateTxSlices(
   changeSlice,
   retries = 10,
-  skipAddresses = new Set()
+  skipAddresses = new Set(),
 ) {
   // eslint-disable-next-line consistent-return
   return async (dispatch, getState) => {
@@ -233,8 +233,8 @@ export function updateTxSlices(
     } catch (e) {
       return dispatch(
         setErrorNotification(
-          `There was a problem updating wallet state. Try a refresh. Error: ${e.message}`
-        )
+          `There was a problem updating wallet state. Try a refresh. Error: ${e.message}`,
+        ),
       );
     }
 
@@ -263,7 +263,7 @@ export function updateTxSlices(
     if (skipAddresses.size !== queriedSlices.length && retries)
       return setTimeout(
         () => dispatch(updateTxSlices(changeSlice, retries - 1, skipAddresses)),
-        750
+        750,
       );
 
     // if we're out of retries and counts are still the same
@@ -280,7 +280,7 @@ export function updateTxSlices(
     // to avoid any confusion for less technical users.
     const updatedSlice = await fetchSliceStatus(
       nextDepositSlice.multisig.address,
-      nextDepositSlice.bip32Path
+      nextDepositSlice.bip32Path,
     );
 
     // if its status has changed and the utxo set for the next

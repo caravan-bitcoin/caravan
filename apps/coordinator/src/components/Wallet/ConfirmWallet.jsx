@@ -15,7 +15,7 @@ import { getWalletConfig } from "../../selectors/wallet";
 
 const ConfirmationInfo = () => {
   const extendedPublicKeyImporters = useSelector(
-    (state) => state.quorum.extendedPublicKeyImporters
+    (state) => state.quorum.extendedPublicKeyImporters,
   );
   return (
     <>
@@ -34,7 +34,7 @@ const ConfirmationInfo = () => {
 
 const PolicyInfo = ({ keys }) => {
   const extendedPublicKeyImporters = useSelector(
-    (state) => state.quorum.extendedPublicKeyImporters
+    (state) => state.quorum.extendedPublicKeyImporters,
   );
 
   const keyOriginsWithName = useMemo(() => {
@@ -42,7 +42,7 @@ const PolicyInfo = ({ keys }) => {
       const origin = keys.find(
         (key) =>
           key.includes(importer.rootXfp) &&
-          key.includes(importer.extendedPublicKey)
+          key.includes(importer.extendedPublicKey),
       );
       return { origin, name: importer.name };
     });
@@ -66,7 +66,7 @@ PolicyInfo.propTypes = {
 
 const WalletConfirmation = () => {
   const startingAddressIndex = useSelector(
-    (state) => state.settings.startingAddressIndex
+    (state) => state.settings.startingAddressIndex,
   );
   const walletConfig = useSelector(getWalletConfig);
 

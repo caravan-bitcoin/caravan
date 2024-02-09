@@ -100,7 +100,7 @@ function sortPublicKeyImporters(state) {
     .sort();
   const sortedPublicKeyImporters = sortedPublicKeys.map((publicKey) => {
     return publicKeyImporters.find(
-      (publicKeyImporter) => publicKeyImporter.publicKey === publicKey
+      (publicKeyImporter) => publicKeyImporter.publicKey === publicKey,
     );
   });
   const publicKeyImportersChange = {};
@@ -144,7 +144,7 @@ function updatePublicKeyImporterState(state, action, field) {
   };
   newState.publicKeyImporters[action.number] = updateState(
     state.publicKeyImporters[action.number],
-    publicKeyImporterChange
+    publicKeyImporterChange,
   );
   newState = setConflict(action.number, state);
   return updateState(newState, { fingerprint: fingerprint(newState) });
@@ -227,7 +227,7 @@ function updateFinalizedSettings(state, action) {
           return count + 1;
         return count;
       },
-      0
+      0,
     );
     if (finalizedCount === 1) {
       // last one to be removed
@@ -235,7 +235,7 @@ function updateFinalizedSettings(state, action) {
       newState.finalizedAddressType = "";
       Object.values(newState.publicKeyImporters).forEach(
         // eslint-disable-next-line no-param-reassign,no-return-assign
-        (importer) => (importer.conflict = false)
+        (importer) => (importer.conflict = false),
       );
     }
   }
@@ -257,16 +257,16 @@ export default (state = createInitialState(), action) => {
         updatePublicKeyImporterState(
           state,
           { number: action.number, value: state.defaultBIP32Path },
-          "bip32Path"
+          "bip32Path",
         ),
         { number: action.number, value: false },
-        "bip32PathModified"
+        "bip32PathModified",
       );
     case SET_PUBLIC_KEY_IMPORTER_BIP32_PATH:
       return updatePublicKeyImporterState(
         updatePublicKeyImporterState(state, action, "bip32Path"),
         { number: action.number, value: true },
-        "bip32PathModified"
+        "bip32PathModified",
       );
     case SET_PUBLIC_KEY_IMPORTER_METHOD:
       return updatePublicKeyImporterState(state, action, "method");
@@ -276,7 +276,7 @@ export default (state = createInitialState(), action) => {
       return updatePublicKeyImporterState(
         updateFinalizedSettings(state, action),
         action,
-        "finalized"
+        "finalized",
       );
     case MOVE_PUBLIC_KEY_IMPORTER_UP:
       return movePublicKeyImporterUp(state, action);

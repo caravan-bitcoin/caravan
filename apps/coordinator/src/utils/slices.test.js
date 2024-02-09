@@ -125,14 +125,14 @@ describe("slices utils", () => {
       validChange.forEach((path) => {
         assert(
           sliceUtils.isChange(path),
-          `Path ${path} should have returned true`
+          `Path ${path} should have returned true`,
         );
       });
 
       invalidChange.forEach((path) => {
         assert(
           !sliceUtils.isChange(path),
-          `Path ${path} should have returned false`
+          `Path ${path} should have returned false`,
         );
       });
     });

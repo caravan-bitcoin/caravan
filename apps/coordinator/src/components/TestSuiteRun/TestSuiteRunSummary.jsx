@@ -109,7 +109,7 @@ class TestSuiteRunSummaryBase extends React.Component {
           <span className="TestSuiteRunSummary-success">
             {
               testSuiteRun.testRuns.filter(
-                (testRun) => testRun.status === Test.SUCCESS
+                (testRun) => testRun.status === Test.SUCCESS,
               ).length
             }{" "}
             <small>SUCCESS</small>
@@ -118,7 +118,7 @@ class TestSuiteRunSummaryBase extends React.Component {
           <span className="TestSuiteRunSummary-failure">
             {
               testSuiteRun.testRuns.filter(
-                (testRun) => testRun.status === Test.FAILURE
+                (testRun) => testRun.status === Test.FAILURE,
               ).length
             }{" "}
             <small>FAIL</small>
@@ -127,7 +127,7 @@ class TestSuiteRunSummaryBase extends React.Component {
           <span className="TestSuiteRunSummary-error">
             {
               testSuiteRun.testRuns.filter(
-                (testRun) => testRun.status === Test.ERROR
+                (testRun) => testRun.status === Test.ERROR,
               ).length
             }{" "}
             <small>ERROR</small>
@@ -268,7 +268,7 @@ const mapDispatchToProps = {
 
 const TestSuiteRunSummary = connect(
   mapStateToProps,
-  mapDispatchToProps
+  mapDispatchToProps,
 )(TestSuiteRunSummaryBase);
 
 export default TestSuiteRunSummary;

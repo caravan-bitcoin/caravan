@@ -67,7 +67,7 @@ export default (state = initialState, action) => {
   const keyResetState = updatePublicKeyImporterState(
     state,
     { value: "" },
-    "publicKey"
+    "publicKey",
   );
 
   switch (action.type) {
@@ -87,7 +87,7 @@ export default (state = initialState, action) => {
       return updatePublicKeyImporterState(
         state,
         { value: state.defaultBIP32Path },
-        "bip32Path"
+        "bip32Path",
       );
     case RESET_PUBLIC_KEY_IMPORTER:
       return {

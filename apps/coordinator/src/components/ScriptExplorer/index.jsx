@@ -110,7 +110,7 @@ class Spend extends React.Component {
             number={signatureImporterNum}
             unsignedPsbt={transaction.unsignedPSBT}
           />
-        </Box>
+        </Box>,
       );
     }
     return signatureImporters;
@@ -126,7 +126,7 @@ class Spend extends React.Component {
     return (
       Object.values(signatureImporters).length > 0 &&
       Object.values(signatureImporters).every(
-        (signatureImporter) => signatureImporter.finalized
+        (signatureImporter) => signatureImporter.finalized,
       )
     );
   };

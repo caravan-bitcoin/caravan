@@ -33,7 +33,7 @@ const StartingAddressIndexPicker = ({
     const index = event.target.value;
     const error = validateBIP32Index(index, { mode: "unhardened" }).replace(
       "BIP32",
-      "Starting Address"
+      "Starting Address",
     );
     if (!error && index) {
       setStartingAddressIndex(parseInt(index, 10));
@@ -118,5 +118,5 @@ export default connect(
   mapStateToProps,
   wrappedActions({
     setStartingAddressIndex: SET_STARTING_ADDRESS_INDEX,
-  })
+  }),
 )(StartingAddressIndexPicker);

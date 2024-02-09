@@ -78,7 +78,7 @@ class WalletDeposit extends React.Component {
           clearInterval(depositTimer);
           updateDepositSlice({ ...updates, bip32Path: slice.bip32Path });
           enqueueSnackbar(
-            "Deposit received. A new address should now be available for deposit."
+            "Deposit received. A new address should now be available for deposit.",
           );
           this.resetDepositAddressIndex();
           setTimeout(this.getDepositAddress, 2000);

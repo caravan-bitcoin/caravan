@@ -74,7 +74,7 @@ const PublicKeyImporters = ({ totalSigners }) => {
     publicKeyImporters.push(
       <Box key={publicKeyImporterNum} mt={publicKeyImporterNum === 1 ? 0 : 2}>
         <PublicKeyImporter number={publicKeyImporterNum} />
-      </Box>
+      </Box>,
     );
   }
   return publicKeyImporters;

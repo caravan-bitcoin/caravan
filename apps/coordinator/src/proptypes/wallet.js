@@ -21,11 +21,11 @@ const quorumPropType = {
 
 const walletConfigPropType = {
   ledgerPolicyHmacs: PropTypes.arrayOf(
-    PropTypes.shape(ledgerPolicyHmacPropType)
+    PropTypes.shape(ledgerPolicyHmacPropType),
   ),
   addressType: PropTypes.string.isRequired,
   extendedPublicKeys: PropTypes.arrayOf(
-    PropTypes.shape(extendedPublicKeyPropType)
+    PropTypes.shape(extendedPublicKeyPropType),
   ),
   name: PropTypes.string,
   uuid: PropTypes.string,

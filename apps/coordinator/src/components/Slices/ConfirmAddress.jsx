@@ -95,7 +95,7 @@ const ConfirmAddress = ({ slice, network }) => {
   const walletConfig = useSelector(getWalletConfig);
   const [state, dispatch] = useReducer(
     interactionReducer,
-    initialInteractionState
+    initialInteractionState,
   );
   const [interaction, setInteraction] = useState(null);
 
@@ -109,7 +109,7 @@ const ConfirmAddress = ({ slice, network }) => {
     if (extendedPublicKeyImporter) {
       const ledgerPolicyHmac =
         walletConfig.ledgerPolicyHmacs.find(
-          (policy) => policy.xfp === extendedPublicKeyImporter.rootXfp
+          (policy) => policy.xfp === extendedPublicKeyImporter.rootXfp,
         )?.policyHmac || "";
       dispatch({
         type: "SET_KEY_SELECTED",
@@ -149,7 +149,7 @@ const ConfirmAddress = ({ slice, network }) => {
             multisig,
             walletConfig,
             policyHmac: ledgerPolicyHmac,
-          })
+          }),
         );
         dispatch({ type: "HAS_INTERACTION", value: true });
         dispatch({ type: "RESET" });
@@ -182,7 +182,7 @@ const ConfirmAddress = ({ slice, network }) => {
           multisig,
           walletConfig,
           policyHmac: state.ledgerPolicyHmac,
-        })
+        }),
       );
       dispatch({ type: "HAS_INTERACTION", value: true });
       dispatch({ type: "RESET" });

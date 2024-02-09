@@ -1,23 +1,39 @@
-FROM node:16-buster-slim AS builder
+FROM node:20-buster-slim AS base
 
 # Install all OS dependencies
+FROM base AS builder
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update --yes && \
     apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
     build-essential
 
-# Copy over required files for build
-WORKDIR /var/app
-COPY fixtures /var/app/fixtures
-COPY public /var/app/public
-COPY src /var/app/src
-COPY babel.config.json jest.config.json vite.config.ts tsconfig.json tsconfig.node.json .env vite-env.d.ts .eslintignore .eslintrc package-lock.json index.html package.json /var/app/
+# Set the working directory
+WORKDIR /app
+RUN npm install -g turbo
+COPY . .
+# Optimize caching with docker
+# https://turbo.build/repo/docs/handbook/deploying-with-docker
+RUN turbo prune @caravan/coordinator --docker
 
-# Build the app
+# Add lockfile and package.json's of isolated subworkspace
+FROM base AS installer
+WORKDIR /app
+
+# First install the dependencies (as they change less often)
+COPY .gitignore .gitignore
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/package-lock.json ./package-lock.json
 RUN npm install
-RUN npm run build
 
-# Serve the production build files via nginx (will be served at http://localhost:80/caravan)
-FROM nginx:1.23
-COPY --from=builder /var/app/build /usr/share/nginx/html/caravan
+# Build the project
+COPY --from=builder /app/out/full/ .
+ENV NODE_OPTIONS=--max-old-space-size=32768
+
+RUN npx turbo run build --filter=coordinator...
+
+# Serve the production build files via nginx (will be served at http://localhost:80/caravan/#
+# in docker vm. Map port 80 to a different port on the host machine to access the app)
+FROM nginx:1.23 AS runner
+WORKDIR /app
+COPY --from=installer /app/apps/coordinator/build /usr/share/nginx/html/caravan

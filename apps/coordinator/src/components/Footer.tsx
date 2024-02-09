@@ -17,7 +17,7 @@ const Footer = () => (
             className="logo"
             alt="Unchained Capital logo"
             height="32"
-          />
+          />,
         )}
       </Grid>
 

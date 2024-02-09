@@ -32,7 +32,7 @@ const PrivateClientSettings = ({
         }
         {externalLink(
           "https://github.com/unchained-capital/caravan#adding-cors-headers",
-          "here"
+          "here",
         )}
         {"."}
       </small>

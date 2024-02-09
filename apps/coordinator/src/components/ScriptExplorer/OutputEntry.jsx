@@ -155,11 +155,11 @@ class OutputEntry extends React.Component {
       .map((output) => output.amountSats)
       .reduce(
         (accumulator, currentValue) => accumulator.plus(currentValue),
-        new BigNumber(0)
+        new BigNumber(0),
       );
     const feeSats = bitcoinsToSatoshis(new BigNumber(fee));
     return satoshisToBitcoins(
-      inputsTotalSats.minus(outputTotalSats.plus(feeSats))
+      inputsTotalSats.minus(outputTotalSats.plus(feeSats)),
     );
   };
 
@@ -325,7 +325,7 @@ OutputEntry.propTypes = {
     PropTypes.shape({
       amount: PropTypes.string,
       amountError: PropTypes.string.isRequired,
-    })
+    }),
   ).isRequired,
   remove: PropTypes.func.isRequired,
   setAddress: PropTypes.func.isRequired,

@@ -101,7 +101,7 @@ export async function bitcoindGetAddressStatus({ url, auth, address }) {
     if (isWalletAddressNotFoundError(e))
       // eslint-disable-next-line no-console
       console.warn(
-        `Address ${address} not found in bitcoind's wallet. Query failed.`
+        `Address ${address} not found in bitcoind's wallet. Query failed.`,
       );
     else console.error(e.message); // eslint-disable-line no-console
     return e;
