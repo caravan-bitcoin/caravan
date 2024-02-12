@@ -3,10 +3,14 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "changeset": "changeset",
+    "ci": "turbo run build lint test",
     "dev": "turbo dev",
-    "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "gen": "turbo gen run"
+    "gen": "turbo gen run",
+    "lint": "turbo lint",
+    "version": "turbo run build lint test && changeset version",
+    "release": "turbo run build lint test && changeset publish"
   },
   "devDependencies": {
     "@caravan/eslint-config": "*",
