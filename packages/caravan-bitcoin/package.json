@@ -7,16 +7,16 @@
   "module": "./dist/index.mjs",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/unchained-capital/unchained-bitcoin.git"
+    "url": "https://github.com/caravan-bitcoin/caravan/packages/caravan-bitcoin"
   },
   "author": "Unchained Capital",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/unchained-capital/unchained-bitcoin/issues"
+    "url": "https://github.com/caravan-bitcoin/caravan/issues"
   },
-  "homepage": "https://unchained-capital.github.io/unchained-bitcoin",
+  "homepage": "https://github.com/caravan-bitcoin/caravan/",
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "devDependencies": {
     "@babel/cli": "^7.7.0",

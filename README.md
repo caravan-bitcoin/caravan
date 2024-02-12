@@ -47,6 +47,25 @@ In the caravan monorepo we use `changesets` to manage versioning and releases.
 A changeset will be _required_ for PRs to be merged. Read below to learn more.
 
 ### Changesets
+
+#### Quickstart
+Any PR to caravan that introduces a functional change requires a changeset be submitted with it.
+
+Simply run the following command and follow the cli instructions:
+
+```
+$ npm run changesets
+```
+
+Learn about [semantic versioning](https://docs.npmjs.com/about-semantic-versioning) if you
+are unsure whether your changes qualify as a patch, minor, or major change.
+
+Pull Requests are checked for changesets by the [changeset-bot](https://github.com/apps/changeset-bot).
+
+[Changesets GitHub Actions](https://github.com/changesets/action) are run to create a version PR
+and publish on merge.
+
+#### About Changesets
 This is the [recommended way by Turborepo](https://turbo.build/repo/docs/handbook/publishing-packages/versioning-and-publishing)
 to handle changelogs, versioning, and releases.
 It's designed first as a manual process, so by default it won't "yell" at you to do
@@ -70,13 +89,6 @@ And another good resource for what the workflow should look like [here](https://
 - Detection + surfacing of changesets in PRs
 
 [Automating Changesets](https://github.com/changesets/changesets/blob/main/docs/automating-changesets.md)
-
-Rough steps to implement:
-- [Intro by Turborepo](https://turbo.build/repo/docs/handbook/publishing-packages/versioning-and-publishing)
-- [Intro to using changesets](https://github.com/changesets/changesets/blob/main/docs/intro-to-using-changesets.md)
-- [Example project](https://github.com/vercel/turbo/tree/main/examples/with-changesets)
-- Add [changeset bot](https://github.com/apps/changeset-bot) - gets CI to check for changesets
-- Automate versioning and publishing in CI with [GitHub Actions](https://github.com/changesets/action)
 
 
 ## Getting started

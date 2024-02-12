@@ -3,18 +3,18 @@
   "version": "0.0.0-beta",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
-  "publicPrivate": true,
+  "private": true,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/unchained-capital/caravan"
+    "url": "https://github.com/caravan-bitcoin/caravan/apps/coordinator"
   },
   "author": "Unchained Capital",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/unchained-capital/caravan/issues"
+    "url": "https://github.com/caravan-bitcoin/caravan/issues"
   },
-  "homepage": "https://unchained-capital.github.io/caravan",
+  "homepage": "https://github.com/caravan-bitcoin/caravan",
   "engineStrict": true,
   "engines": {
     "node": ">=20"
