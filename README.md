@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/images/caravan-logo-transparent.png" />
+</p>
+
 # Caravan Monorepo
 
 ## Introduction
