@@ -34,23 +34,6 @@ project.
 - Having a unified set of developer tooling (linting rules, deployment automation, etc.) also improves developer QoL and code reliability.
 
 
-## TODO:
-This is still a work in progress. Before we're ready to release,
-the following need to be resolved
-
-- [x] Setup the readme for how to install, build, manage workspaces, etc.
-- [ ] Setup global pre-commit hooks for linting and type checks
-- [x] Setup with all latest versions of repos with typescript
-- [x] Coordinate/centralize engines and npmrcs
-- [ ] Setup automation: changeset, CI, release process, etc.
-- [x] Finish cleanup of old build related dependencies
-- [ ] Lock in old repos and deploy first versions of @caravan packages
-- [x] Get prettier auto formatting working
-- [x] Make sure all tests pass
-- [x] Improve sharing of configs for jest, tsconfig, and eslint
-- [ ] Cleanup package.jsons
-- [ ] Setup documentation generation
-
 ## Developers
 The monorepo setup should make it easier for developers to test their changes
 in a more realistic environment, especially when making changes to libraries
@@ -115,7 +98,7 @@ Note:
 > After you've declared a task in turbo.json, it's up to you to implement it in your package.json manifests. You can add scripts all at once, or one workspace at a time. Turborepo will gracefully skip workspaces that don't include the task in their respective package.json manifest.
 
 The main scripts to be run are defined in this config file:
-build, lint, test, and dev.
+`build`, `lint`, `test`, and `dev`.
 
 ## Development
 One of the main benefits of a monorepo for this type of project is
@@ -152,7 +135,6 @@ and write a fully functioning package yourself.
 #### Manually adding a new package
 `packages/caravan-psbt` is a good starting point for a simple package.
 
-#### Example Walk-thru
 Let's make a package `@caravan/clients`. This is code that's being added
 to caravan in [this PR](https://github.com/unchained-capital/caravan/pull/365)
 but would be a good candidate for a standalone package.
@@ -204,15 +186,13 @@ This will initialize a package.json for you. But we want to add a few more field
 }
 ```
 
-**TODO:** probably need to cleanup the @caravan/eslint-config and maybe tsconfig
-
 - Install some more dependencies (from package dir):
 ```shell
 $ npm install --save-dev typescript tsup eslint jest ts-jest
 ```
 
-(alternatively can use the `--scope` arg to target the package from
-the root)
+(alternatively can use the `--scope` arg to target the package from the root)
+
 - Add configs: `eslintrc.js`, `tsconfig.json`, `jest.config.js`:
 ```javascript
 // .eslintrc.js
@@ -284,8 +264,6 @@ This Turborepo includes the following packages and apps:
 
 - `eslint-config-custom`: shared `eslint` configurations
 - `tsconfig`: `tsconfig.json`s used throughout the monorepo
-
-Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
 
 ### Utilities
 
