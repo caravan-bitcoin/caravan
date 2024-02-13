@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     tags:
-      - '**'
+      - '@caravan/coordinator**'
 
 permissions:
   contents: write
@@ -19,5 +19,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Deploy
-        run: npx turbo run deploy
+      - name: Build
+        run: npx turbo run build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          folder: ~/apps/caravan-coordinator/build
