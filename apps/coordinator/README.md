@@ -35,12 +35,22 @@ a copy of Caravan hosted on GitHub by
 If you would prefer to host your own copy of Caravan on GitHub, you
 can do so by first forking the
 [Caravan repository](https://github.com/unchained-capital/caravan)
-into your own GitHub organization. You should see a copy of the
-Caravan web application at
-`https://YOUR_GITHUB_USERNAME.github.io/caravan`.
+into your own GitHub organization. Go to the (newly forked) repository's "Settings" page and
+scroll down to the "GitHub Pages" section. Make sure to setup the settings
+to us a gh-pages branch (create the branch if necessary).
 
-If not, go to the (newly forked) repository's "Settings" page and
-scroll down to the "GitHub Pages" section. Ensure you see a message
+You may need to run a deploy manually from your computer for the first time.
+
+```shell
+$ git clone https://YOUR_GITHUB_USERNAME.github.io/caravan
+$ cd caravan
+$ npm install
+$ turbo run deploy
+```
+
+You should see a copy of the Caravan web application at
+`https://YOUR_GITHUB_USERNAME.github.io/caravan`. If not, go back to the
+GitHub Pages section and ensure you see a message
 saying "Your site is published at ...".
 
 ### Host Locally
