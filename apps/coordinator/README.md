@@ -10,7 +10,7 @@ addresses.
 Caravan is also stateless. It does not itself store any data. You must
 safekeep the addresses (and redeem scripts & BIP32 paths) you create.
 
-[Try Caravan now!](https://caravan-bitcoin.github.io/coordinator)
+[Try Caravan now!](https://caravan-bitcoin.github.io/caravan)
 
 ## Installation
 
@@ -20,7 +20,7 @@ be run in any web browser from a local or remote installation.
 ### Unchained Capital GitHub
 
 The simplest way to use Caravan is to visit
-[https://caravan-bitcoin.github.io/coordinator](https://caravan-bitcoin.github.io/coordinator),
+[https://caravan-bitcoin.github.io/caravan](https://caravan-bitcoin.github.io/caravan),
 a copy of Caravan hosted on GitHub by
 [Unchained Capital](https://www.unchained.com).
 
@@ -43,7 +43,7 @@ $ turbo run deploy
 ```
 
 You should see a copy of the Caravan web application at
-`https://YOUR_GITHUB_USERNAME.github.io/coordinator`. If not, go back to the
+`https://YOUR_GITHUB_USERNAME.github.io/caravan`. If not, go back to the
 GitHub Pages section and ensure you see a message
 saying "Your site is published at ...".
 
@@ -62,7 +62,7 @@ $ npm run dev
 ...
 ```
 
-Now visit http://localhost:5173/coordinator/# to interact with your local copy of
+Now visit http://localhost:5173/caravan/# to interact with your local copy of
 Caravan.
 
 ### Host Remotely
@@ -105,7 +105,7 @@ Caravan should then be accessible at http://localhost:8000/caravan/#
 ## Usage
 
 If you can access the [Caravan Coordinator web
-application](https://caravan-bitcoin.github.io/coordinator) in your
+application](https://caravan-bitcoin.github.io/caravan) in your
 browser, you are ready to start using Caravan.
 
 Click the _Create_ or _Interact_ links in the navbar to get started.

@@ -5,7 +5,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/coordinator/#",
+  base: "/caravan/#",
   resolve: {
     alias: {
       utils: path.resolve(__dirname, "./src/utils"),
@@ -19,6 +19,14 @@ export default defineConfig({
   ],
   build: {
     outDir: "build",
+    rollupOptions: {
+      onwarn(warning, warn) {
+        if (warning.code === "MODULE_LEVEL_DIRECTIVE") {
+          return;
+        }
+        warn(warning);
+      },
+    },
   },
   define: {
     __GIT_SHA__: JSON.stringify(process.env.__GIT_SHA__),

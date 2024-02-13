@@ -3,7 +3,9 @@ name: Deploy
 on:
   push:
     tags:
-      - '@caravan/coordinator@*'
+      - '@caravan/coordinator**'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -12,12 +14,33 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    # To use Turborepo Remote Caching
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
       - name: Install dependencies
         run: npm install
 
-      - name: Deploy
-        run: npx turbo run deploy
+      # the deploy action can't find the build directory if it's in the
+      # sub directory of the monorepo, even if we reference it correctly
+      # so we have to copy it to the root of the repo.
+      - name: Build
+        run: |
+          npx turbo run build
+          cp -R apps/coordinator ./build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: build
