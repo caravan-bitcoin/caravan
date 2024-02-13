@@ -4,6 +4,11 @@
 
 # Caravan Monorepo
 
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+![Build Status](https://github.com/caravan-bitcoin/caravan/actions/workflows/ci.yml/badge.svg)
+![Hosted Coordinator](https://github.com/caravan-bitcoin/caravan/actions/workflows/deploy.yml/badge.svg)
+![Package Publication](https://github.com/caravan-bitcoin/caravan/actions/workflows/release.yml/badge.svg)
+
 ## Introduction
 
 This is a monorepo project for the Caravan FOSS ecosystem, built with
