@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.1
+
+### Patch Changes
+
+- [#7](https://github.com/caravan-bitcoin/caravan/pull/7) [`1a5b408`](https://github.com/caravan-bitcoin/caravan/commit/1a5b408fdf2c8e961609124fa6847642b04ff134) Thanks [@bucko13](https://github.com/bucko13)! - Change the baseUrl for caravan coordinator from /caravan/# to /coordinator/#
+
 ## 0.0.0
 
 ### Major Changes
