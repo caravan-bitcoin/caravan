@@ -2,7 +2,7 @@ import React, { ErrorInfo } from "react";
 
 import { Box, Typography } from "@mui/material";
 
-const reportingURL = "https://github.com/unchained-capital/caravan/issues";
+const reportingURL = "https://github.com/caravan-bitcoin/caravan/issues";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
