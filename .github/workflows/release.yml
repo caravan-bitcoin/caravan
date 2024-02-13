@@ -5,8 +5,10 @@ on:
     branches:
       - main
 
+# allow action to create tags and pull request
 permissions:
-  contents: write   # This is required to create/push the new git tag
+  contents: write
+  pull-requests: write
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
