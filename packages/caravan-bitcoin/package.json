@@ -18,6 +18,11 @@
   "engines": {
     "node": ">=20"
   },
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "devDependencies": {
     "@babel/cli": "^7.7.0",
     "@babel/core": "^7.7.2",
