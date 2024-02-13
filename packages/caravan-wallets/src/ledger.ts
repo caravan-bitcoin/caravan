@@ -470,7 +470,7 @@ export class LedgerGetMetadata extends LedgerDashboardInteraction {
         versionString = "";
       }
 
-      /* eslint-disable no-unused-vars, no-bitwise */
+      /* eslint-disable @typescript-eslint/no-unused-vars, no-bitwise */
       const isOSU = seVersion.includes("-osu");
       const version = seVersion.replace("-osu", "");
       const m = seVersion.match(/([0-9]+.[0-9]+)(.[0-9]+)?(-(.*))?/);

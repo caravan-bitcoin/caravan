@@ -6,8 +6,7 @@
     "jest/globals": true
   },
   "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended"
+    "@caravan/eslint-config/library.js"
   ],
   "globals": {
     "Atomics": "readonly",
@@ -303,7 +302,6 @@
     ]
   },
   "plugins": [
-    "jest",
-    "@typescript-eslint"
+    "jest"
   ]
 }
