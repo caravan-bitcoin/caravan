@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.2
+
+### Patch Changes
+
+- [#9](https://github.com/caravan-bitcoin/caravan/pull/9) [`1cf609b`](https://github.com/caravan-bitcoin/caravan/commit/1cf609bfda54d9502453581a23c060d1b8dc52b2) Thanks [@bucko13](https://github.com/bucko13)! - Fix deploy and revert back to original base url for github pages compatibility
+
 ## 0.0.1
 
 ### Patch Changes
