@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     tags:
-      - '@caravan/coordinator@*'
+      - '**'
 
 permissions:
   contents: write
