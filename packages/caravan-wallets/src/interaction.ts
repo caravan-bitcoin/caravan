@@ -567,6 +567,7 @@ export class IndirectKeystoreInteraction extends KeystoreInteraction {
    * of this interaction.
    *
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   parse(response: Record<string, unknown> | string) {
     throw new Error("Override the `parse` method in this interaction.");
   }
