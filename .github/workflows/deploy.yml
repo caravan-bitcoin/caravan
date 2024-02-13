@@ -1,0 +1,23 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - '@caravan/coordinator@*'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Deploy
+        run: npx turbo run deploy
