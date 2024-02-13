@@ -1,11 +1,5 @@
 # Caravan - Stateless Multisig Coordinator
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
-[![Build Status](https://travis-ci.com/unchained-capital/caravan.svg?branch=master)](https://travis-ci.com/unchained-capital/caravan)
-[![dependencies Status](https://david-dm.org/unchained-capital/caravan/status.svg)](https://david-dm.org/unchained-capital/caravan)
-[![devDependencies Status](https://david-dm.org/unchained-capital/caravan/dev-status.svg)](https://david-dm.org/unchained-capital/caravan?type=dev)
-[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
-
 Caravan is making bitcoin multisig custody easier and safer through
 transparency and standards.
 
@@ -16,7 +10,7 @@ addresses.
 Caravan is also stateless. It does not itself store any data. You must
 safekeep the addresses (and redeem scripts & BIP32 paths) you create.
 
-[Try Caravan now!](https://unchained-capital.github.io/caravan)
+[Try Caravan now!](https://caravan-bitcoin.github.io/coordinator)
 
 ## Installation
 
@@ -26,7 +20,7 @@ be run in any web browser from a local or remote installation.
 ### Unchained Capital GitHub
 
 The simplest way to use Caravan is to visit
-[https://unchained-capital.github.io/caravan](https://unchained-capital.github.io/caravan),
+[https://caravan-bitcoin.github.io/coordinator](https://caravan-bitcoin.github.io/coordinator),
 a copy of Caravan hosted on GitHub by
 [Unchained Capital](https://www.unchained.com).
 
@@ -34,7 +28,7 @@ a copy of Caravan hosted on GitHub by
 
 If you would prefer to host your own copy of Caravan on GitHub, you
 can do so by first forking the
-[Caravan repository](https://github.com/unchained-capital/caravan)
+[Caravan repository](https://github.com/caravan-bitcoin/caravan)
 into your own GitHub organization. Go to the (newly forked) repository's "Settings" page and
 scroll down to the "GitHub Pages" section. Make sure to setup the settings
 to us a gh-pages branch (create the branch if necessary).
@@ -49,7 +43,7 @@ $ turbo run deploy
 ```
 
 You should see a copy of the Caravan web application at
-`https://YOUR_GITHUB_USERNAME.github.io/caravan`. If not, go back to the
+`https://YOUR_GITHUB_USERNAME.github.io/coordinator`. If not, go back to the
 GitHub Pages section and ensure you see a message
 saying "Your site is published at ...".
 
@@ -59,7 +53,7 @@ You can always clone the source code of Caravan to your local machine
 and run it from there. You will require a recent `npm` installation.
 
 ```bash
-$ git clone https://github.com/unchained-capital/caravan
+$ git clone https://github.com/caravan-bitcoin/caravan
 ...
 $ cd caravan
 $ npm install
@@ -68,7 +62,7 @@ $ npm run dev
 ...
 ```
 
-Now visit http://localhost:5173 to interact with your local copy of
+Now visit http://localhost:5173/coordinator/# to interact with your local copy of
 Caravan.
 
 ### Host Remotely
@@ -110,8 +104,8 @@ Caravan should then be accessible at http://localhost:8000/caravan/#
 
 ## Usage
 
-If you can access the [Caravan web
-application](https://unchained-capital.github.io/caravan) in your
+If you can access the [Caravan Coordinator web
+application](https://caravan-bitcoin.github.io/coordinator) in your
 browser, you are ready to start using Caravan.
 
 Click the _Create_ or _Interact_ links in the navbar to get started.
@@ -359,4 +353,4 @@ point that if corsproxy is running, paste your node's IP:port on the end of the
 
 ## Contributing
 
-Please see the [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the open [GitHub Issues](https://github.com/unchained-capital/caravan/issues)
+Please see the [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the open [GitHub Issues](https://github.com/caravan-bitcoin/caravan/issues)

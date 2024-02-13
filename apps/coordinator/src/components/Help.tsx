@@ -174,7 +174,7 @@ const Help = () => (
                   </ListItemIcon>
                   <ListItemText>
                     {externalLink(
-                      "https://unchained-capital.com/blog/gearing-up-the-caravan/",
+                      "https://unchained.com/blog/gearing-up-the-caravan/",
                       "Blog Post",
                     )}
                   </ListItemText>
@@ -198,7 +198,7 @@ const Help = () => (
                   </ListItemIcon>
                   <ListItemText>
                     {externalLink(
-                      "https://github.com/unchained-capital/caravan",
+                      "https://github.com/caravan-bitcoin/caravan",
                       "Source Code",
                     )}
                   </ListItemText>
@@ -261,7 +261,7 @@ const Help = () => (
               Seeing a bug or need a feature?
             </CardContent>
             <CardActions>
-              <Button href="https://github.com/unchained-capital/caravan/issues">
+              <Button href="https://github.com/caravan-bitcoin/caravan/issues">
                 <BugReport /> &nbsp; Report Issue
               </Button>
               <Button data-cy="run-tests-button" component={Link} to="/test">

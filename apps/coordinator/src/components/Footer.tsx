@@ -11,7 +11,7 @@ const Footer = () => (
     <Grid container justifyContent="space-between" alignItems="center">
       <Grid item sm={2}>
         {externalLink(
-          "https://www.unchained-capital.com",
+          "https://www.unchained.com",
           <img
             src={logo}
             className="logo"
