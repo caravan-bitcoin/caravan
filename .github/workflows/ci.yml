@@ -10,11 +10,16 @@ jobs:
         node-version: ["20.x"]
 
     steps:
-      - name: Install Dependencies
-        run: npm install
-      - uses: actions/checkout@v4
-      - name: Use Node.js
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js 20
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
-      - run: npm run ci
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm run ci
