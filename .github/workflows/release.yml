@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write   # This is required to create/push the new git tag
+
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
