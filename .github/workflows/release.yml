@@ -16,6 +16,11 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # To use Turborepo Remote Caching
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -45,3 +50,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # For caravan coordinator, there's no publish to npm so no
+      # tag is created. This makes sure we push tags for everything
+      - name: Publish tags
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          npm run publish-tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -10,7 +10,8 @@
     "gen": "turbo gen run",
     "lint": "turbo lint",
     "version": "turbo run build lint test && changeset version",
-    "release": "turbo run build lint test && changeset publish"
+    "release": "turbo run build lint test && changeset publish",
+    "publish-tags": "changeset tag && git push --follow-tags"
   },
   "devDependencies": {
     "@caravan/eslint-config": "*",

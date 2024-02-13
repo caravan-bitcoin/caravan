@@ -8,6 +8,10 @@ jobs:
     strategy:
       matrix:
         node-version: ["20.x"]
+    # To use Turborepo Remote Caching
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
     steps:
       - name: Checkout Repo
