@@ -8,6 +8,9 @@
 ![Build Status](https://github.com/caravan-bitcoin/caravan/actions/workflows/ci.yml/badge.svg)
 ![Hosted Coordinator](https://github.com/caravan-bitcoin/caravan/actions/workflows/deploy.yml/badge.svg)
 ![Package Publication](https://github.com/caravan-bitcoin/caravan/actions/workflows/release.yml/badge.svg)
+[![Try with Replit Badge](https://replit.com/badge?caption=Try%20with%20Replit)](https://replit.com/@Bucko13/caravan))
+
+
 
 ## Introduction
 
