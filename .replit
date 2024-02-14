@@ -1,0 +1,15 @@
+modules = ["nodejs-20:v8-20230920-bd784b9"]
+hidden = [".config", "package-lock.json"]
+run = "npx turbo run dev"
+
+[nix]
+channel = "stable-23_05"
+
+[unitTest]
+language = "nodejs"
+
+[deployment]
+deploymentTarget = "static"
+ignorePorts = false
+build = ["sh", "-c", "npx turbo run build"]
+publicDir = "apps/coordinator/build"

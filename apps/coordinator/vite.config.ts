@@ -5,7 +5,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/caravan/#",
+  base: "#",
   resolve: {
     alias: {
       utils: path.resolve(__dirname, "./src/utils"),
@@ -17,6 +17,9 @@ export default defineConfig({
       protocolImports: true,
     }),
   ],
+  server: {
+    host: "0.0.0.0",
+  },
   build: {
     outDir: "build",
     rollupOptions: {
