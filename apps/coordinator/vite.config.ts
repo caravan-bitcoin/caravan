@@ -5,7 +5,11 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/caravan/#",
+  // only need to set the base to a subdirectory when deploying to GitHub Pages
+  // otherwise, if running locally or deploying via alternative like vercel or replit,
+  // then the sub-path can cause issues
+  base:
+    process.env.GH_PAGES || process.env.GITHUB_ACTIONS ? "/caravan/#" : "/#",
   resolve: {
     alias: {
       utils: path.resolve(__dirname, "./src/utils"),

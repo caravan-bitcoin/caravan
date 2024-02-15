@@ -32,8 +32,8 @@ ENV NODE_OPTIONS=--max-old-space-size=32768
 
 RUN npx turbo run build --filter=coordinator...
 
-# Serve the production build files via nginx (will be served at http://localhost:80/caravan/#
+# Serve the production build files via nginx (will be served at http://localhost:80/#
 # in docker vm. Map port 80 to a different port on the host machine to access the app)
 FROM nginx:1.23 AS runner
 WORKDIR /app
-COPY --from=installer /app/apps/coordinator/build /usr/share/nginx/html/caravan
+COPY --from=installer /app/apps/coordinator/build /usr/share/nginx/html/

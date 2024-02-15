@@ -62,7 +62,7 @@ $ npm run dev
 ...
 ```
 
-Now visit http://localhost:5173/caravan/# to interact with your local copy of
+Now visit http://localhost:5173/# to interact with your local copy of
 Caravan.
 
 ### Host Remotely
@@ -97,10 +97,10 @@ docker build  -t caravan:latest -f apps/coordinator/Dockerfile .
 To run the built docker image:
 
 ```bash
-docker run -p 80:8000 caravan:latest
+docker run -p 8000:80 caravan:latest
 ```
 
-Caravan should then be accessible at http://localhost:8000/caravan/#
+Caravan should then be accessible at http://localhost:8000/#
 
 ## Usage
 
