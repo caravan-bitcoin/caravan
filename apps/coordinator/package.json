@@ -1,6 +1,6 @@
 {
   "name": "@caravan/coordinator",
-  "version": "0.0.3",
+  "version": "0.0.2",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
   "private": true,
@@ -69,7 +69,7 @@
     "build:ci": "npm run ci && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
     "ci": "npm run lint && npm run test:ci",
-    "deploy": "gh-pages -d build",
+    "deploy": "GH_PAGES=true gh-pages -d build",
     "gh-pages": "CI=true npm run build && gh-pages -d build",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src/",
     "predeploy": "npm run build",
