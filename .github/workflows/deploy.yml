@@ -14,10 +14,8 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    # To use Turborepo Remote Caching
     env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      GITHUB_PAGES: true
 
     steps:
       - name: Checkout Repo
@@ -35,12 +33,13 @@ jobs:
       # sub directory of the monorepo, even if we reference it correctly
       # so we have to copy it to the root of the repo.
       - name: Build
-        run: |
-          npx turbo run build
-          cp -R apps/coordinator ./build
+        # forcing a build to avoid the cache. Probably unnecessary
+        # but useful in case any environment variables change that might
+        # impact the build
+        run: npx turbo run build --force
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: build
+          folder: apps/coordinator/build
