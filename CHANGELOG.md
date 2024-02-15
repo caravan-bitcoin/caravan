@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3
+
+### Patch Changes
+
+- [#11](https://github.com/caravan-bitcoin/caravan/pull/11) [`fa74b6c`](https://github.com/caravan-bitcoin/caravan/commit/fa74b6c8cd527b8b558490f4fe2521986c6223b6) Thanks [@bucko13](https://github.com/bucko13)! - Enable caravan coordinator to be run without the subpath which is primarily just for supporting github pages hosting but causes issues in other environments
+
 ## 0.0.2
 
 ### Patch Changes
