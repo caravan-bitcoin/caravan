@@ -1,6 +1,0 @@
-{
-  "extends": "@caravan/typescript-config/base.json",
-  "compilerOptions": {
-    "allowJs": true
-  }
-}
