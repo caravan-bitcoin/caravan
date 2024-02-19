@@ -1,5 +1,5 @@
 import moment from "moment";
-import { PENDING, ACTIVE } from "unchained-wallets";
+import { PENDING, ACTIVE } from "@caravan/wallets";
 
 import { SUITE } from "../tests";
 

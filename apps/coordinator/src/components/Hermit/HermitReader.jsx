@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
-import { PENDING, ACTIVE, BCURDecoder } from "unchained-wallets";
+import { PENDING, ACTIVE, BCURDecoder } from "@caravan/wallets";
 import { QrReader } from "react-qr-reader";
 import {
   Grid,

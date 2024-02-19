@@ -6,7 +6,7 @@ import {
   PENDING,
   UNSUPPORTED,
   SignMultisigTransaction,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Grid, Box, Button } from "@mui/material";
 import HermitDisplayer from "./HermitDisplayer";
 import InteractionMessages from "../InteractionMessages";

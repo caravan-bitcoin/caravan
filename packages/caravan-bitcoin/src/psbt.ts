@@ -195,7 +195,7 @@ export function psbtOutputFormatter(output) {
 }
 
 /**
- * Create unchained-wallets style transaction input objects from a PSBT
+ * Create @caravan/wallets style transaction input objects from a PSBT
  */
 function getUnchainedInputsFromPSBT(network, addressType, psbt) {
   return psbt.txInputs.map((input, index) => {
@@ -221,7 +221,7 @@ function getUnchainedInputsFromPSBT(network, addressType, psbt) {
 }
 
 /**
- * Create unchained-wallets style transaction output objects from a PSBT
+ * Create @caravan/wallets style transaction output objects from a PSBT
  */
 function getUnchainedOutputsFromPSBT(psbt) {
   return psbt.txOutputs.map((output) => ({
@@ -231,7 +231,7 @@ function getUnchainedOutputsFromPSBT(psbt) {
 }
 
 /**
- * Create unchained-wallets style transaction input objects
+ * Create @caravan/wallets style transaction input objects
  *
  * @param {Object} psbt - Psbt bitcoinjs-lib object
  * @param {Object} signingKeyDetails - Object containing signing key details (Fingerprint + bip32path prefix)
@@ -254,7 +254,7 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
 
 /**
  * Translates a PSBT into inputs/outputs consumable by supported non-PSBT devices in the
- * `unchained-wallets` library.
+ * `@caravan/wallets` library.
  *
  * FIXME - Have only confirmed this is working for P2SH addresses on Ledger on regtest
  */
@@ -267,7 +267,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   let localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
   if (localPSBT === null) return null;
 
-  // The information we need to provide proper unchained-wallets style objects to the supported
+  // The information we need to provide proper @caravan/wallets style objects to the supported
   // non-PSBT devices, we need to grab info from different places from within the PSBT.
   //    1. the "data inputs"
   //    2. the "transaction inputs"
@@ -281,7 +281,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   );
 
   // The shape of these return objects are specific to existing code
-  // in unchained-wallets for signing with Trezor and Ledger devices.
+  // in @caravan/wallets for signing with Trezor and Ledger devices.
   const unchainedInputs = getUnchainedInputsFromPSBT(
     network,
     addressType,

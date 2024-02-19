@@ -7,7 +7,7 @@ import {
   HERMIT,
   COLDCARD,
   INDIRECT_KEYSTORES,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import {
   Box,
   Typography,

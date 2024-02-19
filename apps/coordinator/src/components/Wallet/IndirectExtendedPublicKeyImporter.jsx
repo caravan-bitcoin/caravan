@@ -5,7 +5,7 @@ import {
   ExportExtendedPublicKey,
   PENDING,
   UNSUPPORTED,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { FormGroup, FormHelperText } from "@mui/material";
 import InteractionMessages from "../InteractionMessages";
 

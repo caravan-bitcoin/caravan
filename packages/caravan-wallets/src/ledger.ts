@@ -102,7 +102,7 @@ export interface AppAndVersion {
  * should use `try...catch` as always.
  *
  * @example
- * import {LedgerInteraction} from "unchained-wallets";
+ * import {LedgerInteraction} from "@caravan/wallets";
  * // Simple subclass
  *
  * class SimpleLedgerInteraction extends LedgerInteraction {
@@ -376,7 +376,7 @@ export abstract class LedgerBitcoinInteraction extends LedgerInteraction {
  * Includes model name, firmware & MCU versions.
  *
  * @example
- * import {LedgerGetMetadata} from "unchained-wallets";
+ * import {LedgerGetMetadata} from "@caravan/wallets";
  * const interaction = new LedgerGetMetadata();
  * const result = await interaction.run();
  * console.log(result);
@@ -578,7 +578,7 @@ export interface LedgerDeviceError {
  *
  * @example
  * import {MAINNET} from "unchained-bitcoin";
- * import {LedgerExportHDNode} from "unchained-wallets";
+ * import {LedgerExportHDNode} from "@caravan/wallets";
  * const interaction = new LedgerExportHDNode({network: MAINNET, bip32Path: "m/48'/0'/0'/2'/0"});
  * const node = await interaction.run();
  * console.log(node);
@@ -735,7 +735,7 @@ abstract class LedgerExportHDNode extends LedgerBitcoinInteraction {
  * Returns the public key at a given BIP32 path.
  *
  * @example
- * import {LedgerExportPublicKey} from "unchained-wallets";
+ * import {LedgerExportPublicKey} from "@caravan/wallets";
  * const interaction = new LedgerExportPublicKey({bip32Path: "m/48'/0'/0'/2'/0"});
  * const publicKey = await interaction.run();
  * console.log(publicKey);
@@ -841,7 +841,7 @@ export class LedgerExportExtendedPublicKey extends LedgerExportHDNode {
   /**
    * Retrieve extended public key (xpub) from Ledger device for a given BIP32 path
    * @example
-   * import {LedgerExportExtendedPublicKey} from "unchained-wallets";
+   * import {LedgerExportExtendedPublicKey} from "@caravan/wallets";
    * const interaction = new LedgerExportExtendedPublicKey({network, bip32Path});
    * const xpub = await interaction.run();
    * console.log(xpub);
@@ -914,7 +914,7 @@ interface LedgerSignMultisigTransactionArguments {
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
  * } from "unchained-bitcoin";
- * import {LedgerSignMultisigTransaction} from "unchained-wallets";
+ * import {LedgerSignMultisigTransaction} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const inputs = [
  *   {

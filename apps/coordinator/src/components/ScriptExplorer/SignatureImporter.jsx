@@ -9,7 +9,7 @@ import {
   validateBIP32Path,
   getMaskedDerivation,
 } from "unchained-bitcoin";
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "unchained-wallets";
+import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,
   CardHeader,

@@ -45,7 +45,7 @@ import { braidDetailsToWalletConfig } from "./policy";
 import { unsignedMultisigPSBT, BraidDetails, Network } from "unchained-bitcoin";
 
 /**
- * Current unchained-wallets version.
+ * Current @caravan/wallets version.
  */
 export const VERSION: string = version;
 
@@ -87,7 +87,7 @@ export type KEYSTORE_TYPES = (typeof KEYSTORES)[KEYSTORE_KEYS];
  * **Supported keystores:** Trezor, Ledger
  *
  * @example
- * import {GetMetadata, TREZOR} from "unchained-wallets";
+ * import {GetMetadata, TREZOR} from "@caravan/wallets";
  * // Works similarly for Ledger.
  * const interaction = GetMetadata({keystore: TREZOR});
  * const metadata = await interaction.run();
@@ -114,7 +114,7 @@ export function GetMetadata({ keystore }: { keystore: KEYSTORE_TYPES }) {
  *
  * @example
  * import {MAINNET} from "unchained-bitcoin";
- * import {ExportPublicKey, TREZOR, HERMIT} from "unchained-wallets";
+ * import {ExportPublicKey, TREZOR, HERMIT} from "@caravan/wallets";
  * // Works similarly for Ledger
  * const interaction = ExportPublicKey({keystore: TREZOR, network: MAINNET, bip32Path: "m/45'/0'/0'/0/0"});
  * const publicKey = await interaction.run();
@@ -197,7 +197,7 @@ export function SignMessage({
  *
  * @example
  * import {MAINNET} from "unchained-bitcoin";
- * import {ExportExtendedPublicKey, TREZOR, HERMIT} from "unchained-wallets";
+ * import {ExportExtendedPublicKey, TREZOR, HERMIT} from "@caravan/wallets";
  * // Works similarly for Ledger
  * const interaction = ExportExtendedPublicKey({keystore: TREZOR, network: MAINNET, bip32Path: "m/45'/0'/0'/0/0"});
  * const xpub = await interaction.run();
@@ -268,7 +268,7 @@ export function ExportExtendedPublicKey({
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
  * } from "unchained-bitcoin";
- * import {SignMultisigTransaction, TREZOR} from "unchained-wallets";
+ * import {SignMultisigTransaction, TREZOR} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const inputs = [
  *   {
@@ -420,7 +420,7 @@ export function SignMultisigTransaction({
  *   ConfirmMultisigAddress,
  *   multisigPublicKeys,
  *   trezorPublicKey,
- *   TREZOR} from "unchained-wallets";
+ *   TREZOR} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const multisig = generateMultisigFromHex(TESTNET, P2SH, redeemScript);
  * const interaction = ConfirmMultisigAddress({

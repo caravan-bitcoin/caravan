@@ -1,6 +1,6 @@
 import React from "react";
 import { Network, TEST_FIXTURES } from "unchained-bitcoin";
-import { COLDCARD, ExportPublicKey, HERMIT } from "unchained-wallets";
+import { COLDCARD, ExportPublicKey, HERMIT } from "@caravan/wallets";
 
 import Test from "./Test";
 

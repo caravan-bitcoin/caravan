@@ -1,4 +1,4 @@
-import { COLDCARD } from "unchained-wallets";
+import { COLDCARD } from "@caravan/wallets";
 
 import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";

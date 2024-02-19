@@ -5,7 +5,7 @@ import {
   UNSUPPORTED,
   SignMultisigTransaction,
   ACTIVE,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import {
   Box,
   FormHelperText,

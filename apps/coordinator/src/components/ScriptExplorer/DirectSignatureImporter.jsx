@@ -7,7 +7,7 @@ import {
   ACTIVE,
   ERROR,
   SignMultisigTransaction,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import {
   Button,
   TextField,

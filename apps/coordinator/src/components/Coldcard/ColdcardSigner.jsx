@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import moment from "moment";
-import { COLDCARD, ConfigAdapter } from "unchained-wallets";
+import { COLDCARD, ConfigAdapter } from "@caravan/wallets";
 import { connect } from "react-redux";
 import { ColdcardSigningButtons } from ".";
 import { ColdcardPSBTReader } from "./ColdcardFileReader";
@@ -16,7 +16,7 @@ const ColdcardSigner = ({
   interaction,
   setActive,
 }) => {
-  // This tries to reshape it to a Coldcard Wallet Config via unchained-wallets
+  // This tries to reshape it to a Coldcard Wallet Config via @caravan/wallets
   const reshapeConfig = (walletDetails) => {
     const walletConfig = JSON.parse(walletDetails);
     const { startingAddressIndex } = walletConfig;

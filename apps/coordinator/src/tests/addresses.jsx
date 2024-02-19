@@ -5,7 +5,7 @@ import {
   ConfirmMultisigAddress,
   LEDGER,
   braidDetailsToWalletConfig,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 

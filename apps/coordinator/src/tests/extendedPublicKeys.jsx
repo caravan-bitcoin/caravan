@@ -6,7 +6,7 @@ import {
   COLDCARD,
   ExportExtendedPublicKey,
   HERMIT,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import Test from "./Test";
 
 class ExportExtendedPublicKeyTest extends Test {

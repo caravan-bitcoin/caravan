@@ -117,7 +117,7 @@ type FormatReturnType<T extends FormatType> = T extends "buffer"
  *   them as appropriate.
  *
  * @example
- * import {KeystoreInteraction, PENDING, ACTIVE, INFO} from "unchained-wallets";
+ * import {KeystoreInteraction, PENDING, ACTIVE, INFO} from "@caravan/wallets";
  * class DoNothingInteraction extends KeystoreInteraction {
  *
  *   constructor({param}) {
@@ -314,7 +314,7 @@ export class KeystoreInteraction {
  *   `request`, and `parse`.
  *
  * @example
- * import {UnsupportedInteraction} from "unchained-wallets";
+ * import {UnsupportedInteraction} from "@caravan/wallets";
  * const interaction = new UnsupportedInteraction({text: "failure text", code: "fail"});
  * console.log(interaction.isSupported()); // false
  *
@@ -391,7 +391,7 @@ export class UnsupportedInteraction extends KeystoreInteraction {
  * &c.
  *
  * @example
- * import {DirectKeystoreInteraction} from "unchained-wallets";
+ * import {DirectKeystoreInteraction} from "@caravan/wallets";
  * class SimpleDirectInteraction extends DirectKeystoreInteraction {   *
  *
  *   constructor({param}) {
@@ -497,7 +497,7 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
  * to `parse` which should return a result.
  *
  * @example
- * import {IndirectKeystoreInteraction} from "unchained-wallets";
+ * import {IndirectKeystoreInteraction} from "@caravan/wallets";
  * class SimpleIndirectInteraction extends IndirectKeystoreInteraction {   *
  *
  *   constructor({param}) {

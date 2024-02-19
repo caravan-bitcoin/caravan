@@ -29,7 +29,7 @@ import {
   multisigAddressType,
   Network,
 } from "unchained-bitcoin";
-import { PENDING, ACTIVE, ConfirmMultisigAddress } from "unchained-wallets";
+import { PENDING, ACTIVE, ConfirmMultisigAddress } from "@caravan/wallets";
 import LaunchIcon from "@mui/icons-material/Launch";
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import MultisigDetails from "../MultisigDetails";

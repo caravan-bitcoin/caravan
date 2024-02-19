@@ -30,7 +30,7 @@ import {
   ACTIVE,
   PENDING,
   ConfirmMultisigAddress,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 
 import { useSelector } from "react-redux";
 import ExtendedPublicKeySelector from "../Wallet/ExtendedPublicKeySelector";

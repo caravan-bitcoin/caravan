@@ -12,7 +12,7 @@ import {
   PENDING,
   UNSUPPORTED,
   SignMultisigTransaction,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Grid, Box, TextField, Button, FormHelperText } from "@mui/material";
 import { Psbt } from "bitcoinjs-lib";
 import HermitReader from "./HermitReader";

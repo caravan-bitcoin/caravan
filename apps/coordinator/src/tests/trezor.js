@@ -1,4 +1,4 @@
-import { TREZOR } from "unchained-wallets";
+import { TREZOR } from "@caravan/wallets";
 
 import publicKeyTests from "./publicKeys";
 import extendedPublicKeyTests from "./extendedPublicKeys";

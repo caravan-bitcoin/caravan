@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { validatePublicKey as baseValidatePublicKey } from "unchained-bitcoin";
-import { TREZOR, LEDGER } from "unchained-wallets";
+import { TREZOR, LEDGER } from "@caravan/wallets";
 
 // Components
 import {

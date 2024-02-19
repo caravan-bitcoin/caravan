@@ -609,8 +609,8 @@ export class ColdcardMultisigWalletConfig {
    * Output to be written to a text file and uploaded to Coldcard.
    */
   adapt() {
-    let output = `# Coldcard Multisig setup file (exported from unchained-wallets)
-# https://github.com/unchained-capital/unchained-wallets
+    let output = `# Coldcard Multisig setup file (exported from @caravan/wallets)
+# https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets
 # v${COLDCARD_WALLET_CONFIG_VERSION}
 #
 Name: ${this.name}

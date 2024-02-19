@@ -8,7 +8,7 @@ import {
   ExportPublicKey,
   TREZOR,
   LEDGER,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { validateBIP32Path } from "unchained-bitcoin";
 
 // Components
