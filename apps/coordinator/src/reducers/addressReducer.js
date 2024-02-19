@@ -1,4 +1,4 @@
-import { Network, P2SH, multisigBIP32Path } from "unchained-bitcoin";
+import { Network, P2SH, multisigBIP32Path } from "@caravan/bitcoin";
 import updateState from "./utils";
 import {
   SET_TOTAL_SIGNERS,

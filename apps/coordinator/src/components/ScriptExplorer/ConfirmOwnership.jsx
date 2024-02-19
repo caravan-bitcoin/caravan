@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { validatePublicKey, validateBIP32Path } from "unchained-bitcoin";
+import { validatePublicKey, validateBIP32Path } from "@caravan/bitcoin";
 import { TREZOR, LEDGER } from "@caravan/wallets";
 
 // Components

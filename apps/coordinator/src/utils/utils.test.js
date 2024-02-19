@@ -4,7 +4,7 @@ import {
   TEST_FIXTURES,
   estimateMultisigTransactionFee,
   P2WSH,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 import { DUST_IN_SATOSHIS } from "./constants";
 import { isSpendAll, naiveCoinSelection } from "./index";

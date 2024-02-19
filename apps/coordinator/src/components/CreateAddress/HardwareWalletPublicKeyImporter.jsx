@@ -9,7 +9,7 @@ import {
   TREZOR,
   LEDGER,
 } from "@caravan/wallets";
-import { validateBIP32Path } from "unchained-bitcoin";
+import { validateBIP32Path } from "@caravan/bitcoin";
 
 // Components
 import { Button, TextField, FormHelperText, Box, Grid } from "@mui/material";

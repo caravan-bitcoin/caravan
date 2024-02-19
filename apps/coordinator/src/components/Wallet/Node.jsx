@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { satoshisToBitcoins } from "unchained-bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 
 // Components
 import { TableRow, TableCell, Checkbox } from "@mui/material";

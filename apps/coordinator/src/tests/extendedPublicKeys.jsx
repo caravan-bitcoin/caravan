@@ -1,5 +1,5 @@
 import React from "react";
-import { Network, TEST_FIXTURES } from "unchained-bitcoin";
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   LEDGER,
   TREZOR,

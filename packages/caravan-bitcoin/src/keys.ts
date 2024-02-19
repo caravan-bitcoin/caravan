@@ -70,7 +70,7 @@ export function validateRootFingerprint(rootFingerprint: string): void {
  * @param {string} [options.network = mainnet] - mainnet or testnet
  * @param {string} [options.rootFingerprint] - the root fingerprint of the device, e.g. 'ca2ab33f'
  * @example
- * import { ExtendedPublicKey } from "unchained-bitcoin"
+ * import { ExtendedPublicKey } from "@caravan/bitcoin"
  * const xpub = ExtendedPublicKey.fromBase58("xpub6CCHViYn5VzKSmKD9cK9LBDPz9wBLV7owXJcNDioETNvhqhVtj3ABnVUERN9aV1RGTX9YpyPHnC4Ekzjnr7TZthsJRBiXA4QCeXNHEwxLab")
  * console.log(xpub.encode()) // returns raw Buffer of xpub encoded as per BIP32
  * console.log(xpub.toBase58()) // returns base58 check encoded xpub
@@ -262,7 +262,7 @@ export class ExtendedPublicKey extends Struct {
  * @param {string} extendedPublicKey - the extended public key to convert
  * @param {string} targetPrefix - the target format to convert to
  * @example
- * import {convertExtendedPublicKey} from "unchained-bitcoin";
+ * import {convertExtendedPublicKey} from "@caravan/bitcoin";
  * const tpub = convertExtendedPublicKey("xpub6CCH...", "tpub");
  * console.log(tpub.extendedPublicKey, tpub.message)
  * // tpubDCZv...
@@ -296,7 +296,7 @@ export function convertExtendedPublicKey(
  * @param {string} extendedPublicKey - the extended public key to check
  * @param {string} network - the bitcoin network
  * @example
- * import {validateExtendedPublicKeyForNetwork} from "unchained-bitcoin";
+ * import {validateExtendedPublicKeyForNetwork} from "@caravan/bitcoin";
  * console.log(validateExtendedPublicKeyForNetwork('xpub...', MAINNET)) // empty
  * console.log(validateExtendedPublicKeyForNetwork('tpub...', MAINNET)) // "Extended public key must begin with ...."
  * @returns {string} a validation message or empty if valid
@@ -331,7 +331,7 @@ export function validateExtendedPublicKeyForNetwork(
  * @param {module:networks.Networks} network  - bitcoin network
  * @returns {string} empty if valid or corresponding validation message if not
  * @example
- * import {validateExtendedPublicKey} from "unchained-bitcoin";
+ * import {validateExtendedPublicKey} from "@caravan/bitcoin";
  * console.log(validateExtendedPublicKey("", MAINNET)); // "Extended public key cannot be blank."
  * console.log(validateExtendedPublicKey("foo", MAINNET)); // "Extended public key must begin with ..."
  * console.log(validateExtendedPublicKey("xpub123", MAINNET)); // "Extended public key is too short."
@@ -377,7 +377,7 @@ export function validateExtendedPublicKey(
  * @param {string} [addressType] - one of P2SH, P2SH-P2WSH, P2WSH
  * @returns {string} empty if valid or corresponding validation message if not
  * @example
- * import {validatePublicKey} from "unchained-bitcoin";
+ * import {validatePublicKey} from "@caravan/bitcoin";
  * console.log(validatePublicKey("")); // "Public key cannot be blank."
  * console.log(validatePublicKey("zzzz")); // "Invalid hex..."
  * console.log(validatePublicKey("deadbeef")); // "Invalid public key."
@@ -422,7 +422,7 @@ export function validatePublicKey(
  * @param {string} publicKey - (uncompressed) public key in hex
  * @returns {string} compressed public key in hex
  * @example
- * import {compressPublicKey} from "unchained-bitcoin";
+ * import {compressPublicKey} from "@caravan/bitcoin";
  * console.log(compressPublicKey("04b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee6e43c09d025c2ad322382347ec0f69b4e78d8e23c8ff9aa0dd0cb93665ae83d5"));
  * // "03b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee"
  */
@@ -448,7 +448,7 @@ export function compressPublicKey(publicKey: string): string {
  * @param {module:networks.Networks} network - bitcoin network
  * @returns {string} (compressed) child public key in hex
  * @example
- * import {deriveChildPublicKey, MAINNET} from "unchained-bitcoin";
+ * import {deriveChildPublicKey, MAINNET} from "@caravan/bitcoin";
  * const xpub = "xpub6CCHViYn5VzKSmKD9cK9LBDPz9wBLV7owXJcNDioETNvhqhVtj3ABnVUERN9aV1RGTX9YpyPHnC4Ekzjnr7TZthsJRBiXA4QCeXNHEwxLab";
  * console.log(deriveChildPublicKey(xpub, "m/0/0", MAINNET));
  * // "021a0b6eb37bd9d2767a364601e41635a11c1dbbbb601efab8406281e210336ace"
@@ -478,7 +478,7 @@ export function deriveChildPublicKey(
  * @param {module:networks.Networks} network - bitcoin network
  * @returns {string} child extended public key in base58
  * @example
- * import {deriveChildExtendedPublicKey, MAINNET} from "unchained-bitcoin";
+ * import {deriveChildExtendedPublicKey, MAINNET} from "@caravan/bitcoin";
  * const xpub = "xpub6CCHViYn5VzKSmKD9cK9LBDPz9wBLV7owXJcNDioETNvhqhVtj3ABnVUERN9aV1RGTX9YpyPHnC4Ekzjnr7TZthsJRBiXA4QCeXNHEwxLab";
  * console.log(deriveChildExtendedPublicKey(xpub, "m/0/0", MAINNET));
  * // "xpub6GYTTMaaN8bSEhicdKq7ji9H7B2SL4un33obThv9aekop4J7L7B3snYMnJUuwXJiUmsbSVSyZydbqLC97JMWnj3R4MHz6JNunMJhjEBKovS"
@@ -509,7 +509,7 @@ export function deriveChildExtendedPublicKey(
  * @param {string | Buffer} _pubkey pubkey to check
  * @returns {boolean} true if compressed, otherwise false
  * @example
- * import {isKeyCompressed} from "unchained-bitcoin"
+ * import {isKeyCompressed} from "@caravan/bitcoin"
  * const uncompressed = "0487cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03f7c55f784242305cfd8252076d038b0f3c92836754308d06b097d11e37bc0907"
  * const compressed = "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03"
  * console.log(isKeyCompressed(uncompressed)) // false
@@ -528,7 +528,7 @@ export function isKeyCompressed(_pubkey: string | Buffer): boolean {
  * @param {string} _pubkey - pubkey to derive fingerprint from
  * @returns {number} fingerprint
  * @example
- * import {getFingerprintFromPublicKey} from "unchained-bitcoin"
+ * import {getFingerprintFromPublicKey} from "@caravan/bitcoin"
  * const pubkey = "03b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee"
  * console.log(getFingerprintFromPublicKey(pubkey)) // 724365675
  *
@@ -553,7 +553,7 @@ export function getFingerprintFromPublicKey(_pubkey: string): number {
  * @returns {string} zero-padded, fixed-length hex xfp
  *
  * @example
- * import {fingerprintToFixedLengthHex} from "unchained-bitcoin"
+ * import {fingerprintToFixedLengthHex} from "@caravan/bitcoin"
  * const pubkeyFingerprint = 724365675
  * console.log(fingerprintToFixedLengthHex(pubkeyFingerprint)) // 2b2cf16b
  *

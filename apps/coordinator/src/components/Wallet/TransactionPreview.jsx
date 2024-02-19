@@ -2,7 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "unchained-bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,

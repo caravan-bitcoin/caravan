@@ -38,7 +38,7 @@ import {
   getPsbtVersionNumber,
   PsbtV2,
   ExtendedPublicKey,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 import {
   ACTIVE,
@@ -577,7 +577,7 @@ export interface LedgerDeviceError {
  * `LedgerExportExtendedPublicKey` directly.
  *
  * @example
- * import {MAINNET} from "unchained-bitcoin";
+ * import {MAINNET} from "@caravan/bitcoin";
  * import {LedgerExportHDNode} from "@caravan/wallets";
  * const interaction = new LedgerExportHDNode({network: MAINNET, bip32Path: "m/48'/0'/0'/2'/0"});
  * const node = await interaction.run();
@@ -906,14 +906,14 @@ interface LedgerSignMultisigTransactionArguments {
  * Returns a signature for a bitcoin transaction with inputs from one
  * or many multisig addresses.
  *
- * - `inputs` is an array of `UTXO` objects from `unchained-bitcoin`
- * - `outputs` is an array of `TransactionOutput` objects from `unchained-bitcoin`
+ * - `inputs` is an array of `UTXO` objects from `@caravan/bitcoin`
+ * - `outputs` is an array of `TransactionOutput` objects from `@caravan/bitcoin`
  * - `bip32Paths` is an array of (`string`) BIP32 paths, one for each input, identifying the path on this device to sign that input with
  *
  * @example
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
- * } from "unchained-bitcoin";
+ * } from "@caravan/bitcoin";
  * import {LedgerSignMultisigTransaction} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const inputs = [

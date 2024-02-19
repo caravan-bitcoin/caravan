@@ -7,7 +7,7 @@ import {
   convertExtendedPublicKey,
   validateExtendedPublicKey,
   Network,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,

@@ -1,4 +1,4 @@
-import { Network, P2SH } from "unchained-bitcoin";
+import { Network, P2SH } from "@caravan/bitcoin";
 
 import updateState from "./utils";
 import {

@@ -141,7 +141,6 @@
     "redux-promise": "^0.6.0",
     "redux-thunk": "^2.3.0",
     "reselect": "^4.0.0",
-    "sass": "^1.56.2",
-    "unchained-bitcoin": "^1.2.1"
+    "sass": "^1.56.2"
   }
 }

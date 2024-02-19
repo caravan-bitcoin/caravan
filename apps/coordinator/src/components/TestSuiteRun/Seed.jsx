@@ -1,6 +1,6 @@
 import React from "react";
 import { connect } from "react-redux";
-import { TEST_FIXTURES } from "unchained-bitcoin";
+import { TEST_FIXTURES } from "@caravan/bitcoin";
 import { Grid } from "@mui/material";
 import { COLDCARD } from "@caravan/wallets";
 import PropTypes from "prop-types";

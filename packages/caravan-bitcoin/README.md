@@ -1,6 +1,6 @@
 # Unchained Capital Bitcoin Utilities
 
-[![Build Status](https://travis-ci.com/unchained-capital/unchained-bitcoin.svg?branch=master)](https://travis-ci.com/unchained-capital/unchained-bitcoin)
+[![Build Status](https://travis-ci.com/unchained-capital/@caravan/bitcoin.svg?branch=master)](https://travis-ci.com/unchained-capital/@caravan/bitcoin)
 
 This library builds on the excellent
 [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib), adding
@@ -8,18 +8,18 @@ valuable but missing functionality for validation, HD wallets, block
 explorers, and especially multisig.
 
 Full API documentation can be found at
-[unchained-bitcoin](https://unchained-capital.github.io/unchained-bitcoin).
+[@caravan/bitcoin](https://unchained-capital.github.io/@caravan/bitcoin).
 
 This library was built and is maintained by [Unchained
 Capital](https://www.unchained-capital.com).
 
 ## Installation
 
-`unchained-bitcoin` is distributed as an NPM package. Add it to your
+`@caravan/bitcoin` is distributed as an NPM package. Add it to your
 application's dependencies:
 
 ```
-$ npm install --save unchained-bitcoin
+$ npm install --save @caravan/bitcoin
 ```
 
 ## Usage
@@ -32,10 +32,7 @@ type name given by this library to the kind of object returned by
 functions such as `bitcoin.payments.p2ms`, `bitcoin.payments.p2sh`,
 &c. from `bitcoinjs-lib`.
 
-The examples below provide an initial idea of how to use this library,
-but see the [API
-documentation](https://unchained-capital.github.io/unchained-bitcoin)
-for full details.
+The examples below provide an initial idea of how to use this library.
 
 ### Interacting with a multisig address.
 
@@ -56,7 +53,7 @@ import {
 	P2SH,                      // or: P2SH_P2WSH, P2WSH,
 	TESTNET,                   // or: MAINNET,
 	multisigAddress,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 // Public keys are represented as compressed hex.
 const publicKeys = [
@@ -92,10 +89,6 @@ multisigWitnessScript(multisig); // Returns witness script in hex (null for P2SH
 multisigPublicKeys(multisig); // Returns publicKeys
 ```
 
-See the [API
-documentation](https://unchained-capital.github.io/unchained-bitcoin)
-for full details on these functions.
-
 #### Multisig Transactions
 
 `Multisig` objects can be used to draft signed or unsigned
@@ -108,7 +101,7 @@ import {
   P2SH,
   unsignedMultisigTransaction,
   validateMultisigSignature,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 // Spending 3 UTXOs from the same multisig address.
 
 // First build the multisig for the address.
@@ -225,61 +218,12 @@ and provide a helpful error message otherwise.
 
 ## Developers
 
-Developers who want to work on this library should clone the source
-code and install dependencies:
-
-```
-$ git clone https://github.com/unchained-capital/unchained-bitcoin
-...
-$ cd unchained-bitcoin
-$ npm install
-```
-
-### Testing
-
-Unit tests are implemented in Jest and can be run via
-
-```
-$ npm test
-```
-
 ### Contributing
 
 Unchained Capital welcomes bug reports, new features, and better documentation for this library.
 
-If you are fixing a bug or adding a feature, please first check the [GitHub issues page](https://github.com/unchained-capital/unchained-bitcoin/issues) to see if there is any existing discussion about it.
+If you are fixing a bug or adding a feature, please first check the [GitHub issues page](https://github.com/caravan-bitcoin/caravan/issues) to see if there is any existing discussion about it.
 
-To contribute, create a pull request (PR) on GitHub against the [Unchained Capital fork of unchained-bitcoin](https://github.com/unchained-capital/unchained-bitcoin).
+To contribute, create a pull request (PR) on GitHub against the [main fork of @caravan/bitcoin](https://github.com/caravan-bitcoin/caravan/).
 
 Before you submit your PR, make sure to update and run the test suite!
-
-#### Commit linting
-
-Commits in this repository are automatically linted using [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0-beta.2/#summary) rules. This helps with code clarity, autogenerating a useful changelog, and changing semantic release versions to account for breaking changes.
-
-The following prefixes will generate version bumps:
-
-- `fix:` - Generates a `patch` increment in the lib version.
-- `feat:` - Generates a `minor` increment in the lib version.
-- `feat!:`, `fix!:`, and `refactor!:` (note the `!`) - Generates a `major` increment.
--
-
-Commit prefixes can also include [scopes](https://github.com/conventional-changelog/commitlint#what-is-commitlint) to specify the area of change.
-
-This example combines both the bang and scopes:
-
-```plaintext
-feat(psbt)!: add backwards compatible support
-```
-
-Note that commit messages are expected to be lowercase, although scopes can have different casing, and upper-case characters (eg `PR`) can show up so long as they don't start the commit message.
-
-Any commit not prepended with one of the valid prefixes will be rejected when you try to commit your code.
-
-#### Make your commits legible
-
-These prepended commits will then be used to auto-construct a useful changelog associated changes with releases. This means your commits should not only follow the above rules, but also be **legible and informative**!
-
-#### Commits and releases
-
-When a branch is merged into master, its commits are read, and their commitlint prefixes parsed, to determine the semver significance of the change (no change, patch, minor, master), and to generate a new changelog file. A script then bumps the library version accordingly, and auto-updates the `CHANGELOG.md` file based on commit messages. This new versioning commit is pushed to master immediately after building the package to our Nexus registry.

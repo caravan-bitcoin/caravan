@@ -16,7 +16,7 @@ import {
   TableBody,
   FormGroup,
 } from "@mui/material";
-import { satoshisToBitcoins } from "unchained-bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import InteractionMessages from "../InteractionMessages";
 
 class IndirectSignatureImporter extends React.Component {
@@ -155,7 +155,7 @@ class IndirectSignatureImporter extends React.Component {
 
       // We have a slight issue for the n-ly signed PSBT case
       // because there is no order to the pubkey: [signature(s)] mapping
-      // returned from `unchained-bitcoin`. it's ok, we have valid signatures, etc.
+      // returned from `@caravan/bitcoin`. it's ok, we have valid signatures, etc.
       // but truncating information can cause problems down the line in keeping
       // the validation straightforward.
 

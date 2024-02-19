@@ -1,6 +1,6 @@
 import React from "react";
 
-import { blockExplorerAddressURL, TEST_FIXTURES } from "unchained-bitcoin";
+import { blockExplorerAddressURL, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   ConfirmMultisigAddress,
   LEDGER,

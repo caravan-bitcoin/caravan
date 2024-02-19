@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import {
   validateExtendedPublicKey,
   deriveChildExtendedPublicKey,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 // Components
 import { Button, TextField, FormHelperText, Box, Grid } from "@mui/material";

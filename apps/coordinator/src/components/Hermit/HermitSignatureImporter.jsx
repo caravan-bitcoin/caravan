@@ -6,7 +6,7 @@ import {
   networkData,
   parseSignatureArrayFromPSBT,
   unsignedMultisigPSBT,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   HERMIT,
   PENDING,

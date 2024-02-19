@@ -6,7 +6,7 @@ import {
   unsignedMultisigPSBT,
   unsignedTransactionObjectFromPSBT,
   TEST_FIXTURES,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   COLDCARD,
   HERMIT,

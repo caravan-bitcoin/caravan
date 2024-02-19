@@ -1,6 +1,6 @@
 import React from "react";
 
-import { TEST_FIXTURES } from "unchained-bitcoin";
+import { TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   RegisterWalletPolicy,
   braidDetailsToWalletConfig,

@@ -11,7 +11,7 @@
  */
 
 import Bowser from "bowser";
-import { signatureNoSighashType } from "unchained-bitcoin";
+import { signatureNoSighashType } from "@caravan/bitcoin";
 
 /**
  * Constant representing a keystore which is unsupported due to the
@@ -220,7 +220,7 @@ export class KeystoreInteraction {
    * dimensions.
    *
    * @example
-   * import {PENDING, ACTIVE} from "unchained-bitcoin";
+   * import {PENDING, ACTIVE} from "@caravan/bitcoin";
    * // Create any interaction instance
    * interaction.messages().forEach(msg => console.log(msg));
    *   { code: "device.connect", state: "pending", level: "info", text: "Please plug in your device."}

@@ -66,8 +66,8 @@ a public key from a Trezor hardware wallet.
 import React from "react";
 import PropTypes from "prop-types";
 
-// The `unchained-bitcoin` library is used by `@caravan/wallets`.
-import { MAINNET } from "unchained-bitcoin";
+// The `@caravan/bitcoin` library is used by `@caravan/wallets`.
+import { MAINNET } from "@caravan/bitcoin";
 
 import {
   // This is the interaction we are implementing.

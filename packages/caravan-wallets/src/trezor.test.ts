@@ -8,7 +8,7 @@ import {
   PSBT_MAGIC_B64,
   networkData,
   Network,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
 
 import {

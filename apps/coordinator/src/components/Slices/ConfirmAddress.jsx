@@ -21,7 +21,7 @@ import {
   multisigAddressType,
   multisigRequiredSigners,
   multisigTotalSigners,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   TREZOR,
   LEDGER,
