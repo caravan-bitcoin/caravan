@@ -4,9 +4,9 @@ import {
 } from "@caravan/bitcoin";
 
 import BigNumber from "bignumber.js";
-import { fetchAddressUTXOs } from "../blockchain";
 import { isChange } from "../utils/slices";
 import { naiveCoinSelection } from "../utils";
+import { getBlockchainClientFromStore } from "./clientActions";
 import {
   setBalanceError,
   setChangeOutput,
@@ -173,8 +173,6 @@ export function updateTxSlices(
   // eslint-disable-next-line consistent-return
   return async (dispatch, getState) => {
     const {
-      settings: { network },
-      client,
       spend: {
         transaction: { changeAddress, inputs, txid },
       },
@@ -183,11 +181,11 @@ export function updateTxSlices(
         change: { nodes: changeSlices },
       },
     } = getState();
-
+    const client = await dispatch(getBlockchainClientFromStore());
     // utility function for getting utxo set of an address
     // and formatting the result in a way we can use
     const fetchSliceStatus = async (address, bip32Path) => {
-      const utxos = await fetchAddressUTXOs(address, network, client);
+      const utxos = await client.fetchAddressUTXOs(address);
       return {
         addressUsed: true,
         change: isChange(bip32Path),

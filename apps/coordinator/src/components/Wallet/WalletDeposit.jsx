@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { enqueueSnackbar } from "notistack";
 
-import { fetchAddressUTXOs } from "../../blockchain";
+import { getBlockchainClientFromStore } from "../../actions/clientActions";
 import {
   updateDepositSliceAction,
   resetWalletView as resetWalletViewAction,
@@ -58,7 +58,7 @@ class WalletDeposit extends React.Component {
   };
 
   getDepositAddress = () => {
-    const { network, client, updateDepositSlice, depositableSlices } =
+    const { getBlockchainClient, updateDepositSlice, depositableSlices } =
       this.props;
     const { depositIndex } = this.state;
 
@@ -73,7 +73,8 @@ class WalletDeposit extends React.Component {
       let updates;
       try {
         const { address, slice } = this.state;
-        updates = await fetchAddressUTXOs(address, network, client);
+        const client = await getBlockchainClient();
+        updates = await client.fetchAddressUtxos(address);
         if (updates && updates.utxos && updates.utxos.length) {
           clearInterval(depositTimer);
           updateDepositSlice({ ...updates, bip32Path: slice.bip32Path });
@@ -200,6 +201,7 @@ WalletDeposit.propTypes = {
     .isRequired,
   network: PropTypes.string.isRequired,
   updateDepositSlice: PropTypes.func.isRequired,
+  getBlockchainClient: PropTypes.func.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -213,6 +215,7 @@ function mapStateToProps(state) {
 const mapDispatchToProps = {
   updateDepositSlice: updateDepositSliceAction,
   resetWalletView: resetWalletViewAction,
+  getBlockchainClient: getBlockchainClientFromStore,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(WalletDeposit);
