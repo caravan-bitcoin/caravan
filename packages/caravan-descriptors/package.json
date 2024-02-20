@@ -3,18 +3,17 @@
   "version": "1.0.0",
   "author": "Unchained Capital",
   "description": "A library for parsing and encoding descriptor strings using bdk",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "module": "./dist/index.mjs",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build:rs": "cd caravan-rs && wasm-pack build -t web --out-dir pkg-web && wasm-pack build --target nodejs --out-dir pkg-nodejs",
-    "build:ts": "tsup src/index.ts --format cjs,esm --dts",
-    "build": "npm run clean && npm run build:rs && npm run build:ts && npm run copy-wasm",
+    "build:ts": "tsc",
+    "build": "npm run build:rs && npm run build:ts && npm run copy-wasm",
     "clean": "rm -rf dist/",
-    "copy-wasm": "shx mkdir -p dist/caravan-rs/pkg-web && shx mkdir -p dist/caravan-rs/pkg-nodejs && shx cp -r caravan-rs/pkg-web/* dist/caravan-rs/pkg-web/ && shx cp -r caravan-rs/pkg-nodejs/* dist/caravan-rs/pkg-nodejs/",
+    "copy-wasm": "shx mkdir -p dist/caravan-rs/pkg-web && shx mkdir -p dist/caravan-rs/pkg-nodejs && shx cp -R caravan-rs/pkg-web/* dist/caravan-rs/pkg-web/ && shx cp -R caravan-rs/pkg-nodejs/* dist/caravan-rs/pkg-nodejs/",
     "dev": "npm run build -- --watch",
     "test": "jest src",
     "test:watch": "jest --watch src",

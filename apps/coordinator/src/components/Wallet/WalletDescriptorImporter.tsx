@@ -2,12 +2,8 @@ import React, { Dispatch, useEffect, useState } from "react";
 import { Button } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 
-import {
-  getWalletFromDescriptor,
-  getChecksum,
-  KeyOrigin,
-  MultisigWalletConfig,
-} from "@caravan/descriptors";
+import type { KeyOrigin, MultisigWalletConfig } from "@caravan/descriptors";
+import { getWalletFromDescriptor, getChecksum } from "@caravan/descriptors";
 import {
   setRequiredSigners,
   setTotalSigners,
