@@ -30,6 +30,9 @@
     ,
     "deploy": {
       "dependsOn": ["build", "test", "lint"]
+    },
+    "preview": {
+      "dependsOn": ["build"]
     }
   }
 }
