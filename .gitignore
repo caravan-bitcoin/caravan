@@ -37,4 +37,8 @@ yarn-error.log*
 .DS_Store
 *.pem
 
+**/target
+.rustup
+.cargo
+
 .vscode
