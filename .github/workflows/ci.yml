@@ -34,5 +34,4 @@ jobs:
 
       - name: Run tests
         run: |
-          npx turbo run build
-          npm run ci
+          npx turbo run ci

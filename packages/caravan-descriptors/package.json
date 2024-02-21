@@ -15,6 +15,8 @@
     "clean": "rm -rf dist/",
     "copy-wasm": "shx mkdir -p dist/caravan-rs/pkg-web && shx mkdir -p dist/caravan-rs/pkg-nodejs && shx cp -R caravan-rs/pkg-web/* dist/caravan-rs/pkg-web/ && shx cp -R caravan-rs/pkg-nodejs/* dist/caravan-rs/pkg-nodejs/",
     "dev": "npm run build -- --watch",
+    "lint": "eslint src",
+    "ci": "npm run build && npm run lint && npm run test",
     "test": "jest src",
     "test:watch": "jest --watch src",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"

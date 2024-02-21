@@ -15,7 +15,7 @@ import {
 } from "./bitcoind";
 import BigNumber from "bignumber.js";
 
-interface UTXO {
+export interface UTXO {
   txid: string;
   vout: number;
   value: number;

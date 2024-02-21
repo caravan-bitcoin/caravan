@@ -51,6 +51,7 @@ describe("decodeDescriptors", () => {
     let passed = false;
     try {
       await decodeDescriptors(testInternal, testExternal, Network.MAINNET);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       if (e instanceof Error) {
         passed = true;
@@ -61,6 +62,7 @@ describe("decodeDescriptors", () => {
     passed = false;
     try {
       await decodeDescriptors(internal, external, Network.TESTNET);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       if (e instanceof Error) {
         passed = true;
@@ -98,6 +100,7 @@ describe("getWalletFromDescriptor", () => {
     let passed = false;
     try {
       await getWalletFromDescriptor(internal, Network.TESTNET);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       if (e instanceof Error) {
         passed = true;
@@ -127,6 +130,7 @@ describe("getChecksum", () => {
     for (const test of invalids) {
       try {
         await getChecksum(test);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (e: any) {
         if (e instanceof Error) {
           passed = true;

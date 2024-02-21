@@ -33,6 +33,9 @@
     },
     "preview": {
       "dependsOn": ["build"]
+    },
+    "ci": {
+      "dependsOn": ["^build"]
     }
   }
 }

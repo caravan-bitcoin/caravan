@@ -479,6 +479,7 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result.utxos).toEqual(
         await Promise.all(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           mockUtxos.map((utxo: any) => blockchainClient.formatUtxo(utxo))
         )
       );

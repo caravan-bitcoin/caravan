@@ -6,8 +6,10 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx src/",
+    "ci": "npm run lint && npm run test",
     "test": "jest src",
     "test:watch": "jest --watch src",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand",
   }
 }
