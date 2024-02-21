@@ -58,7 +58,6 @@ import {
   SET_CLIENT_USERNAME,
 } from "../../actions/clientActions";
 import { clientPropTypes, slicePropTypes } from "../../proptypes";
-import { WalletDescriptorImporter } from "./WalletDescriptorImporter";
 
 class CreateWallet extends React.Component {
   static validateProperties(config, properties, key) {
@@ -540,9 +539,6 @@ class CreateWallet extends React.Component {
             <Grid item xs={12}>
               <Grid container style={{ marginTop: "10px" }} spacing={3}>
                 <Grid item>{this.renderWalletImporter()}</Grid>
-                <Grid item>
-                  <WalletDescriptorImporter />
-                </Grid>
               </Grid>
             </Grid>
             <Grid item md={configuring ? 8 : 12}>
