@@ -8,7 +8,7 @@ import {
   validateRootFingerprint,
   BraidDetails,
   getMaskedDerivation,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { WalletPolicy } from "ledger-bitcoin";
 import { MultisigWalletConfig } from "./types";
 

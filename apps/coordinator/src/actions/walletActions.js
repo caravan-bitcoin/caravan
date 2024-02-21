@@ -1,7 +1,7 @@
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 import BigNumber from "bignumber.js";
 import { isChange } from "../utils/slices";

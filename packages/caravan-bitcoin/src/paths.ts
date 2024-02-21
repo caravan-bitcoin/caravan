@@ -27,7 +27,7 @@ const MAX_BIP32_NODE_INDEX = Math.pow(2, 32) - 1;
  * @param {string|number} index - BIP32 index
  * @returns {number} the hardened index
  * @example
- * import {hardenedBIP32Index} from "unchained-bitcoin";
+ * import {hardenedBIP32Index} from "@caravan/bitcoin";
  * console.log(hardenedBIP32Index(44); // 2147483692
  */
 export function hardenedBIP32Index(index) {
@@ -43,7 +43,7 @@ export function hardenedBIP32Index(index) {
  * @param {string} pathString - BIP32 derivation path string
  * @returns {number[]} the derivation indices
  * @example
- * import {bip32PathToSequence} from "unchained-bitcoin";
+ * import {bip32PathToSequence} from "@caravan/bitcoin";
  * console.log(bip32PathToSequence("m/45'/1/99")); // [2147483693, 1, 99]
  */
 export function bip32PathToSequence(pathString): number[] {
@@ -66,7 +66,7 @@ export function bip32PathToSequence(pathString): number[] {
  * @param {number[]} sequence - the derivation indices
  * @returns {string} BIP32 derivation path
  * @example
- * import {bip32SequenceToPath} from "unchained-bitcoin";
+ * import {bip32SequenceToPath} from "@caravan/bitcoin";
  * console.log(bip32SequenceToPath([2147483693, 1, 99])); // m/45'/1/99
  */
 export function bip32SequenceToPath(sequence) {
@@ -98,7 +98,7 @@ export function bip32SequenceToPath(sequence) {
  * @param {string} [options.mode] - "hardened" or "unhardened"
  * @returns {string} empty if valid or corresponding validation message if not
  * @example
- * import {validateBIP32Path} from "unchained-bitcoin";
+ * import {validateBIP32Path} from "@caravan/bitcoin";
  * console.log(validateBIP32Path("")); // "BIP32 path cannot be blank."
  * console.log(validateBIP32Path("foo")); // "BIP32 path is invalid."
  * console.log(validateBIP32Path("//45")); // "BIP32 path is invalid."
@@ -171,7 +171,7 @@ function validateBIP32PathSegments(segmentStrings) {
  * @param {string} [options.mode] - "hardened" or "unhardened"
  * @returns {string} empty if valid or corresponding validation message if not
  * @example
- * import {validateBIP32Path} from "unchained-bitcoin";
+ * import {validateBIP32Path} from "@caravan/bitcoin";
  * console.log(validateBIP32Path("")); // "BIP32 index cannot be blank."
  * console.log(validateBIP32Path("foo")); // "BIP32 index is invalid."
  * console.log(validateBIP32Path("//45")); // "BIP32 index is invalid."
@@ -259,7 +259,7 @@ export function validateBIP32Index(indexString, options?) {
  * @param {module:networks.NETWORKS} network - bitcoin network
  * @returns {string} derivation path
  * @example
- * import {multisigBIP32Root} from "unchained-bitcoin";
+ * import {multisigBIP32Root} from "@caravan/bitcoin";
  * console.log(multisigBIP32Root(P2SH, MAINNET)); // m/45'/0'/0'
  * console.log(multisigBIP32Root(P2SH_P2WSH, TESTNET); // m/48'/1'/0'/1'
  */
@@ -286,7 +286,7 @@ export function multisigBIP32Root(addressType, network: Network) {
  * @param {number|string} relativePath - the relative BIP32 path (no leading `/`)
  * @returns {string} child BIP32 path
  * @example
- * import {multisigBIP32Path} from "unchained-bitcoin";
+ * import {multisigBIP32Path} from "@caravan/bitcoin";
  * console.log(multisigBIP32Path(P2SH, MAINNET, 0); // m/45'/0'/0'/0
  * console.log(multisigBIP32Path(P2SH_P2WSH, TESTNET, "3'/4"); // m/48'/1'/0'/1'/3'/4"
  */
@@ -307,7 +307,7 @@ export function multisigBIP32Path(
  * @param {string} bip32Path e.g. "m/45'/0'/0'/0"
  * @returns {string} parent path
  * @example
- * import {getParentBIP32Path} from "unchained-bitcoin";
+ * import {getParentBIP32Path} from "@caravan/bitcoin";
  * console.log(getParentBIP32Path("m/45'/0'/0'/0"); // m/45'/0'/0'
  */
 export function getParentBIP32Path(bip32Path) {
@@ -324,7 +324,7 @@ export function getParentBIP32Path(bip32Path) {
  * @param {string} childBIP32Path e.g. "m/45'/0'/0'/0/1/2"
  * @returns {string} relative path below path
  * @example
- * import {getRelativeBIP32Path} from "unchained-bitcoin";
+ * import {getRelativeBIP32Path} from "@caravan/bitcoin";
  * console.log(getRelativeBIP32Path("m/45'/0'/0'", "m/45'/0'/0'/0/1/2"); // 0/1/2
  */
 export function getRelativeBIP32Path(parentBIP32Path, childBIP32Path) {

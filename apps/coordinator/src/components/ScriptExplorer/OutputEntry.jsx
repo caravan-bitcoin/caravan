@@ -5,7 +5,7 @@ import {
   satoshisToBitcoins,
   bitcoinsToSatoshis,
   validateOutputAmount,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
   Grid,

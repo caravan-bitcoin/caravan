@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { COLDCARD } from "unchained-wallets";
+import { COLDCARD } from "@caravan/wallets";
 import { Box, FormGroup } from "@mui/material";
-import { Network, P2SH } from "unchained-bitcoin";
+import { Network, P2SH } from "@caravan/bitcoin";
 import { ColdcardJSONReader } from ".";
 import IndirectExtendedPublicKeyImporter from "../Wallet/IndirectExtendedPublicKeyImporter";
 

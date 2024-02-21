@@ -11,7 +11,7 @@ import {
   PENDING,
   ACTIVE,
   VERSION as UNCHAINED_WALLETS_VERSION,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 
 import {
   Grid,
@@ -61,7 +61,7 @@ class TestSuiteRunSummaryBase extends React.Component {
                   {environment.getBrowserName()}{" "}
                   {environment.getBrowserVersion()}
                 </dd>
-                <dt>unchained-wallets:</dt>
+                <dt>@caravan/wallets:</dt>
                 <dd>
                   v.
                   {UNCHAINED_WALLETS_VERSION}

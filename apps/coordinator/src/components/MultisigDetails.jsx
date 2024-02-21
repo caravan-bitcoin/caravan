@@ -11,7 +11,7 @@ import {
   multisigRequiredSigners,
   multisigTotalSigners,
   blockExplorerAddressURL,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { Typography, Grid, Box, Chip } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 import { externalLink } from "utils/ExternalLink";

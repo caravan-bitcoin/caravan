@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import {
   signedMultisigTransaction,
   blockExplorerTransactionURL,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 import {
   Typography,

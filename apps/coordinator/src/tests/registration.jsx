@@ -1,10 +1,10 @@
 import React from "react";
 
-import { TEST_FIXTURES } from "unchained-bitcoin";
+import { TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   RegisterWalletPolicy,
   braidDetailsToWalletConfig,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 
 import Test from "./Test";

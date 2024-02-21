@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import {
   blockExplorerTransactionURL,
   satoshisToBitcoins,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   Table,
   TableHead,

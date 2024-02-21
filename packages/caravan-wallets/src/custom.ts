@@ -14,7 +14,7 @@ import {
   validateBIP32Path,
   validateRootFingerprint,
   ExtendedPublicKey,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -22,7 +22,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { BitcoinNetwork } from "unchained-bitcoin";
+import { BitcoinNetwork } from "@caravan/bitcoin";
 
 export const CUSTOM = "custom";
 
@@ -240,7 +240,7 @@ export class CustomSignMultisigTransaction extends CustomInteraction {
   }
 
   /**
-   * This calls a function in unchained-bitcoin which parses
+   * This calls a function in @caravan/bitcoin which parses
    * PSBT files for sigantures and then returns an object with the format
    * {
    *   pubkey1 : [sig1, sig2, ...],

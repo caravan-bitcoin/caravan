@@ -1,6 +1,6 @@
 import axios from "axios";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins, blockExplorerAPIURL } from "unchained-bitcoin";
+import { satoshisToBitcoins, blockExplorerAPIURL } from "@caravan/bitcoin";
 
 // FIXME: hack
 const delay = () => {

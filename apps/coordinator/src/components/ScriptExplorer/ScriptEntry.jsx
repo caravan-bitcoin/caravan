@@ -10,7 +10,7 @@ import {
   multisigRequiredSigners,
   multisigTotalSigners,
   toHexString,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   Box,
   Grid,

@@ -1,4 +1,4 @@
-import { PENDING } from "unchained-wallets";
+import { PENDING } from "@caravan/wallets";
 
 import {
   SET_KEYSTORE,

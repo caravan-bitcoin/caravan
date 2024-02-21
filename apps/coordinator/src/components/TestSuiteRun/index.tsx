@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { connect } from "react-redux";
 
-import { PENDING, ACTIVE } from "unchained-wallets";
+import { PENDING, ACTIVE } from "@caravan/wallets";
 
 import {
   Grid,

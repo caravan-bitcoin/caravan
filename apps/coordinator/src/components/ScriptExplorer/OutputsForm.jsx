@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { map } from "lodash";
 import BigNumber from "bignumber.js";
-import { bitcoinsToSatoshis, satoshisToBitcoins } from "unchained-bitcoin";
+import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Grid,
   Button,

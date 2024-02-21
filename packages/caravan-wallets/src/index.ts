@@ -42,10 +42,10 @@ import {
 } from "./trezor";
 import { MultisigWalletConfig, TxInput } from "./types";
 import { braidDetailsToWalletConfig } from "./policy";
-import { unsignedMultisigPSBT, BraidDetails, Network } from "unchained-bitcoin";
+import { unsignedMultisigPSBT, BraidDetails, Network } from "@caravan/bitcoin";
 
 /**
- * Current unchained-wallets version.
+ * Current @caravan/wallets version.
  */
 export const VERSION: string = version;
 
@@ -87,7 +87,7 @@ export type KEYSTORE_TYPES = (typeof KEYSTORES)[KEYSTORE_KEYS];
  * **Supported keystores:** Trezor, Ledger
  *
  * @example
- * import {GetMetadata, TREZOR} from "unchained-wallets";
+ * import {GetMetadata, TREZOR} from "@caravan/wallets";
  * // Works similarly for Ledger.
  * const interaction = GetMetadata({keystore: TREZOR});
  * const metadata = await interaction.run();
@@ -113,8 +113,8 @@ export function GetMetadata({ keystore }: { keystore: KEYSTORE_TYPES }) {
  * **Supported keystores:** Trezor, Ledger, Hermit
  *
  * @example
- * import {MAINNET} from "unchained-bitcoin";
- * import {ExportPublicKey, TREZOR, HERMIT} from "unchained-wallets";
+ * import {MAINNET} from "@caravan/bitcoin";
+ * import {ExportPublicKey, TREZOR, HERMIT} from "@caravan/wallets";
  * // Works similarly for Ledger
  * const interaction = ExportPublicKey({keystore: TREZOR, network: MAINNET, bip32Path: "m/45'/0'/0'/0/0"});
  * const publicKey = await interaction.run();
@@ -196,8 +196,8 @@ export function SignMessage({
  * **Supported keystores:** Trezor, Hermit, Ledger
  *
  * @example
- * import {MAINNET} from "unchained-bitcoin";
- * import {ExportExtendedPublicKey, TREZOR, HERMIT} from "unchained-wallets";
+ * import {MAINNET} from "@caravan/bitcoin";
+ * import {ExportExtendedPublicKey, TREZOR, HERMIT} from "@caravan/wallets";
  * // Works similarly for Ledger
  * const interaction = ExportExtendedPublicKey({keystore: TREZOR, network: MAINNET, bip32Path: "m/45'/0'/0'/0/0"});
  * const xpub = await interaction.run();
@@ -254,7 +254,7 @@ export function ExportExtendedPublicKey({
  *
  * The inputs are objects which have `txid`, `index`, and a `multisig`
  * object, the last which is a `Multisig` object from
- * `unchained-bitcoin`.
+ * `@caravan/bitcoin`.
  *
  * The outputs are objects which have `address` and `amountSats` (an
  * integer).
@@ -267,8 +267,8 @@ export function ExportExtendedPublicKey({
  * @example
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
- * } from "unchained-bitcoin";
- * import {SignMultisigTransaction, TREZOR} from "unchained-wallets";
+ * } from "@caravan/bitcoin";
+ * import {SignMultisigTransaction, TREZOR} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const inputs = [
  *   {
@@ -403,7 +403,7 @@ export function SignMultisigTransaction({
  * the given `keystore`.
  *
  * The `multisig` parameter is a `Multisig` object from
- * `unchained-bitcoin`.
+ * `@caravan/bitcoin`.
  *
  * `bip32Path` is the BIP32 path for the publiic key in the address on
  * this device.
@@ -415,12 +415,12 @@ export function SignMultisigTransaction({
  * @example
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
- * } from "unchained-bitcoin";
+ * } from "@caravan/bitcoin";
  * import {
  *   ConfirmMultisigAddress,
  *   multisigPublicKeys,
  *   trezorPublicKey,
- *   TREZOR} from "unchained-wallets";
+ *   TREZOR} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const multisig = generateMultisigFromHex(TESTNET, P2SH, redeemScript);
  * const interaction = ConfirmMultisigAddress({

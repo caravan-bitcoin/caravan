@@ -1,4 +1,4 @@
-import { LEDGER } from "unchained-wallets";
+import { LEDGER } from "@caravan/wallets";
 
 import publicKeyTests from "./publicKeys";
 import extendedPublicKeyTests from "./extendedPublicKeys";

@@ -1,4 +1,4 @@
-import { TEST_FIXTURES, ROOT_FINGERPRINT } from "unchained-bitcoin";
+import { TEST_FIXTURES, ROOT_FINGERPRINT } from "@caravan/bitcoin";
 
 const { nodes } = TEST_FIXTURES.keys.open_source;
 
@@ -6,7 +6,7 @@ const P2SH_BASE_MAIN = "m/45'/0'/0'";
 const P2SH_BASE_TEST = "m/45'/1'/0'";
 
 export const customFixtures = {
-  // These use the Open Source Wallet words from the `unchained-bitcoin` fixtures
+  // These use the Open Source Wallet words from the `@caravan/bitcoin` fixtures
   validCustomTpubJSON: {
     bip32Path: P2SH_BASE_TEST,
     xpub: nodes[P2SH_BASE_TEST].xpub,

@@ -5,7 +5,7 @@ import {
   satoshisToBitcoins,
   networkData,
   autoLoadPSBT,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import { DUST_IN_BTC } from "../utils/constants";
 

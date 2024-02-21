@@ -6,7 +6,7 @@ import {
   deriveMultisigByPath,
   ExtendedPublicKey,
   generateBraid,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   Button,
   Card,

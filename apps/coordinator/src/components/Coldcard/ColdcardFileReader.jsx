@@ -5,7 +5,7 @@ import Dropzone from "react-dropzone";
 import { Buffer } from "buffer/";
 import { Box, Button, FormHelperText, Grid, TextField } from "@mui/material";
 import { CloudUpload as UploadIcon } from "@mui/icons-material";
-import { PSBT_MAGIC_HEX } from "unchained-bitcoin";
+import { PSBT_MAGIC_HEX } from "@caravan/bitcoin";
 import styles from "./ColdcardFileReader.module.scss";
 
 const ColdcardFileReaderBase = ({

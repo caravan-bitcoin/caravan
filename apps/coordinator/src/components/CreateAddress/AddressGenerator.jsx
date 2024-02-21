@@ -7,7 +7,7 @@ import {
   multisigRedeemScript,
   multisigWitnessScript,
   validatePublicKey,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   Box,
   Grid,

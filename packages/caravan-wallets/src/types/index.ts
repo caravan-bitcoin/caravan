@@ -1,10 +1,10 @@
-import { MultisigAddressType, BitcoinNetwork } from "unchained-bitcoin";
+import { MultisigAddressType, BitcoinNetwork } from "@caravan/bitcoin";
 
 export interface DeviceError extends Error {
   message: string;
 }
 
-// TODO: could this be in unchained-bitcoin?
+// TODO: could this be in @caravan/bitcoin?
 export interface TxInput {
   // this one is messy in the way it's used
   // and so we'll need to better define it as typescript

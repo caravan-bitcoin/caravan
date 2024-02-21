@@ -1,4 +1,4 @@
-import { satoshisToBitcoins } from "unchained-bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 
 export const DUST_IN_SATOSHIS = 546;
 export const DUST_IN_BTC = satoshisToBitcoins(DUST_IN_SATOSHIS.toString());

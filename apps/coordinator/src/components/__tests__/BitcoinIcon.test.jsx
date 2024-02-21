@@ -1,5 +1,5 @@
 import React from "react";
-import { Network } from "unchained-bitcoin";
+import { Network } from "@caravan/bitcoin";
 
 import { render, screen } from "../../utils/test-utils";
 import BitcoinIcon from "../BitcoinIcon";

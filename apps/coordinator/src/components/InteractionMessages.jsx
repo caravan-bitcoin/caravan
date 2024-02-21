@@ -3,7 +3,7 @@
 
 import React from "react";
 import PropTypes from "prop-types";
-import { INFO, WARNING, ERROR } from "unchained-wallets";
+import { INFO, WARNING, ERROR } from "@caravan/wallets";
 import {
   Box,
   Typography,

@@ -1,6 +1,6 @@
 import axios from "axios";
 import BigNumber from "bignumber.js";
-import { bitcoinsToSatoshis } from "unchained-bitcoin";
+import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
 async function callBitcoind(url, auth, method, params = []) {
   // FIXME

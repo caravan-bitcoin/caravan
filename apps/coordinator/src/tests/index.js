@@ -1,5 +1,5 @@
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "unchained-wallets";
-import { TEST_FIXTURES } from "unchained-bitcoin";
+import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import { TEST_FIXTURES } from "@caravan/bitcoin";
 
 import trezorTests from "./trezor";
 import ledgerTests from "./ledger";
