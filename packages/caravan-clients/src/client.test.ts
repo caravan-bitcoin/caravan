@@ -25,6 +25,8 @@ describe("ClientBase", () => {
     expect(axios.request).toHaveBeenCalledWith({
       method: "GET",
       url: mockHost + "/path",
+      withCredentials: false,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
     expect(result).toEqual(mockResponse);
   });
@@ -40,6 +42,8 @@ describe("ClientBase", () => {
       method: "POST",
       url: mockHost + "/path",
       data: mockData,
+      withCredentials: false,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
     expect(result).toEqual(mockResponse);
   });
@@ -138,7 +142,7 @@ describe("BlockchainClient", () => {
       const mockResponse = { success: true };
       const mockBitcoindSendRawTransaction = jest.spyOn(
         bitcoind,
-        "bitcoindSendRawTransaction"
+        "bitcoindSendRawTransaction",
       );
       mockBitcoindSendRawTransaction.mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
@@ -182,6 +186,27 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result).toEqual(mockResponse);
     });
+    it("should broadcast a transaction (BLOCKSTREAM client)", async () => {
+      // Mock the response from the API
+      const mockResponse = "txid";
+      const mockPost = jest.fn().mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Post = mockPost;
+
+      // Call the broadcastTransaction method
+      const rawTx = "rawTransaction";
+      const result = await blockchainClient.broadcastTransaction(rawTx);
+
+      // Verify the mock axios instance was called with the correct URL and data
+      expect(mockPost).toHaveBeenCalledWith(`/tx`, rawTx);
+
+      // Verify the returned result
+      expect(result).toEqual(mockResponse);
+    });
   });
 
   describe("getTransactionHex", () => {
@@ -214,7 +239,7 @@ describe("BlockchainClient", () => {
         blockchainClient.bitcoindParams.url,
         blockchainClient.bitcoindParams.auth,
         "gettransaction",
-        [txid]
+        [txid],
       );
 
       // Verify the returned transaction hex
@@ -245,7 +270,7 @@ describe("BlockchainClient", () => {
 
       // Verify the error message
       expect(error).toEqual(
-        new Error(`Failed to get transaction: ${mockError.message}`)
+        new Error(`Failed to get transaction: ${mockError.message}`),
       );
     });
 
@@ -296,7 +321,7 @@ describe("BlockchainClient", () => {
 
       // Verify the error message
       expect(error).toEqual(
-        new Error(`Failed to get transaction: ${mockError.message}`)
+        new Error(`Failed to get transaction: ${mockError.message}`),
       );
     });
   });
@@ -479,8 +504,8 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result.utxos).toEqual(
         await Promise.all(
-          mockUtxos.map((utxo: any) => blockchainClient.formatUtxo(utxo))
-        )
+          mockUtxos.map((utxo: any) => blockchainClient.formatUtxo(utxo)),
+        ),
       );
       expect(result.balanceSats).toEqual(new BigNumber(300));
       expect(result.addressKnown).toBe(true);
@@ -525,7 +550,7 @@ describe("BlockchainClient", () => {
       };
       const mockBitcoindGetAddressStatus = jest.spyOn(
         bitcoind,
-        "bitcoindGetAddressStatus"
+        "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
@@ -553,7 +578,7 @@ describe("BlockchainClient", () => {
       const mockError = new Error("Failed to fetch address status");
       const mockBitcoindGetAddressStatus = jest.spyOn(
         bitcoind,
-        "bitcoindGetAddressStatus"
+        "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
@@ -579,8 +604,8 @@ describe("BlockchainClient", () => {
       // Verify the error message
       expect(error).toEqual(
         new Error(
-          `Failed to get status for address ${address}: ${mockError.message}`
-        )
+          `Failed to get status for address ${address}: ${mockError.message}`,
+        ),
       );
     });
 
@@ -650,7 +675,7 @@ describe("BlockchainClient", () => {
         if (err instanceof Error) {
           error = err?.message;
         } else {
-          throw err
+          throw err;
         }
       }
 
@@ -659,7 +684,7 @@ describe("BlockchainClient", () => {
 
       // Verify the error message
       expect(error).toEqual(
-        `Failed to get status for address ${address}: ${mockError.message}`
+        `Failed to get status for address ${address}: ${mockError.message}`,
       );
     });
   });
@@ -670,7 +695,7 @@ describe("BlockchainClient", () => {
       const mockResponse = 10;
       const mockEstimateSmartFee = jest.spyOn(
         bitcoind,
-        "bitcoindEstimateSmartFee"
+        "bitcoindEstimateSmartFee",
       );
       mockEstimateSmartFee.mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
@@ -741,7 +766,7 @@ describe("BlockchainClient", () => {
 
       for (const block in blocks) {
         const feeEstimate = await blockchainClient.getFeeEstimate(
-          blocks[block]
+          blocks[block],
         );
 
         // Verify the mock axios instance was called with the correct URL
