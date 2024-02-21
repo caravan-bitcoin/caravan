@@ -136,12 +136,12 @@ function mapStateToProps(state) {
     signatureImporters: state.spend.signatureImporters,
     inputs: state.spend.transaction.inputs,
     outputs: state.spend.transaction.outputs,
-    getBlockchainClient: getBlockchainClientFromStore,
   };
 }
 
 const mapDispatchToProps = {
   setTxid: setTXID,
+  getBlockchainClient: getBlockchainClientFromStore,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transaction);

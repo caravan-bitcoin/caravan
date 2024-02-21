@@ -52,10 +52,13 @@ export class ClientBase {
   private async Request(method: Method, path: string, data?: any) {
     await this.throttle();
     try {
+      console.log("method: ", method, "path: ", path, "data: ", data);
       const response = await axios.request({
         method,
         url: this.host + path,
         data,
+        withCredentials: false,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       return response.data;
     } catch (e: any) {
@@ -147,7 +150,7 @@ export class BlockchainClient extends ClientBase {
       return await this.Get(`/address/${address}/utxo`);
     } catch (error: any) {
       throw new Error(
-        `Failed to get UTXOs for address ${address}: ${error.message}`
+        `Failed to get UTXOs for address ${address}: ${error.message}`,
       );
     }
   }
@@ -160,7 +163,12 @@ export class BlockchainClient extends ClientBase {
           ...this.bitcoindParams,
         });
       }
-      return await this.Post(`/tx`, { tx: rawTx });
+      if (this.type === ClientType.BLOCKSTREAM) {
+        return await this.Post(`/tx`, rawTx);
+      }
+      if (this.type === ClientType.MEMPOOL) {
+        return await this.Post(`/tx`, { tx: rawTx });
+      }
     } catch (error: any) {
       throw new Error(`Failed to broadcast transaction: ${error.message}`);
     }
@@ -199,7 +207,7 @@ export class BlockchainClient extends ClientBase {
       } else {
         const utxos: UTXO[] = await this.Get(`/address/${address}/utxo`);
         unsortedUTXOs = await Promise.all(
-          utxos.map(async (utxo) => await this.formatUtxo(utxo))
+          utxos.map(async (utxo) => await this.formatUtxo(utxo)),
         );
       }
     } catch (error: Error | any) {
@@ -231,7 +239,7 @@ export class BlockchainClient extends ClientBase {
       .reduce(
         (accumulator: BigNumber, currentValue: BigNumber) =>
           accumulator.plus(currentValue),
-        new BigNumber(0)
+        new BigNumber(0),
       );
 
     return {
@@ -259,7 +267,7 @@ export class BlockchainClient extends ClientBase {
       };
     } catch (error: any) {
       throw new Error(
-        `Failed to get status for address ${address}: ${error.message}`
+        `Failed to get status for address ${address}: ${error.message}`,
       );
     }
   }
@@ -302,7 +310,7 @@ export class BlockchainClient extends ClientBase {
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "gettransaction",
-          [txid]
+          [txid],
         );
       }
       return await this.Get(`/tx/${txid}/hex`);
