@@ -1,6 +1,6 @@
 {
   "name": "@caravan/descriptors",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "author": "Unchained Capital",
   "description": "A library for parsing and encoding descriptor strings using bdk",
   "main": "./dist/src/index.js",
