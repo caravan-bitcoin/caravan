@@ -1,13 +1,13 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { satoshisToBitcoins } from "unchained-bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   PENDING,
   UNSUPPORTED,
   ACTIVE,
   ERROR,
   SignMultisigTransaction,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import {
   Button,
   TextField,

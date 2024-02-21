@@ -6,7 +6,7 @@ import {
   validateExtendedPublicKeyForNetwork,
   deriveChildPublicKey,
   validateBIP32Path,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 
 // Components
 import { Button, TextField, FormHelperText, Box, Grid } from "@mui/material";

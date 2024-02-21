@@ -1433,7 +1433,7 @@ const TRANSACTIONS = MULTISIGS.map((test) =>
  * - `transactions` -- an array of [transactions]{@link module:fixtures.MultisigTransaction} from the multisig address above.
  *
  * @example
- * import {TEST_FIXTURES} from "unchained-bitcoin";
+ * import {TEST_FIXTURES} from "@caravan/bitcoin";
  * console.log(TEST_FIXTURES.keys.open_source.bip39Phrase);
  * // merge alley lucky axis penalty manage latin gasp virus captain wheel deal chase fragile chapter boss zero dirt stadium tooth physical valve kid plunge
  *

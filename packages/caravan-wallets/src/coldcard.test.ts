@@ -8,7 +8,7 @@ import {
   ColdcardSignMultisigTransaction,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
-import { Network, TEST_FIXTURES, ROOT_FINGERPRINT } from "unchained-bitcoin";
+import { Network, TEST_FIXTURES, ROOT_FINGERPRINT } from "@caravan/bitcoin";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
 

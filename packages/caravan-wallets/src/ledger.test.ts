@@ -7,7 +7,7 @@ import {
   ROOT_FINGERPRINT,
   Network,
   BraidDetails,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
 import {
   LedgerGetMetadata,
@@ -164,7 +164,7 @@ describe("ledger", () => {
         expect(() => {
           interactionBuilder().parsePublicKey();
         }).toThrow(/received no public key/i);
-        // TODO: this is broken in unchained-bitcoin
+        // TODO: this is broken in @caravan/bitcoin
         // the underlying function call should fail when not
         // given a valid hex string, instead it's just converting
         // to an empty string which can still convert

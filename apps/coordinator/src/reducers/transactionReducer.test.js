@@ -4,7 +4,7 @@ import {
   Network,
   satoshisToBitcoins,
   estimateMultisigP2WSHTransactionVSize,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { SET_NETWORK, SET_ADDRESS_TYPE } from "../actions/settingsActions";
 import {
   CHOOSE_PERFORM_SPEND,

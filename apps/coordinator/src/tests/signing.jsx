@@ -6,14 +6,14 @@ import {
   unsignedMultisigPSBT,
   unsignedTransactionObjectFromPSBT,
   TEST_FIXTURES,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   COLDCARD,
   HERMIT,
   LEDGER,
   SignMultisigTransaction,
   braidDetailsToWalletConfig,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 import Test from "./Test";

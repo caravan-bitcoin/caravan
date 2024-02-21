@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { estimateMultisigTransactionFee } from "unchained-bitcoin";
+import { estimateMultisigTransactionFee } from "@caravan/bitcoin";
 
 import { DUST_IN_SATOSHIS } from "./constants";
 

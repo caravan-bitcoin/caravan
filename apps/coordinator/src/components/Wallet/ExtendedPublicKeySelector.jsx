@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 
 // Actions
-import { deriveChildPublicKey } from "unchained-bitcoin";
+import { deriveChildPublicKey } from "@caravan/bitcoin";
 import { Box, FormControl, MenuItem, TextField } from "@mui/material";
 import {
   setSignatureImporterBIP32Path,

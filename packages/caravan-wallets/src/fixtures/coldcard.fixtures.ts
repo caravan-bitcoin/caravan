@@ -1,6 +1,6 @@
 import { COLDCARD_WALLET_CONFIG_VERSION } from "../coldcard";
 
-import { ROOT_FINGERPRINT } from "unchained-bitcoin";
+import { ROOT_FINGERPRINT } from "@caravan/bitcoin";
 
 export const coldcardFixtures = {
   // These use the Open Source Wallet words from the Caravan Test Suite
@@ -118,8 +118,8 @@ export const coldcardFixtures = {
     uuid: "OWPyFOA1",
   },
 
-  coldcardConfigUUID: `# Coldcard Multisig setup file (exported from unchained-wallets)
-# https://github.com/unchained-capital/unchained-wallets
+  coldcardConfigUUID: `# Coldcard Multisig setup file (exported from @caravan/wallets)
+# https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets
 # v${COLDCARD_WALLET_CONFIG_VERSION}
 #
 Name: OWPyFOA1
@@ -134,8 +134,8 @@ Derivation: m/45'/1/0/0
 77d36d3b: tpubDF4Ar5bxLQV9qbr2bZ7N7TYYWNv28kPEChWwyvrrxTMKJjqsYhce79mUkLNiKpW121TshHwjZhZbHmT66oPbwLqxJzcXLyf32ubCJyr4pRR
 `,
 
-  coldcardConfigName: `# Coldcard Multisig setup file (exported from unchained-wallets)
-# https://github.com/unchained-capital/unchained-wallets
+  coldcardConfigName: `# Coldcard Multisig setup file (exported from @caravan/wallets)
+# https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets
 # v${COLDCARD_WALLET_CONFIG_VERSION}
 #
 Name: Test

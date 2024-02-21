@@ -1,12 +1,12 @@
 import React from "react";
-import { Network, TEST_FIXTURES } from "unchained-bitcoin";
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   LEDGER,
   TREZOR,
   COLDCARD,
   ExportExtendedPublicKey,
   HERMIT,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import Test from "./Test";
 
 class ExportExtendedPublicKeyTest extends Test {

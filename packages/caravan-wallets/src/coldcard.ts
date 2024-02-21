@@ -20,7 +20,7 @@ import {
   convertExtendedPublicKey,
   getMaskedDerivation,
   MultisigAddressType,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -28,8 +28,8 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { P2SH, P2SH_P2WSH, P2WSH } from "unchained-bitcoin";
-import { BitcoinNetwork } from "unchained-bitcoin";
+import { P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
+import { BitcoinNetwork } from "@caravan/bitcoin";
 import { WalletConfigKeyDerivation } from "./types";
 
 export const COLDCARD = "coldcard";
@@ -267,7 +267,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
    *
    * 1. determine which t/U/V/x/Y/Zpub to use
    * 2. derive deeper if necessary (and able) using functionality
-   *    from unchained-bitcoin
+   *    from @caravan/bitcoin
    *
    */
   deriveDeeperXpubIfNecessary(result: Record<string, unknown> | string) {
@@ -484,7 +484,7 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
   }
 
   /**
-   * This calls a function in unchained-bitcoin which parses
+   * This calls a function in @caravan/bitcoin which parses
    * PSBT files for sigantures and then returns an object with the format
    * {
    *   pubkey1 : [sig1, sig2, ...],
@@ -609,8 +609,8 @@ export class ColdcardMultisigWalletConfig {
    * Output to be written to a text file and uploaded to Coldcard.
    */
   adapt() {
-    let output = `# Coldcard Multisig setup file (exported from unchained-wallets)
-# https://github.com/unchained-capital/unchained-wallets
+    let output = `# Coldcard Multisig setup file (exported from @caravan/wallets)
+# https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets
 # v${COLDCARD_WALLET_CONFIG_VERSION}
 #
 Name: ${this.name}

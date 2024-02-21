@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { Network } from "unchained-bitcoin";
+import { Network } from "@caravan/bitcoin";
 
 // Components
 

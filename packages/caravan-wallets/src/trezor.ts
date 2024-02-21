@@ -6,7 +6,7 @@
  * The base class provided is `TrezorInteraction` which wraps calls to [`TrezorConnect`]{@link https://github.com/trezor/connect}.  New interactions should subclass `TrezorInteraction`.
  *
  * Many Trezor calls require knowing the bitcoin network.  This
- * library uses the API defined by `unchained-bitcoin` to label
+ * library uses the API defined by `@caravan/bitcoin` to label
  * bitcoin networks, and this is the value expected in several off the
  * constructors for classes in this module.
  *
@@ -39,7 +39,7 @@ import {
   translatePSBT,
   addSignaturesToPSBT,
   Network,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import {
@@ -118,7 +118,7 @@ try {
     lazyLoad: true, // this param prevents iframe injection until a TrezorConnect.method is called
     manifest: {
       email: "help@unchained.com",
-      appUrl: "https://github.com/unchained-capital/unchained-wallets",
+      appUrl: "https://github.com/caravan-bitcoin/caravan",
     },
   });
 } catch (e) {
@@ -157,7 +157,7 @@ try {
  * manipulate the messages returned to the user for each interaction.
  *
  * @example
- * import {TrezorInteraction} from "unchained-wallets";
+ * import {TrezorInteraction} from "@caravan/wallets";
  * // Simple subclass
  *
  * class SimpleTrezorInteraction extends TrezorInteraction {
@@ -190,7 +190,7 @@ try {
  *
  * }
  * // usage
- * import {Network} from "unchained-bitcoin";
+ * import {Network} from "@caravan/bitcoin";
  * const interaction = new SimpleTrezorInteraction({network: Network.MAINNET, param: "foo"});
  * const result = await interaction.run();
  * console.log(result); // someValue from payload
@@ -318,7 +318,7 @@ export class TrezorInteraction extends DirectKeystoreInteraction {
  * PIN/passphrase enablement.
  *
  * @example
- * import {TrezorGetMetadata} from "unchained-wallets";
+ * import {TrezorGetMetadata} from "@caravan/wallets";
  * const interaction = new TrezorGetMetadata();
  * const result = await interaction.run();
  * console.log(result);
@@ -430,8 +430,8 @@ export class TrezorGetMetadata extends TrezorInteraction {
  * `TrezorExportExtendedPublicKey` directly.
  *
  * @example
- * import {Network} from "unchained-bitcoin";
- * import {TrezorExportHDNode} from "unchained-wallets";
+ * import {Network} from "@caravan/bitcoin";
+ * import {TrezorExportHDNode} from "@caravan/wallets";
  * const interaction = new TrezorExportHDNode({network: Network.MAINNET, bip32Path: "m/48'/0'/0'/2'/0"});
  * const node = await interaction.run();
  * console.log(node); // {publicKey: "", xpub: "", ...}
@@ -545,8 +545,8 @@ export class TrezorExportHDNode extends TrezorInteraction {
  * Returns the public key at a given BIP32 path.
  *
  * @example
- * import {Network} from "unchained-bitcoin";
- * import {TrezorExportPublicKey} from "unchained-wallets";
+ * import {Network} from "@caravan/bitcoin";
+ * import {TrezorExportPublicKey} from "@caravan/wallets";
  * const interaction = new TrezorExportPublicKey({network: Network.MAINNET, bip32Path: "m/48'/0'/0'/2'/0"});
  * const publicKey = await interaction.run();
  * console.log(publicKey);
@@ -585,8 +585,8 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
  * Returns the extended public key at a given BIP32 path.
  *
  * @example
- * import {Network} from "unchained-bitcoin";
- * import {TrezorExportExtendedPublicKey} from "unchained-wallets";
+ * import {Network} from "@caravan/bitcoin";
+ * import {TrezorExportExtendedPublicKey} from "@caravan/wallets";
  * const interaction = new TrezorExportExtendedPublicKey({network: Network.MAINNET, bip32Path: "m/48'/0'/0'"});
  * const xpub = await interaction.run();
  * console.log(xpub);
@@ -626,15 +626,15 @@ export class TrezorExportExtendedPublicKey extends TrezorExportHDNode {
  * Returns a signature for a bitcoin transaction with inputs from one
  * or many multisig addresses.
  *
- * - `inputs` is an array of `UTXO` objects from `unchained-bitcoin`
- * - `outputs` is an array of `TransactionOutput` objects from `unchained-bitcoin`
+ * - `inputs` is an array of `UTXO` objects from `@caravan/bitcoin`
+ * - `outputs` is an array of `TransactionOutput` objects from `@caravan/bitcoin`
  * - `bip32Paths` is an array of (`string`) BIP32 paths, one for each input, identifying the path on this device to sign that input with
  *
  * @example
  * import {
  *   generateMultisigFromHex, TESTNET, P2SH,
- * } from "unchained-bitcoin";
- * import {TrezorSignMultisigTransaction} from "unchained-wallets";
+ * } from "@caravan/bitcoin";
+ * import {TrezorSignMultisigTransaction} from "@caravan/wallets";
  * const redeemScript = "5...ae";
  * const inputs = [
  *   {
@@ -817,8 +817,8 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
  * @example
  * import {
  *   generateMultisigFromPublicKeys, Network, P2SH,
- * } from "unchained-bitcoin";
- * import {TrezorConfirmMultisigAddress} from "unchained-wallets";
+ * } from "@caravan/bitcoin";
+ * import {TrezorConfirmMultisigAddress} from "@caravan/wallets";
  * const multisig = generateMultisigFromPublicKeys(Network.MAINNET, P2SH, 2, "03a...", "03b...");
  * const interaction = new TrezorConfirmMultisigAddress({network: Network.MAINNET, bip32Path: "m/45'/0'/0'/0/0", multisig});
  * await interaction.run();

@@ -1,7 +1,7 @@
 import PropTypes from "prop-types";
 
 // TODO: This should all be coming from typescript
-// types in unchained-wallets/bitcoin
+// types in @caravan/wallets/bitcoin
 
 const ledgerPolicyHmacPropType = {
   xfp: PropTypes.string.isRequired,

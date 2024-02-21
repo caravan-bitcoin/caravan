@@ -23,11 +23,11 @@ which is being re-branded as the "Caravan Coordinator". The goal is to have many
 more applications built within this ecosystem that can live under the caravan/apps directory.
 
 `caravan/packages` is where the utility libraries live. Their foundation are forked versions of the [`unchained-bitcoin`](https://github.com/unchained-capital/unchained-bitcoin)
-and [`unchained-wallets`](https://github.com/unchained-capital/unchained-bitcoin)
+and [`unchained-wallets`](https://github.com/unchained-capital/unchained-wallets)
 projects. These are being re-branded for legacy support
 as `@caravan/bitcoin` and `@caravan/wallets` but moving forward
 the expectation is that they will be split up as well. For
-example the `psbt` module in `unchained-bitcoin` will become
+example the `psbt` module in `@caravan/bitcoin` will become
 `@caravan/psbt`.
 
 

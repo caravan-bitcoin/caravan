@@ -6,7 +6,7 @@ import {
   CustomExportExtendedPublicKey,
   CustomSignMultisigTransaction,
 } from "./custom";
-import { Network, TEST_FIXTURES } from "unchained-bitcoin";
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
 import { customFixtures } from "./fixtures/custom.fixtures";
 

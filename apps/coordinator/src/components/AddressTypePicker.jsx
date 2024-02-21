@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { P2SH, P2SH_P2WSH, P2WSH } from "unchained-bitcoin";
+import { P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 
 // Components
 import {

@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Network } from "unchained-bitcoin";
+import { Network } from "@caravan/bitcoin";
 
 // Components
 import { Card, CardContent, Typography, Grid } from "@mui/material";

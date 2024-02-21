@@ -18,7 +18,7 @@
  * * HermitExportExtendedPublicKey
  * * HermitSignMultisigTransaction
  */
-import { parseSignaturesFromPSBT } from "unchained-bitcoin";
+import { parseSignaturesFromPSBT } from "@caravan/bitcoin";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -88,7 +88,7 @@ export class HermitInteraction extends IndirectKeystoreInteraction {
  *
  */
 
-// FIXME -- move all this descriptor regex and extraction stuff to unchained-bitcoin
+// FIXME -- move all this descriptor regex and extraction stuff to @caravan/bitcoin
 const DESCRIPTOR_REGEXP = new RegExp(
   "^\\[([a-fA-F0-9]{8})((?:/[0-9]+'?)+)\\]([a-km-zA-NP-Z1-9]+)$"
 );
