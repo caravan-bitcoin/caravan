@@ -186,9 +186,10 @@ class OutputsForm extends React.Component {
     let feeEstimate;
     let feeRateFetchError = "";
     try {
-      feeEstimate = await client.fetchFeeEstimate();
+      feeEstimate = await client.getFeeEstimate();
     } catch (e) {
       feeRateFetchError = "There was an error fetching the fee rate.";
+      console.error(e);
     } finally {
       setFeeRate(
         !Number.isNaN(feeEstimate)
