@@ -1,4 +1,4 @@
-import { HERMIT } from "unchained-wallets";
+import { HERMIT } from "@caravan/wallets";
 
 import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";

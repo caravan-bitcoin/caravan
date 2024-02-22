@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { HERMIT, ExportPublicKey } from "unchained-wallets";
-import { validateBIP32Path } from "unchained-bitcoin";
+import { HERMIT, ExportPublicKey } from "@caravan/wallets";
+import { validateBIP32Path } from "@caravan/bitcoin";
 
 // Components
 import { FormGroup, FormHelperText } from "@mui/material";

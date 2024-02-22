@@ -64,18 +64,20 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.7.0",
+    "@caravan/bitcoin": "*",
     "@ledgerhq/hw-app-btc": "^5.34.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.27.12",
-    "@trezor/connect-web": "9.0.11",
+    "@trezor/connect-web": "^9.1.12",
+    "axios": "1.6.7",
     "bignumber.js": "^8.1.1",
     "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",
     "core-js": "^2.6.10",
     "ledger-bitcoin": "^0.2.0",
+    "material-table": "1.63.0",
     "punycode": "^2.1.1",
-    "sha": "^3.0.0",
-    "unchained-bitcoin": "^1.0.0"
+    "sha": "^3.0.0"
   },
   "overrides": {
     "@ledgerhq/hw-transport-webusb": {

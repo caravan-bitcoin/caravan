@@ -10,7 +10,7 @@ import {
   ACTIVE,
   INDIRECT_KEYSTORES,
   GetMetadata,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 
 import {
   Box,

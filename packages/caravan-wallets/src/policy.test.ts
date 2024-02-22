@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { Network, TEST_FIXTURES, BraidDetails } from "unchained-bitcoin";
+import { Network, TEST_FIXTURES, BraidDetails } from "@caravan/bitcoin";
 import {
   KeyOrigin,
   validateMultisigPolicyTemplate,

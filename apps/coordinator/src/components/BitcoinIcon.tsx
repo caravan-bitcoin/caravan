@@ -1,6 +1,6 @@
 import React from "react";
 import { SvgIcon } from "@mui/material";
-import { Network } from "unchained-bitcoin";
+import { Network } from "@caravan/bitcoin";
 
 interface BitcoinIconProps {
   network:

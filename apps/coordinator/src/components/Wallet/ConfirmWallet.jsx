@@ -10,7 +10,7 @@ import {
   TableCell,
   Box,
 } from "@mui/material";
-import { MultisigWalletPolicy } from "unchained-wallets";
+import { MultisigWalletPolicy } from "@caravan/wallets";
 import { getWalletConfig } from "../../selectors/wallet";
 
 const ConfirmationInfo = () => {

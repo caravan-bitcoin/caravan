@@ -1,4 +1,4 @@
-import { Network, P2SH, multisigBIP32Root } from "unchained-bitcoin";
+import { Network, P2SH, multisigBIP32Root } from "@caravan/bitcoin";
 import updateState from "./utils";
 import {
   SET_EXTENDED_PUBLIC_KEY_IMPORTER_NAME,

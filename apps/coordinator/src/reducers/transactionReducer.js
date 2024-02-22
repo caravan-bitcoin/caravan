@@ -14,7 +14,7 @@ import {
   checkFeeRateError,
   getFeeErrorMessage,
   FeeValidationError,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import updateState from "./utils";
 import { SET_NETWORK, SET_ADDRESS_TYPE } from "../actions/settingsActions";
 import {

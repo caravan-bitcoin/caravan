@@ -20,7 +20,7 @@ import { encodeUR, smartDecodeUR } from "./vendor/bcur";
  * codes.
  *
  * @example
- * import {BCUREncoder} from "unchained-wallets";
+ * import {BCUREncoder} from "@caravan/wallets";
  * const hexString = "deadbeef";
  * const encoder = BCUREncoder(hexString);
  * console.log(encoder.parts())
@@ -58,7 +58,7 @@ export class BCUREncoder {
  * in a loop parsing an animated sequence of QR codes.
  *
  * @example
- * import {BCURDecoder} from "unchained-wallets";
+ * import {BCURDecoder} from "@caravan/wallets";
  * const decoder = new BCURDecoder();
  *
  * // Read data until the decoder is complete...
@@ -139,7 +139,7 @@ export class BCURDecoder {
    * Returns the current progress of this decoder.
    *
    * @example
-   * import {BCURDecoder} from "unchained-wallets";
+   * import {BCURDecoder} from "@caravan/wallets";
    * const decoder = BCURDecoder();
    * console.log(decoder.progress())
    * // { totalParts: 0, partsReceived: 0 }

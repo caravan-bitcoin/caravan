@@ -1,6 +1,6 @@
 # Unchained Keystore Utilities
 
-[![Build Status](https://travis-ci.com/unchained-capital/unchained-wallets.svg?branch=master)](https://travis-ci.com/unchained-capital/unchained-wallets)
+[![Build Status](https://travis-ci.com/unchained-capital/@caravan/wallets.svg?branch=master)](https://travis-ci.com/unchained-capital/@caravan/wallets)
 
 This library provides classes for integrating functionality from the
 following keystores into JavaScript applications:
@@ -10,17 +10,17 @@ following keystores into JavaScript applications:
 - [Hermit](https://github.com/unchained-capital/hermit)
 
 Full API documentation can be found at
-[unchained-wallets](https://unchained-capital.github.io/unchained-wallets).
+[@caravan/wallets](https://unchained-capital.github.io/@caravan/wallets).
 
 This library was built and is maintained by [Unchained](https://www.unchained.com).
 
 ## Installation
 
-`unchained-wallets` is distributed as an NPM package. Add it to your
+`@caravan/wallets` is distributed as an NPM package. Add it to your
 application's dependencies:
 
 ```
-$ npm install --save unchained-wallets
+$ npm install --save @caravan/wallets
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ Not every keystore supported by this library implements each of these
 interactions.
 
 Each interaction takes different arguments. See the [API
-documentation](https://unchained-capital.github.io/unchained-wallets)
+documentation](https://unchained-capital.github.io/@caravan/wallets)
 for full details.
 
 ### Applications
@@ -66,8 +66,8 @@ a public key from a Trezor hardware wallet.
 import React from "react";
 import PropTypes from "prop-types";
 
-// The `unchained-bitcoin` library is used by `unchained-wallets`.
-import { MAINNET } from "unchained-bitcoin";
+// The `@caravan/bitcoin` library is used by `@caravan/wallets`.
+import { MAINNET } from "@caravan/bitcoin";
 
 import {
   // This is the interaction we are implementing.
@@ -84,7 +84,7 @@ import {
   PENDING,
   ACTIVE,
   UNSUPPORTED,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 
 export class HardwareWalletPublicKeyImporter extends React.Component {
   // For this example, the required arguments are
@@ -228,7 +228,7 @@ Several methods such as `hasMessage`, `messageTextFor()`, &c. are
 available to filter and extract data from messages.
 
 See the [API
-documentation](https://unchained-capital.github.io/unchained-wallets)
+documentation](https://unchained-capital.github.io/@caravan/wallets)
 for more details on messages.
 
 ## Developers
@@ -247,15 +247,15 @@ Developers who want to work on this library should clone the source
 code and install dependencies:
 
 ```
-$ git clone https://github.com/unchained-capital/unchained-wallets`
+$ git clone https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets`
 ...
-$ cd unchained-wallets
+$ cd @caravan/wallets
 $ npm install
 ```
 
 Development proceeds in one of three ways:
 
-1. Working on the `unchained-wallets` library itself.
+1. Working on the `@caravan/wallets` library itself.
 
 2. Implementing interactions to support a new keystore.
 
@@ -276,20 +276,20 @@ discouraged.
 
 ### Developing locally with another app (ex. [Caravan](https://github.com/unchained-capital/caravan))
 
-If you would like to develop unchained-wallets locally while also developing an app that depends on unchained-wallets, you'll need to do a few steps:
+If you would like to develop @caravan/wallets locally while also developing an app that depends on @caravan/wallets, you'll need to do a few steps:
 
 1. Change `"main": "lib/index.js"` in package.json to `"main": "src/index.ts"` This step is temporary while we convert this package to ESM.
 2. In the root of this project run `npm link`
-3. In the root of the project that depends on this package run `npm link unchained-wallets`
+3. In the root of the project that depends on this package run `npm link @caravan/wallets`
 
 Now when you start up your app, whatever bundler you're using (Vite, Webpack, etc.) should compile this package as well.
 
 ### Developing against local Trezor connect
 
 If for some reason you need to use a [local instance of Trezor Connect](https://wiki.trezor.io/Developers_guide:Running_Trezor_Connect_on_localhost)
-The module that unchained-wallets uses to connect will need to be initialized
+The module that @caravan/wallets uses to connect will need to be initialized
 with a custom `connectSrc` option. To enable this automatically, make sure
-to start the process that unchained-wallets is running in with the `TREZOR_DEV`
+to start the process that @caravan/wallets is running in with the `TREZOR_DEV`
 environment variable set to `true` (e.g. `TREZOR_DEV=true npm run start`).
 
 Currently this will tell the Trezor interaction to access connect at `https://localhost:8088`
@@ -351,9 +351,9 @@ of the configurations as well as management of the type declarations can be alte
 
 Unchained welcomes bug reports, new features, and better documentation for this library.
 
-If you are fixing a bug or adding a feature, please first check the [GitHub issues page](https://github.com/unchained-capital/unchained-wallets/issues) to see if there is any existing discussion about it.
+If you are fixing a bug or adding a feature, please first check the [GitHub issues page](https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets/issues) to see if there is any existing discussion about it.
 
-To contribute, create a pull request (PR) on GitHub against the [Unchained fork of unchained-wallets](https://github.com/unchained-capital/unchained-wallets).
+To contribute, create a pull request (PR) on GitHub against the [Unchained fork of @caravan/wallets](https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets).
 
 Before you submit your PR, make sure to update and run the test suite!
 

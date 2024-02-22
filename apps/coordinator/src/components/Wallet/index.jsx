@@ -6,7 +6,7 @@ import {
   validateBIP32Index,
   validateBIP32Path,
   validateExtendedPublicKey,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import { Box, Button, FormHelperText, Grid } from "@mui/material";
 import { downloadFile } from "../../utils";
 import {

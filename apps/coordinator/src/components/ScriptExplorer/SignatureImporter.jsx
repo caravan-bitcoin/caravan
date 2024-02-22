@@ -8,8 +8,8 @@ import {
   multisigBIP32Root,
   validateBIP32Path,
   getMaskedDerivation,
-} from "unchained-bitcoin";
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "unchained-wallets";
+} from "@caravan/bitcoin";
+import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -450,7 +450,7 @@ class SignatureImporter extends React.Component {
         // Loop over inputs and check the sigs array to see if you can find a public key or not.
         // NOTE - signaturesToCheck.length could be much larger than inputs.length!
         // This is *not* efficient, but it will work as a temporary solution until we refactor
-        // the signatures data structure returned from unchained-bitcoin or change how caravan
+        // the signatures data structure returned from @caravan/bitcoin or change how caravan
         // validates signatures.
 
         // The "sets" of signatures that come out of this process are not all connected /  tied to the same root xpub

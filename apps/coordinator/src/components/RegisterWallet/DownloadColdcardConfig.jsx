@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
-import { COLDCARD, ConfigAdapter } from "unchained-wallets";
+import { COLDCARD, ConfigAdapter } from "@caravan/wallets";
 import { getWalletConfig } from "../../selectors/wallet";
 import { setErrorNotification } from "../../actions/errorNotificationActions";
 import { downloadFile } from "../../utils";

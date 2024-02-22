@@ -104,7 +104,7 @@
     "@trezor/transport": "^1.1.15",
     "@types/redux": "^3.6.0",
     "@vitejs/plugin-react": "^3.1.0",
-    "axios": "^0.21.2",
+    "axios": "^1.6.7",
     "base58check": "^2.0.0",
     "bignumber.js": "^9.0.0",
     "bip32": "^2.0.4",
@@ -118,7 +118,7 @@
     "hi-base32": "^0.5.0",
     "history": "^5.0.0",
     "lodash": "^4.17.19",
-    "material-table": "^2.0.3",
+    "material-table": "^2.0.5",
     "moment": "^2.24.0",
     "notistack": "^3.0.0",
     "pako": "^1.0.10",
@@ -141,8 +141,6 @@
     "redux-promise": "^0.6.0",
     "redux-thunk": "^2.3.0",
     "reselect": "^4.0.0",
-    "sass": "^1.56.2",
-    "unchained-bitcoin": "^1.2.1",
-    "unchained-wallets": "^1.0.4"
+    "sass": "^1.56.2"
   }
 }

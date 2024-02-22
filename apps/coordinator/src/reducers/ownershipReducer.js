@@ -4,7 +4,7 @@ import {
   multisigAddressType,
   multisigBIP32Path,
   multisigPublicKeys,
-} from "unchained-bitcoin";
+} from "@caravan/bitcoin";
 import updateState from "./utils";
 import { SET_NETWORK } from "../actions/settingsActions";
 import {

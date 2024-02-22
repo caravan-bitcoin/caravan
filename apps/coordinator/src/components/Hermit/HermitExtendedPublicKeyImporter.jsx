@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { HermitExportExtendedPublicKey } from "unchained-wallets";
+import { HermitExportExtendedPublicKey } from "@caravan/wallets";
 import { FormGroup, FormHelperText } from "@mui/material";
 
 import HermitReader from "./HermitReader";

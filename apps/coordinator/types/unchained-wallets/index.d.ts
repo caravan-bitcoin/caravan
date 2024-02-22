@@ -1,1 +1,1 @@
-declare module "unchained-wallets";
+declare module "@caravan/wallets";

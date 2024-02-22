@@ -1,11 +1,11 @@
 import React from "react";
 
-import { blockExplorerAddressURL, TEST_FIXTURES } from "unchained-bitcoin";
+import { blockExplorerAddressURL, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   ConfirmMultisigAddress,
   LEDGER,
   braidDetailsToWalletConfig,
-} from "unchained-wallets";
+} from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 
