@@ -52,7 +52,6 @@ export class ClientBase {
   private async Request(method: Method, path: string, data?: any) {
     await this.throttle();
     try {
-      console.log("method: ", method, "path: ", path, "data: ", data);
       const response = await axios.request({
         method,
         url: this.host + path,
