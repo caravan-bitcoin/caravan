@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0
+
+### Minor Changes
+
+- [#14](https://github.com/caravan-bitcoin/caravan/pull/14) [`d1d1699`](https://github.com/caravan-bitcoin/caravan/commit/d1d1699b6b97b042e4ff232fc7660ed2318cb9ee) Thanks [@bucko13](https://github.com/bucko13)! - Use @caravan/clients for client requests and revert to use blockstream as default. This is to avoid rate limiting issues with mempool.space
+
+### Patch Changes
+
+- [#15](https://github.com/caravan-bitcoin/caravan/pull/15) [`a39dfde`](https://github.com/caravan-bitcoin/caravan/commit/a39dfde2aab9908370bc5eea032960b1939f1e14) Thanks [@bucko13](https://github.com/bucko13)! - maintenance patch to cleanup dependencies
+
+- Updated dependencies [[`a39dfde`](https://github.com/caravan-bitcoin/caravan/commit/a39dfde2aab9908370bc5eea032960b1939f1e14)]:
+  - @caravan/bitcoin@0.0.1
+  - @caravan/wallets@0.0.1
+
 ## 0.0.3
 
 ### Patch Changes
