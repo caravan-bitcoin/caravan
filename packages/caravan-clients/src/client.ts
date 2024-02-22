@@ -277,7 +277,7 @@ export class BlockchainClient extends ClientBase {
       switch (this.type) {
         case ClientType.PRIVATE:
           return bitcoindEstimateSmartFee({
-            numBlocks: blocks,
+            numBlocks: +blocks,
             ...this.bitcoindParams,
           });
         case ClientType.BLOCKSTREAM:
