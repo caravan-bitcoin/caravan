@@ -25,7 +25,7 @@ import {
   finalizeOutputs as finalizeOutputsAction,
   resetOutputs as resetOutputsAction,
 } from "../../actions/transactionActions";
-import { fetchFeeEstimate } from "../../blockchain";
+import { getBlockchainClientFromStore } from "../../actions/clientActions";
 import { MIN_SATS_PER_BYTE_FEE } from "../Wallet/constants";
 import OutputEntry from "./OutputEntry";
 import styles from "./styles.module.scss";
@@ -181,13 +181,15 @@ class OutputsForm extends React.Component {
   };
 
   getFeeEstimate = async () => {
-    const { client, network, setFeeRate } = this.props;
+    const { getBlockchainClient, setFeeRate } = this.props;
+    const client = await getBlockchainClient();
     let feeEstimate;
     let feeRateFetchError = "";
     try {
-      feeEstimate = await fetchFeeEstimate(network, client);
+      feeEstimate = await client.getFeeEstimate();
     } catch (e) {
       feeRateFetchError = "There was an error fetching the fee rate.";
+      console.error(e);
     } finally {
       setFeeRate(
         !Number.isNaN(feeEstimate)
@@ -485,6 +487,7 @@ OutputsForm.propTypes = {
   setOutputAmount: PropTypes.func.isRequired,
   signatureImporters: PropTypes.shape({}).isRequired,
   updatesComplete: PropTypes.bool,
+  getBlockchainClient: PropTypes.func.isRequired,
 };
 
 OutputsForm.defaultProps = {
@@ -511,6 +514,7 @@ const mapDispatchToProps = {
   setFee: setFeeAction,
   finalizeOutputs: finalizeOutputsAction,
   resetOutputs: resetOutputsAction,
+  getBlockchainClient: getBlockchainClientFromStore,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(OutputsForm);
