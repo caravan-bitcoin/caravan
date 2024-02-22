@@ -107,7 +107,7 @@ const ClientPicker = ({
     setConnectError("");
     setConnectSuccess(false);
     try {
-      await blockchainClient.fetchFeeEstimate(network, client);
+      await blockchainClient.getFeeEstimate();
       if (onSuccess) {
         onSuccess();
       }
