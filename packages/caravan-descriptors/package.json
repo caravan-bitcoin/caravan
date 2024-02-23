@@ -17,7 +17,7 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src",
     "ci": "npm run build && npm run lint && npm run test",
-    "test": "jest src",
+    "test": "npm run build && jest src",
     "test:watch": "jest --watch src",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
