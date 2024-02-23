@@ -5,6 +5,18 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
+  "files": [
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets"
@@ -63,6 +75,7 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.7.0",
+    "@babel/runtime": "^7.23.9",
     "@caravan/bitcoin": "*",
     "@ledgerhq/hw-app-btc": "^5.34.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
