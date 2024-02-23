@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,

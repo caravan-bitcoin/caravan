@@ -49,9 +49,9 @@ import {
   DirectKeystoreInteraction,
 } from "./interaction";
 
-import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction";
-import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction";
-import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion";
+import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
+import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
+import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
 import { DeviceError, MultisigWalletConfig, TxInput } from "./types";
 import { MultisigWalletPolicy } from "./policy";

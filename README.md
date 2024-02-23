@@ -182,6 +182,13 @@ This will initialize a package.json for you. But we want to add a few more field
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
@@ -277,20 +284,30 @@ import { BlockchainClient, ClientType } from "@caravan/clients";
 ```
 - Note that now not only if you make a change to `caravan/coordinator` the changes will be reflected almost instantly in the app, but you can also make a change to the dependencies and everything will rebuild (technically turborepo only rebuilds what is necessary, caching the rest). Add a console.log to the `getFeeEstimate` in the `BlockchainClient` app and see for yourself!
 
-## What's inside?
+## Troubleshooting
+- you might see an error "The request '...' failed to resolve only because it was resolved as fully specified"
+Webpack has an [issue](https://github.com/webpack/webpack/issues/11467#issuecomment-691873586) by default
+resolving the built module package if the extension is not specified. You can fix this by adding the following
+rule to your webpack config (module.rules array):
 
-This Turborepo includes the following packages and apps:
+```javascript
+{
+  test: /\.m?js/,
+  resolve: {
+      fullySpecified: false
+  }
+},
+```
+This will usually happen if a package was written trying to do a direct import of a file from a dependency and not
+specifying the extension, for example:
 
-### Configs
+```ts
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
+```
 
-- `eslint-config-custom`: shared `eslint` configurations
-- `tsconfig`: `tsconfig.json`s used throughout the monorepo
+instead of
 
-### Utilities
+```ts
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
+```
 
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Jest](https://jestjs.io) test runner for all things JavaScript
-- [Prettier](https://prettier.io) for code formatting
