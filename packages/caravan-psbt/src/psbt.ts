@@ -1,5 +1,5 @@
 import { Psbt, Transaction } from "bitcoinjs-lib";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import { toHexString } from "@caravan/bitcoin";
 import {
   generateMultisigFromHex,

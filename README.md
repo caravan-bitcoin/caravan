@@ -298,4 +298,16 @@ rule to your webpack config (module.rules array):
   }
 },
 ```
+This will usually happen if a package was written trying to do a direct import of a file from a dependency and not
+specifying the extension, for example:
+
+```ts
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
+```
+
+instead of
+
+```ts
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
+```
 
