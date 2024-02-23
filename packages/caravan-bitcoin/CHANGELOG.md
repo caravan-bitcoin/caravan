@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3
+
+### Patch Changes
+
+- [#21](https://github.com/caravan-bitcoin/caravan/pull/21) [`c8ac4d3`](https://github.com/caravan-bitcoin/caravan/commit/c8ac4d37f8e6e1c7e71010c7e7723468d63d8c75) Thanks [@bucko13](https://github.com/bucko13)! - lint fixes
+
 ## 0.0.2
 
 ### Patch Changes
