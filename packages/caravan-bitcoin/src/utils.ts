@@ -74,8 +74,6 @@ export function satoshisToBitcoins(satoshis: string | number) {
  * - Rounds down output value to the nearest Satoshi.
  */
 export function bitcoinsToSatoshis(btc: string | number) {
-  const btcAmount = new BigNumber(btc);
-
   return new BigNumber(btc)
     .shiftedBy(8)
     .integerValue(BigNumber.ROUND_DOWN)
