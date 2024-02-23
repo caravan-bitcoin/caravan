@@ -1,5 +1,5 @@
 import { Network, satoshisToBitcoins } from "@caravan/bitcoin";
-import { BlockchainClient, ClientType, ClientBase } from "./client";
+import { BlockchainClient, ClientType, ClientBase, UTXO } from "./client";
 import * as bitcoind from "./bitcoind";
 import BigNumber from "bignumber.js";
 
@@ -481,9 +481,9 @@ describe("BlockchainClient", () => {
         .mockResolvedValue(mockTransactionResult);
 
       // Mock the response from the Get method
-      const mockUtxos = [
-        { txid: "txid1", vout: 0, value: 100, status: "confirmed" },
-        { txid: "txid2", vout: 1, value: 200, status: "confirmed" },
+      const mockUtxos: UTXO[] = [
+        { txid: "txid1", vout: 0, value: 100, status: {confirmed: true, block_time: 21} },
+        { txid: "txid2", vout: 1, value: 200, status: {confirmed: true, block_time: 42} },
       ];
       const mockGet = jest.fn().mockResolvedValue(mockUtxos);
 
@@ -504,8 +504,8 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result.utxos).toEqual(
         await Promise.all(
-          mockUtxos.map((utxo: any) => blockchainClient.formatUtxo(utxo)),
-        ),
+          mockUtxos.map((utxo: UTXO) => blockchainClient.formatUtxo(utxo))
+        )
       );
       expect(result.balanceSats).toEqual(new BigNumber(300));
       expect(result.addressKnown).toBe(true);

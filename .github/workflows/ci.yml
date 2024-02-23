@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         node-version: ["20.x"]
-    # To use Turborepo Remote Caching
+    # To use Turborepo Remote Caching, set the following environment variables for the job.
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -22,8 +22,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
+          version: 'latest'
+
       - name: Install Dependencies
         run: npm install
 
+
       - name: Run tests
-        run: npm run ci
+        run: |
+          npx turbo run ci

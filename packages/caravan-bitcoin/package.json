@@ -61,6 +61,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
+    "lint": "eslint src/ --ext .ts",
+    "ci": "npm run test",
     "test": "jest src",
     "test:watch": "jest --watch src"
   },

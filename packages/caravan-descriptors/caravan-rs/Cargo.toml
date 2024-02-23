@@ -1,0 +1,36 @@
+[package]
+name = "caravan-rs"
+version = "0.1.0"
+authors = ["Steve Myers <steve@notmandatory.org>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+wasm-bindgen = "0.2.84"
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = { version = "^1.0" }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+# Bitcoin Dev Kit
+bdk = { version = "1.0.0-alpha.1", default-features = false }
+getrandom = { version = "0.2", features = ["js"] }
+bdk_chain = "0.5.0"
+bdk_esplora = { version = "0.3.0", default-features = false, features = ["async-https"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.34"
+assert-json-diff = "2.0"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
