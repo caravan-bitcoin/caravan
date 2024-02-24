@@ -8,6 +8,11 @@
   "engines": {
     "node": ">=20"
   },
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build:rs": "cd caravan-rs && wasm-pack build -t web --out-dir pkg-web && wasm-pack build --target nodejs --out-dir pkg-nodejs",
     "build:ts": "tsc",
