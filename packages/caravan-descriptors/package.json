@@ -27,7 +27,8 @@
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
-    "@caravan/bitcoin": "*"
+    "@caravan/bitcoin": "*",
+    "@caravan/wallets": "*"
   },
   "devDependencies": {
     "shx": "^0.3.4"

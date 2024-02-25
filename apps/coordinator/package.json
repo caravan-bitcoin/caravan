@@ -62,7 +62,8 @@
     "standard-version": "^9.0.0",
     "typescript": "^5.0.2",
     "vite": "^4.2.3",
-    "vite-plugin-node-polyfills": "^0.7.0"
+    "vite-plugin-node-polyfills": "^0.7.0",
+    "vite-plugin-wasm": "^3.3.0"
   },
   "scripts": {
     "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
@@ -94,6 +95,7 @@
   "dependencies": {
     "@caravan/bitcoin": "*",
     "@caravan/clients": "*",
+    "@caravan/descriptors": "^0.0.1",
     "@caravan/wallets": "*",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",

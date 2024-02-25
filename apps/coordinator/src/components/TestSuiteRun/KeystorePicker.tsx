@@ -10,6 +10,7 @@ import {
   ACTIVE,
   INDIRECT_KEYSTORES,
   GetMetadata,
+  KEYSTORE_TYPES,
 } from "@caravan/wallets";
 
 import {
@@ -33,7 +34,7 @@ interface KeystorePickerBaseProps {
   setKeystore: (type: string, version: string) => void;
   setKeystoreStatus: (status: string) => void;
   status: string;
-  type: string;
+  type: KEYSTORE_TYPES | "";
   version: string;
 }
 
@@ -61,7 +62,7 @@ const KeystorePickerBase = ({
   };
 
   const interaction = () => {
-    return GetMetadata({ keystore: type });
+    return GetMetadata({ keystore: type as KEYSTORE_TYPES });
   };
 
   const handleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {

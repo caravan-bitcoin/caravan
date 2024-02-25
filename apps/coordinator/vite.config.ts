@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import path from "path";
+import wasm from "vite-plugin-wasm";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -10,12 +11,14 @@ export default defineConfig({
   // then the sub-path can cause issues
   base:
     process.env.GH_PAGES || process.env.GITHUB_ACTIONS ? "/caravan/#" : "/#",
+  assetsInclude: ["**/*.wasm"],
   resolve: {
     alias: {
       utils: path.resolve(__dirname, "./src/utils"),
     },
   },
   plugins: [
+    wasm(),
     react(),
     nodePolyfills({
       protocolImports: true,
@@ -35,5 +38,9 @@ export default defineConfig({
   define: {
     __GIT_SHA__: JSON.stringify(process.env.__GIT_SHA__),
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+  },
+  optimizeDeps: {
+    // needed for local development to support proper handling of wasm
+    // exclude: ["@caravan/descriptors"],
   },
 });

@@ -1,38 +1,36 @@
 import { getRustAPI } from "./wasmLoader";
 import {
-  BitcoinNetwork,
   MultisigAddressType,
+  Network,
   validateExtendedPublicKeyForNetwork,
 } from "@caravan/bitcoin";
-
-// TODO: should come from unchained-wallets
-export interface KeyOrigin {
-  xfp: string;
-  bip32Path: string;
-  xpub: string;
-}
+import { KeyOrigin } from "@caravan/wallets";
 
 // should be a 32 byte hex string
 export type PolicyHmac = string;
 // should be an 8 byte hex string
 export type RootFingerprint = string;
 
+// This interface is different from the one that is
+// exported from the `@caravan/wallets` package, which
+// is primarily built for the original caravan config
+// and has some unnecessary config fields (e.g. quorum).
 export interface MultisigWalletConfig {
   requiredSigners: number;
   addressType: MultisigAddressType;
   keyOrigins: KeyOrigin[];
-  network: BitcoinNetwork | "bitcoin";
+  network: Network | "bitcoin";
 }
 
 export const decodeDescriptors = async (
   internal: string,
   external: string,
-  network?: BitcoinNetwork,
+  network?: Network | "bitcoin",
 ): Promise<MultisigWalletConfig> => {
   const { ExtendedDescriptor, CaravanConfig, Network } = await getRustAPI();
   const external_descriptor = ExtendedDescriptor.from_str(external);
   const internal_descriptor = ExtendedDescriptor.from_str(internal);
-  let _network: BitcoinNetwork | "bitcoin";
+  let _network: Network | "bitcoin";
   if (network === "mainnet" || !network) {
     _network = "bitcoin";
   } else {
@@ -109,7 +107,7 @@ export const getChecksum = async (descriptor: string) => {
 
 export const getWalletFromDescriptor = async (
   descriptor: string,
-  network?: BitcoinNetwork,
+  network?: Network,
 ): Promise<MultisigWalletConfig> => {
   let internal: string = "",
     external: string = "";

@@ -32,7 +32,6 @@ $ npm run test
 ```
 This will run the TypeScript tests only.
 
-
 ### Web
 You'll need to make sure that the web environment this is used in
 supports wasm. For example, if you're using in a vite.js project
@@ -41,6 +40,18 @@ you'll need the `vite-plugin-wasm` plugin.
 Also note that all functions exported are async and need to be awaited
 since they will load up the wasm modules to be used (this way consumers
 of the library don't have to worry about loading up the modules themselves)
+
+## Development
+### Usage in Monorepo
+While this package is used on `@caravan/coordinator`, due to the "special" requirements needed
+to build this package for usage in `@caravan/coordinator`, the local version of `@caravan/descriptors` is not explicitly
+linked in the package.json but instead the published version is referenced. This means
+that users who aren't setup to build the wasm dependencies can still build the coordinator.
+
+If you want to work on an update to this package and test them out in a web environment,
+simply change the `@caravan/coordinator` package.json to be `"@caravan/descriptors": "*"`
+and run `npm install && turbo run dev` from the root. Make sure to revert the dependency though
+before finalizing your Pull Request.
 
 
 ## API
@@ -56,3 +67,4 @@ the two corresponding descriptors
 Take two descriptors and convert them into a multisig wallet
 config object. This will make it possible to determine and parse the wallet type
 (e.g. P2SH) and the key origins.
+
