@@ -1,19 +1,23 @@
 # Caravan Descriptors
 
 ## Installation
+@caravan/descriptors is built ontop of bdk which is written in Rust. In order to leverage
+bdk as the reference code, there are wasm bindings provided.
 
-1. clone
-2. install [rust toolchain](https://www.rust-lang.org/tools/install) and `cargo install wasm-pack`
-3. npm install in the main directory
-4. cd to the caravan-rs directory and `wasm-pack build -t nodejs` to build the `pkg/` directory (not clear yet if nodejs is the right target or how to make it more flexible)
-   1. You might need to install llvm/clang
-   2. Will also need to setup paths to build libsecp
+In order to build these, you will need Rust and wasm-pack. You may also need to install llvm/clang
 
+```shell
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh # https://www.rust-lang.org/tools/install
+$ cargo install wasm-pack
 ```
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-# for older homebrew installs
+
+You may also need to export some paths to build libsecp:
+
+```shell
+$ $ export PATH="/opt/homebrew/opt/llvm/bin:$PATH" \
+# for older homebrew installs \
 # export PATH="/usr/local/opt/llvm/bin:$PATH"
-export CC=/opt/homebrew/opt/llvm/bin/clang
+export CC=/opt/homebrew/opt/llvm/bin/clang \
 export AR=/opt/homebrew/opt/llvm/bin/llvm-ar
 ```
 

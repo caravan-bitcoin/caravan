@@ -1,6 +1,7 @@
 name: Deploy GH Pages
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '@caravan/coordinator**'
