@@ -13,7 +13,7 @@
     "lint": {},
     "test": {
       "dependsOn": [
-        "^build"
+        "^build, build"
       ]
     },
     "test:debug": {

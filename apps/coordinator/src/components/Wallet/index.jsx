@@ -27,7 +27,6 @@ import AddressTypePicker from "../AddressTypePicker";
 import ClientPicker from "../ClientPicker";
 import StartingAddressIndexPicker from "../StartingAddressIndexPicker";
 import WalletGenerator from "./WalletGenerator";
-import ExtendedPublicKeyImporter from "./ExtendedPublicKeyImporter";
 import WalletActionsPanel from "./WalletActionsPanel";
 import {
   getUnknownAddresses,
@@ -58,7 +57,6 @@ import {
   SET_CLIENT_USERNAME,
 } from "../../actions/clientActions";
 import { clientPropTypes, slicePropTypes } from "../../proptypes";
-import { WalletDescriptorImporter } from "./WalletDescriptorImporter";
 import { ExtendedPublicKeyImporters } from "./ExtendedPublicKeyImporters";
 
 class CreateWallet extends React.Component {
