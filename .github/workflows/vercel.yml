@@ -1,0 +1,61 @@
+name: Deploy Vercel
+
+on: [ push, pull_request_target ]
+
+jobs:
+  vercel:
+    name: Deploy Vercel
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAGES: true
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Cache Dependencies ...
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      # the deploy action can't find the build directory if it's in the
+      # sub directory of the monorepo, even if we reference it correctly
+      # so we have to copy it to the root of the repo.
+      - name: Build
+        # forcing a build to avoid the cache. Probably unnecessary
+        # but useful in case any environment variables change that might
+        # impact the build
+        run: npx turbo run build --force
+
+
+      - name: Deploy to Staging ...
+        id: deploy-vercel-staging
+        uses: amondnet/vercel-action@v20
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Deploy to Production ...
+        uses: amondnet/vercel-action@v20
+        id: deploy-vercel-production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_TL_ENGINE }}
+          vercel-args: '--prod'
+          scope: ${{ secrets.VERCEL_ORG_ID }}
