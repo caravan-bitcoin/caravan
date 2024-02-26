@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.3
+
+### Patch Changes
+
+- [#21](https://github.com/caravan-bitcoin/caravan/pull/21) [`c8ac4d3`](https://github.com/caravan-bitcoin/caravan/commit/c8ac4d37f8e6e1c7e71010c7e7723468d63d8c75) Thanks [@bucko13](https://github.com/bucko13)! - lint fixes
+
+## 0.0.2
+
+### Patch Changes
+
+- [#18](https://github.com/caravan-bitcoin/caravan/pull/18) [`df50672`](https://github.com/caravan-bitcoin/caravan/commit/df506724b82c65ac47012e8da8a962e34611790e) Thanks [@bucko13](https://github.com/bucko13)! - - Makes package.jsons more explicit for wallets and bitcoin.
+  - caravan/bitcoin now exports its types explicitly
+
 ## 0.0.1
 
 ### Patch Changes

@@ -31,6 +31,12 @@
     ,
     "deploy": {
       "dependsOn": ["build", "test", "lint"]
+    },
+    "preview": {
+      "dependsOn": ["build"]
+    },
+    "ci": {
+      "dependsOn": ["^build"]
     }
   }
 }

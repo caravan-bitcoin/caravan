@@ -43,6 +43,12 @@ module.exports = function(plop) {
         message: "Do you want a .eslintrc.js?",
         default: true,
       },
+      {
+        type: "confirm",
+        name: "prettier",
+        message: "Do you want a .prettierrc?",
+        default: true,
+      },
     ],
     actions: function(data) {
       const actions = [

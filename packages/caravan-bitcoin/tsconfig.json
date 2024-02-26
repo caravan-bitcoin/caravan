@@ -18,10 +18,7 @@
     "isolatedModules": true,
     "outDir": "lib",
   },
-  "include": ["src"],
-  "exclude": [
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "src/**/*.test.js"
-  ]
+  "include": [
+    "src"
+  ],
 }

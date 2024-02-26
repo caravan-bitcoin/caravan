@@ -1,6 +1,6 @@
 {
   "name": "@caravan/wallets",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Unchained Capital's HWI Library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -66,6 +66,7 @@
   "scripts": {
     "compile-images": "node images/compile.js",
     "build": "tsup src/index.ts --format cjs,esm --dts",
+    "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
     "test": "jest src",
     "test:watch": "jest --watch src",

@@ -9,8 +9,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "gen": "turbo gen run",
     "lint": "turbo lint",
-    "version": "turbo run build lint test && changeset version",
-    "release": "turbo run build lint test && changeset publish",
+    "version": "turbo run build && turbo lint test && changeset version",
+    "release": "turbo run build && turbo lint test && changeset publish",
     "publish-tags": "changeset tag && git push --follow-tags"
   },
   "devDependencies": {
