@@ -68,7 +68,7 @@ describe("ClientBase", () => {
     const endTime = Date.now();
 
     const elapsedTime = endTime - startTime;
-    expect(elapsedTime).toBeGreaterThanOrEqual(500); // Assuming delay() is 1000ms
+    expect(elapsedTime).toBeGreaterThan(499); // Assuming delay() is 500
   });
 });
 
