@@ -17,7 +17,7 @@ safekeep the addresses (and redeem scripts & BIP32 paths) you create.
 Caravan is a stateless pure HTML & JavaScript web application. It can
 be run in any web browser from a local or remote installation.
 
-### Unchained Capital GitHub
+### Caravan Bitcoin Github
 
 The simplest way to use Caravan is to visit
 [https://caravan-bitcoin.github.io/caravan](https://caravan-bitcoin.github.io/caravan),
@@ -58,7 +58,7 @@ $ git clone https://github.com/caravan-bitcoin/caravan
 $ cd caravan
 $ npm install
 ...
-$ npm run dev
+$ npm run dev:coordinator
 ...
 ```
 
@@ -73,7 +73,7 @@ application for a production deployment and then host the contents of
 the resulting `build` directory via a webserver such as `nginx`.
 
 ```bash
-$ npm run build
+$ npm run build:coordinator
 ...
 ```
 
