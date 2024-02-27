@@ -26,6 +26,13 @@
   "engines": {
     "node": ">=20"
   },
+  "overrides": {
+    "jspdf": "2.5.1",
+    "@ledgerhq/hw-transport-webusb": {
+      "@ledgerhq/hw-transport": "6.28.1",
+      "@ledgerhq/devices": "8.0.0"
+    }
+  },
   "packageManager": "npm@10.2.3",
   "workspaces": [
     "apps/*",
