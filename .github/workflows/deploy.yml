@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAGES: true
+      __GIT_SHA__: ${{ github.sha }}:short
 
     steps:
       - name: Checkout Repo
