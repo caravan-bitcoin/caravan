@@ -34,7 +34,7 @@
       "dependsOn": ["build"]
     },
     "ci": {
-      "dependsOn": ["^build", "build"]
+      "dependsOn": ["^build"]
     }
   }
 }

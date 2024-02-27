@@ -95,7 +95,9 @@
   "dependencies": {
     "@caravan/bitcoin": "*",
     "@caravan/clients": "*",
-    "@caravan/descriptors": "^0.0.1",
+    "@caravan/descriptors": "^0.0.6",
+    "@caravan/eslint-config": "*",
+    "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",

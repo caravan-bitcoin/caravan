@@ -41,6 +41,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     // needed for local development to support proper handling of wasm
-    // exclude: ["@caravan/descriptors"],
+    exclude: ["@caravan/descriptors"],
   },
 });
