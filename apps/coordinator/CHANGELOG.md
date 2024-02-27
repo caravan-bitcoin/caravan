@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- [#24](https://github.com/caravan-bitcoin/caravan/pull/24) [`00a550f`](https://github.com/caravan-bitcoin/caravan/commit/00a550f6675d7d0a90f4e572aeac3d07f8759f36) Thanks [@bucko13](https://github.com/bucko13)! - Implements a UI for using @caravan/descriptors in the coordinator for importing and exporting descriptors. Includes some cleanup to some build processes.
+
+### Patch Changes
+
+- Updated dependencies [[`00a550f`](https://github.com/caravan-bitcoin/caravan/commit/00a550f6675d7d0a90f4e572aeac3d07f8759f36)]:
+  - @caravan/clients@0.0.1
+
 ## 0.1.0
 
 ### Minor Changes
