@@ -1,34 +1,34 @@
 name: Deploy Vercel
 
-on: [ push, pull_request ]
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    branches:
+      - main
+    paths-ignore:
+      - '**'
 
 jobs:
   vercel:
     name: Deploy Vercel
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Cache Dependencies ...
-        uses: actions/cache@v1
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-node-
-
       - name: Setup Node.js 20
         uses: actions/setup-node@v3
         with:
           node-version: 20
-
-      - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          # Optional version of wasm-pack to install (eg. 'v0.9.1', 'latest')
-          version: 'latest'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -40,7 +40,7 @@ jobs:
         # forcing a build to avoid the cache. Probably unnecessary
         # but useful in case any environment variables change that might
         # impact the build
-        run: npx turbo run build --force
+        run: npx turbo run build
 
 
       - name: Deploy to Staging ...

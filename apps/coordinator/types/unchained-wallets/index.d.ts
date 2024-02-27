@@ -1,1 +1,0 @@
-declare module "@caravan/wallets";

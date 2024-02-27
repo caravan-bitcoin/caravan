@@ -102,6 +102,9 @@ And another good resource for what the workflow should look like [here](https://
 
 Clone the repo, install all dependencies, and run dev instances of
 everything.
+
+(Checkout the README for caravan/descriptors to make sure you can build the wasm dependencies.)
+
 ```shell
 $ npm install turbo --global
 $ git clone https://github.com/caravan-bitcoin/caravan.git

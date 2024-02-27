@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "build:coordinator": "turbo build --filter=@caravan/coordinator",
     "changeset": "changeset",
     "ci": "turbo run build lint test",
     "dev": "turbo dev",
@@ -11,6 +12,7 @@
     "lint": "turbo lint",
     "version": "turbo run build && turbo lint test && changeset version",
     "release": "turbo run build && turbo lint test && changeset publish",
+    "dev:coordinator": "turbo run dev --filter=@caravan/coordinator",
     "publish-tags": "changeset tag && git push --follow-tags"
   },
   "devDependencies": {

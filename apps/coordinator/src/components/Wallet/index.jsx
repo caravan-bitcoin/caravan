@@ -27,7 +27,6 @@ import AddressTypePicker from "../AddressTypePicker";
 import ClientPicker from "../ClientPicker";
 import StartingAddressIndexPicker from "../StartingAddressIndexPicker";
 import WalletGenerator from "./WalletGenerator";
-import ExtendedPublicKeyImporter from "./ExtendedPublicKeyImporter";
 import WalletActionsPanel from "./WalletActionsPanel";
 import {
   getUnknownAddresses,
@@ -58,6 +57,7 @@ import {
   SET_CLIENT_USERNAME,
 } from "../../actions/clientActions";
 import { clientPropTypes, slicePropTypes } from "../../proptypes";
+import { ExtendedPublicKeyImporters } from "./ExtendedPublicKeyImporters";
 
 class CreateWallet extends React.Component {
   static validateProperties(config, properties, key) {
@@ -393,30 +393,6 @@ class CreateWallet extends React.Component {
     return settings;
   };
 
-  renderExtendedPublicKeyImporters = () => {
-    const { totalSigners, configuring } = this.props;
-    const extendedPublicKeyImporters = [];
-    for (
-      let extendedPublicKeyImporterNum = 1;
-      extendedPublicKeyImporterNum <= totalSigners;
-      extendedPublicKeyImporterNum += 1
-    ) {
-      extendedPublicKeyImporters.push(
-        <Box
-          key={extendedPublicKeyImporterNum}
-          mt={extendedPublicKeyImporterNum === 1 ? 0 : 2}
-          display={configuring ? "block" : "none"}
-        >
-          <ExtendedPublicKeyImporter
-            key={extendedPublicKeyImporterNum}
-            number={extendedPublicKeyImporterNum}
-          />
-        </Box>,
-      );
-    }
-    return extendedPublicKeyImporters;
-  };
-
   downloadWalletDetails = (event) => {
     const { walletDetailsText } = this.props;
     event.preventDefault();
@@ -542,7 +518,10 @@ class CreateWallet extends React.Component {
               </Grid>
             </Grid>
             <Grid item md={configuring ? 8 : 12}>
-              {this.renderExtendedPublicKeyImporters()}
+              <ExtendedPublicKeyImporters
+                totalSigners={this.props.totalSigners}
+                configuring={this.props.configuring}
+              />
               <Box mt={2}>
                 <WalletGenerator
                   generating={generating}
