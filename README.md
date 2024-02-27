@@ -4,9 +4,10 @@
 
 # Caravan Monorepo
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/caravan-bitcoin/caravan/pulls)
 ![Build Status](https://github.com/caravan-bitcoin/caravan/actions/workflows/ci.yml/badge.svg)
-![Hosted Coordinator](https://github.com/caravan-bitcoin/caravan/actions/workflows/deploy.yml/badge.svg)
+[![Vercel Deploy](https://therealsujitk-vercel-badge.vercel.app/?app=caravan-coordinator)](https://caravan-coordinator.vercel.app)
+[![Hosted Coordinator](https://github.com/caravan-bitcoin/caravan/actions/workflows/deploy.yml/badge.svg)](https://caravan-bitcoin.github.io/caravan/#/)
 ![Package Publication](https://github.com/caravan-bitcoin/caravan/actions/workflows/release.yml/badge.svg)
 
 ## Introduction
