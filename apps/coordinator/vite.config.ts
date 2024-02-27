@@ -36,7 +36,10 @@ export default defineConfig({
     },
   },
   define: {
-    __GIT_SHA__: JSON.stringify(process.env.__GIT_SHA__),
+    __GIT_SHA__: JSON.stringify(
+      process.env.__GIT_SHA__ ||
+        (process.env.__VERCEL_GIT_COMMIT_SHA__ || "").slice(0, 7),
+    ),
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },
   optimizeDeps: {
