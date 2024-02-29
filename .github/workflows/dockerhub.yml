@@ -27,6 +27,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: caravanbitcoin/caravan
+          tags: |
+            # set latest tag for default branch
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -34,7 +37,5 @@ jobs:
           context: .
           file: ./apps/coordinator/Dockerfile
           push: true
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
