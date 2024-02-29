@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- [#30](https://github.com/caravan-bitcoin/caravan/pull/30) [`baf9a7d`](https://github.com/caravan-bitcoin/caravan/commit/baf9a7d262d22752bb7fa723e1b681b1e86fe89c) Thanks [@bucko13](https://github.com/bucko13)! - Future-proof legacy version checking for Ledger bitcoin app
+
 ## 0.1.0
 
 ### Minor Changes
