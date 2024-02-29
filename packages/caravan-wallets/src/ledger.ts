@@ -219,8 +219,11 @@ export class LedgerInteraction extends DirectKeystoreInteraction {
     const [majorVersion, minorVersion] = version.split(".");
     // if the name includes "Legacy" then it is legacy app
     if (this.appName && Boolean(this.appName.includes("Legacy"))) return true;
-    // otherwise check version number. <=2.1.0 is legacy
-    return Number(majorVersion) <= 1 || Number(minorVersion) < 1;
+    // otherwise check version number. < 2.1.0 is legacy
+    return (
+      Number(majorVersion) <= 1 ||
+      (Number(majorVersion) == 2 && Number(minorVersion) < 1)
+    );
   }
 
   /**
