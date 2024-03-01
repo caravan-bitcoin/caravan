@@ -23,6 +23,8 @@ export const getBlockchainClientFromStore = async () => {
     const { network } = getState().settings;
     const { client } = getState();
     if (!client) return;
+    if (client.blockchainClient?.type === client.type)
+      return client.blockchainClient;
     let clientType: ClientType;
 
     switch (client.type) {
