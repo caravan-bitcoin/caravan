@@ -8,6 +8,7 @@ import {
   validateExtendedPublicKey,
 } from "@caravan/bitcoin";
 import { Box, Button, FormHelperText, Grid } from "@mui/material";
+import { ClientType } from "@caravan/clients";
 import { downloadFile } from "../../utils";
 import {
   resetWallet as resetWalletAction,
@@ -97,10 +98,13 @@ class CreateWallet extends React.Component {
     }
 
     if (config.client) {
-      const clientProperties =
-        config.client.type === "public"
-          ? ["type"]
-          : ["type", "url", "username"];
+      const clientProperties = [
+        "public",
+        ClientType.MEMPOOL,
+        ClientType.BLOCKSTREAM,
+      ].includes(config.client.type)
+        ? ["type"]
+        : ["type", "url", "username"];
       const validClient = CreateWallet.validateProperties(
         config,
         clientProperties,

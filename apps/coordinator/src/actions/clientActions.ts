@@ -42,7 +42,7 @@ export const getBlockchainClientFromStore = async () => {
       client,
       type: clientType,
       network,
-      throttled: true,
+      throttled: client.type === ClientType.BLOCKSTREAM,
     });
     dispatch({ type: SET_BLOCKCHAIN_CLIENT, value: blockchainClient });
     return blockchainClient;

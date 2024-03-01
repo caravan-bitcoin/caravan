@@ -10,8 +10,8 @@ import {
   FormControl,
   Radio,
   RadioGroup,
-  FormHelperText,
 } from "@mui/material";
+import { ClientType } from "@caravan/clients";
 
 // Components
 
@@ -127,13 +127,22 @@ const ClientPicker = ({
           <FormControl component="fieldset">
             <RadioGroup>
               <FormControlLabel
-                id="public"
+                id={ClientType.MEMPOOL}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value="public"
-                label={<strong>Public</strong>}
+                value={ClientType.MEMPOOL}
+                label={<strong>Mempool.space</strong>}
                 onChange={handleTypeChange}
-                checked={client.type === "public"}
+                checked={client.type === ClientType.MEMPOOL}
+              />
+              <FormControlLabel
+                id={ClientType.BLOCKSTREAM}
+                control={<Radio color="primary" />}
+                name="clientType"
+                value={ClientType.BLOCKSTREAM}
+                label={<strong>Blockstream.info</strong>}
+                onChange={handleTypeChange}
+                checked={client.type === ClientType.BLOCKSTREAM}
               />
               <FormControlLabel
                 id="private"
@@ -145,15 +154,6 @@ const ClientPicker = ({
                 checked={client.type === "private"}
               />
             </RadioGroup>
-            {client.type === "public" && (
-              <FormHelperText>
-                {"'Public' uses the "}
-                <code>{blockchainClient?.type}</code>
-                {" API. Switch to private to use a "}
-                <code>bitcoind</code>
-                {" node."}
-              </FormHelperText>
-            )}
             {client.type === "private" && (
               <PrivateClientSettings
                 handleUrlChange={(event) => handleUrlChange(event)}
