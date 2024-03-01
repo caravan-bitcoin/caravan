@@ -106,7 +106,7 @@ describe("BlockchainClient", () => {
       type: ClientType.MEMPOOL,
       network: Network.MAINNET,
     });
-    expect(mempool.host).toEqual("https://mempool.space/api/v1");
+    expect(mempool.host).toEqual("https://unchained.mempool.space/api");
   });
 
   it("should set the testnet host for a public client", () => {
@@ -119,7 +119,7 @@ describe("BlockchainClient", () => {
       type: ClientType.MEMPOOL,
       network: Network.TESTNET,
     });
-    expect(mempool.host).toEqual("https://mempool.space/testnet/api/v1");
+    expect(mempool.host).toEqual("https://unchained.mempool.space/testnet/api");
   });
 
   it("should set the signet host for a public client", () => {
@@ -127,7 +127,7 @@ describe("BlockchainClient", () => {
       type: ClientType.MEMPOOL,
       network: Network.SIGNET,
     });
-    expect(mempool.host).toEqual("https://mempool.space/signet/api/v1");
+    expect(mempool.host).toEqual("https://unchained.mempool.space/signet/api");
     expect(() => {
       new BlockchainClient({
         type: ClientType.BLOCKSTREAM,
@@ -482,8 +482,18 @@ describe("BlockchainClient", () => {
 
       // Mock the response from the Get method
       const mockUtxos: UTXO[] = [
-        { txid: "txid1", vout: 0, value: 100, status: {confirmed: true, block_time: 21} },
-        { txid: "txid2", vout: 1, value: 200, status: {confirmed: true, block_time: 42} },
+        {
+          txid: "txid1",
+          vout: 0,
+          value: 100,
+          status: { confirmed: true, block_time: 21 },
+        },
+        {
+          txid: "txid2",
+          vout: 1,
+          value: 200,
+          status: { confirmed: true, block_time: 42 },
+        },
       ];
       const mockGet = jest.fn().mockResolvedValue(mockUtxos);
 
@@ -504,8 +514,8 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result.utxos).toEqual(
         await Promise.all(
-          mockUtxos.map((utxo: UTXO) => blockchainClient.formatUtxo(utxo))
-        )
+          mockUtxos.map((utxo: UTXO) => blockchainClient.formatUtxo(utxo)),
+        ),
       );
       expect(result.balanceSats).toEqual(new BigNumber(300));
       expect(result.addressKnown).toBe(true);
@@ -770,7 +780,7 @@ describe("BlockchainClient", () => {
         );
 
         // Verify the mock axios instance was called with the correct URL
-        expect(mockGet).toHaveBeenCalledWith("/fees/recommended");
+        expect(mockGet).toHaveBeenCalledWith("/v1/fees/recommended");
         // Verify the returned fee estimate
         expect(feeEstimate).toEqual(mockResponse[block]);
       }

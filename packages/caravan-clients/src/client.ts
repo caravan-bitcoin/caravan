@@ -122,15 +122,13 @@ export class BlockchainClient extends ClientBase {
     if (type === ClientType.BLOCKSTREAM) {
       host = "https://blockstream.info";
     } else if (type === ClientType.MEMPOOL) {
-      host = "https://mempool.space";
+      host = "https://unchained.mempool.space";
     }
     if (type !== ClientType.PRIVATE && network !== Network.MAINNET) {
       host += `/${network}`;
     }
-    if (type === ClientType.BLOCKSTREAM) {
+    if (type !== ClientType.PRIVATE) {
       host += "/api";
-    } else if (type === ClientType.MEMPOOL) {
-      host += "/api/v1";
     }
     super(throttled, host);
     this.network = network;
@@ -284,7 +282,7 @@ export class BlockchainClient extends ClientBase {
           fees = await this.Get(`/fee-estimates`);
           return fees[blocks];
         case ClientType.MEMPOOL:
-          fees = await this.Get("/fees/recommended");
+          fees = await this.Get("/v1/fees/recommended");
           if (blocks === 1) {
             return fees.fastestFee;
           } else if (blocks <= 3) {
