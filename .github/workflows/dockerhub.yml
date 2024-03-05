@@ -1,9 +1,10 @@
 name: Publish Docker container
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - '@caravan/coordinator**'
+      - '**/coordinator**'
 
 jobs:
   docker:

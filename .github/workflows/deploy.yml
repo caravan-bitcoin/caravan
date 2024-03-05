@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - '@caravan/coordinator**'
-    branches:
-      - main
+      - '**/coordinator**'
 
 permissions:
   contents: write
