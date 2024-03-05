@@ -20,7 +20,7 @@ import {
   Box,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-
+import { ClientType } from "@caravan/clients";
 import ClientPicker from "../ClientPicker";
 import ConfirmWallet from "./ConfirmWallet";
 import RegisterWallet from "./RegisterWallet";
@@ -460,7 +460,13 @@ class WalletGenerator extends React.Component {
                 variant="contained"
                 color="primary"
                 onClick={this.generate}
-                disabled={client.type !== "public" && !connectSuccess}
+                disabled={
+                  ![
+                    "public",
+                    ClientType.MEMPOOL,
+                    ClientType.BLOCKSTREAM,
+                  ].includes(client.type) && !connectSuccess
+                }
               >
                 Confirm
               </Button>

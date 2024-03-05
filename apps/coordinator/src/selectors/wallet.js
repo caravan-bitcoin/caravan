@@ -28,7 +28,7 @@ const getClientDetails = (state) => {
   }`;
   }
   return `{
-    "type": "public"
+    "type": "${state.client.type}"
   }`;
 };
 

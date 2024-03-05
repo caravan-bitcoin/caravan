@@ -80,7 +80,6 @@ export const WalletDescriptorImporter = () => {
     try {
       const config = await getWalletFromDescriptor(descriptor, network);
       const checksum = await getChecksum(descriptor);
-      console.log(config);
       dispatch(updateWalletUuidAction(checksum));
       setWalletConfig(config);
     } catch (e) {

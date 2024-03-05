@@ -23,6 +23,8 @@ export const getBlockchainClientFromStore = async () => {
     const { network } = getState().settings;
     const { client } = getState();
     if (!client) return;
+    if (client.blockchainClient?.type === client.type)
+      return client.blockchainClient;
     let clientType: ClientType;
 
     switch (client.type) {
@@ -42,7 +44,7 @@ export const getBlockchainClientFromStore = async () => {
       client,
       type: clientType,
       network,
-      throttled: true,
+      throttled: client.type === ClientType.BLOCKSTREAM,
     });
     dispatch({ type: SET_BLOCKCHAIN_CLIENT, value: blockchainClient });
     return blockchainClient;
