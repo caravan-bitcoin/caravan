@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [#34](https://github.com/caravan-bitcoin/caravan/pull/34) [`b4e349c`](https://github.com/caravan-bitcoin/caravan/commit/b4e349c170a83d4e0d153bfec62a97170e534fda) Thanks [@bucko13](https://github.com/bucko13)! - Add support for different public client options (mempool or blockstream).
+
+### Patch Changes
+
+- Updated dependencies [[`b4e349c`](https://github.com/caravan-bitcoin/caravan/commit/b4e349c170a83d4e0d153bfec62a97170e534fda)]:
+  - @caravan/clients@0.0.2
+
 ## 0.2.0
 
 ### Minor Changes
