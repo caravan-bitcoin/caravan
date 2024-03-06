@@ -56,7 +56,25 @@ import { MULTISIG_ROOT } from "./index";
  */
 export const TREZOR = "trezor";
 
-import TrezorConnect from "@trezor/connect-web";
+/**
+ * What's going on with this TrezorConnect import?
+ * For some reason the way trezor/connect and trezor/connect-web export their default
+ * export gets ignored from some build systems (it might be a webpack issue, but we haven't been
+ * able to narrow it down exactly). In @caravan/coordinator, the vite build is able to find
+ * the default export correctly. In builds that don't respect the built @trezor/connect code,
+ * the exports.default value and instead falls back to the tsbuild.__exportStar exports. When
+ * this happens we need to pull the `TrezorConnect` object from the default property of the module.
+ */
+import TrezorConnectDefault, {
+  TrezorConnect as TrezorConnectType,
+} from "@trezor/connect-web";
+
+let TrezorConnect: TrezorConnectType & { default?: TrezorConnectType } =
+  TrezorConnectDefault;
+
+if (TrezorConnect && TrezorConnect.default) {
+  TrezorConnect = TrezorConnect.default;
+}
 
 const ADDRESS_SCRIPT_TYPES = {
   [P2SH]: "SPENDMULTISIG",
@@ -111,6 +129,7 @@ const TREZOR_DEV =
   env_variables.VITE_TREZOR_DEV;
 
 try {
+  console.log("TrezorConnect:", TrezorConnect);
   TrezorConnect.init({
     connectSrc: TREZOR_DEV
       ? TREZOR_CONNECT_URL
@@ -804,6 +823,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
   }
 }
 
+// eslint-disable-next-line multiline-comment-style
 /**
  * Shows a multisig address on the device and prompts the user to
  * confirm it.
@@ -819,6 +839,8 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
  *   generateMultisigFromPublicKeys, Network, P2SH,
  * } from "@caravan/bitcoin";
  * import {TrezorConfirmMultisigAddress} from "@caravan/wallets";
+import * as TrezorRest from '@trezor/connect-web';
+import * as TrezorConnect from '@trezor/connect-web';
  * const multisig = generateMultisigFromPublicKeys(Network.MAINNET, P2SH, 2, "03a...", "03b...");
  * const interaction = new TrezorConfirmMultisigAddress({network: Network.MAINNET, bip32Path: "m/45'/0'/0'/0/0", multisig});
  * await interaction.run();
