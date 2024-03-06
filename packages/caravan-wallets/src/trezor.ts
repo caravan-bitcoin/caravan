@@ -129,7 +129,6 @@ const TREZOR_DEV =
   env_variables.VITE_TREZOR_DEV;
 
 try {
-  console.log("TrezorConnect:", TrezorConnect);
   TrezorConnect.init({
     connectSrc: TREZOR_DEV
       ? TREZOR_CONNECT_URL
