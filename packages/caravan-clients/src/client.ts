@@ -160,12 +160,7 @@ export class BlockchainClient extends ClientBase {
           ...this.bitcoindParams,
         });
       }
-      if (this.type === ClientType.BLOCKSTREAM) {
-        return await this.Post(`/tx`, rawTx);
-      }
-      if (this.type === ClientType.MEMPOOL) {
-        return await this.Post(`/tx`, { tx: rawTx });
-      }
+      return await this.Post(`/tx`, rawTx);
     } catch (error: any) {
       throw new Error(`Failed to broadcast transaction: ${error.message}`);
     }
