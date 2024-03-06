@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.0.3
+
+### Patch Changes
+
+- [#39](https://github.com/caravan-bitcoin/caravan/pull/39) [`09a4ad8`](https://github.com/caravan-bitcoin/caravan/commit/09a4ad8a82096ef2c42b4df926bd87a982223c0e) Thanks [@bucko13](https://github.com/bucko13)! - Fixes a bug in the mempool broadcast request
+
 ## 0.0.2
 
 ### Patch Changes
