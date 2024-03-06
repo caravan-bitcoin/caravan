@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- [#41](https://github.com/caravan-bitcoin/caravan/pull/41) [`7e055cd`](https://github.com/caravan-bitcoin/caravan/commit/7e055cd93acaaeeb74fd7fb7d31bc7e26f7c9820) Thanks [@bucko13](https://github.com/bucko13)! - Fix TrezorConnect default import for some build systems
+
 ## 0.1.1
 
 ### Patch Changes
