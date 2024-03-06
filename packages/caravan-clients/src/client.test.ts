@@ -181,7 +181,7 @@ describe("BlockchainClient", () => {
       const result = await blockchainClient.broadcastTransaction(rawTx);
 
       // Verify the mock axios instance was called with the correct URL and data
-      expect(mockPost).toHaveBeenCalledWith(`/tx`, { tx: rawTx });
+      expect(mockPost).toHaveBeenCalledWith(`/tx`, rawTx);
 
       // Verify the returned result
       expect(result).toEqual(mockResponse);
