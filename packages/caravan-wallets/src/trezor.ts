@@ -822,8 +822,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
   }
 }
 
-// eslint-disable-next-line multiline-comment-style
-/**
+/*
  * Shows a multisig address on the device and prompts the user to
  * confirm it.
  * If the optional publicKey parameter is used, the public key at
@@ -838,8 +837,8 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
  *   generateMultisigFromPublicKeys, Network, P2SH,
  * } from "@caravan/bitcoin";
  * import {TrezorConfirmMultisigAddress} from "@caravan/wallets";
-import * as TrezorRest from '@trezor/connect-web';
-import * as TrezorConnect from '@trezor/connect-web';
+ * import * as TrezorRest from '@trezor/connect-web';
+ * import * as TrezorConnect from '@trezor/connect-web';
  * const multisig = generateMultisigFromPublicKeys(Network.MAINNET, P2SH, 2, "03a...", "03b...");
  * const interaction = new TrezorConfirmMultisigAddress({network: Network.MAINNET, bip32Path: "m/45'/0'/0'/0/0", multisig});
  * await interaction.run();
