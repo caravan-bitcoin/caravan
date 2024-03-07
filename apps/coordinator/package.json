@@ -1,9 +1,9 @@
 {
-  "name": "@caravan/coordinator",
+  "name": "caravan-coordinator",
+  "private": true,
   "version": "0.3.0",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
-  "private": true,
   "type": "module",
   "repository": {
     "type": "git",
