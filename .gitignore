@@ -41,4 +41,5 @@ yarn-error.log*
 .rustup
 .cargo
 
-.vscode
+.vscode/
+.idea/
