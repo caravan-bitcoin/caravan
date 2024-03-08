@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - '**/coordinator**'
+      - '**caravan**coordinator@[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   docker:
@@ -21,7 +21,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: caravanbitcoin/caravan
+          images: caravanbitcoin/coordinator
+          tags: |
+            type=match,pattern=@(\d.\d.\d),group=1
+            type=match,pattern=@(\d.\d),group=1
+            type=sha
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
