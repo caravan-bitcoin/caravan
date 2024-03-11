@@ -14,7 +14,7 @@ RUN npm install -g turbo
 COPY . .
 # Optimize caching with docker
 # https://turbo.build/repo/docs/handbook/deploying-with-docker
-RUN turbo prune @caravan/coordinator --docker
+RUN turbo prune caravan-coordinator --docker
 
 # Add lockfile and package.json's of isolated subworkspace
 FROM base AS installer
@@ -30,7 +30,7 @@ RUN npm install
 COPY --from=builder /app/out/full/ .
 ENV NODE_OPTIONS=--max-old-space-size=32768
 
-RUN npx turbo run build --filter=coordinator...
+RUN npx turbo run build --filter=caravan-coordinator...
 
 # Serve the production build files via nginx (will be served at http://localhost:80/#
 # in docker vm. Map port 80 to a different port on the host machine to access the app)
