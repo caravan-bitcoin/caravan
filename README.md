@@ -259,7 +259,7 @@ module.exports = {
 - add our module file(s) (e.g. `src/clients.ts`) and test file(s) (e.g. `src/clients.test.ts`)
   - NOTE: when these files were copied over, they came from caravan when not all files were converted to typescript. A `transform` field needed to be added to the jest config as well as `babel-jest` package to handle js transformations for those older files.
 - You should now be able to run `turbo run test --scope=@caravan/clients` and `turbo run build --scope=@caravan/clients` to test and build
-- To start using this in another package, say `@caravan/coordinator` simply add it to the package.json with a `*`:
+- To start using this in another package, say `caravan-coordinator` simply add it to the package.json with a `*`:
 ```json
 {
   "dependencies": {
@@ -314,4 +314,3 @@ instead of
 ```ts
 import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 ```
-

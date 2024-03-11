@@ -60,7 +60,7 @@ export const TREZOR = "trezor";
  * What's going on with this TrezorConnect import?
  * For some reason the way trezor/connect and trezor/connect-web export their default
  * export gets ignored from some build systems (it might be a webpack issue, but we haven't been
- * able to narrow it down exactly). In @caravan/coordinator, the vite build is able to find
+ * able to narrow it down exactly). In caravan-coordinator, the vite build is able to find
  * the default export correctly. In builds that don't respect the built @trezor/connect code,
  * the exports.default value and instead falls back to the tsbuild.__exportStar exports. When
  * this happens we need to pull the `TrezorConnect` object from the default property of the module.
