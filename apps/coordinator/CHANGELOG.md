@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- [#48](https://github.com/caravan-bitcoin/caravan/pull/48) [`56ab23a`](https://github.com/caravan-bitcoin/caravan/commit/56ab23a9f3bd6d6394577ac68912dea2c3fa519a) Thanks [@robertshuford](https://github.com/robertshuford)! - Update coordinator with wallets 0.1.2 and clients 0.0.3
+
 ## 0.3.0
 
 ### Minor Changes
