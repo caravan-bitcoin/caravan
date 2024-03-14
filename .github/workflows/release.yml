@@ -51,13 +51,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # For caravan coordinator, there's no publish to npm so no
-      # tag is created. This makes sure we push tags for everything
-      - name: Publish tags
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          npm run publish-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
