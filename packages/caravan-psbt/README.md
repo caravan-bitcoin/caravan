@@ -94,7 +94,7 @@ Extracts signatures in order of inputs and returns as array (or array of arrays 
 
 ## PSBTv2
 
-The `psbtv2` module provides utilities for working with v2 PSBTs and tranlations or conversions between v0 and v2.
+The `psbtv2` module provides utilities for working with v2 PSBTs and transformations or conversions between v0 and v2.
 
 ### Exports
 
@@ -157,7 +157,7 @@ Removes an output from the PSBT. This method validates outputs modifiable on `PS
 
 Adds a signature for an input. Validates that the input is mapped and does not already have a signature for the pubkey. Also validates for sighash. Other validation is incomplete.
 
-The Signer, when it creates a signature, must add the partial sig keypair to the psbt for the input which it is signing. In the case that aparticular signer does not, this method can be used to add a signature tothe psbt. This method assumes the Signer did the validation outlined in BIP0174 before creating a signature. See [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#signer).
+The Signer, when it creates a signature, must add the partial sig keypair to the psbt for the input which it is signing. In the case that a particular signer does not, this method can be used to add a signature to the psbt. This method assumes the Signer did the validation outlined in BIP0174 before creating a signature. See [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#signer).
 
 ##### `public removePartialSig`
 
