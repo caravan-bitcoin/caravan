@@ -8,6 +8,10 @@
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "private": false,
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
