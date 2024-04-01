@@ -1,3 +1,23 @@
+import { BufferReader, BufferWriter } from "bufio";
+import { Psbt } from "bitcoinjs-lib";
+
+import {
+  Key,
+  Value,
+  NonUniqueKeyTypeValue,
+  KeyType,
+  PsbtGlobalTxModifiableBits,
+  SighashType,
+} from "./types";
+import {
+  bufferize,
+  getNonUniqueKeyTypeValues,
+  getOptionalMappedBytesAsHex,
+  getOptionalMappedBytesAsUInt,
+  parseDerivationPathNodesToBytes,
+} from "./functions";
+import { PsbtV2Maps } from "./psbtv2maps";
+
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all
@@ -7,370 +27,6 @@
  * Defining BIPs:
  * https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki
- */
-
-import { BufferReader, BufferWriter } from "bufio";
-import { Psbt } from "bitcoinjs-lib";
-
-import { validateHex, validBase64, validateBIP32Path } from "@caravan/bitcoin";
-import { PSBT_MAGIC_BYTES } from "./psbt";
-
-/**
- * Global Types
- */
-
-/**
- * Hex encoded string containing `<keytype><keydata>`. A string is needed for
- * Map.get() since it matches by identity. Most commonly, a `Key` only contains a
- * keytype byte, however, some with keydata can allow for multiple unique keys
- * of the same type.
- */
-type Key = string;
-
-/**
- * Values can be of various different types or formats. Here we leave them as
- * Buffers so that getters can decide how they should be formatted.
- */
-type Value = Buffer;
-
-type NonUniqueKeyTypeValue = { key: string; value: string | null };
-
-/**
- * KeyTypes are hex bytes, but within this module are used as string enums to
- * assist in Map lookups. See type `Key` for more info.
- */
-//eslint-disable-next-line no-shadow
-enum KeyType {
-  PSBT_GLOBAL_XPUB = "01",
-  PSBT_GLOBAL_TX_VERSION = "02",
-  PSBT_GLOBAL_FALLBACK_LOCKTIME = "03",
-  PSBT_GLOBAL_INPUT_COUNT = "04",
-  PSBT_GLOBAL_OUTPUT_COUNT = "05",
-  PSBT_GLOBAL_TX_MODIFIABLE = "06",
-  PSBT_GLOBAL_VERSION = "fb",
-  PSBT_GLOBAL_PROPRIETARY = "fc",
-
-  PSBT_IN_NON_WITNESS_UTXO = "00",
-  PSBT_IN_WITNESS_UTXO = "01",
-  PSBT_IN_PARTIAL_SIG = "02",
-  PSBT_IN_SIGHASH_TYPE = "03",
-  PSBT_IN_REDEEM_SCRIPT = "04",
-  PSBT_IN_WITNESS_SCRIPT = "05",
-  PSBT_IN_BIP32_DERIVATION = "06",
-  PSBT_IN_FINAL_SCRIPTSIG = "07",
-  PSBT_IN_FINAL_SCRIPTWITNESS = "08",
-  PSBT_IN_POR_COMMITMENT = "09",
-  PSBT_IN_RIPEMD160 = "0a",
-  PSBT_IN_SHA256 = "0b",
-  PSBT_IN_HASH160 = "0c",
-  PSBT_IN_HASH256 = "0d",
-  PSBT_IN_PREVIOUS_TXID = "0e",
-  PSBT_IN_OUTPUT_INDEX = "0f",
-  PSBT_IN_SEQUENCE = "10",
-  PSBT_IN_REQUIRED_TIME_LOCKTIME = "11",
-  PSBT_IN_REQUIRED_HEIGHT_LOCKTIME = "12",
-  PSBT_IN_TAP_KEY_SIG = "13",
-  PSBT_IN_TAP_SCRIPT_SIG = "14",
-  PSBT_IN_TAP_LEAF_SCRIPT = "15",
-  PSBT_IN_TAP_BIP32_DERIVATION = "16",
-  PSBT_IN_TAP_INTERNAL_KEY = "17",
-  PSBT_IN_TAP_MERKLE_ROOT = "18",
-  PSBT_IN_PROPRIETARY = "fc",
-
-  PSBT_OUT_REDEEM_SCRIPT = "00",
-  PSBT_OUT_WITNESS_SCRIPT = "01",
-  PSBT_OUT_BIP32_DERIVATION = "02",
-  PSBT_OUT_AMOUNT = "03",
-  PSBT_OUT_SCRIPT = "04",
-  PSBT_OUT_TAP_INTERNAL_KEY = "05",
-  PSBT_OUT_TAP_TREE = "06",
-  PSBT_OUT_TAP_BIP32_DERIVATION = "07",
-  PSBT_OUT_PROPRIETARY = "fc",
-}
-
-/**
- * Provided to friendly-format the `PSBT_GLOBAL_TX_MODIFIABLE` bitmask from
- * `PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE` which returns
- * `PsbtGlobalTxModifiableBits[]`.
- */
-// eslint-disable-next-line no-shadow
-enum PsbtGlobalTxModifiableBits {
-  INPUTS = "INPUTS", // 0b00000001
-  OUTPUTS = "OUTPUTS", // 0b00000010
-  SIGHASH_SINGLE = "SIGHASH_SINGLE", // 0b00000100
-}
-
-// eslint-disable-next-line no-shadow
-enum SighashType {
-  SIGHASH_ALL = 0x01,
-  SIGHASH_NONE = 0x02,
-  SIGHASH_SINGLE = 0x03,
-  SIGHASH_ANYONECANPAY = 0x80,
-}
-
-/**
- * Global Constants
- */
-
-const PSBT_MAP_SEPARATOR = Buffer.from([0x00]);
-const BIP_32_NODE_REGEX = /(\/[0-9]+'?)/gi;
-const BIP_32_HARDENING_OFFSET = 0x80000000;
-
-/**
- * Helper Functions
- */
-
-/**
- * Ensure base64 and hex strings are a buffer. No-op if already a buffer.
- */
-function bufferize(psbt: string | Buffer): Buffer {
-  if (Buffer.isBuffer(psbt)) {
-    return psbt;
-  }
-
-  if (typeof psbt === "string") {
-    if (validateHex(psbt) === "") {
-      return Buffer.from(psbt, "hex");
-    }
-
-    if (validBase64(psbt)) {
-      return Buffer.from(psbt, "base64");
-    }
-  }
-
-  throw Error("Input cannot be bufferized.");
-}
-
-/**
- * Some keytypes have keydata which allows for multiple unique keys of the same
- * keytype. Getters which return values from these keys should search and return
- * values from all keys of that keytype. This function matches on the first byte
- * of each key string (hex encoded) and returns all values associated with those
- * keys as an array of string (hex encoded) values.
- */
-function getNonUniqueKeyTypeValues(
-  maps: Map<Key, Value> | Map<Key, Value>[],
-  keytype: KeyType,
-) {
-  if (Array.isArray(maps)) {
-    // It's a set of input or output maps, so recursively check each map and set
-    // values.
-    const values: NonUniqueKeyTypeValue[][] = maps.map(
-      (map) =>
-        // TODO: Figure out a better way to type this
-        getNonUniqueKeyTypeValues(map, keytype) as NonUniqueKeyTypeValue[],
-    );
-
-    return values;
-  }
-
-  const map = maps; // Not an array
-  const values: NonUniqueKeyTypeValue[] = [];
-
-  for (const [key, value] of map.entries()) {
-    if (key.startsWith(keytype)) {
-      values.push({ key, value: value?.toString("hex") || null });
-    }
-  }
-
-  return values;
-}
-
-/**
- * A getter helper for optional keytypes which returns lists of values as hex
- * strings.
- */
-function getOptionalMappedBytesAsHex(
-  maps: Map<Key, Value>[],
-  keytype: KeyType,
-) {
-  return maps.map((map) => map.get(keytype)?.toString("hex") ?? null);
-}
-
-/**
- * A getter helper for optional keytypes which returns lists of values as
- * numbers.
- */
-function getOptionalMappedBytesAsUInt(
-  maps: Map<Key, Value>[],
-  keytype: KeyType,
-) {
-  return maps.map((map) => map.get(keytype)?.readUInt32LE(0) ?? null);
-}
-
-/**
- * Accepts a BIP0032 path as a string and returns a Buffer containing uint32
- * values for each path node.
- */
-function parseDerivationPathNodesToBytes(path: string): Buffer {
-  const validationMessage = validateBIP32Path(path);
-  if (validationMessage !== "") {
-    throw Error(validationMessage);
-  }
-
-  const bw = new BufferWriter();
-
-  for (const node of path.match(BIP_32_NODE_REGEX) ?? []) {
-    // Skip slash and parse int
-    let num = parseInt(node.slice(1), 10);
-
-    if (node.indexOf("'") > -1) {
-      // Hardened node needs hardening
-      num += BIP_32_HARDENING_OFFSET;
-    }
-
-    bw.writeU32(num);
-  }
-
-  return bw.render();
-}
-
-/**
- * Takes a BufferReader and a Map then reads keypairs until it gets to a map
- * separator (keyLen 0x00 byte).
- */
-function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
-  const nextByte: Buffer = br.readBytes(1);
-  if (nextByte.equals(PSBT_MAP_SEPARATOR)) {
-    return;
-  }
-
-  const keyLen = nextByte.readUInt8(0);
-  const key = br.readBytes(keyLen);
-  const value = br.readVarBytes();
-
-  map.set(key.toString("hex"), value);
-  readAndSetKeyPairs(map, br);
-}
-
-/**
- * Serializes a Map containing keypairs, includes keylen, and writes to the
- * BufferWriter.
- */
-function serializeMap(map: Map<Key, Value>, bw: BufferWriter): void {
-  map.forEach((value, key) => {
-    // Add <keylen><keytype><keydata>
-    const keyBuf = Buffer.from(key, "hex");
-    const keyLen = keyBuf.length;
-    bw.writeVarint(keyLen);
-    bw.writeString(key, "hex");
-
-    // Add <valuelen><valuedata>
-    bw.writeVarint(value.length);
-    bw.writeBytes(value);
-  });
-
-  bw.writeBytes(PSBT_MAP_SEPARATOR);
-}
-
-/**
- * This abstract class is provided for utility to allow for mapping, map
- * copying, and serialization operations for psbts. This does almost no
- * validation, so do not rely on it for ensuring a valid psbt.
- */
-export abstract class PsbtV2Maps {
-  // These maps directly correspond to the maps defined in BIP0174
-  protected globalMap: Map<Key, Value> = new Map();
-  protected inputMaps: Map<Key, Value>[] = [];
-  protected outputMaps: Map<Key, Value>[] = [];
-
-  constructor(psbt?: Buffer | string) {
-    if (!psbt) {
-      return;
-    }
-
-    const buf = bufferize(psbt);
-    const br = new BufferReader(buf);
-    if (!br.readBytes(PSBT_MAGIC_BYTES.length, true).equals(PSBT_MAGIC_BYTES)) {
-      throw Error("PsbtV2 magic bytes are incorrect.");
-    }
-    // Build globalMap
-    readAndSetKeyPairs(this.globalMap, br);
-    if (
-      // Assuming that psbt being passed in is a valid psbtv2
-      !this.globalMap.has(KeyType.PSBT_GLOBAL_VERSION) ||
-      !this.globalMap.has(KeyType.PSBT_GLOBAL_TX_VERSION) ||
-      !this.globalMap.has(KeyType.PSBT_GLOBAL_INPUT_COUNT) ||
-      !this.globalMap.has(KeyType.PSBT_GLOBAL_OUTPUT_COUNT) ||
-      this.globalMap.has("00") // PsbtV2 must exclude key 0x00
-    ) {
-      throw Error("Provided PsbtV2 not valid. Missing required global keys.");
-    }
-
-    // Build inputMaps
-    const inputCount =
-      this.globalMap.get(KeyType.PSBT_GLOBAL_INPUT_COUNT)?.readUInt8(0) ?? 0;
-    for (let i = 0; i < inputCount; i++) {
-      const map = new Map<Key, Value>();
-      readAndSetKeyPairs(map, br);
-      this.inputMaps.push(map);
-    }
-
-    // Build outputMaps
-    const outputCount =
-      this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT)?.readUInt8(0) ?? 0;
-    for (let i = 0; i < outputCount; i++) {
-      const map = new Map<Key, Value>();
-      readAndSetKeyPairs(map, br);
-      this.outputMaps.push(map);
-    }
-  }
-
-  /**
-   * Return the current state of the psbt as a string in the specified format.
-   */
-  public serialize(format: "base64" | "hex" = "base64"): string {
-    // Build hex string from maps
-    let bw = new BufferWriter();
-    bw.writeBytes(PSBT_MAGIC_BYTES);
-    serializeMap(this.globalMap, bw);
-
-    for (const map of this.inputMaps) {
-      serializeMap(map, bw);
-    }
-
-    for (const map of this.outputMaps) {
-      serializeMap(map, bw);
-    }
-
-    return bw.render().toString(format);
-  }
-
-  /**
-   * Copies the maps in this PsbtV2 object to another PsbtV2 object.
-   *
-   * NOTE: This copy method is made available to achieve parity with the PSBT
-   * api required by `ledger-bitcoin` for creating merklized PSBTs. HOWEVER, it
-   * is not recommended to use this when avoidable as copying maps bypasses the
-   * validation defined in the constructor, so it could create a psbtv2 in an
-   * invalid psbt state. PsbtV2.serialize is preferable whenever possible.
-   */
-  public copy(to: PsbtV2) {
-    this.copyMap(this.globalMap, to.globalMap);
-    this.copyMaps(this.inputMaps, to.inputMaps);
-    this.copyMaps(this.outputMaps, to.outputMaps);
-  }
-
-  private copyMaps(
-    from: readonly ReadonlyMap<string, Buffer>[],
-    to: Map<string, Buffer>[],
-  ) {
-    from.forEach((m, index) => {
-      const to_index = new Map<Key, Value>();
-      this.copyMap(m, to_index);
-      to[index] = to_index;
-    });
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
-    from.forEach((v, k) => to.set(k, Buffer.from(v)));
-  }
-}
-
-/**
- * Provides utilities for working with v2 PSBTs and tranlations or conversions
- * between v0 and v2.
  */
 export class PsbtV2 extends PsbtV2Maps {
   constructor(psbt?: Buffer | string) {
@@ -941,7 +597,7 @@ export class PsbtV2 extends PsbtV2Maps {
     this.globalMap.set(KeyType.PSBT_GLOBAL_TX_VERSION, bw.render());
   }
 
-  // Is this a Creator/Constructor role action, or something else. BIPs don't
+  // Is this a Creator/Constructor role action, or something else? BIPs don't
   // define it well.
   public addGlobalXpub(xpub: Buffer, fingerprint: Buffer, path: string) {
     const bw = new BufferWriter();
@@ -1335,18 +991,4 @@ export class PsbtV2 extends PsbtV2Maps {
 
     return psbtv2;
   }
-}
-
-/**
- * Attempts to extract the version number as uint32LE from raw psbt regardless
- * of psbt validity.
- * @param {string | Buffer} psbt - hex, base64 or buffer of psbt
- * @returns {number} version number
- */
-export function getPsbtVersionNumber(psbt: string | Buffer): number {
-  const map = new Map<Key, Value>();
-  const buf = bufferize(psbt);
-  const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length));
-  readAndSetKeyPairs(map, br);
-  return map.get(KeyType.PSBT_GLOBAL_VERSION)?.readUInt32LE(0) || 0;
 }
