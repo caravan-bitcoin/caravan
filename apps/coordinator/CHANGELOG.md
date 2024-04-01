@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+### Patch Changes
+
+- [#54](https://github.com/caravan-bitcoin/caravan/pull/54) [`c8a0d72`](https://github.com/caravan-bitcoin/caravan/commit/c8a0d728bb62519e3147195663519aab4fddaa5f) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - This is a bug fix for getting the redux to capture the changed state of the private client information.
+
 ## 0.3.1
 
 ### Patch Changes
