@@ -1,4 +1,4 @@
-import { Dispatch } from "redux";
+import { Dispatch } from "react";
 import { BlockchainClient, ClientType } from "@caravan/clients";
 
 export const SET_CLIENT_TYPE = "SET_CLIENT_TYPE";
