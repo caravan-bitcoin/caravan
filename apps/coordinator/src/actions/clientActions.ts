@@ -1,4 +1,4 @@
-import { Dispatch } from "react";
+import { Dispatch } from "redux";
 import { BlockchainClient, ClientType } from "@caravan/clients";
 
 export const SET_CLIENT_TYPE = "SET_CLIENT_TYPE";
@@ -12,10 +12,7 @@ export const SET_CLIENT_PASSWORD_ERROR = "SET_CLIENT_PASSWORD_ERROR";
 
 export const SET_BLOCKCHAIN_CLIENT = "SET_BLOCKCHAIN_CLIENT";
 
-// TODO: use this to add more flexibility to client support
-// For example, this defaults to blockstream for public client
-// but can also support mempool.space as an option
-export const getBlockchainClientFromStore = async () => {
+export const getBlockchainClientFromStore = () => {
   return async (
     dispatch: Dispatch<any>,
     getState: () => { settings: any; client: any },
@@ -35,8 +32,6 @@ export const getBlockchainClientFromStore = async () => {
         clientType = ClientType.PRIVATE;
         break;
       default:
-        // this allows us to support other clients in the future
-        // like mempool.space
         clientType = client.type;
     }
 
@@ -46,7 +41,7 @@ export const getBlockchainClientFromStore = async () => {
       network,
       throttled: client.type === ClientType.BLOCKSTREAM,
     });
-    dispatch({ type: SET_BLOCKCHAIN_CLIENT, value: blockchainClient });
+    dispatch({ type: SET_BLOCKCHAIN_CLIENT, payload: blockchainClient });
     return blockchainClient;
   };
 };
