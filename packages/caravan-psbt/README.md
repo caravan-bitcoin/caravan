@@ -110,7 +110,7 @@ Getters and setters are provided for the keytypes defined in [BIP 174](https://g
 
 ##### `get isReadyForConstructor`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Returns `true` if the PsbtV2 is ready for an operator taking the Constructor role.
 
@@ -118,7 +118,7 @@ This check assumes that the Creator used this class's constructor method to init
 
 ##### `get isReadyForUpdater`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Returns `true` if the PsbtV2 is ready for an operator taking the Updater role.
 
@@ -128,7 +128,7 @@ According to BIP370, the Updater can modify the sequence number, but it is uncle
 
 ##### `get isReadyForSigner`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Returns `true` if the PsbtV2 is ready for an operator taking the Signer role.
 
@@ -138,7 +138,7 @@ A future improvement to this method might be to more thoroughly check inputs to 
 
 ##### `get isReadyForCombiner`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Returns `true` if the PsbtV2 is ready for an operator taking the Combiner role.
 
@@ -146,13 +146,13 @@ Since a Combiner can potentially provide everything needed to a mostly blank Psb
 
 ##### `get isReadyForInputFinalizer`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Callable, but unimplemented. Returns `undefined`.
 
 ##### `get isReadyForTransactionExtractor`
 
-A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
 Callable, but unimplemented. Returns `undefined`.
 
