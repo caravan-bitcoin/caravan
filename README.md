@@ -9,6 +9,7 @@
 [![Vercel Deploy](https://therealsujitk-vercel-badge.vercel.app/?app=caravan-coordinator)](https://caravan-coordinator.vercel.app)
 [![Hosted Coordinator](https://github.com/caravan-bitcoin/caravan/actions/workflows/deploy.yml/badge.svg)](https://caravan-bitcoin.github.io/caravan/#/)
 ![Package Publication](https://github.com/caravan-bitcoin/caravan/actions/workflows/release.yml/badge.svg)
+[![Pulls from DockerHub](https://img.shields.io/docker/pulls/caravanbitcoin/coordinator?logo=docker)](https://hub.docker.com/r/caravanbitcoin/coordinator)
 
 ## Introduction
 
