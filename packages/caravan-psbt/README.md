@@ -19,6 +19,12 @@ A set of utilities for working with PSBTs.
 - [PSBTv2](#psbtv2)
   - [Exports](#psbtv2-exports)
     - [`class PsbtV2`](#class-psbtv2)
+      - [`get isReadyForConstructor`](#get-isreadyforconstructor)
+      - [`get isReadyForUpdater`](#get-isreadyforupdater)
+      - [`get isReadyForSigner`](#get-isreadyforsigner)
+      - [`get isReadyForCombiner`](#get-isreadyforcombiner)
+      - [`get isReadyForInputFinalizer`](#get-isreadyforinputfinalizer)
+      - [`get isReadyForTransactionExtractor`](#get-isreadyfortransactionextractor)
       - [`get nLockTime`](#get-nlocktime)
       - [`public dangerouslySetGlobalTxVersion1`](#public-dangerouslysetglobaltxversion1)
       - [`public addGlobalXpub`](#public-addglobalxpub)
@@ -30,8 +36,6 @@ A set of utilities for working with PSBTs.
       - [`public removePartialSig`](#public-removepartialsig)
       - [`static PsbtV2.FromV0`](#static-psbtv2fromv0)
     - [`function getPsbtVersionNumber`](#function-getpsbtversionnumber)
-    - [`abstract class PsbtV2Maps`](#abstract-class-psbtv2maps)
-      - [`public copy`](#public-copy)
 - [Concepts](#concepts)
   - [The operator role saga](#the-operator-role-saga)
 - [TODO](#todo)
@@ -104,6 +108,54 @@ An object class representing a PSBTv2 and its current state. While not yet compl
 
 Getters and setters are provided for the keytypes defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki). These getters/setters are named after the keytype in ALL_CAPS_SNAKE like `PsbtV2.PSBT_GLOBAL_VERSION`. Additional getters/setters may be listed in the following API documentation.
 
+##### `get isReadyForConstructor`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Returns `true` if the PsbtV2 is ready for an operator taking the Constructor role.
+
+This check assumes that the Creator used this class's constructor method to initialize the PsbtV2 without passing a psbt (constructor defaults were set).
+
+##### `get isReadyForUpdater`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Returns `true` if the PsbtV2 is ready for an operator taking the Updater role.
+
+Before signatures are added, but after an input is added, a PsbtV2 is likely to be ready for Constructor, ready for Updater, and ready for Signer simultaneously.
+
+According to BIP370, the Updater can modify the sequence number, but it is unclear if the Updater retains permissions provided in psbtv0 (BIP174). It is likely not the case that the Updater has the same permissions as previously because it seems to now be the realm of the Constructor to add inputs and outputs.
+
+##### `get isReadyForSigner`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Returns `true` if the PsbtV2 is ready for an operator taking the Signer role.
+
+Right now, this method only checks for two things: There is an input for signing and `this.isReadyForTransactionExtractor === false`. The point of the latter is to check that the PsbtV2 has not been finalized.
+
+A future improvement to this method might be to more thoroughly check inputs to determine if the PsbtV2 does or does not need to collect more signatures.
+
+##### `get isReadyForCombiner`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Returns `true` if the PsbtV2 is ready for an operator taking the Combiner role.
+
+Since a Combiner can potentially provide everything needed to a mostly blank PsbtV2, instances of a PsbtV2 are likely to return true as long as inputs have not been finalized.
+
+##### `get isReadyForInputFinalizer`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Callable, but unimplemented. Returns `undefined`.
+
+##### `get isReadyForTransactionExtractor`
+
+A getter to check readiness for an operator role. Operator roles are defined in defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
+
+Callable, but unimplemented. Returns `undefined`.
+
 ##### `get nLockTime`
 
 Returns the `nLockTime` field for the psbt as if it were a bitcoin transaction.
@@ -114,7 +166,7 @@ From BIP 370:
 
 ##### `public dangerouslySetGlobalTxVersion1`
 
-A helper method for compatibility, but seems to no-longer be required.
+A helper method for compatibility. Some devices require a psbtV2 configured with a transaction version of 1. BIP370 leaves room for this if the Creator is also the Constructor.
 
 ##### `public addGlobalXpub`
 
@@ -171,16 +223,6 @@ Attempts to return a `PsbtV2` by converting from a PSBTv0 string or Buffer
 
 Attempts to extract the version number as uint32LE from raw psbt regardless of psbt validity.
 
-#### `abstract class PsbtV2Maps`
-
-This is provided for utility for compatibility and to allow for mapping, map copying, and serialization operations for psbts. This does almost no validation, so do not rely on it for ensuring a valid psbt.
-
-##### `public copy`
-
-Copies the maps in this PsbtV2 object to another PsbtV2 object.
-
-NOTE: This copy method is made available to achieve parity with the PSBT api required by `ledger-bitcoin` for creating merklized PSBTs. HOWEVER, it is not recommended to use this when avoidable as copying maps bypasses the validation defined in the constructor, so it could create a psbtv2 in an invalid psbt state. PsbtV2.serialize is preferable whenever possible.
-
 ## Concepts
 
 ### The operator role saga
@@ -189,9 +231,20 @@ The PSBT is a resource which may be passed between several operators or services
 
 ### TODO
 
-Work remains on PSBTv2 for determining the next valid operator role(s) and restricting actions based on PSBT state. In other words, if the state of the PSBT suggests the PSBT might be in role A and is ready for role B, it should only allow actions within the context of role A or B.
+#### PsbtV2
 
-The following list is a non-comprehensive list of validation checks which must be performed:
+##### Operator role validation
 
-- Check ready for Updater role on `addInput`, `addOutput`, `deleteInput`, and `deleteOuput`.
-- Check ready for Signer role on `addPartialSig`.
+Work remains for determining readiness for operator roles Input Finalizer and Transaction Extractor. The getters responsible for these checks are `isReadyForInputFinalizer` and `isReadyForTransactionExtractor`. Work also remains to expand the PsbtV2 method functionality beyond the Signer role. A huge benefit might be gained from building methods aimed at the Combiner role.
+
+##### Class constructor
+
+The constructor must be able to handle values which the Creator role is responsible for. Currently, the constructor can only accept an optional psbt which it parses to configure itself. It would be ideal if a fresh PsbtV2 instance could be initialized with minimal arguments for which the Creator role is responsible. See `private create()`.
+
+##### Add input timelocks
+
+The `public addInput` must be able to properly handle input locktimes which interact with the global value.
+
+##### Add input sighash_single
+
+The `public addInput` must be able to properly handle new inputs when the psbt has a `SIGHASH_SINGLE` flag on `PSBT_GLOBAL_TX_MODIFIABLE`.

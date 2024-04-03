@@ -1,5 +1,6 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
 import { test } from "@jest/globals";
+import { PsbtGlobalTxModifiableBits } from "./types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -818,6 +819,89 @@ describe("PsbtV2", () => {
   });
 });
 
+describe("PsbtV2.isReadyForConstructor", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+  });
+
+  it("Returns not ready for Constructor when PSBT_GLOBAL_FALLBACK_LOCKTIME is not set", () => {
+    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = null;
+    expect(psbt.isReadyForConstructor).toBe(false);
+  });
+
+  it("Returns not ready for Constructor when neither inputs or outputs are modifiable", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
+    expect(psbt.isReadyForConstructor).toBe(false);
+  });
+
+  it("Returns ready for Constructor when created with the object class constructor method", () => {
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+
+  it("Returns ready for Constructor when a custom PSBT_GLOBAL_FALLBACK_LOCKTIME has been set", () => {
+    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = 500000000;
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+
+  it("Returns ready for Constructor when at least inputs or outputs are modifiable", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
+    expect(psbt.isReadyForConstructor).toBe(true);
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.OUTPUTS];
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForUpdater", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
+  });
+
+  it("Returns not ready for Updater when there are no inputs to update", () => {
+    psbt.deleteInput(0);
+    expect(psbt.isReadyForUpdater).toBe(false);
+  });
+
+  it("Returns not ready for Updater when there are no modifiable inputs", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
+    expect(psbt.isReadyForUpdater).toBe(false);
+  });
+
+  it("Returns ready for Updater when it has at least one input and inputs are modifiable", () => {
+    expect(psbt.isReadyForUpdater).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForSigner", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+  });
+
+  it("Returns not ready for Signer when there are no inputs to sign", () => {
+    psbt.deleteInput(0);
+    expect(psbt.isReadyForSigner).toBe(false);
+  });
+
+  it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
+    jest
+      .spyOn(psbt, "isReadyForTransactionExtractor", "get")
+      .mockReturnValue(true);
+    expect(psbt.isReadyForSigner).toBe(false);
+  });
+
+  it("Returns ready for Signer when the psbt has an input for signing", () => {
+    expect(psbt.isReadyForSigner).toBe(true);
+  });
+});
+
 describe("PsbtV2.nLockTime", () => {
   it("Returns 0 when No locktimes specified", () => {
     const vect = BIP_370_VECTORS_VALID_PSBT[14];
@@ -1024,9 +1108,14 @@ describe("PsbtV2.addPartialSig", () => {
   it("Throws on validation failures", () => {
     const addSig = (index: number, pub?: any, sig?: any) =>
       psbt.addPartialSig(index, pub, sig);
-    expect(() => addSig(0)).toThrow("PsbtV2 has no input at 0");
+
+    // No inputs, so it's not ready for Signer
+    expect(() => addSig(0)).toThrow(
+      "The PsbtV2 is not ready for a Signer. Partial sigs cannot be added.",
+    );
 
     psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    expect(() => addSig(1)).toThrow("PsbtV2 has no input at 1");
     expect(() => addSig(0)).toThrow(
       "PsbtV2.addPartialSig() missing argument pubkey",
     );
