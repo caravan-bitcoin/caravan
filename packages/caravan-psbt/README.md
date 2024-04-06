@@ -154,7 +154,9 @@ Callable, but unimplemented. Returns `undefined`.
 
 A getter to check readiness for an operator role. Operator roles are defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles) and [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#user-content-Roles).
 
-Callable, but unimplemented. Returns `undefined`.
+Returns `true` if the PsbtV2 is ready for an operator taking the Transaction Extractor role.
+
+If all the inputs have been finalized, then the psbt is ready for the Transaction Extractor. According to BIP 174, it's the responsibility of the Input Finalizer to add scriptSigs or scriptWitnesses and then remove other details besides the UTXO. This getter checks that the Input Finalizer has finished its job.
 
 ##### `get nLockTime`
 

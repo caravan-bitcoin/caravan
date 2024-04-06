@@ -44,7 +44,10 @@ export class PsbtV2 extends PsbtV2Maps {
    */
 
   get PSBT_GLOBAL_XPUB() {
-    return getNonUniqueKeyTypeValues(this.globalMap, KeyType.PSBT_GLOBAL_XPUB);
+    return getNonUniqueKeyTypeValues(
+      this.globalMap,
+      KeyType.PSBT_GLOBAL_XPUB,
+    ) as NonUniqueKeyTypeValue[];
   }
 
   get PSBT_GLOBAL_TX_VERSION() {
@@ -189,7 +192,7 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.globalMap,
       KeyType.PSBT_GLOBAL_PROPRIETARY,
-    );
+    ) as NonUniqueKeyTypeValue[];
   }
 
   /**
@@ -210,7 +213,7 @@ export class PsbtV2 extends PsbtV2Maps {
     );
   }
 
-  get PSBT_IN_PARTIAL_SIG(): NonUniqueKeyTypeValue[][] {
+  get PSBT_IN_PARTIAL_SIG() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_PARTIAL_SIG,
@@ -242,7 +245,7 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_BIP32_DERIVATION,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_FINAL_SCRIPTSIG() {
@@ -267,19 +270,31 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   get PSBT_IN_RIPEMD160() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_RIPEMD160);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_RIPEMD160,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_SHA256() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_SHA256);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_SHA256,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_HASH160() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_HASH160);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_HASH160,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_HASH256() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_HASH256);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_HASH256,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_PREVIOUS_TXID() {
@@ -338,21 +353,21 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_SCRIPT_SIG,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_LEAF_SCRIPT() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_LEAF_SCRIPT,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_INTERNAL_KEY() {
@@ -550,20 +565,85 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
-   * Unimplemented. Returns undefined.
+   * Unimplemented. Returns false.
    */
-  get isReadyForInputFinalizer(): boolean | undefined {
+  get isReadyForInputFinalizer(): boolean {
     // Checks to see if the psbt contains everything needed to finalize inputs.
-    return undefined;
+    // This can become quite complicated considering multisig and taproot.
+    console.warn(
+      "PsbtV2.isReadyForInputFinalizer has been called, however, this getter is unimplemented and shouldn't be used.",
+    );
+    return false;
   }
 
   /**
-   * Unimplemented. Returns undefined.
+   * Returns true if the PsbtV2 is ready for an operator taking the Transaction
+   * Extractor role.
+   *
+   * If all the inputs have been finalized, then the psbt is ready for the
+   * Transaction Extractor. According to BIP 174, it's the responsibility of the
+   * Input Finalizer to add scriptSigs or scriptWitnesses and then remove other
+   * details besides the UTXO. This getter checks that the Input Finalizer has
+   * finished its job.
    */
-  get isReadyForTransactionExtractor(): boolean | undefined {
-    // Must check that all fields needed to produce a valid bitcoin transaction
-    // exist on the psbt.
-    return undefined;
+  get isReadyForTransactionExtractor(): boolean {
+    // Iterate over all inputs
+    for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
+      // Check for finalized script
+      if (
+        !this.PSBT_IN_FINAL_SCRIPTSIG[i] &&
+        !this.PSBT_IN_FINAL_SCRIPTWITNESS[i]
+      ) {
+        return false;
+      }
+
+      // Check that the corresponding UTXO is still available
+      if (
+        (this.PSBT_IN_FINAL_SCRIPTSIG[i] &&
+          !this.PSBT_IN_NON_WITNESS_UTXO[i]) ||
+        (this.PSBT_IN_FINAL_SCRIPTWITNESS[i] && !this.PSBT_IN_WITNESS_UTXO[i])
+      ) {
+        return false;
+      }
+
+      // Check that Input Finalizer removed other values from the input.
+      if (
+        // Unique key types: Check the value
+        this.PSBT_IN_SIGHASH_TYPE[i] ||
+        this.PSBT_IN_REDEEM_SCRIPT[i] ||
+        this.PSBT_IN_WITNESS_SCRIPT[i] ||
+        this.PSBT_IN_POR_COMMITMENT[i] ||
+        this.PSBT_IN_PREVIOUS_TXID[i] ||
+        this.PSBT_IN_OUTPUT_INDEX[i] ||
+        this.PSBT_IN_SEQUENCE[i] ||
+        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] ||
+        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] ||
+        this.PSBT_IN_TAP_KEY_SIG[i] ||
+        this.PSBT_IN_TAP_INTERNAL_KEY[i] ||
+        this.PSBT_IN_TAP_MERKLE_ROOT[i] ||
+        // Non-unique key types: Check the array for values
+        this.PSBT_IN_PARTIAL_SIG[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_BIP32_DERIVATION[i].filter((el) => el !== null).length >
+          0 ||
+        this.PSBT_IN_RIPEMD160[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_SHA256[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_HASH160[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_HASH256[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_TAP_SCRIPT_SIG[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_TAP_LEAF_SCRIPT[i].filter((el) => el !== null).length >
+          0 ||
+        this.PSBT_IN_TAP_BIP32_DERIVATION[i].filter((el) => el !== null)
+          .length > 0
+      ) {
+        return false;
+      }
+
+      // This input has been finalized. Continue checking the next one.
+    }
+
+    // All inputs have been finalized, so this psbt is ready for transaction
+    // extraction.
+    return true;
   }
 
   /**
