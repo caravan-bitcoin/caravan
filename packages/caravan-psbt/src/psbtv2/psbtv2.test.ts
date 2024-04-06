@@ -1,6 +1,6 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
 import { test } from "@jest/globals";
-import { PsbtGlobalTxModifiableBits } from "./types";
+import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -899,6 +899,66 @@ describe("PsbtV2.isReadyForSigner", () => {
 
   it("Returns ready for Signer when the psbt has an input for signing", () => {
     expect(psbt.isReadyForSigner).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForTransactionExtractor", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    // Create finalized non-witness input
+    psbt.addInput({
+      previousTxId: Buffer.from([0x00]),
+      outputIndex: 0,
+    });
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_NON_WITNESS_UTXO,
+      Buffer.from([0x01]),
+    );
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
+      Buffer.from([0x00]),
+    );
+    // Create finalized witness input
+    psbt.addInput({
+      previousTxId: Buffer.from([0x00]),
+      outputIndex: 1,
+    });
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_WITNESS_UTXO,
+      Buffer.from([0x01]),
+    );
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTWITNESS,
+      Buffer.from([0x01]),
+    );
+  });
+
+  it("Returns not ready for Transaction Extractor when there are no finalized scripts", () => {
+    // Unset script from second input
+    (psbt as any).inputMaps[1].delete(KeyType.PSBT_IN_FINAL_SCRIPTWITNESS);
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns not ready for Transaction Extractor when there are missing UTXOs", () => {
+    (psbt as any).inputMaps[1].delete(
+      KeyType.PSBT_IN_WITNESS_UTXO,
+      Buffer.from([0x00]),
+    );
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns not ready for Transaction Extractor when extra fields have not been removed", () => {
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
+      Buffer.from([0x01]),
+    );
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns ready for Transaction Extractor when the Input Finalizer's job has been completed", () => {
+    expect(psbt.isReadyForTransactionExtractor).toBe(true);
   });
 });
 

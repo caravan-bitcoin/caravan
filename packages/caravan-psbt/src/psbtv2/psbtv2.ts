@@ -588,6 +588,7 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   get isReadyForTransactionExtractor(): boolean {
     // Iterate over all inputs
+
     for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
       // Check for finalized script
       if (
@@ -607,17 +608,27 @@ export class PsbtV2 extends PsbtV2Maps {
       }
 
       // Check that Input Finalizer removed other values from the input.
+      //
+      // Test vectors from BIP 370 indicate that a missing PSBT_IN_OUTPUT_INDEX
+      // or PSBT_IN_PREVIOUS_TXID should be an invalid psbt, so the getters for
+      // these keys will throw unless the values are set. However, the BIP also
+      // requires that the Input Finalizer removes all other values from the
+      // input map except for the finalized scripts and UTXOs. Since removal of
+      // the above mentioned keys will result in an invalid psbt, it's decided
+      // here that it's safe to ignore the fact that those keys have not been
+      // removed.
       if (
-        // Unique key types: Check the value
         this.PSBT_IN_SIGHASH_TYPE[i] ||
+        this.PSBT_IN_SIGHASH_TYPE[i] === 0 ||
         this.PSBT_IN_REDEEM_SCRIPT[i] ||
         this.PSBT_IN_WITNESS_SCRIPT[i] ||
         this.PSBT_IN_POR_COMMITMENT[i] ||
-        this.PSBT_IN_PREVIOUS_TXID[i] ||
-        this.PSBT_IN_OUTPUT_INDEX[i] ||
         this.PSBT_IN_SEQUENCE[i] ||
+        this.PSBT_IN_SEQUENCE[i] === 0 ||
         this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] ||
+        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] === 0 ||
         this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] ||
+        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] === 0 ||
         this.PSBT_IN_TAP_KEY_SIG[i] ||
         this.PSBT_IN_TAP_INTERNAL_KEY[i] ||
         this.PSBT_IN_TAP_MERKLE_ROOT[i] ||
