@@ -567,7 +567,7 @@ export class PsbtV2 extends PsbtV2Maps {
   /**
    * Unimplemented. Returns false.
    */
-  get isReadyForInputFinalizer(): boolean {
+  get isReadyForInputFinalizer() {
     // Checks to see if the psbt contains everything needed to finalize inputs.
     // This can become quite complicated considering multisig and taproot.
     console.warn(
@@ -586,7 +586,7 @@ export class PsbtV2 extends PsbtV2Maps {
    * details besides the UTXO. This getter checks that the Input Finalizer has
    * finished its job.
    */
-  get isReadyForTransactionExtractor(): boolean {
+  get isReadyForTransactionExtractor() {
     // Iterate over all inputs
 
     for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
@@ -618,21 +618,19 @@ export class PsbtV2 extends PsbtV2Maps {
       // here that it's safe to ignore the fact that those keys have not been
       // removed.
       if (
-        this.PSBT_IN_SIGHASH_TYPE[i] ||
-        this.PSBT_IN_SIGHASH_TYPE[i] === 0 ||
+        // Strings
         this.PSBT_IN_REDEEM_SCRIPT[i] ||
         this.PSBT_IN_WITNESS_SCRIPT[i] ||
         this.PSBT_IN_POR_COMMITMENT[i] ||
-        this.PSBT_IN_SEQUENCE[i] ||
-        this.PSBT_IN_SEQUENCE[i] === 0 ||
-        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] ||
-        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] === 0 ||
-        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] ||
-        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] === 0 ||
         this.PSBT_IN_TAP_KEY_SIG[i] ||
         this.PSBT_IN_TAP_INTERNAL_KEY[i] ||
         this.PSBT_IN_TAP_MERKLE_ROOT[i] ||
-        // Non-unique key types: Check the array for values
+        // Numbers
+        this.PSBT_IN_SIGHASH_TYPE[i] !== null ||
+        this.PSBT_IN_SEQUENCE[i] !== null ||
+        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] !== null ||
+        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] !== null ||
+        // Arrays of non-unique keytype values
         this.PSBT_IN_PARTIAL_SIG[i].filter((el) => el !== null).length > 0 ||
         this.PSBT_IN_BIP32_DERIVATION[i].filter((el) => el !== null).length >
           0 ||
