@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.1.0
+
+### Minor Changes
+
+- [#65](https://github.com/caravan-bitcoin/caravan/pull/65) [`514b72f`](https://github.com/caravan-bitcoin/caravan/commit/514b72fe071ee39db833d4d6b6c4a95df288008e) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2 operator role validation getters are added to provide a way for validating role readiness. These getters are used in some Constructor and Signer methods. For example, an error will be thrown if `addPartialSig` is called when the PsbtV2 is not ready for a Signer.
+
 ## 1.0.1
 
 ### Patch Changes
