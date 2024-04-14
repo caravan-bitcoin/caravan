@@ -44,7 +44,10 @@ export class PsbtV2 extends PsbtV2Maps {
    */
 
   get PSBT_GLOBAL_XPUB() {
-    return getNonUniqueKeyTypeValues(this.globalMap, KeyType.PSBT_GLOBAL_XPUB);
+    return getNonUniqueKeyTypeValues(
+      this.globalMap,
+      KeyType.PSBT_GLOBAL_XPUB,
+    ) as NonUniqueKeyTypeValue[];
   }
 
   get PSBT_GLOBAL_TX_VERSION() {
@@ -189,7 +192,7 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.globalMap,
       KeyType.PSBT_GLOBAL_PROPRIETARY,
-    );
+    ) as NonUniqueKeyTypeValue[];
   }
 
   /**
@@ -210,7 +213,7 @@ export class PsbtV2 extends PsbtV2Maps {
     );
   }
 
-  get PSBT_IN_PARTIAL_SIG(): NonUniqueKeyTypeValue[][] {
+  get PSBT_IN_PARTIAL_SIG() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_PARTIAL_SIG,
@@ -242,7 +245,7 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_BIP32_DERIVATION,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_FINAL_SCRIPTSIG() {
@@ -267,19 +270,31 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   get PSBT_IN_RIPEMD160() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_RIPEMD160);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_RIPEMD160,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_SHA256() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_SHA256);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_SHA256,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_HASH160() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_HASH160);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_HASH160,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_HASH256() {
-    return getNonUniqueKeyTypeValues(this.inputMaps, KeyType.PSBT_IN_HASH256);
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_HASH256,
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_PREVIOUS_TXID() {
@@ -338,21 +353,21 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_SCRIPT_SIG,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_LEAF_SCRIPT() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_LEAF_SCRIPT,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
       KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
-    );
+    ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_TAP_INTERNAL_KEY() {
@@ -456,6 +471,191 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
+   * Operator Role Validation Getters
+   */
+
+  /**
+   * Returns true if the PsbtV2 is ready for an operator taking the Constructor
+   * role.
+   *
+   * This check assumes that the Creator used this class's constructor method to
+   * initialize the PsbtV2 without passing a psbt (constructor  defaults were
+   * set).
+   */
+  get isReadyForConstructor() {
+    // The Creator role (likely via the class constructor) must ensure at least
+    // the following value has been initialized. The psbt cannot be passed to
+    // the Constructor until it is set.
+    if (this.PSBT_GLOBAL_FALLBACK_LOCKTIME === null) {
+      return false;
+    }
+
+    // At least inputs or outputs must still be modifiable.
+    if (
+      !this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS]) &&
+      !this.isModifiable([PsbtGlobalTxModifiableBits.OUTPUTS])
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns true if the PsbtV2 is ready for an operator taking the Updater
+   * role.
+   *
+   * Before signatures are added, but after an input is added, a PsbtV2 is
+   * likely to be ready for Constructor, ready for Updater, and ready for Signer
+   * simultaneously.
+   *
+   * According to BIP370, the Updater can modify the sequence number, but it is
+   * unclear if the Updater retains permissions provided in psbtv0 (BIP174). It
+   * is likely not the case that the Updater has the same permissions as
+   * previously because it seems to now be the realm of the Constructor to add
+   * inputs and outputs.
+   */
+  get isReadyForUpdater() {
+    // In psbtv2, the Updater can set the sequence number, but an input must
+    // exist for this to be set.
+    if (this.PSBT_GLOBAL_INPUT_COUNT === 0) {
+      return false;
+    }
+
+    // Inputs must still be modifiable
+    if (!this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS])) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns true if the PsbtV2 is ready for an operator taking the Signer role.
+   */
+  get isReadyForSigner() {
+    // An input must exist before it can be signed.
+    if (this.PSBT_GLOBAL_INPUT_COUNT === 0) {
+      return false;
+    }
+
+    // TODO: Maybe it makes sense to more granularly check if the psbt is fully
+    // signed or has minimum signatures. Until then, just check that sigs have
+    // not been finalized.
+    if (this.isReadyForTransactionExtractor) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns true if the PsbtV2 is ready for an operator taking the Combiner
+   * role.
+   */
+  get isReadyForCombiner() {
+    // The combiner can potentially provide everything that's missing when
+    // merging another psbt. If it's at least ready for updates from the
+    // following roles, then it's ready for a Combiner.
+    return (
+      this.isReadyForConstructor ||
+      this.isReadyForUpdater ||
+      this.isReadyForSigner
+    );
+  }
+
+  /**
+   * Unimplemented. Returns false.
+   */
+  get isReadyForInputFinalizer() {
+    // Checks to see if the psbt contains everything needed to finalize inputs.
+    // This can become quite complicated considering multisig and taproot.
+    console.warn(
+      "PsbtV2.isReadyForInputFinalizer has been called, however, this getter is unimplemented and shouldn't be used.",
+    );
+    return false;
+  }
+
+  /**
+   * Returns true if the PsbtV2 is ready for an operator taking the Transaction
+   * Extractor role.
+   *
+   * If all the inputs have been finalized, then the psbt is ready for the
+   * Transaction Extractor. According to BIP 174, it's the responsibility of the
+   * Input Finalizer to add scriptSigs or scriptWitnesses and then remove other
+   * details besides the UTXO. This getter checks that the Input Finalizer has
+   * finished its job.
+   */
+  get isReadyForTransactionExtractor() {
+    // Iterate over all inputs
+
+    for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
+      // Check for finalized script
+      if (
+        !this.PSBT_IN_FINAL_SCRIPTSIG[i] &&
+        !this.PSBT_IN_FINAL_SCRIPTWITNESS[i]
+      ) {
+        return false;
+      }
+
+      // Check that the corresponding UTXO is still available
+      if (
+        (this.PSBT_IN_FINAL_SCRIPTSIG[i] &&
+          !this.PSBT_IN_NON_WITNESS_UTXO[i]) ||
+        (this.PSBT_IN_FINAL_SCRIPTWITNESS[i] && !this.PSBT_IN_WITNESS_UTXO[i])
+      ) {
+        return false;
+      }
+
+      // Check that Input Finalizer removed other values from the input.
+      //
+      // Test vectors from BIP 370 indicate that a missing PSBT_IN_OUTPUT_INDEX
+      // or PSBT_IN_PREVIOUS_TXID should be an invalid psbt, so the getters for
+      // these keys will throw unless the values are set. However, the BIP also
+      // requires that the Input Finalizer removes all other values from the
+      // input map except for the finalized scripts and UTXOs. Since removal of
+      // the above mentioned keys will result in an invalid psbt, it's decided
+      // here that it's safe to ignore the fact that those keys have not been
+      // removed.
+      if (
+        // Strings
+        this.PSBT_IN_REDEEM_SCRIPT[i] ||
+        this.PSBT_IN_WITNESS_SCRIPT[i] ||
+        this.PSBT_IN_POR_COMMITMENT[i] ||
+        this.PSBT_IN_TAP_KEY_SIG[i] ||
+        this.PSBT_IN_TAP_INTERNAL_KEY[i] ||
+        this.PSBT_IN_TAP_MERKLE_ROOT[i] ||
+        // Numbers
+        this.PSBT_IN_SIGHASH_TYPE[i] !== null ||
+        this.PSBT_IN_SEQUENCE[i] !== null ||
+        this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] !== null ||
+        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] !== null ||
+        // Arrays of non-unique keytype values
+        this.PSBT_IN_PARTIAL_SIG[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_BIP32_DERIVATION[i].filter((el) => el !== null).length >
+          0 ||
+        this.PSBT_IN_RIPEMD160[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_SHA256[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_HASH160[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_HASH256[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_TAP_SCRIPT_SIG[i].filter((el) => el !== null).length > 0 ||
+        this.PSBT_IN_TAP_LEAF_SCRIPT[i].filter((el) => el !== null).length >
+          0 ||
+        this.PSBT_IN_TAP_BIP32_DERIVATION[i].filter((el) => el !== null)
+          .length > 0
+      ) {
+        return false;
+      }
+
+      // This input has been finalized. Continue checking the next one.
+    }
+
+    // All inputs have been finalized, so this psbt is ready for transaction
+    // extraction.
+    return true;
+  }
+
+  /**
    * Other Getters/Setters
    */
 
@@ -530,7 +730,15 @@ export class PsbtV2 extends PsbtV2Maps {
     this.PSBT_GLOBAL_TX_VERSION = 2;
     this.PSBT_GLOBAL_INPUT_COUNT = 0;
     this.PSBT_GLOBAL_OUTPUT_COUNT = 0;
+
+    // TODO: Right now these values are setting a default. How can it be made to
+    // accept values on the constructor method? The Creator role should be
+    // allowed to configure these.
     this.PSBT_GLOBAL_FALLBACK_LOCKTIME = 0;
+    this.PSBT_GLOBAL_TX_MODIFIABLE = [
+      PsbtGlobalTxModifiableBits.INPUTS,
+      PsbtGlobalTxModifiableBits.OUTPUTS,
+    ];
   }
 
   /**
@@ -591,6 +799,11 @@ export class PsbtV2 extends PsbtV2Maps {
    * defined for PsbtV2.
    */
   public dangerouslySetGlobalTxVersion1() {
+    if (!this.isReadyForConstructor) {
+      throw Error(
+        "The PsbtV2 is not ready for a Constructor. The PSBT_GLOBAL_TX_VERSION should not be forced to version 1.",
+      );
+    }
     console.warn("Dangerously setting PsbtV2.PSBT_GLOBAL_TX_VERSION to 1!");
     const bw = new BufferWriter();
     bw.writeI32(1);
@@ -638,6 +851,17 @@ export class PsbtV2 extends PsbtV2Maps {
     // significant validation concerning this step detailed in the BIP0370
     // Constructor role:
     // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#constructor
+    //
+    // TODO: This method must properly handle the SIGHASH_SINGLE flag. If the
+    // `PSBT_GLOBAL_TX_MODIFIABLE` flag `SIGHASH_SINGLE` is present and a
+    // signature is present, then adding or removing  inputs or outputs before a
+    // signature with sighash_single must happen atomically in pairs.
+
+    if (!this.isReadyForConstructor) {
+      throw Error(
+        "The PsbtV2 is not ready for a Constructor. Inputs cannot be added.",
+      );
+    }
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS])) {
       throw Error(
         "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified.",
@@ -704,6 +928,11 @@ export class PsbtV2 extends PsbtV2Maps {
       path: string;
     }[];
   }) {
+    if (!this.isReadyForConstructor) {
+      throw Error(
+        "The PsbtV2 is not ready for a Constructor. Outputs cannot be added.",
+      );
+    }
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.OUTPUTS])) {
       throw Error(
         "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified.",
@@ -747,6 +976,11 @@ export class PsbtV2 extends PsbtV2Maps {
    * Removes an input-map from inputMaps.
    */
   public deleteInput(index: number) {
+    if (!this.isReadyForConstructor) {
+      throw Error(
+        "The PsbtV2 is not ready for a Constructor. Inputs cannot be removed.",
+      );
+    }
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS])) {
       throw Error(
         "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified.",
@@ -761,6 +995,11 @@ export class PsbtV2 extends PsbtV2Maps {
    * Removes an output-map from outputMaps.
    */
   public deleteOutput(index: number) {
+    if (!this.isReadyForConstructor) {
+      throw Error(
+        "The PsbtV2 is not ready for a Constructor. Outputs cannot be removed.",
+      );
+    }
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.OUTPUTS])) {
       throw Error(
         "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified.",
@@ -782,7 +1021,7 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
-   * Checks that provided flags are present in PSBT_GLOBAL_TX_MODIFIABLE.
+   * Checks that all provided flags are present in PSBT_GLOBAL_TX_MODIFIABLE.
    */
   private isModifiable(flags: PsbtGlobalTxModifiableBits[]) {
     for (const flag of flags) {
@@ -808,6 +1047,11 @@ export class PsbtV2 extends PsbtV2Maps {
    * https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#signer
    */
   public addPartialSig(inputIndex: number, pubkey: Buffer, sig: Buffer) {
+    if (!this.isReadyForSigner) {
+      throw Error(
+        "The PsbtV2 is not ready for a Signer. Partial sigs cannot be added.",
+      );
+    }
     if (!this.inputMaps[inputIndex]) {
       throw Error(`PsbtV2 has no input at ${inputIndex}`);
     }
@@ -845,6 +1089,8 @@ export class PsbtV2 extends PsbtV2Maps {
    * the pubkey exists.
    */
   public removePartialSig(inputIndex: number, pubkey?: Buffer) {
+    // TODO: What role is allowed to remove a partial sig? Perform that
+    // role-check validation here.
     const input = this.inputMaps[inputIndex];
 
     if (!input) {
@@ -909,7 +1155,11 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
-   * Attempts to return a PsbtV2 by converting from a PsbtV0 string or Buffer
+   * Attempts to return a PsbtV2 by converting from a PsbtV0 string or Buffer.
+   *
+   * This method first starts with a fresh PsbtV2 having just been created. It
+   * then takes the PsbtV2 through its operator saga through the Signer role. In
+   * this sense validation for each operator role will be performed.
    */
   static FromV0(psbt: string | Buffer, allowTxnVersion1 = false): PsbtV2 {
     const psbtv0Buf = bufferize(psbt);
@@ -918,11 +1168,6 @@ export class PsbtV2 extends PsbtV2Maps {
 
     // Creator Role
     const psbtv2 = new PsbtV2();
-    // Set it fully modifiable so that we can add the v0 inputs and outputs.
-    psbtv2.PSBT_GLOBAL_TX_MODIFIABLE = [
-      PsbtGlobalTxModifiableBits.INPUTS,
-      PsbtGlobalTxModifiableBits.OUTPUTS,
-    ];
     const txVersion = psbtv0.data.getTransaction().readInt32LE(0);
     if (txVersion === 1 && allowTxnVersion1) {
       psbtv2.dangerouslySetGlobalTxVersion1();
@@ -932,7 +1177,7 @@ export class PsbtV2 extends PsbtV2Maps {
         .readInt32LE(0);
     }
 
-    // Is this also a Creator role step? Unknown.
+    // Constructor Role
     for (const globalXpub of psbtv0GlobalMap.globalXpub ?? []) {
       psbtv2.addGlobalXpub(
         globalXpub.extendedPubkey,
@@ -941,8 +1186,7 @@ export class PsbtV2 extends PsbtV2Maps {
       );
     }
 
-    // Constructor Role
-    let txInputs: any = [];
+    const txInputs: any = [];
     for (const [index, txInput] of psbtv0.txInputs.entries()) {
       txInputs[index] = txInput;
     }
@@ -964,7 +1208,7 @@ export class PsbtV2 extends PsbtV2Maps {
       });
     }
 
-    let txOutputs: any = [];
+    const txOutputs: any = [];
     for (const [index, txOutput] of psbtv0.txOutputs.entries()) {
       txOutputs[index] = txOutput;
     }
@@ -979,6 +1223,8 @@ export class PsbtV2 extends PsbtV2Maps {
         bip32Derivation: output.bip32Derivation,
       });
     }
+
+    // Signer Role
 
     // Finally, add partialSigs to inputs. This has to be performed last since
     // it may change PSBT_GLOBAL_TX_MODIFIABLE preventing inputs or outputs from
