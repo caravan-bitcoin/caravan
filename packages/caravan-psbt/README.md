@@ -34,6 +34,7 @@ A set of utilities for working with PSBTs.
       - [`public deleteOutput`](#public-deleteoutput)
       - [`public addPartialSig`](#public-addpartialsig)
       - [`public removePartialSig`](#public-removepartialsig)
+      - [`public setProprietaryValue`](#public-setproprietaryvalue)
       - [`static PsbtV2.FromV0`](#static-psbtv2fromv0)
     - [`function getPsbtVersionNumber`](#function-getpsbtversionnumber)
 - [Concepts](#concepts)
@@ -216,6 +217,20 @@ The Signer, when it creates a signature, must add the partial sig keypair to the
 ##### `public removePartialSig`
 
 Removes all sigs for an input unless a pubkey is specified. Validates that the input exists. When providing a pubkey, this validates that a sig for the pubkey exists.
+
+##### `public setProprietaryValue`
+
+Sets values on the proprietary keytype for a global, input, or output map. BIP 174 allows for proprietary values to be set on all maps with the keytype `0xFC`. This method sets byte data to key values defined by the args.
+
+Args:
+
+- `mapSelector` selects which map to set the proprietary value. If this value is not `"global"`, then a tuple must be provided with `"inputs"` or `"outputs"` as the first element and the index `number` on the second element representing which input or output map to set the value to. An example looks like `["inputs", 0]`. If the map name doesn't match, the values will be set to the global map. If the index is missing on `"inputs"` or `"outputs"`, then it will throw.
+- `identifier` should be the bytes identifier for the set of proprietary keytypes.
+- `subkeyType` accepts bytes proprietary keytype.
+- `subkeyData` accepts bytes proprietary keydata.
+- `valueData` accepts bytes which will be written as the proprietary value.
+
+From the provided args, a key with the following format will be generated: `0xFC<compact uint identifier length><bytes identifier><bytes subtype><bytes subkeydata>`
 
 ##### `static PsbtV2.FromV0`
 
