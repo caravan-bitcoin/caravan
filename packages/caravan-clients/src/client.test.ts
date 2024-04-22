@@ -786,4 +786,163 @@ describe("BlockchainClient", () => {
       }
     });
   });
+
+  describe("getBlockInformation", () => {
+    it("should get the block information for a given block hash (PRIVATE client)", async () => {
+      // Mock the response from the API
+      const mockResponse = "blockInformation";
+      const mockGetBlock = jest.spyOn(bitcoind, "callBitcoind");
+      mockGetBlock.mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      // Call the getBlockInformation method
+      const blockHash = "blockHash123";
+      const blockInformation =
+        await blockchainClient.getBlockInformation(blockHash);
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGetBlock).toHaveBeenCalledWith(
+        blockchainClient.bitcoindParams.url,
+        blockchainClient.bitcoindParams.auth,
+        "getblock",
+        [blockHash],
+      );
+
+      // Verify the returned block information
+      expect(blockInformation).toEqual(mockResponse);
+    });
+
+    it("it should get the block information for a given block hash (MEMPOOL client)", async () => {
+      // Mock the response from the API
+      const mockResponse = "blockInformation";
+      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.MEMPOOL,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Get = mockGet;
+
+      // Call the getBlockInformation method
+      const blockHash = "blockHash123";
+      const blockInformation =
+        await blockchainClient.getBlockInformation(blockHash);
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/block/${blockHash}`);
+
+      // Verify the returned block information
+      expect(blockInformation).toEqual(mockResponse);
+    });
+
+    it("it should get the block information for a given block hash (BLOCKSTREAM client)", async () => {
+      // Mock the response from the API
+      const mockResponse = "blockInformation";
+      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Get = mockGet;
+
+      // Call the getBlockInformation method
+      const blockHash = "blockHash123";
+      const blockInformation =
+        await blockchainClient.getBlockInformation(blockHash);
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/block/${blockHash}`);
+
+      // Verify the returned block information
+      expect(blockInformation).toEqual(mockResponse);
+    });
+
+    it("should throw an error when failing to get the block information for a given block hash (PRIVATE client)", async () => {
+      // Mock the error from the API
+      const mockError = new Error("Failed to fetch block information");
+      const mockGetBlock = jest.spyOn(bitcoind, "callBitcoind");
+      mockGetBlock.mockRejectedValue(mockError);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+      //call the getBlockInformation method
+      const blockHash = "blockHash123";
+      const result = await blockchainClient.getBlockInformation(blockHash);
+
+      //Verify that the mock axios instance was called with the correct URL
+      expect(mockGetBlock).toHaveBeenCalledWith(
+        blockchainClient.bitcoindParams.url,
+        blockchainClient.bitcoindParams.auth,
+        "getblock",
+        [blockHash],
+      );
+      expect(result).toEqual(
+        `Failed to get block information: ${mockError.message}`,
+      );
+    });
+
+    it("should throw an error when failing to get the block information for a given block hash (MEMPOOL client)", async () => {
+      // Mock the error from the API
+      const mockError = new Error("Failed to fetch block information");
+      const mockGet = jest.fn().mockRejectedValue(mockError);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.MEMPOOL,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Get = mockGet;
+
+      // Call the getBlockInformation method
+      const blockHash = "blockHash123";
+      let error;
+      try {
+        await blockchainClient.getBlockInformation(blockHash);
+      } catch (err) {
+        error = err;
+      }
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/block/${blockHash}`);
+
+      // Verify the error message
+      expect(error).toEqual(
+        `Failed to get block information: ${mockError.message}`,
+      );
+    });
+    it("should throw an error when failing to get the block information for a given block hash (BLOCKSTREAM client)", async () => {
+      // Mock the error from the API
+      const mockError = new Error("Failed to fetch block information");
+      const mockGet = jest.fn().mockRejectedValue(mockError);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Get = mockGet;
+
+      // Call the getBlockInformation method
+      const blockHash = "blockHash123";
+      let error;
+      try {
+        await blockchainClient.getBlockInformation(blockHash);
+      } catch (err) {
+        error = err;
+      }
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/block/${blockHash}`);
+
+      // Verify the error message
+      expect(error).toEqual(
+        `Failed to get block information: ${mockError.message}`,
+      );
+    });
+  });
 });

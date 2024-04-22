@@ -310,4 +310,20 @@ export class BlockchainClient extends ClientBase {
       throw new Error(`Failed to get transaction: ${error.message}`);
     }
   }
+
+  public async getBlockInformation(blockHash: string): Promise<any> {
+    try {
+      if (this.type === ClientType.PRIVATE) {
+        return await callBitcoind(
+          this.bitcoindParams.url,
+          this.bitcoindParams.auth,
+          "getblock",
+          [blockHash],
+        );
+      }
+      return await this.Get(`/block/${blockHash}`);
+    } catch (error: any) {
+      throw new Error(`Failed to get block information: ${error.message}`);
+    }
+  }
 }
