@@ -1,0 +1,1 @@
+export { useGetDescriptors } from "./descriptors";
