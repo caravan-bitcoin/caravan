@@ -166,7 +166,7 @@ class WalletGenerator extends React.Component {
   fetchUTXOs = async (isChange, multisig, attemptToKeepGenerating) => {
     const { getBlockchainClient } = this.props;
     const { network } = this.props;
-    const client = await getBlockchainClient();
+    const client = getBlockchainClient();
     let updates = await client.fetchAddressUtxos(multisig.address);
     let addressStatus;
 

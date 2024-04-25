@@ -180,12 +180,12 @@ export function updateTxSlices(
         deposits: { nextNode: nextDepositSlice, nodes: depositSlices },
         change: { nodes: changeSlices },
       },
+      client: { blockchainClient },
     } = getState();
-    const client = dispatch(updateBlockchainClient());
     // utility function for getting utxo set of an address
     // and formatting the result in a way we can use
     const fetchSliceStatus = async (address, bip32Path) => {
-      const utxos = await client.fetchAddressUTXOs(address);
+      const utxos = await blockchainClient.fetchAddressUtxos(address);
       return {
         addressUsed: true,
         change: isChange(bip32Path),

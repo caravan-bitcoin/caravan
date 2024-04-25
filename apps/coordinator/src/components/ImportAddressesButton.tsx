@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import InfoIcon from "@mui/icons-material/Info";
-import { bitcoindGetAddressStatus, bitcoindParams } from "../clients/bitcoind";
 import { ClientType } from "./types/client";
 
 import { useGetClient, useGetDescriptors } from "../hooks";
@@ -64,12 +63,7 @@ function ImportAddressesButton({
       const address = addresses[addresses.length - 1]; // TODO: loop, or maybe just check one
       if (!address) return;
       try {
-        // TODO: remove any after converting bitcoind
-        const status: any = await bitcoindGetAddressStatus({
-          // TODO: use this to warn if spent
-          ...bitcoindParams(client),
-          address,
-        });
+        const status: any = await blockchainClient.getAddressStatus(address);
         // if there is a problem querying the address, then enable the button
         // once enabled, we won't run checkAddress effect anymore
         if (!status || typeof status.used === "undefined") {

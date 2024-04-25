@@ -27,7 +27,7 @@ export const fetchSliceData = async (slices) => {
         // creating a tuple of async calls that will need to be resolved
         // for each slice we're querying for
         return Promise.all([
-          blockchainClient.fetchAddressUTXOs(address),
+          blockchainClient.fetchAddressUtxos(address),
           blockchainClient.getAddressStatus(address),
         ]);
       });
