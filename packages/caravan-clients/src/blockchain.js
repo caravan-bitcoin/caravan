@@ -13,7 +13,7 @@ import {
   bitcoindParams,
   bitcoindGetAddressStatus,
   isWalletAddressNotFoundError,
-} from "./bitcoind";
+} from "./wallet";
 
 export const BLOCK_EXPLORER = "public";
 export const BITCOIND = "private";

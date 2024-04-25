@@ -41,9 +41,9 @@ export function isWalletAddressNotFoundError(e) {
 }
 
 export function bitcoindParams(client) {
-  const { url, username, password } = client;
+  const { url, username, password, walletName } = client;
   const auth = { username, password };
-  return { url, auth };
+  return { url, auth, walletName };
 }
 
 /**

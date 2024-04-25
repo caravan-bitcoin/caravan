@@ -1,1 +1,2 @@
-export { BlockchainClient, ClientType } from './client';
+export { bitcoindImportDescriptors } from "./wallet";
+export { BlockchainClient, ClientType } from "./client";
