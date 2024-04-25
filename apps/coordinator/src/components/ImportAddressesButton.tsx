@@ -13,12 +13,10 @@ import {
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import InfoIcon from "@mui/icons-material/Info";
-import {
-  bitcoindImportMulti,
-  bitcoindGetAddressStatus,
-  bitcoindParams,
-} from "../clients/bitcoind";
+import { bitcoindGetAddressStatus, bitcoindParams } from "../clients/bitcoind";
 import { ClientType } from "./types/client";
+
+import { useGetClient, useGetDescriptors } from "../hooks";
 
 const useStyles = makeStyles(() => ({
   tooltip: {
@@ -49,6 +47,8 @@ function ImportAddressesButton({
   const [rescan, setRescanPreference] = useState(false);
   const [addressesError, setAddressesError] = useState("");
   const [enableImport, setEnableImport] = useState(false);
+  const descriptors = useGetDescriptors();
+  const blockchainClient = useGetClient();
 
   const classes = useStyles();
   // when addresses prop has changed, we want to check its status
@@ -114,16 +114,12 @@ function ImportAddressesButton({
     }`;
 
   async function importAddresses() {
-    const label = ""; // TODO: do we want to allow to set? or set to "caravan"?
-
     try {
-      // TODO: remove any after converting bitcoind
-      const response: any = await bitcoindImportMulti({
-        ...bitcoindParams(client),
-        ...{ addresses, label, rescan },
-      });
+      const response = (await blockchainClient.importDescriptors(
+        descriptors,
+      )) as any;
 
-      const responseError = response.result.reduce((e: any, c: any) => {
+      const responseError = response?.result?.reduce((e: any, c: any) => {
         return (c.error && c.error.message) || e;
       }, "");
 
