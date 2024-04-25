@@ -39,7 +39,7 @@ import { setExtendedPublicKeyImporterVisible } from "../../actions/extendedPubli
 import { setIsWallet as setIsWalletAction } from "../../actions/transactionActions";
 import { wrappedActions } from "../../actions/utils";
 import {
-  getBlockchainClientFromStore,
+  updateBlockchainClient,
   SET_CLIENT_PASSWORD,
   SET_CLIENT_PASSWORD_ERROR,
 } from "../../actions/clientActions";
@@ -553,7 +553,7 @@ const mapDispatchToProps = {
   setIsWallet: setIsWalletAction,
   resetWallet: resetWalletAction,
   resetNodesFetchErrors: resetNodesFetchErrorsAction,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
   ...wrappedActions({
     setPassword: SET_CLIENT_PASSWORD,
     setPasswordError: SET_CLIENT_PASSWORD_ERROR,

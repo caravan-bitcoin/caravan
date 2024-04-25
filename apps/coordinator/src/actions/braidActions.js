@@ -3,7 +3,7 @@ import {
   updateChangeSliceAction,
 } from "./walletActions";
 import { setErrorNotification } from "./errorNotificationActions";
-import { getBlockchainClientFromStore } from "./clientActions";
+import { updateBlockchainClient } from "./clientActions";
 
 export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
 
@@ -16,7 +16,7 @@ export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
  */
 export const fetchSliceData = async (slices) => {
   return async (dispatch) => {
-    const blockchainClient = await dispatch(getBlockchainClientFromStore());
+    const blockchainClient = dispatch(updateBlockchainClient());
     if (!blockchainClient) return;
 
     try {

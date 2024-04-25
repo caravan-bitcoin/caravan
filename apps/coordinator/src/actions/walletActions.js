@@ -6,7 +6,7 @@ import {
 import BigNumber from "bignumber.js";
 import { isChange } from "../utils/slices";
 import { naiveCoinSelection } from "../utils";
-import { getBlockchainClientFromStore } from "./clientActions";
+import { updateBlockchainClient } from "./clientActions";
 import {
   setBalanceError,
   setChangeOutput,
@@ -181,7 +181,7 @@ export function updateTxSlices(
         change: { nodes: changeSlices },
       },
     } = getState();
-    const client = await dispatch(getBlockchainClientFromStore());
+    const client = dispatch(updateBlockchainClient());
     // utility function for getting utxo set of an address
     // and formatting the result in a way we can use
     const fetchSliceStatus = async (address, bip32Path) => {

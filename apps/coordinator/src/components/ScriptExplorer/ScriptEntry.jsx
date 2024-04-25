@@ -47,7 +47,7 @@ import {
   chooseConfirmOwnership as chooseConfirmOwnershipAction,
   setOwnershipMultisig as setOwnershipMultisigAction,
 } from "../../actions/ownershipActions";
-import { getBlockchainClientFromStore } from "../../actions/clientActions";
+import { updateBlockchainClient } from "../../actions/clientActions";
 
 class ScriptEntry extends React.Component {
   constructor(props) {
@@ -441,7 +441,7 @@ const mapDispatchToProps = {
   setFee: setFeeAction,
   setUnsignedPSBT: setUnsignedPSBTAction,
   finalizeOutputs: finalizeOutputsAction,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ScriptEntry);

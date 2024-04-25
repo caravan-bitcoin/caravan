@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 
-import { getBlockchainClientFromStore } from "../../actions/clientActions";
+import { updateBlockchainClient } from "../../actions/clientActions";
 import Copyable from "../Copyable";
 import { externalLink } from "utils/ExternalLink";
 import { setTXID } from "../../actions/transactionActions";
@@ -141,7 +141,7 @@ function mapStateToProps(state) {
 
 const mapDispatchToProps = {
   setTxid: setTXID,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transaction);
