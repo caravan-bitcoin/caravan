@@ -1,5 +1,7 @@
+import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
+import BigNumber from "bignumber.js";
 
 export interface BitcoindWalletParams {
   baseUrl: string;
@@ -9,7 +11,7 @@ export interface BitcoindWalletParams {
     password: string;
   };
   method: string;
-  params?: any[];
+  params?: any[] | Record<string, any>;
 }
 
 export function callBitcoindWallet({
@@ -120,5 +122,62 @@ export async function bitcoindGetAddressStatus({
       );
     else console.error(error.message); // eslint-disable-line no-console
     return e;
+  }
+}
+
+/**
+ * Fetch unspent outputs for a single or set of addresses
+ * @param {Object} options - what is needed to communicate with the RPC
+ * @param {string} options.url - where to connect
+ * @param {AxiosBasicCredentials} options.auth - username and password
+ * @param {string} options.address - The address from which to obtain the information
+ * @returns {UTXO} object for signing transaction inputs
+ */
+export async function bitcoindListUnspent({
+  url,
+  auth,
+  walletName,
+  address,
+  addresses,
+}: BaseBitcoindParams & { address?: string; addresses?: string[] }) {
+  try {
+    const addressParam = addresses || [address];
+    const resp = await callBitcoindWallet({
+      baseUrl: url,
+      auth,
+      walletName,
+      method: "listunspent",
+      // params: [0, 9999999, addressParam],
+      params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
+    });
+    const promises: Promise<any>[] = [];
+    resp.result.forEach((utxo) => {
+      promises.push(
+        callBitcoindWallet({
+          baseUrl: url,
+          walletName: walletName,
+          auth,
+          method: "gettransaction",
+          params: { txid: utxo.txid },
+        }),
+      );
+    });
+    const previousTransactions = await Promise.all(promises);
+    return resp.result.map((utxo, mapindex) => {
+      const amount = new BigNumber(utxo.amount);
+      return {
+        confirmed: (utxo.confirmations || 0) > 0,
+        txid: utxo.txid,
+        index: utxo.vout,
+        amount: amount.toFixed(8),
+        amountSats: bitcoinsToSatoshis(amount.toString()),
+        transactionHex: previousTransactions[mapindex].result.hex,
+        time: previousTransactions[mapindex].result.blocktime,
+      };
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("There was a problem:", (e as Error).message);
+    throw e;
   }
 }

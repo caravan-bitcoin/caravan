@@ -2,7 +2,8 @@ import axios from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
-export async function callBitcoind(url, auth, method, params = []) {
+export async function callBitcoind(url, auth, method, params) {
+  if (!params) params = [];
   // FIXME
   // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {

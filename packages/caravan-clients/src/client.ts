@@ -6,7 +6,6 @@ import axios, { Method } from "axios";
 import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
 import {
   bitcoindEstimateSmartFee,
-  bitcoindListUnspent,
   bitcoindParams,
   bitcoindSendRawTransaction,
   isWalletAddressNotFoundError,
@@ -15,6 +14,7 @@ import {
 import {
   bitcoindGetAddressStatus,
   bitcoindImportDescriptors,
+  bitcoindListUnspent,
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
