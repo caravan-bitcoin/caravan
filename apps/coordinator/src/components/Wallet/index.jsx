@@ -56,6 +56,7 @@ import {
   SET_CLIENT_TYPE,
   SET_CLIENT_URL,
   SET_CLIENT_USERNAME,
+  setClientWalletName,
 } from "../../actions/clientActions";
 import { clientPropTypes, slicePropTypes } from "../../proptypes";
 import { ExtendedPublicKeyImporters } from "./ExtendedPublicKeyImporters";
@@ -269,6 +270,7 @@ class CreateWallet extends React.Component {
       setClientType,
       setClientUrl,
       setClientUsername,
+      setWalletName,
       updateWalletPolicyRegistrations,
     } = this.props;
 
@@ -290,6 +292,7 @@ class CreateWallet extends React.Component {
       if (walletConfiguration.client.type === "private") {
         setClientUrl(walletConfiguration.client.url);
         setClientUsername(walletConfiguration.client.username);
+        setWalletName(walletConfiguration.client.walletName);
       }
     } else {
       setClientType("unknown");
@@ -586,6 +589,7 @@ CreateWallet.propTypes = {
   setExtendedPublicKeyImporterVisible: PropTypes.func.isRequired,
   setClientType: PropTypes.func.isRequired,
   setClientUrl: PropTypes.func.isRequired,
+  setWalletName: PropTypes.func.isRequired,
   setClientUsername: PropTypes.func.isRequired,
   totalSigners: PropTypes.number.isRequired,
   updateWalletNameAction: PropTypes.func.isRequired,
@@ -650,6 +654,7 @@ const mapDispatchToProps = {
     setClientUsername: SET_CLIENT_USERNAME,
     setClientPassword: SET_CLIENT_PASSWORD,
   }),
+  setWalletName: setClientWalletName,
   updateDepositNode: updateDepositSliceAction,
   updateChangeNode: updateChangeSliceAction,
 };

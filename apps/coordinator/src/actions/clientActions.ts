@@ -13,11 +13,18 @@ export const SET_CLIENT_PASSWORD_ERROR = "SET_CLIENT_PASSWORD_ERROR";
 
 export const SET_BLOCKCHAIN_CLIENT = "SET_BLOCKCHAIN_CLIENT";
 
-interface Client {
+export const SET_CLIENT_WALLET_NAME = "SET_CLIENT_WALLET_NAME";
+
+export const setClientWalletName = (walletName: string) => {
+  return { type: SET_CLIENT_WALLET_NAME, value: walletName };
+};
+
+export interface ClientSettings {
   type: string;
   url: string;
   username: string;
   password: string;
+  walletName?: string;
 }
 // Ideally we'd just use the hook to get the client
 // and do the comparisons. Because the action creators for the
@@ -27,7 +34,7 @@ interface Client {
 // we have to do this here.
 const matchesClient = (
   blockchainClient: BlockchainClient,
-  client: Client,
+  client: ClientSettings,
   network: BitcoinNetwork,
 ) => {
   return (
@@ -42,7 +49,7 @@ const matchesClient = (
   );
 };
 
-const getClientType = (client: Client): ClientType => {
+const getClientType = (client: ClientSettings): ClientType => {
   switch (client.type) {
     case "public":
       return ClientType.BLOCKSTREAM;
@@ -72,7 +79,7 @@ export const updateBlockchainClient = () => {
 export const setBlockchainClient = () => {
   return (
     dispatch: Dispatch<any>,
-    getState: () => { settings: any; client: any },
+    getState: () => { settings: any; client: ClientSettings },
   ) => {
     const { network } = getState().settings;
     const { client } = getState();

@@ -99,13 +99,16 @@ const ClientPicker = ({
     setConnectError("");
     setConnectSuccess(false);
     try {
+      if (blockchainClient.bitcoindParams.walletName) {
+        await blockchainClient.getWalletInfo();
+      }
       await blockchainClient.getFeeEstimate();
       if (onSuccess) {
         onSuccess();
       }
       setConnectSuccess(true);
     } catch (e) {
-      setConnectError(e.message);
+      setConnectError(e.response?.data?.error?.message || e.message);
     }
   };
 
