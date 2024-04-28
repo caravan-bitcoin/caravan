@@ -1,6 +1,7 @@
 import { Network, satoshisToBitcoins } from "@caravan/bitcoin";
 import { BlockchainClient, ClientType, ClientBase, UTXO } from "./client";
 import * as bitcoind from "./bitcoind";
+import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
 
 import axios from "axios";
@@ -377,7 +378,7 @@ describe("BlockchainClient", () => {
         { txid: "txid2", vout: 1, amount: 0.2, amountSats: new BigNumber(0.2) },
       ];
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
+        .spyOn(wallet, "bitcoindListUnspent")
         .mockResolvedValue(mockUnspent);
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
@@ -408,7 +409,7 @@ describe("BlockchainClient", () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Address not found");
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
+        .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
       const mockIsWalletAddressNotFoundError = jest
@@ -446,7 +447,7 @@ describe("BlockchainClient", () => {
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(false);
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
+        .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
@@ -559,7 +560,7 @@ describe("BlockchainClient", () => {
         balance: 500,
       };
       const mockBitcoindGetAddressStatus = jest.spyOn(
-        bitcoind,
+        wallet,
         "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockResolvedValue(mockResponse);
@@ -587,7 +588,7 @@ describe("BlockchainClient", () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
       const mockBitcoindGetAddressStatus = jest.spyOn(
-        bitcoind,
+        wallet,
         "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockRejectedValue(mockError);
