@@ -19,6 +19,13 @@ import {
 } from "./wallet";
 import BigNumber from "bignumber.js";
 
+export class BlockchainClientError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BlockchainClientError";
+  }
+}
+
 export interface UTXO {
   txid: string;
   vout: number;
@@ -332,7 +339,9 @@ export class BlockchainClient extends ClientBase {
     change: string;
   }): Promise<object> {
     if (this.type !== ClientType.PRIVATE) {
-      throw new Error("Only private clients support descriptor importing");
+      throw new BlockchainClientError(
+        "Only private clients support descriptor importing",
+      );
     }
 
     return await bitcoindImportDescriptors({
@@ -344,7 +353,9 @@ export class BlockchainClient extends ClientBase {
 
   public async getWalletInfo() {
     if (this.type !== ClientType.PRIVATE) {
-      throw new Error("Only private clients support wallet info");
+      throw new BlockchainClientError(
+        "Only private clients support wallet info",
+      );
     }
 
     return await bitcoindWalletInfo({ ...this.bitcoindParams });

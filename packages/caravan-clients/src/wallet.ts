@@ -3,6 +3,13 @@ import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
 
+export class BitcoindWalletClientError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BitcoindWalletClientError";
+  }
+}
+
 export interface BitcoindWalletParams {
   baseUrl: string;
   walletName?: string;
@@ -36,6 +43,7 @@ export interface BaseBitcoindParams {
   };
   walletName?: string;
 }
+
 export function bitcoindWalletInfo({
   url,
   auth,
@@ -108,7 +116,9 @@ export async function bitcoindGetAddressStatus({
       params: [address],
     });
     if (typeof resp?.result === "undefined") {
-      throw new Error(`Error: invalid response from ${url}`);
+      throw new BitcoindWalletClientError(
+        `Error: invalid response from ${url}`,
+      );
     }
     return {
       used: resp?.result > 0,
@@ -125,6 +135,12 @@ export async function bitcoindGetAddressStatus({
   }
 }
 
+export interface ListUnspentResponse {
+  txid: string;
+  amount: number;
+  confirmations: number;
+  vout: number;
+}
 /**
  * Fetch unspent outputs for a single or set of addresses
  * @param {Object} options - what is needed to communicate with the RPC
@@ -139,18 +155,33 @@ export async function bitcoindListUnspent({
   walletName,
   address,
   addresses,
-}: BaseBitcoindParams & { address?: string; addresses?: string[] }) {
+}: BaseBitcoindParams & {
+  address?: string;
+  addresses?: string[];
+}): Promise<
+  {
+    txid: string;
+    amount: string;
+    amountSats: string;
+    index: number;
+    confirmed: boolean;
+    transactionHex: string;
+    time: string;
+  }[]
+> {
   try {
     const addressParam = addresses || [address];
-    const resp = await callBitcoindWallet({
+    const resp: {
+      result: ListUnspentResponse[];
+    } = await callBitcoindWallet({
       baseUrl: url,
       auth,
       walletName,
       method: "listunspent",
-      // params: [0, 9999999, addressParam],
       params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
     });
     const promises: Promise<any>[] = [];
+
     resp.result.forEach((utxo) => {
       promises.push(
         callBitcoindWallet({
