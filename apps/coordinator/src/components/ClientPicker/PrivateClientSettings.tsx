@@ -1,5 +1,4 @@
-import React, { EventHandler } from "react";
-import PropTypes from "prop-types";
+import React from "react";
 
 // Components
 import { Grid, TextField, Button, FormHelperText, Box } from "@mui/material";

@@ -6,7 +6,6 @@ import {
 import BigNumber from "bignumber.js";
 import { isChange } from "../utils/slices";
 import { naiveCoinSelection } from "../utils";
-import { updateBlockchainClient } from "./clientActions";
 import {
   setBalanceError,
   setChangeOutput,
