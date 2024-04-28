@@ -50,7 +50,7 @@ const ClientPicker = ({
   const [connectError, setConnectError] = useState("");
   const [connectSuccess, setConnectSuccess] = useState(false);
   const blockchainClient = useGetClient();
-  console.log("blockchainClient", blockchainClient);
+
   const validatePassword = () => {
     return "";
   };
