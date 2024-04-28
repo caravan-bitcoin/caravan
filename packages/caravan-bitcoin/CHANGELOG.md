@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0
+
+### Minor Changes
+
+- [#79](https://github.com/caravan-bitcoin/caravan/pull/79) [`f4ec934`](https://github.com/caravan-bitcoin/caravan/commit/f4ec9348598ee07e974208d6b18b8dfecad511eb) Thanks [@benthecarman](https://github.com/benthecarman)! - Fixed bug with detecting odd length string
+
 ## 0.0.3
 
 ### Patch Changes
