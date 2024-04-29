@@ -160,7 +160,7 @@ const HardwareWalletPublicKeyImporter = ({
           </Button>
         </Box>
         <InteractionMessages
-          messages={interaction.messagesFor({ state: status })}
+          messages={interaction().messagesFor({ state: status })}
           excludeCodes={["bip32"]}
         />
         <FormHelperText error>{publicKeyError}</FormHelperText>
