@@ -6,27 +6,29 @@ import { getWalletConfig } from "../selectors/wallet";
 import { getMaskedDerivation } from "@caravan/bitcoin";
 
 export function useGetDescriptors() {
-  const walletConfig = useSelector(getWalletConfig);
+  const { quorum, extendedPublicKeys, addressType, network } =
+    useSelector(getWalletConfig);
   const [descriptors, setDescriptors] = useState({ change: "", receive: "" });
 
   useEffect(() => {
     const loadAsync = async () => {
       const multisigConfig = {
-        requiredSigners: walletConfig.quorum.requiredSigners,
-        keyOrigins: walletConfig.extendedPublicKeys.map(
+        requiredSigners: quorum.requiredSigners,
+        keyOrigins: extendedPublicKeys.map(
           ({ xfp, bip32Path, xpub }: KeyOrigin) => ({
             xfp,
             bip32Path: getMaskedDerivation({ xpub, bip32Path }),
             xpub,
           }),
         ),
-        addressType: walletConfig.addressType,
-        network: walletConfig.network,
+        addressType: addressType,
+        network: network,
       };
       const { change, receive } = await encodeDescriptors(multisigConfig);
       setDescriptors({ change, receive });
     };
+
     loadAsync();
-  }, [walletConfig]);
+  }, [quorum, extendedPublicKeys, addressType, network]);
   return descriptors;
 }

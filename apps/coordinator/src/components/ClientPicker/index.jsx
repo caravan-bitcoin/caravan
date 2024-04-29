@@ -101,8 +101,9 @@ const ClientPicker = ({
     try {
       if (blockchainClient.bitcoindParams.walletName) {
         await blockchainClient.getWalletInfo();
+      } else {
+        await blockchainClient.getFeeEstimate();
       }
-      await blockchainClient.getFeeEstimate();
       if (onSuccess) {
         onSuccess();
       }
