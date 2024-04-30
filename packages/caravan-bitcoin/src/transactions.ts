@@ -21,13 +21,14 @@ import {
   validateMultisigSignature,
   signatureNoSighashType,
 } from "./signatures";
-import { validateMultisigInputs } from "./inputs";
+import { idToHash, validateMultisigInputs } from "./inputs";
 import { validateOutputs } from "./outputs";
 import { scriptToHex } from "./script";
 import { psbtInputFormatter, psbtOutputFormatter } from "./psbt";
 import { Braid } from "./braid";
 import { ExtendedPublicKey } from "./keys";
 import * as tinysecp from "tiny-secp256k1";
+import { toOutputScript } from "bitcoinjs-lib/src/address";
 initEccLib(tinysecp);
 
 /**
@@ -51,16 +52,18 @@ export function unsignedMultisigTransaction(
   // transactionBuilder.network = networkData(network);
   for (let inputIndex = 0; inputIndex < inputs.length; inputIndex += 1) {
     const input = inputs[inputIndex];
-    transactionBuilder.addInput(input.txid, input.index);
+    const inputHash = idToHash(input.txid);
+    transactionBuilder.addInput(inputHash, input.index);
   }
   for (let outputIndex = 0; outputIndex < outputs.length; outputIndex += 1) {
     const output = outputs[outputIndex];
+    const scriptPubKey = toOutputScript(output.address, networkData(network));
     transactionBuilder.addOutput(
-      output.address,
+      scriptPubKey,
       new BigNumber(output.amountSats).toNumber(),
     );
   }
-  // return transactionBuilder.buildIncomplete();
+
   return transactionBuilder;
 }
 

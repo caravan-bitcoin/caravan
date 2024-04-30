@@ -127,3 +127,13 @@ export function validateTransactionIndex(indexString?) {
   }
   return "";
 }
+
+/**
+ * when creating inputs for a tx, the txid is in little-endian format
+ * this function converts it to big-endian format
+ * @param id txid as a hex string
+ * @returns the reversed bytes of txid
+ */
+export function idToHash(id: string) {
+  return Buffer.from(id, "hex").reverse();
+}

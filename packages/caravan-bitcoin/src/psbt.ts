@@ -15,6 +15,17 @@ import { P2WSH } from "./p2wsh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { generateBip32DerivationByIndex, generateBraid } from "./braid";
 import { networkData } from "./networks";
+import { isTaprootInput } from "bitcoinjs-lib/src/psbt/bip371.js";
+import * as ecc from "tiny-secp256k1";
+import ECPairFactory from "ecpair";
+
+const ECPair = ECPairFactory(ecc);
+
+const signatureValidator = (
+  pubkey: Buffer,
+  msghash: Buffer,
+  signature: Buffer,
+): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature);
 
 /**
  * This module provides functions for interacting with PSBTs, see BIP174
@@ -66,7 +77,7 @@ function getBip32Derivation(multisig, index = 0) {
     config.addressType,
     config.extendedPublicKeys,
     config.requiredSigners,
-    config.index
+    config.index,
   );
   return generateBip32DerivationByIndex(braid, index);
 }
@@ -207,7 +218,7 @@ function getUnchainedInputsFromPSBT(network, addressType, psbt) {
     const multisig = generateMultisigFromHex(
       network,
       addressType,
-      dataInput.redeemScript.toString("hex")
+      dataInput.redeemScript.toString("hex"),
     );
 
     return {
@@ -242,7 +253,7 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
     const bip32Derivation = input.bip32Derivation.filter(
       (b32d) =>
         b32d.path.startsWith(signingKeyDetails.path) &&
-        b32d.masterFingerprint.toString("hex") === signingKeyDetails.xfp
+        b32d.masterFingerprint.toString("hex") === signingKeyDetails.xfp,
     );
 
     if (!bip32Derivation.length) {
@@ -261,7 +272,7 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
 export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   if (addressType !== P2SH) {
     throw new Error(
-      "Unsupported addressType -- only P2SH is supported right now"
+      "Unsupported addressType -- only P2SH is supported right now",
     );
   }
   let localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
@@ -277,7 +288,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   // First, we check that we actually do have any inputs to sign:
   const bip32Derivations = filterRelevantBip32Derivations(
     localPSBT,
-    signingKeyDetails
+    signingKeyDetails,
   );
 
   // The shape of these return objects are specific to existing code
@@ -285,7 +296,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   const unchainedInputs = getUnchainedInputsFromPSBT(
     network,
     addressType,
-    localPSBT
+    localPSBT,
   );
   const unchainedOutputs = getUnchainedOutputsFromPSBT(localPSBT);
 
@@ -311,7 +322,10 @@ function addSignatureToPSBT(psbt, inputIndex, pubkey, signature) {
     },
   ];
   psbt.data.updateInput(inputIndex, { partialSig });
-  if (!psbt.validateSignaturesOfInput(inputIndex, pubkey)) {
+  if (isTaprootInput(psbt.txInputs[inputIndex])) {
+    throw new Error("Cannot validate taproot inputs.");
+  }
+  if (!psbt.validateSignaturesOfInput(inputIndex, signatureValidator)) {
     throw new Error("One or more invalid signatures.");
   }
   return psbt;
