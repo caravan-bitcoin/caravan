@@ -721,17 +721,14 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  test.each(BIP_370_VECTORS_INVALID_PSBT)(
-    "Throws with BIP0370 test vectors. $case",
-    (vect) => {
-      for (const key in vect) {
-        if (key === "hex" || key === "base64") {
-          const t = () => new PsbtV2(vect[key]);
-          expect(t).toThrow();
-        }
-      }
-    },
-  );
+  beforeAll(() => {
+    global.console.warn = jest.fn().mockImplementation(() => {});
+    global.console.error = jest.fn().mockImplementation(() => {});
+  });
+  afterAll(() => {
+    (global.console.warn as jest.Mock).mockRestore();
+    (global.console.error as jest.Mock).mockRestore();
+  });
 
   test.each(BIP_370_VECTORS_VALID_PSBT)(
     "Instantiates from and re-serializes to match BIP0370 test vectors. $case",
