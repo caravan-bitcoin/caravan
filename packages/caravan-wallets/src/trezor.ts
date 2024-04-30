@@ -111,7 +111,7 @@ const env_variables = { ...process.env }; // Accessing directly does not appear 
 
 const ENV_TREZOR_CONNECT_URL =
   env_variables.TREZOR_CONNECT_URL ||
-  env_variables.REACT_APP_TREZOR_CONNECT_UR ||
+  env_variables.REACT_APP_TREZOR_CONNECT_URL ||
   env_variables.VITE_TREZOR_CONNECT_URL;
 const ENV_TREZOR_BLOCKBOOK_URL =
   env_variables.TREZOR_BLOCKBOOK_URL ||

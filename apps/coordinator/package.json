@@ -77,7 +77,7 @@
     "start": "HTTPS=true npm run preview",
     "test": "__GIT_SHA__=`git rev-parse --short HEAD` jest",
     "test:ci": "CI=true jest --coverage",
-    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
+    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` TREZOR_DEV=true vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },
   "husky": {

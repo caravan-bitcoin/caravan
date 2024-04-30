@@ -41,6 +41,16 @@ export default defineConfig({
         (process.env.__VERCEL_GIT_COMMIT_SHA__ || "").slice(0, 7),
     ),
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    "process.env": {
+      TREZOR_DEV: process.env.TREZOR_DEV,
+      __GIT_SHA__: JSON.stringify(
+        process.env.__GIT_SHA__ ||
+          (process.env.__VERCEL_GIT_COMMIT_SHA__ || "").slice(0, 7),
+      ),
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+      TREZOR_CONNECT_URL: process.env.TREZOR_CONNECT_URL,
+      TREZOR_BLOCKBOOK_URL: process.env.TREZOR_BLOCKBOOK_URL,
+    },
   },
   optimizeDeps: {
     // needed for local development to support proper handling of wasm
