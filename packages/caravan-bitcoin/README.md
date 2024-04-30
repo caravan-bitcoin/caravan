@@ -218,6 +218,16 @@ and provide a helpful error message otherwise.
 
 ## Developers
 
+### Troubleshooting
+
+Upgrading to version 6 of bitcoinjs-lib caused some compatibility issues with certain packages.
+
+`tiny-secp256k1` is required now for initializing certain cryptographic functions
+but it doesn't always build well for all environments. It is therefore locked
+in to version 1. Similarly another required package `ecpair` needed to be locked into
+version `2.0.x`. See [this issue ](https://github.com/bitcoinjs/ecpair/issues/14) for
+more information.
+
 ### Contributing
 
 Unchained Capital welcomes bug reports, new features, and better documentation for this library.

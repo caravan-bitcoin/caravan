@@ -5,7 +5,7 @@
 
 import BigNumber from "bignumber.js";
 import assert from "assert";
-import { Psbt, Transaction, script, payments, initEccLib } from "bitcoinjs-lib";
+import { Psbt, Transaction, script, payments } from "bitcoinjs-lib";
 import { networkData } from "./networks";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -27,9 +27,8 @@ import { scriptToHex } from "./script";
 import { psbtInputFormatter, psbtOutputFormatter } from "./psbt";
 import { Braid } from "./braid";
 import { ExtendedPublicKey } from "./keys";
-import * as tinysecp from "tiny-secp256k1";
 import { toOutputScript } from "bitcoinjs-lib/src/address";
-initEccLib(tinysecp);
+
 
 /**
  * Create an unsigned bitcoin transaction based on the network, inputs
