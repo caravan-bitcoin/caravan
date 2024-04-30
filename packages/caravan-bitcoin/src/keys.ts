@@ -6,7 +6,8 @@
  * @module keys
  */
 
-import { ECPair } from "bitcoinjs-lib";
+import { ECPairAPI, ECPairFactory } from "ecpair";
+import * as tinysecp from "tiny-secp256k1";
 import * as bip32 from "bip32";
 import bs58check from "bs58check";
 import { Struct, BufferWriter, BufferReader } from "bufio";
@@ -17,6 +18,8 @@ import { Network, networkData } from "./networks";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
 import { BitcoinNetwork, KeyPrefix, KeyVersion } from "./types";
+
+const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 
 export const EXTENDED_PUBLIC_KEY_VERSIONS = {
   xpub: "0488b21e",
@@ -554,6 +557,7 @@ export function getFingerprintFromPublicKey(_pubkey: string): number {
  *
  * @example
  * import {fingerprintToFixedLengthHex} from "@caravan/bitcoin"
+import { ECPair } from 'bitcoinjs-lib';
  * const pubkeyFingerprint = 724365675
  * console.log(fingerprintToFixedLengthHex(pubkeyFingerprint)) // 2b2cf16b
  *

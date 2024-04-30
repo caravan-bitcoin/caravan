@@ -77,11 +77,13 @@
     "bip32": "^2.0.5",
     "bip66": "^1.1.5",
     "bitcoin-address-validation": "^2.2.3",
-    "bitcoinjs-lib": "^5.1.10",
+    "bitcoinjs-lib": "^6.1.5",
     "bs58check": "^2.1.2",
     "buffer": "^6.0.3",
     "bufio": "^1.2.0",
-    "core-js": "^2.6.10"
+    "core-js": "^2.6.10",
+    "ecpair": "^2.0.1",
+    "tiny-secp256k1": "^1.1.6"
   },
   "directories": {
     "lib": "lib"

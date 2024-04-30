@@ -5,7 +5,7 @@
 
 import BigNumber from "bignumber.js";
 import bip66 from "bip66";
-import { ECPair, Transaction } from "bitcoinjs-lib";
+import { Transaction } from "bitcoinjs-lib";
 
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -18,6 +18,11 @@ import {
 } from "./multisig";
 import { unsignedMultisigTransaction } from "./transactions";
 
+import { ECPairAPI, ECPairFactory } from "ecpair";
+import * as tinysecp from "tiny-secp256k1";
+
+const ECPair: ECPairAPI = ECPairFactory(tinysecp);
+
 /**
  * Validate a multisig signature for given input and public key.
  */
@@ -26,11 +31,11 @@ export function validateMultisigSignature(
   inputs,
   outputs,
   inputIndex,
-  inputSignature
+  inputSignature,
 ) {
   const hash = multisigSignatureHash(network, inputs, outputs, inputIndex);
   const signatureBuffer = multisigSignatureBuffer(
-    signatureNoSighashType(inputSignature)
+    signatureNoSighashType(inputSignature),
   );
   const input = inputs[inputIndex];
   const publicKeys = multisigPublicKeys(input.multisig);
@@ -65,7 +70,7 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
   const unsignedTransaction = unsignedMultisigTransaction(
     network,
     inputs,
-    outputs
+    outputs,
   );
   const input = inputs[inputIndex];
   if (
@@ -76,13 +81,13 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
       inputIndex,
       multisigWitnessScript(input.multisig).output,
       new BigNumber(input.amountSats).toNumber(),
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   } else {
     return unsignedTransaction.hashForSignature(
       inputIndex,
       multisigRedeemScript(input.multisig).output,
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   }
 }

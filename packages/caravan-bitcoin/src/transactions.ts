@@ -5,13 +5,7 @@
 
 import BigNumber from "bignumber.js";
 import assert from "assert";
-import {
-  TransactionBuilder,
-  Psbt,
-  Transaction,
-  script,
-  payments,
-} from "bitcoinjs-lib";
+import { Psbt, Transaction, script, payments, initEccLib } from "bitcoinjs-lib";
 import { networkData } from "./networks";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -33,6 +27,8 @@ import { scriptToHex } from "./script";
 import { psbtInputFormatter, psbtOutputFormatter } from "./psbt";
 import { Braid } from "./braid";
 import { ExtendedPublicKey } from "./keys";
+import * as tinysecp from "tiny-secp256k1";
+initEccLib(tinysecp);
 
 /**
  * Create an unsigned bitcoin transaction based on the network, inputs
@@ -40,15 +36,19 @@ import { ExtendedPublicKey } from "./keys";
  *
  * Returns a [`Transaction`]{@link https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/types/transaction.d.ts|Transaction} object from bitcoinjs-lib.
  */
-export function unsignedMultisigTransaction(network, inputs, outputs) {
+export function unsignedMultisigTransaction(
+  network,
+  inputs,
+  outputs,
+): Transaction {
   const multisigInputError = validateMultisigInputs(inputs);
   assert(!multisigInputError.length, multisigInputError);
   const multisigOutputError = validateOutputs(network, outputs);
   assert(!multisigOutputError.length, multisigOutputError);
 
-  const transactionBuilder = new TransactionBuilder();
-  transactionBuilder.setVersion(1); // FIXME this depends on type...
-  transactionBuilder.network = networkData(network);
+  const transactionBuilder = new Transaction();
+  transactionBuilder.version = 1; // FIXME this depends on type...
+  // transactionBuilder.network = networkData(network);
   for (let inputIndex = 0; inputIndex < inputs.length; inputIndex += 1) {
     const input = inputs[inputIndex];
     transactionBuilder.addInput(input.txid, input.index);
@@ -57,10 +57,11 @@ export function unsignedMultisigTransaction(network, inputs, outputs) {
     const output = outputs[outputIndex];
     transactionBuilder.addOutput(
       output.address,
-      new BigNumber(output.amountSats).toNumber()
+      new BigNumber(output.amountSats).toNumber(),
     );
   }
-  return transactionBuilder.buildIncomplete();
+  // return transactionBuilder.buildIncomplete();
+  return transactionBuilder;
 }
 
 /**
