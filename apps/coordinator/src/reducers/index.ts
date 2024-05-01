@@ -44,7 +44,7 @@ const appReducer = combineReducers({
   errorNotification: errorNotificationReducer,
 });
 
-const rootReducer = (state, action) => {
+const rootReducer = (state: any, action: any) => {
   let newState = state;
   if (action.type === RESET_WALLET || action.type === "RESET_APP_STATE")
     newState = undefined;
@@ -53,3 +53,4 @@ const rootReducer = (state, action) => {
 };
 
 export default rootReducer;
+export type RootState = ReturnType<typeof rootReducer>;

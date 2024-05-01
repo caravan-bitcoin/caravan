@@ -1,6 +1,13 @@
 import { Network, satoshisToBitcoins } from "@caravan/bitcoin";
-import { BlockchainClient, ClientType, ClientBase, UTXO } from "./client";
+import {
+  BlockchainClient,
+  ClientType,
+  ClientBase,
+  UTXO,
+  BlockchainClientError,
+} from "./client";
 import * as bitcoind from "./bitcoind";
+import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
 
 import axios from "axios";
@@ -373,12 +380,28 @@ describe("BlockchainClient", () => {
     it("should fetch UTXOs using bitcoindListUnspent (PRIVATE client)", async () => {
       // Mock the response from bitcoindListUnspent
       const mockUnspent = [
-        { txid: "txid1", vout: 0, amount: 0.1, amountSats: new BigNumber(0.1) },
-        { txid: "txid2", vout: 1, amount: 0.2, amountSats: new BigNumber(0.2) },
+        {
+          txid: "txid1",
+          amount: ".0001",
+          amountSats: "1000",
+          index: 1,
+          confirmed: true,
+          transactionHex: "hex",
+          time: "string",
+        },
+        {
+          txid: "txid1",
+          amount: ".0001",
+          amountSats: "1000",
+          index: 1,
+          confirmed: true,
+          transactionHex: "hex",
+          time: "string",
+        },
       ];
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
-        .mockResolvedValue(mockUnspent);
+        .spyOn(wallet, "bitcoindListUnspent")
+        .mockResolvedValue(Promise.resolve(mockUnspent));
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
       const blockchainClient = new BlockchainClient({
@@ -398,7 +421,7 @@ describe("BlockchainClient", () => {
 
       // Verify the returned result
       expect(result.utxos).toEqual(mockUnspent);
-      expect(result.balanceSats).toEqual(new BigNumber(0.3));
+      expect(result.balanceSats).toEqual(new BigNumber(2000));
       expect(result.addressKnown).toBe(true);
       expect(result.fetchedUTXOs).toBe(true);
       expect(result.fetchUTXOsError).toBe("");
@@ -408,7 +431,7 @@ describe("BlockchainClient", () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Address not found");
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
+        .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
       const mockIsWalletAddressNotFoundError = jest
@@ -446,7 +469,7 @@ describe("BlockchainClient", () => {
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(false);
       const mockBitcoindListUnspent = jest
-        .spyOn(bitcoind, "bitcoindListUnspent")
+        .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
@@ -559,7 +582,7 @@ describe("BlockchainClient", () => {
         balance: 500,
       };
       const mockBitcoindGetAddressStatus = jest.spyOn(
-        bitcoind,
+        wallet,
         "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockResolvedValue(mockResponse);
@@ -587,7 +610,7 @@ describe("BlockchainClient", () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
       const mockBitcoindGetAddressStatus = jest.spyOn(
-        bitcoind,
+        wallet,
         "bitcoindGetAddressStatus",
       );
       mockBitcoindGetAddressStatus.mockRejectedValue(mockError);
@@ -784,6 +807,69 @@ describe("BlockchainClient", () => {
         // Verify the returned fee estimate
         expect(feeEstimate).toEqual(mockResponse[block]);
       }
+    });
+  });
+
+  describe("importDescriptors", () => {
+    it("should throw BlockchainClientError if not a private client", () => {
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+
+      expect(() =>
+        blockchainClient.importDescriptors({
+          receive: "receive",
+          change: "change",
+        }),
+      ).rejects.toThrow(BlockchainClientError);
+    });
+
+    it("calls bitcoindImportDescriptors with descriptors to import", async () => {
+      const mockImportDescriptors = jest.spyOn(
+        wallet,
+        "bitcoindImportDescriptors",
+      );
+      mockImportDescriptors.mockResolvedValue({});
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      const receive = "receive";
+      const change = "change";
+      await blockchainClient.importDescriptors({ receive, change });
+      expect(mockImportDescriptors).toHaveBeenCalledWith({
+        receive,
+        change,
+        ...blockchainClient.bitcoindParams,
+      });
+    });
+  });
+  describe("getWalletInfo", () => {
+    it("should throw BlockchainClientError if not a private client", () => {
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+
+      expect(() => blockchainClient.getWalletInfo()).rejects.toThrow(
+        BlockchainClientError,
+      );
+    });
+
+    it("calls bitcoindImportDescriptors with descriptors to import", async () => {
+      const mockImportDescriptors = jest.spyOn(wallet, "bitcoindWalletInfo");
+      mockImportDescriptors.mockResolvedValue({});
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      await blockchainClient.getWalletInfo();
+      expect(mockImportDescriptors).toHaveBeenCalledWith({
+        ...blockchainClient.bitcoindParams,
+      });
     });
   });
 });

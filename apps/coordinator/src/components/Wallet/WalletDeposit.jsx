@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { enqueueSnackbar } from "notistack";
 
-import { getBlockchainClientFromStore } from "../../actions/clientActions";
+import { updateBlockchainClient } from "../../actions/clientActions";
 import {
   updateDepositSliceAction,
   resetWalletView as resetWalletViewAction,
@@ -215,7 +215,7 @@ function mapStateToProps(state) {
 const mapDispatchToProps = {
   updateDepositSlice: updateDepositSliceAction,
   resetWalletView: resetWalletViewAction,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(WalletDeposit);

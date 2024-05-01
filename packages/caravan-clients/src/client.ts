@@ -6,14 +6,25 @@ import axios, { Method } from "axios";
 import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
 import {
   bitcoindEstimateSmartFee,
-  bitcoindGetAddressStatus,
-  bitcoindListUnspent,
   bitcoindParams,
   bitcoindSendRawTransaction,
   isWalletAddressNotFoundError,
   callBitcoind,
 } from "./bitcoind";
+import {
+  bitcoindGetAddressStatus,
+  bitcoindImportDescriptors,
+  bitcoindListUnspent,
+  bitcoindWalletInfo,
+} from "./wallet";
 import BigNumber from "bignumber.js";
+
+export class BlockchainClientError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BlockchainClientError";
+  }
+}
 
 export interface UTXO {
   txid: string;
@@ -74,16 +85,33 @@ export class ClientBase {
   }
 }
 
+export interface BitcoindClientConfig {
+  url: string;
+  username: string;
+  password: string;
+  walletName?: string;
+}
+
+export interface BitcoindParams {
+  url: string;
+  auth: {
+    username: string;
+    password: string;
+  };
+  walletName?: string;
+}
+
+export interface BlockchainClientParams {
+  type: ClientType;
+  network?: Network;
+  throttled?: boolean;
+  client?: BitcoindClientConfig;
+}
+
 export class BlockchainClient extends ClientBase {
   public readonly type: ClientType;
   public readonly network?: Network;
-  public readonly bitcoindParams: {
-    url: string;
-    auth: {
-      username: string;
-      password: string;
-    };
-  };
+  public readonly bitcoindParams: BitcoindParams;
 
   constructor({
     type,
@@ -93,17 +121,9 @@ export class BlockchainClient extends ClientBase {
       url: "",
       username: "",
       password: "",
+      walletName: "",
     },
-  }: {
-    type: ClientType;
-    network?: Network;
-    throttled?: boolean;
-    client?: {
-      url: string;
-      username: string;
-      password: string;
-    };
-  }) {
+  }: BlockchainClientParams) {
     // regtest not supported by public explorers
     if (
       type !== ClientType.PRIVATE &&
@@ -309,5 +329,35 @@ export class BlockchainClient extends ClientBase {
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
     }
+  }
+
+  public async importDescriptors({
+    receive,
+    change,
+  }: {
+    receive: string;
+    change: string;
+  }): Promise<object> {
+    if (this.type !== ClientType.PRIVATE) {
+      throw new BlockchainClientError(
+        "Only private clients support descriptor importing",
+      );
+    }
+
+    return await bitcoindImportDescriptors({
+      receive,
+      change,
+      ...this.bitcoindParams,
+    });
+  }
+
+  public async getWalletInfo() {
+    if (this.type !== ClientType.PRIVATE) {
+      throw new BlockchainClientError(
+        "Only private clients support wallet info",
+      );
+    }
+
+    return await bitcoindWalletInfo({ ...this.bitcoindParams });
   }
 }

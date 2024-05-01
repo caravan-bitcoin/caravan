@@ -39,7 +39,7 @@ import { setExtendedPublicKeyImporterVisible } from "../../actions/extendedPubli
 import { setIsWallet as setIsWalletAction } from "../../actions/transactionActions";
 import { wrappedActions } from "../../actions/utils";
 import {
-  getBlockchainClientFromStore,
+  updateBlockchainClient,
   SET_CLIENT_PASSWORD,
   SET_CLIENT_PASSWORD_ERROR,
 } from "../../actions/clientActions";
@@ -166,7 +166,7 @@ class WalletGenerator extends React.Component {
   fetchUTXOs = async (isChange, multisig, attemptToKeepGenerating) => {
     const { getBlockchainClient } = this.props;
     const { network } = this.props;
-    const client = await getBlockchainClient();
+    const client = getBlockchainClient();
     let updates = await client.fetchAddressUtxos(multisig.address);
     let addressStatus;
 
@@ -264,7 +264,11 @@ class WalletGenerator extends React.Component {
     try {
       const { getBlockchainClient } = this.props;
       const client = await getBlockchainClient();
-      await client.getFeeEstimate();
+      if (client.bitcoindParams.walletName) {
+        await client.getWalletInfo();
+      } else {
+        await client.getFeeEstimate();
+      }
       setPasswordError("");
       this.setState({ connectSuccess: true }, () => {
         // if testConnection was passed a callback
@@ -278,7 +282,7 @@ class WalletGenerator extends React.Component {
         setPasswordError(
           "Unauthorized: Incorrect username and password combination",
         );
-      else setPasswordError(e.message);
+      else setPasswordError(e.response?.data?.error?.message || e.message);
     }
   };
 
@@ -553,7 +557,7 @@ const mapDispatchToProps = {
   setIsWallet: setIsWalletAction,
   resetWallet: resetWalletAction,
   resetNodesFetchErrors: resetNodesFetchErrorsAction,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
   ...wrappedActions({
     setPassword: SET_CLIENT_PASSWORD,
     setPasswordError: SET_CLIENT_PASSWORD_ERROR,

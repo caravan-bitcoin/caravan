@@ -25,7 +25,7 @@ import {
   finalizeOutputs as finalizeOutputsAction,
   resetOutputs as resetOutputsAction,
 } from "../../actions/transactionActions";
-import { getBlockchainClientFromStore } from "../../actions/clientActions";
+import { updateBlockchainClient } from "../../actions/clientActions";
 import { MIN_SATS_PER_BYTE_FEE } from "../Wallet/constants";
 import OutputEntry from "./OutputEntry";
 import styles from "./styles.module.scss";
@@ -514,7 +514,7 @@ const mapDispatchToProps = {
   setFee: setFeeAction,
   finalizeOutputs: finalizeOutputsAction,
   resetOutputs: resetOutputsAction,
-  getBlockchainClient: getBlockchainClientFromStore,
+  getBlockchainClient: updateBlockchainClient,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(OutputsForm);
