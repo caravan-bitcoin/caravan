@@ -63,6 +63,7 @@ export function bitcoindImportDescriptors({
   walletName,
   receive,
   change,
+  rescan,
 }: {
   url: string;
   auth: {
@@ -72,6 +73,7 @@ export function bitcoindImportDescriptors({
   walletName?: string;
   receive: string;
   change: string;
+  rescan: boolean;
 }) {
   const descriptors = [
     {
@@ -86,7 +88,7 @@ export function bitcoindImportDescriptors({
     return {
       ...d,
       range: [0, 1005],
-      timestamp: "now",
+      timestamp: rescan ? 0 : "now",
       watchonly: true,
       active: true,
     };

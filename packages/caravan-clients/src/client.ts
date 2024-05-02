@@ -334,9 +334,11 @@ export class BlockchainClient extends ClientBase {
   public async importDescriptors({
     receive,
     change,
+    rescan,
   }: {
     receive: string;
     change: string;
+    rescan: boolean;
   }): Promise<object> {
     if (this.type !== ClientType.PRIVATE) {
       throw new BlockchainClientError(
@@ -347,6 +349,7 @@ export class BlockchainClient extends ClientBase {
     return await bitcoindImportDescriptors({
       receive,
       change,
+      rescan,
       ...this.bitcoindParams,
     });
   }

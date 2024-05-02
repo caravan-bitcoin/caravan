@@ -110,7 +110,7 @@ function ImportAddressesButton({
   async function importAddresses() {
     try {
       const response = (await blockchainClient.importDescriptors(
-        descriptors,
+        {...descriptors, rescan},
       )) as any;
 
       const responseError = response?.result?.reduce((e: any, c: any) => {
