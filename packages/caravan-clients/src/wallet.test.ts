@@ -75,6 +75,7 @@ describe("Wallet Functions", () => {
     it("should call callBitcoindWallet with importdescriptors", () => {
       const receive = "receive";
       const change = "change";
+      const rescan = true;
       const descriptorParams = [
         { desc: receive, internal: false },
         { desc: change, internal: true },
@@ -91,6 +92,7 @@ describe("Wallet Functions", () => {
         walletName,
         receive,
         change,
+        rescan,
       });
       expect(mockCallBitcoind).toHaveBeenCalledWith(
         expectedWalletPath,

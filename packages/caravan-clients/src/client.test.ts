@@ -821,6 +821,7 @@ describe("BlockchainClient", () => {
         blockchainClient.importDescriptors({
           receive: "receive",
           change: "change",
+          rescan: true,
         }),
       ).rejects.toThrow(BlockchainClientError);
     });
@@ -838,7 +839,8 @@ describe("BlockchainClient", () => {
 
       const receive = "receive";
       const change = "change";
-      await blockchainClient.importDescriptors({ receive, change });
+      const rescan = true;
+      await blockchainClient.importDescriptors({ receive, change, rescan });
       expect(mockImportDescriptors).toHaveBeenCalledWith({
         receive,
         change,
