@@ -1,36 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { useSelector } from "react-redux";
 import { Button } from "@mui/material";
-import { getMaskedDerivation } from "@caravan/bitcoin";
-import { encodeDescriptors } from "@caravan/descriptors";
+
 import { getWalletConfig } from "../../selectors/wallet";
 import { downloadFile } from "../../utils";
-import { KeyOrigin } from "@caravan/wallets";
+import { useGetDescriptors } from "../../hooks";
 
 export const DownloadDescriptors = () => {
   const walletConfig = useSelector(getWalletConfig);
-  const [descriptors, setDescriptors] = useState({ change: "", receive: "" });
-
-  useEffect(() => {
-    const loadAsync = async () => {
-      const multisigConfig = {
-        requiredSigners: walletConfig.quorum.requiredSigners,
-        keyOrigins: walletConfig.extendedPublicKeys.map(
-          ({ xfp, bip32Path, xpub }: KeyOrigin) => ({
-            xfp,
-            bip32Path: getMaskedDerivation({ xpub, bip32Path }),
-            xpub,
-          }),
-        ),
-        addressType: walletConfig.addressType,
-        network: walletConfig.network,
-      };
-      const { change, receive } = await encodeDescriptors(multisigConfig);
-      setDescriptors({ change, receive });
-    };
-    loadAsync();
-  }, []);
+  const descriptors = useGetDescriptors();
 
   const handleDownload = () => {
     if (descriptors.change) {

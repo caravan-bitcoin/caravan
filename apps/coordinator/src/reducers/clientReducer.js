@@ -8,6 +8,7 @@ import {
   SET_CLIENT_USERNAME_ERROR,
   SET_CLIENT_PASSWORD_ERROR,
   SET_BLOCKCHAIN_CLIENT,
+  SET_CLIENT_WALLET_NAME,
 } from "../actions/clientActions";
 
 const initialState = {
@@ -16,6 +17,7 @@ const initialState = {
   username: "",
   password: "",
   urlError: "",
+  walletName: "",
   usernameError: "",
   passwordError: "",
   status: "unknown",
@@ -38,6 +40,8 @@ export default (state = initialState, action) => {
       return updateState(state, { usernameError: action.value });
     case SET_CLIENT_PASSWORD_ERROR:
       return updateState(state, { passwordError: action.value });
+    case SET_CLIENT_WALLET_NAME:
+      return updateState(state, { walletName: action.value });
     case SET_BLOCKCHAIN_CLIENT:
       return updateState(state, { blockchainClient: action.value });
 

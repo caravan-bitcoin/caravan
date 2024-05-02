@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { connect, useDispatch } from "react-redux";
+import { connect } from "react-redux";
 import {
   Grid,
   Card,
@@ -25,10 +25,10 @@ import {
   SET_CLIENT_URL_ERROR,
   SET_CLIENT_USERNAME_ERROR,
   SET_CLIENT_PASSWORD_ERROR,
-  getBlockchainClientFromStore,
 } from "../../actions/clientActions";
 
 import PrivateClientSettings from "./PrivateClientSettings";
+import { useGetClient } from "../../hooks";
 
 const ClientPicker = ({
   setType,
@@ -49,8 +49,7 @@ const ClientPicker = ({
   const [urlEdited, setUrlEdited] = useState(false);
   const [connectError, setConnectError] = useState("");
   const [connectSuccess, setConnectSuccess] = useState(false);
-  const dispatch = useDispatch();
-  const [blockchainClient, setClient] = useState();
+  const blockchainClient = useGetClient();
 
   const validatePassword = () => {
     return "";
@@ -66,17 +65,12 @@ const ClientPicker = ({
     return "";
   };
 
-  const updateBlockchainClient = async () => {
-    setClient(await dispatch(getBlockchainClientFromStore()));
-  };
-
   const handleTypeChange = async (event) => {
     const clientType = event.target.value;
     if (clientType === "private" && !urlEdited) {
       setUrl(`http://localhost:${network === "mainnet" ? 8332 : 18332}`);
     }
     setType(clientType);
-    await updateBlockchainClient();
   };
 
   const handleUrlChange = async (event) => {
@@ -85,7 +79,6 @@ const ClientPicker = ({
     if (!urlEdited && !error) setUrlEdited(true);
     setUrl(url);
     setUrlError(error);
-    await updateBlockchainClient();
   };
 
   const handleUsernameChange = (event) => {
@@ -100,20 +93,23 @@ const ClientPicker = ({
     const error = validatePassword(password);
     setPassword(password);
     setPasswordError(error);
-    await updateBlockchainClient();
   };
 
   const testConnection = async () => {
     setConnectError("");
     setConnectSuccess(false);
     try {
-      await blockchainClient.getFeeEstimate();
+      if (blockchainClient.bitcoindParams.walletName) {
+        await blockchainClient.getWalletInfo();
+      } else {
+        await blockchainClient.getFeeEstimate();
+      }
       if (onSuccess) {
         onSuccess();
       }
       setConnectSuccess(true);
     } catch (e) {
-      setConnectError(e.message);
+      setConnectError(e.response?.data?.error?.message || e.message);
     }
   };
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- [#76](https://github.com/caravan-bitcoin/caravan/pull/76) [`6c04ac4`](https://github.com/caravan-bitcoin/caravan/commit/6c04ac497b9fcd227b821b0d5ccb8b5291a24d18) Thanks [@bucko13](https://github.com/bucko13)! - Caravan Coordinator:
+  Adds descriptor import support for caravan coordinator. This is a backwards incompatible
+  change for instances that need to interact with bitcoind nodes older than v21 which introduced
+  descriptor wallets.
+
+  @caravan/clients
+
+  - named wallet interactions
+  - import descriptor support
+
+### Patch Changes
+
+- Updated dependencies [[`6c04ac4`](https://github.com/caravan-bitcoin/caravan/commit/6c04ac497b9fcd227b821b0d5ccb8b5291a24d18)]:
+  - @caravan/clients@0.1.0
+
+## 0.3.3
+
+### Patch Changes
+
+- [#81](https://github.com/caravan-bitcoin/caravan/pull/81) [`0e2b045`](https://github.com/caravan-bitcoin/caravan/commit/0e2b0450464699551902e2176bb3e4ea0c9747d1) Thanks [@bucko13](https://github.com/bucko13)! - Fixes incorrect call for interaction messages in address generator
+
 ## 0.3.2
 
 ### Patch Changes

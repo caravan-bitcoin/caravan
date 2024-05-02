@@ -24,7 +24,8 @@ const getClientDetails = (state) => {
     return `{
     "type": "private",
     "url": "${state.client.url}",
-    "username": "${state.client.username}"
+    "username": "${state.client.username}",
+    "walletName": "${state.client.walletName}"
   }`;
   }
   return `{

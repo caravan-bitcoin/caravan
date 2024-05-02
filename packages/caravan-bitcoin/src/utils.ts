@@ -46,7 +46,7 @@ export function validBase64(inputString: string) {
  *   considered invalid (because of the` `x`).
  */
 export function validateHex(inputString: string) {
-  if (inputString.length % 2) {
+  if (inputString.length % 2 !== 0) {
     return "Invalid hex: odd-length string.";
   }
   if (!VALID_HEX_REGEX.test(inputString)) {

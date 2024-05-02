@@ -2,7 +2,8 @@ import axios from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
-export async function callBitcoind(url, auth, method, params = []) {
+export async function callBitcoind(url, auth, method, params) {
+  if (!params) params = [];
   // FIXME
   // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
@@ -41,9 +42,9 @@ export function isWalletAddressNotFoundError(e) {
 }
 
 export function bitcoindParams(client) {
-  const { url, username, password } = client;
+  const { url, username, password, walletName } = client;
   const auth = { username, password };
-  return { url, auth };
+  return { url, auth, walletName };
 }
 
 /**

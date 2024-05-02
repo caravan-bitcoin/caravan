@@ -136,10 +136,57 @@ which can export these data can be made to work with Caravan.
 
 By default, Caravan uses a free API provided by
 [mempool.space](https://mempool.space) whenever it needs
-information about the bitcoin blockchain or to broadcast transactions.
+information about the bitcoin blockchain or to broadcast transactions. Blockstream.info is also available as a fallback
+option for a public API.
 
-You can ask Caravan to use your own private [bitcoind full
+### Bitcoind client
+
+You can also ask Caravan to use your own private [bitcoind full
 node](https://bitcoin.org/en/full-node).
+
+#### Bitcoind Wallet
+
+In order for Caravan to calculate wallet balances and
+construct transactions from available UTXOs, when using
+your own bitcoind node, you will need to have a watch-only
+wallet available to import your wallet's descriptors to (available since
+bitcoin v21).
+
+Bitcoind no longer initializes with a wallet so you will have to create
+one manually:
+
+```shell
+bitcoin-cli -named createwallet wallet_name="watcher" blank=true disable_private_keys=true load_on_startup=true
+```
+
+What does this do:
+- `-named` means you can pass named params rather than having to do them in exactly the right order
+- `createwallet` this creates our wallet (available since [v22](https://bitcoincore.org/en/doc/22.0.0/rpc/wallet/createwallet/))
+- `wallet_name`: the name of the wallet you will use to import your descriptors (multiple descriptors can be imported to the same wallet)
+- `blank`: We don't need to initialize this wallet with any key information
+- `disable_private_keys` this allows us to import watch-only descriptors (xpubs only, no xprivs)
+- `load_on_startup` optionally set this wallet to always load when the node starts up. Wallets need to be manually loaded with `loadwallet` now so this can be handy.
+
+Then in Caravan you will have to use the `Import Addresses` button to have your node start
+watching the addresses in your wallet.
+
+##### Multiple Wallets
+
+A node can have multiple wallets loaded at the same time. In such
+cases if you don't indicate which wallet you are targeting
+with wallet-specific commands then the API call will fail.
+
+As such, Caravan Coordinator and @caravan/clients now support an optional `walletName` configuration. If this is set in your configuration file (also available during wallet creation), then
+the calls will make sure to target this wallet. Use the same value as
+`wallet_name` from wallet creation above.
+
+#### Importing existing wallets
+
+IMPORTANT: if you're importing a wallet that has prior history into a node that was not
+previously watching the addresses and did not have txindex enabled, you will have
+to re-index your node (sync all blocks from the beginning checking for relevant history
+that the node previously didn't care about) in order to see your balance reflected.
+
 
 #### Adding CORS Headers
 

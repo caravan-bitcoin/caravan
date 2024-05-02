@@ -3,7 +3,7 @@ import {
   updateChangeSliceAction,
 } from "./walletActions";
 import { setErrorNotification } from "./errorNotificationActions";
-import { getBlockchainClientFromStore } from "./clientActions";
+import { updateBlockchainClient } from "./clientActions";
 
 export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
 
@@ -16,7 +16,7 @@ export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
  */
 export const fetchSliceData = async (slices) => {
   return async (dispatch) => {
-    const blockchainClient = await dispatch(getBlockchainClientFromStore());
+    const blockchainClient = dispatch(updateBlockchainClient());
     if (!blockchainClient) return;
 
     try {
@@ -27,7 +27,7 @@ export const fetchSliceData = async (slices) => {
         // creating a tuple of async calls that will need to be resolved
         // for each slice we're querying for
         return Promise.all([
-          blockchainClient.fetchAddressUTXOs(address),
+          blockchainClient.fetchAddressUtxos(address),
           blockchainClient.getAddressStatus(address),
         ]);
       });
