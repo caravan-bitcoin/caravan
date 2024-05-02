@@ -91,6 +91,36 @@ describe("Wallet Functions", () => {
         walletName,
         receive,
         change,
+        rescan: false,
+      });
+      expect(mockCallBitcoind).toHaveBeenCalledWith(
+        expectedWalletPath,
+        auth,
+        "importdescriptors",
+        [descriptorParams],
+      );
+    });
+
+    it("should call callBitcoindWallet with importdescriptors to rescan entire blockhain", () => {
+      const receive = "receive";
+      const change = "change";
+      const descriptorParams = [
+        { desc: receive, internal: false },
+        { desc: change, internal: true },
+      ].map((d) => ({
+        ...d,
+        range: [0, 1005],
+        timestamp: 0,
+        watchonly: true,
+        active: true,
+      }));
+      bitcoindImportDescriptors({
+        url: baseUrl,
+        auth,
+        walletName,
+        receive,
+        change,
+        rescan: true,
       });
       expect(mockCallBitcoind).toHaveBeenCalledWith(
         expectedWalletPath,
