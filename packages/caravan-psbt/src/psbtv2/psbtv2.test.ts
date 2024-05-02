@@ -1388,3 +1388,200 @@ describe("PsbtV2.isModifiable (private)", () => {
     },
   );
 });
+
+describe("PsbtV2.setProprietaryValue", () => {
+  const identifier = Buffer.from("satoshi");
+  const idLength = Buffer.from([identifier.length]);
+  const keytype1 = Buffer.from("00", "hex");
+  const keytype2 = Buffer.from("01", "hex");
+  const keydata1 = Buffer.from("0001", "hex");
+  const keydata2 = Buffer.from("0002", "hex");
+  const valuedata1 = Buffer.from("000001", "hex");
+  const valuedata2 = Buffer.from("000002", "hex");
+
+  const key1 = Buffer.from([
+    0xfc,
+    ...idLength,
+    ...identifier,
+    ...keytype1,
+    ...keydata1,
+  ]).toString("hex");
+  const key2 = Buffer.from([
+    0xfc,
+    ...idLength,
+    ...identifier,
+    ...keytype2,
+    ...keydata2,
+  ]).toString("hex");
+
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+  });
+
+  it("sets values to the global map", () => {
+    psbt.setProprietaryValue(
+      "global",
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      "global",
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].key).toBe(key2);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].value).toBe(
+      valuedata2.toString("hex"),
+    );
+  });
+
+  it("defaults to setting global maps when the map selector is malformed", () => {
+    psbt.setProprietaryValue(
+      "inputs" as any,
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    expect((psbt as any).inputMaps.length).toBe(0);
+    expect((psbt as any).outputMaps.length).toBe(0);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+  });
+
+  it("throws when input or output map are missing an index", () => {
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs"] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs", null] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs"] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs", null] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+  });
+
+  it("throws when input or output map is uninitialized", () => {
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs", 0],
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow("Map does not exist at that index.");
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs", 0],
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow("Map does not exist at that index.");
+  });
+
+  it("sets values to input and output maps", () => {
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    psbt.addInput({ previousTxId: Buffer.from([0x01]), outputIndex: 1 });
+    psbt.addOutput({ amount: 1, script: Buffer.from([0x00]) });
+    psbt.addOutput({ amount: 2, script: Buffer.from([0x01]) });
+    psbt.setProprietaryValue(
+      ["inputs", 0],
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      ["inputs", 1],
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+    psbt.setProprietaryValue(
+      ["outputs", 0],
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      ["outputs", 1],
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+
+    expect(psbt.PSBT_IN_PROPRIETARY[0][0].key).toBe(key1);
+    expect(psbt.PSBT_IN_PROPRIETARY[0][0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_IN_PROPRIETARY[1][0].key).toBe(key2);
+    expect(psbt.PSBT_IN_PROPRIETARY[1][0].value).toBe(
+      valuedata2.toString("hex"),
+    );
+    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].key).toBe(key1);
+    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].key).toBe(key2);
+    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].value).toBe(
+      valuedata2.toString("hex"),
+    );
+  });
+});
