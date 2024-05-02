@@ -61,7 +61,7 @@ Any PR to caravan that introduces a functional change requires a changeset be su
 Simply run the following command and follow the cli instructions:
 
 ```
-$ npm run changesets
+$ npm run changeset
 ```
 
 Learn about [semantic versioning](https://docs.npmjs.com/about-semantic-versioning) if you
