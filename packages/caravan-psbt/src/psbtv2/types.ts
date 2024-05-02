@@ -83,3 +83,9 @@ export enum SighashType {
   SIGHASH_SINGLE = 0x03,
   SIGHASH_ANYONECANPAY = 0x80,
 }
+
+type InputOutputIndexType = number;
+export type MapSelectorType =
+  | "global"
+  | ["inputs", InputOutputIndexType]
+  | ["outputs", InputOutputIndexType];

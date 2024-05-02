@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.2.0
+
+### Minor Changes
+
+- [#73](https://github.com/caravan-bitcoin/caravan/pull/73) [`c58f786`](https://github.com/caravan-bitcoin/caravan/commit/c58f786c3409795e12a17a4fe9a3ff4fbf7c6517) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2 public setProprietaryValue allows for proprietary value mapping on the psbt.
+
 ## 1.1.0
 
 ### Minor Changes
