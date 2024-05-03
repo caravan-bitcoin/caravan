@@ -92,12 +92,15 @@ export function unsignedMultisigPSBT(
     if (braidDetails && includeGlobalXpubs) {
       const braid = Braid.fromData(JSON.parse(braidDetails));
       braid.extendedPublicKeys.forEach((extendedPublicKeyData) => {
-        const extendedPublicKey = new ExtendedPublicKey(extendedPublicKeyData);
+        const extendedPublicKey = new ExtendedPublicKey({
+          ...extendedPublicKeyData,
+          network,
+        });
 
         const alreadyFound = globalExtendedPublicKeys.find(
           (existingExtendedPublicKey: any) =>
             existingExtendedPublicKey.toBase58() ===
-            extendedPublicKey.toBase58()
+            extendedPublicKey.toBase58(),
         );
 
         if (!alreadyFound) {

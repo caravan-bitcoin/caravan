@@ -105,7 +105,6 @@ const psbtOutputFormatter = (output: PsbtOutput, network: Network) => {
   const script = toOutputScript(output.address, networkData(network));
   const outputData: any = {
     ...output,
-    // script: toOutputScript(output.address, networkData(network)),
     script,
     value: output.value,
   };
@@ -124,6 +123,7 @@ export const addGlobalXpubs = (
 ) => {
   const globalXpubs = multisigConfig.extendedPublicKeys.map(
     ({ xfp, bip32Path, xpub }) => {
+      console.log("xpub:", xpub);
       return {
         extendedPubkey: ExtendedPublicKey.fromBase58(xpub).encode(),
         masterFingerprint: xfp ? Buffer.from(xfp, "hex") : Buffer.alloc(0),
