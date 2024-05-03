@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.1.1
+
+### Patch Changes
+
+- [#88](https://github.com/caravan-bitcoin/caravan/pull/88) [`180ced6`](https://github.com/caravan-bitcoin/caravan/commit/180ced667fb3b7e4b32b03e885662e4dde934c75) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Rescan functionality was not correctly being passed into bitcoindImportDescriptors which it needs to be in order to correctly set timestamp equal to "0" when rescan equals true.
+
 ## 0.1.0
 
 ### Minor Changes
