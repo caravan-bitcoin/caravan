@@ -215,3 +215,26 @@ The `public addInput` must be able to properly handle input locktimes which inte
 #### Add input sighash_single
 
 The `public addInput` must be able to properly handle new inputs when the psbt has a `SIGHASH_SINGLE` flag on `PSBT_GLOBAL_TX_MODIFIABLE`.
+
+## Troubleshooting and FAQ
+### What's with the vendor version of tiny-secp256k1?
+In v6 of bitcoinjs-lib, which @caravan/psbt upgraded to use relative v5 in the older psbt code in @caravan/bitcoin,
+some functions of the library require an elliptic curve library to be initialized w/ bitcoinjs-lib (see [this issue](https://github.com/bitcoinjs/bitcoinjs-lib/issues/1889#issuecomment-1443792692)), e.g. for taproot functionality.
+For some reason, the recommended library `tiny-secp256k1` fails on initialization saying the library is invalid. The cause
+seems to be a comparison of a Buffer with Uint8Array (see [this issue](https://github.com/bitcoinjs/tiny-secp256k1/issues/136) for more info).
+
+A proposed fix is pending review and approval [here](https://github.com/bitcoinjs/tiny-secp256k1/pull/137). Unfortunately, since there
+is a special build requirement to get the package code, the easiest way to get bitcoinjs initialized was to include patched vendor code in
+the caravan codebase for now.
+
+If a fork needs to be maintained and updated, to build and update the code, you can fork the repo, and run the docker build steps:
+
+```
+% docker build -t tiny-secp256k1 .
+% docker run -it --rm -v `pwd`:/tiny-secp256k1 -w /tiny-secp256k1 tiny-secp256k1
+# make build
+```
+Then copy the resulting built code (ends up in the lib directory) into the vendor/tiny-secp256k1.
+
+Also note that the jest configs and the special prefix in the npm test scripts were needed
+to let jest understand the esmodule imports from the tiny-secp256k1 library.
