@@ -1,11 +1,6 @@
 import { BufferReader, BufferWriter } from "bufio";
-import {
-  validateHex,
-  validBase64,
-  validateBIP32Path,
-  PSBT_MAGIC_BYTES,
-} from "@caravan/bitcoin";
-
+import { validateHex, validBase64, validateBIP32Path } from "@caravan/bitcoin";
+import { PSBT_MAGIC_BYTES } from "../constants";
 import { Key, Value, NonUniqueKeyTypeValue, KeyType } from "./types";
 import {
   BIP_32_HARDENING_OFFSET,

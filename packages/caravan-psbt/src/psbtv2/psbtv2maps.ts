@@ -2,7 +2,7 @@ import { BufferReader, BufferWriter } from "bufio";
 
 import { bufferize, readAndSetKeyPairs, serializeMap } from "./functions";
 import { Key, KeyType, Value } from "./types";
-import { PSBT_MAGIC_BYTES } from "@caravan/bitcoin";
+import { PSBT_MAGIC_BYTES } from "../constants";
 import { PsbtV2 } from "./psbtv2";
 
 /**
