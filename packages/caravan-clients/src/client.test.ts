@@ -821,11 +821,12 @@ describe("BlockchainClient", () => {
         blockchainClient.importDescriptors({
           receive: "receive",
           change: "change",
+          rescan: true,
         }),
       ).rejects.toThrow(BlockchainClientError);
     });
 
-    it("calls bitcoindImportDescriptors with descriptors to import", async () => {
+    it("calls bitcoindImportDescriptors with descriptors to import and rescan", async () => {
       const mockImportDescriptors = jest.spyOn(
         wallet,
         "bitcoindImportDescriptors",
@@ -838,10 +839,33 @@ describe("BlockchainClient", () => {
 
       const receive = "receive";
       const change = "change";
-      await blockchainClient.importDescriptors({ receive, change });
+      await blockchainClient.importDescriptors({ receive, change, rescan: true});
       expect(mockImportDescriptors).toHaveBeenCalledWith({
         receive,
         change,
+        rescan: true,
+        ...blockchainClient.bitcoindParams,
+      });
+    });
+
+    it("calls bitcoindImportDescriptors with descriptors to import without rescan", async () => {
+      const mockImportDescriptors = jest.spyOn(
+        wallet,
+        "bitcoindImportDescriptors",
+      );
+      mockImportDescriptors.mockResolvedValue({});
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      const receive = "receive";
+      const change = "change";
+      await blockchainClient.importDescriptors({ receive, change, rescan: false});
+      expect(mockImportDescriptors).toHaveBeenCalledWith({
+        receive,
+        change,
+        rescan: false,
         ...blockchainClient.bitcoindParams,
       });
     });

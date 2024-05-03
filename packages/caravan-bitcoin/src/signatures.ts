@@ -107,7 +107,7 @@ function multisigSignatureBuffer(signature) {
   // See https://transactionfee.info/charts/bitcoin-script-ecdsa-length/ for more information
 
   // Truncate the leading 0x00 if r or S is 33 bytes long
-  let rToUse = r.byteLength > 32 ? r.slice(1) : r;
+  const rToUse = r.byteLength > 32 ? r.slice(1) : r;
   // Technically, this could be done but extremely unlikely in the current era.
   // let sToUse = s.byteLength > 32 ? s.slice(1) : s;
 
