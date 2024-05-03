@@ -6,6 +6,7 @@ const config: JestConfigWithTsJest = {
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "node",
   testPathIgnorePatterns: ["./lib"],
+  transform: {},
   setupFiles: ["<rootDir>/jest.setup.ts"],
 };
 
