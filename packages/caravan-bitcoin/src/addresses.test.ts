@@ -5,7 +5,7 @@ import { Network } from "./networks";
 const P2PKH = "P2PKH";
 const P2TR = "P2TR";
 
-let ADDRESSES = {};
+const ADDRESSES = {};
 ADDRESSES[Network.MAINNET] = {};
 ADDRESSES[Network.MAINNET][P2PKH] = ["1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH"];
 ADDRESSES[Network.MAINNET][(multisig as any).P2SH] = [

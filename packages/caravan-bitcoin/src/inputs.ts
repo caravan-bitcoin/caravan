@@ -39,7 +39,7 @@ export function validateMultisigInputs(inputs, braidRequired = false) {
   if (!inputs || inputs.length === 0) {
     return "At least one input is required.";
   }
-  let utxoIDs: string[] = [];
+  const utxoIDs: string[] = [];
   for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
     const input = inputs[inputIndex];
     if (
@@ -101,7 +101,7 @@ export function validateTransactionID(txid?) {
   if (txid === null || txid === undefined || txid === "") {
     return "TXID cannot be blank.";
   }
-  let error = validateHex(txid);
+  const error = validateHex(txid);
   if (error) {
     return `TXID is invalid (${error})`;
   }

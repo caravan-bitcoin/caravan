@@ -265,7 +265,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
       "Unsupported addressType -- only P2SH is supported right now"
     );
   }
-  let localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
+  const localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
   if (localPSBT === null) return null;
 
   // The information we need to provide proper @caravan/wallets style objects to the supported
@@ -373,7 +373,7 @@ function getNumSigners(psbt) {
  * could be used in more than one address, everything would still function properly.
  */
 export function parseSignaturesFromPSBT(psbtFromFile) {
-  let psbt = autoLoadPSBT(psbtFromFile, {});
+  const psbt = autoLoadPSBT(psbtFromFile, {});
   if (psbt === null) {
     return null;
   }
@@ -412,7 +412,7 @@ export function parseSignaturesFromPSBT(psbtFromFile) {
  * Extracts signatures in order of inputs and returns as array (or array of arrays if multiple signature sets)
  */
 export function parseSignatureArrayFromPSBT(psbtFromFile) {
-  let psbt = autoLoadPSBT(psbtFromFile);
+  const psbt = autoLoadPSBT(psbtFromFile);
   if (psbt === null) return null;
 
   const numSigners = getNumSigners(psbt);
@@ -427,7 +427,7 @@ export function parseSignatureArrayFromPSBT(psbtFromFile) {
   if (numSigners >= 1) {
     for (let i = 0; i < inputs.length; i += 1) {
       for (let j = 0; j < numSigners; j += 1) {
-        let signature = inputs?.[i]?.partialSig?.[j].signature.toString("hex");
+        const signature = inputs?.[i]?.partialSig?.[j].signature.toString("hex");
         if (signature) {
           signatureArrays[j].push(signature);
         }

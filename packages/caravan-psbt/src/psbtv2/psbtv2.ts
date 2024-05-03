@@ -130,7 +130,7 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_GLOBAL_TX_MODIFIABLE() {
     const val =
       this.globalMap.get(KeyType.PSBT_GLOBAL_TX_MODIFIABLE)?.readUInt8(0) || 0;
-    let modifiable: PsbtGlobalTxModifiableBits[] = [];
+    const modifiable: PsbtGlobalTxModifiableBits[] = [];
 
     if (val & 0b00000001) {
       modifiable.push(PsbtGlobalTxModifiableBits.INPUTS);
@@ -674,8 +674,8 @@ export class PsbtV2 extends PsbtV2Maps {
     const inputCount = this.PSBT_GLOBAL_INPUT_COUNT;
     const heightLocks = this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME;
     const timeLocks = this.PSBT_IN_REQUIRED_TIME_LOCKTIME;
-    let heights: number[] = [];
-    let times: number[] = [];
+    const heights: number[] = [];
+    const times: number[] = [];
     for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
       if (heightLocks[i] !== null) {
         heights.push(heightLocks[i] as number);
