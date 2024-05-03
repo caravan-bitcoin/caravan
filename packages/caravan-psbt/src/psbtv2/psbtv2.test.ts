@@ -1,5 +1,6 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test } from "@jest/globals";
+import { test, jest } from "@jest/globals";
+
 import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [

@@ -1,3 +1,3 @@
 {
-  "extends": "@caravan/typescript-config/base.json"
+  "extends": "@caravan/typescript-config/base.json",
 }
