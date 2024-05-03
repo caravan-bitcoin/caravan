@@ -1,5 +1,5 @@
 /**
- * @jest-environment jsdom
+ * @jest-environment  jsdom
  */
 
 import {
@@ -26,7 +26,6 @@ import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
 } from "@caravan/wallets";
-
 // pulling functions from the old transactions/psbt file
 // so we can work with the fixtures and their deeply
 // nested objects
@@ -130,4 +129,21 @@ describe("getUnsignedMultisigPsbtV0", () => {
         }
       });
     });
+
+  test("it can handle a taproot output", () => {
+    const taprootAddress =
+      "tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c";
+    const fixture = TEST_FIXTURES.transactions[0];
+    let outputIndex;
+    for (const [index, output] of fixture.outputs.entries()) {
+      if (!output.redeemScript) {
+        outputIndex = index;
+        break;
+      }
+    }
+    fixture.outputs[outputIndex].address = taprootAddress;
+
+    const psbt = getUnsignedMultisigPsbtV0(argsFromFixture(fixture));
+    expect(psbt.txOutputs[outputIndex].address).toEqual(taprootAddress);
+  });
 });

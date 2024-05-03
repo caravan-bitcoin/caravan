@@ -9,7 +9,7 @@ import { Psbt, Transaction } from "bitcoinjs-lib";
 import { MultisigWalletConfig } from "@caravan/wallets";
 import { toOutputScript } from "bitcoinjs-lib/src/address";
 import * as bitcoin from "bitcoinjs-lib";
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "../../vendor/tiny-secp256k1/lib";
 
 bitcoin.initEccLib(ecc);
 
@@ -56,8 +56,8 @@ export const getUnsignedMultisigPsbtV0 = ({
   inputs: PsbtInput[];
   outputs: PsbtOutput[];
   multisigConfig: MultisigWalletConfig;
-  includeGlobalXpubs: boolean;
-}) => {
+  includeGlobalXpubs?: boolean;
+}): Psbt => {
   const psbt = new Psbt({ network: networkData(network) });
   // should eventually support version 2, but to maintain compatibility with
   // older api and existing fixtures, will keep with 1 for now
@@ -71,12 +71,11 @@ export const getUnsignedMultisigPsbtV0 = ({
     psbtOutputFormatter(output, network),
   );
   psbt.addOutputs(formatted);
-  const tx = psbt.data.globalMap.unsignedTx.toBuffer().toString("hex");
   if (multisigConfig && includeGlobalXpubs) {
     addGlobalXpubs(psbt, multisigConfig);
   }
 
-  return { ...psbt, tx };
+  return psbt;
 };
 
 const psbtInputFormatter = (
@@ -103,9 +102,11 @@ const psbtInputFormatter = (
 };
 
 const psbtOutputFormatter = (output: PsbtOutput, network: Network) => {
+  const script = toOutputScript(output.address, networkData(network));
   const outputData: any = {
     ...output,
-    script: toOutputScript(output.address, networkData(network)),
+    // script: toOutputScript(output.address, networkData(network)),
+    script,
     value: output.value,
   };
   // Delete key values with undefined values
