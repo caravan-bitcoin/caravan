@@ -209,7 +209,7 @@ export function validateBIP32Index(indexString, options?) {
 
   // This comes after the regex, so no need to test that parseInt fails.
   const numberError = "Invalid BIP32 index.";
-  let number = parseInt(numberString, 10);
+  const number = parseInt(numberString, 10);
 
   if (
     Number.isNaN(number) ||
@@ -312,7 +312,7 @@ export function multisigBIP32Path(
  */
 export function getParentBIP32Path(bip32Path) {
   // first validate the input
-  let validated = validateBIP32Path(bip32Path);
+  const validated = validateBIP32Path(bip32Path);
   if (validated.length) return validated;
   // then slice off then last item in the path
   return bip32Path.split("/").slice(0, -1).join("/");
@@ -330,10 +330,10 @@ export function getParentBIP32Path(bip32Path) {
 export function getRelativeBIP32Path(parentBIP32Path, childBIP32Path) {
   if (parentBIP32Path === childBIP32Path) return "";
   // first validate the parentBIP32Path
-  let validatedParent = validateBIP32Path(parentBIP32Path);
+  const validatedParent = validateBIP32Path(parentBIP32Path);
   if (validatedParent.length) return validatedParent;
   // next validate the input
-  let validatedChild = validateBIP32Path(childBIP32Path);
+  const validatedChild = validateBIP32Path(childBIP32Path);
   if (validatedChild.length) return validatedChild;
   // check that childBIP32Path starts with parentBIP32Path
   if (!childBIP32Path.startsWith(parentBIP32Path)) return `The provided bip32Path does not start with the chroot.`;

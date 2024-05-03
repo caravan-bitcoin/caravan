@@ -1,20 +1,21 @@
 import { Psbt, Transaction } from "bitcoinjs-lib";
 import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
-import { toHexString } from "./utils";
+import { toHexString } from "@caravan/bitcoin";
 import {
   generateMultisigFromHex,
   multisigAddressType,
   multisigBraidDetails,
   multisigRedeemScript,
   multisigWitnessScript,
-} from "./multisig";
-import { bip32PathToSequence } from "./paths";
+  bip32PathToSequence,
+  P2SH,
+  P2WSH,
+  P2SH_P2WSH,
+  generateBip32DerivationByIndex,
+  generateBraid,
+  networkData
+} from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
-import { P2SH } from "./p2sh";
-import { P2WSH } from "./p2wsh";
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
-import { generateBip32DerivationByIndex, generateBraid } from "./braid";
-import { networkData } from "./networks";
 
 /**
  * This module provides functions for interacting with PSBTs, see BIP174
@@ -437,3 +438,4 @@ export function parseSignatureArrayFromPSBT(psbtFromFile) {
   }
   return numSigners === 1 ? signatureArrays[0] : signatureArrays;
 }
+

@@ -8,6 +8,7 @@ import {
   KeyType,
   PsbtGlobalTxModifiableBits,
   SighashType,
+  MapSelectorType,
 } from "./types";
 import {
   bufferize,
@@ -129,7 +130,7 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_GLOBAL_TX_MODIFIABLE() {
     const val =
       this.globalMap.get(KeyType.PSBT_GLOBAL_TX_MODIFIABLE)?.readUInt8(0) || 0;
-    let modifiable: PsbtGlobalTxModifiableBits[] = [];
+    const modifiable: PsbtGlobalTxModifiableBits[] = [];
 
     if (val & 0b00000001) {
       modifiable.push(PsbtGlobalTxModifiableBits.INPUTS);
@@ -673,8 +674,8 @@ export class PsbtV2 extends PsbtV2Maps {
     const inputCount = this.PSBT_GLOBAL_INPUT_COUNT;
     const heightLocks = this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME;
     const timeLocks = this.PSBT_IN_REQUIRED_TIME_LOCKTIME;
-    let heights: number[] = [];
-    let times: number[] = [];
+    const heights: number[] = [];
+    const times: number[] = [];
     for (let i = 0; i < this.PSBT_GLOBAL_INPUT_COUNT; i++) {
       if (heightLocks[i] !== null) {
         heights.push(heightLocks[i] as number);
@@ -1118,6 +1119,72 @@ export class PsbtV2 extends PsbtV2Maps {
         input.delete(sig.key);
       }
     }
+  }
+
+  /**
+   * Sets values on the proprietary keytype for a global, input, or output map.
+   * BIP 174 allows for proprietary values to be set on all maps with the
+   * keytype `0xFC`. This method sets byte data to key values defined by the
+   * args.
+   *
+   * Args:
+   * - `mapSelector` selects which map to set the proprietary value. If this
+   *   value is not `"global"`, then a tuple must be provided with `"inputs"` or
+   *   `"outputs"` as the first element and the index `number` on the second
+   *   element representing which input or output map to set the value to. An
+   *   example looks like `["inputs", 0]`. If the map name doesn't match, the
+   *   values will be set to the global map. If the index is missing on
+   *   `"inputs"` or `"outputs"`, then it will throw.
+   * - `identifier` should be the bytes identifier for the set of proprietary
+   *   keytypes.
+   * - `subkeyType` accepts bytes proprietary keytype.
+   * - `subkeyData` accepts bytes proprietary keydata.
+   * - `valueData` accepts bytes which will be written as the proprietary value.
+   *
+   * From the provided args, a key with the following format will be generated:
+   * `0xFC<compact uint identifier length><bytes identifier><bytes
+   * subtype><bytes subkeydata>`
+   */
+  public setProprietaryValue(
+    mapSelector: MapSelectorType,
+    identifier: Buffer,
+    subkeyType: Buffer,
+    subkeyData: Buffer,
+    valueData: Buffer,
+  ) {
+    if (
+      (mapSelector[0] === "inputs" || mapSelector[0] === "outputs") &&
+      typeof mapSelector[1] !== "number"
+    ) {
+      throw Error(
+        "Must specify an index when setting proprietary values to inputs or outputs.",
+      );
+    }
+
+    let classMap: Map<string, Buffer> = this.globalMap,
+      keyType = KeyType.PSBT_GLOBAL_PROPRIETARY;
+    if (mapSelector[0] === "inputs") {
+      classMap = this.inputMaps[mapSelector[1]];
+      keyType = KeyType.PSBT_IN_PROPRIETARY;
+    } else if (mapSelector[0] === "outputs") {
+      classMap = this.outputMaps[mapSelector[1]];
+      keyType = KeyType.PSBT_OUT_PROPRIETARY;
+    }
+
+    if (!classMap) {
+      throw Error("Map does not exist at that index.");
+    }
+
+    const bw = new BufferWriter();
+    bw.writeBytes(Buffer.from(keyType, "hex"));
+    bw.writeU8(identifier.length);
+    bw.writeBytes(identifier);
+    bw.writeBytes(subkeyType);
+    bw.writeBytes(subkeyData);
+    const key = bw.render().toString("hex");
+    bw.writeBytes(valueData);
+    const value = bw.render();
+    classMap.set(key, value);
   }
 
   /**
