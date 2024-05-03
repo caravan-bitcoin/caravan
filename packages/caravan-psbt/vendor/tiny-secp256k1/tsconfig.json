@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig-base.json",
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "ES2020",
+    "declaration": true,
+    "outDir": "./lib",
+    "paths": {
+      "#wasm_path": ["./wasm_path.js"]
+    }
+  },
+  "exclude": ["src_ts/wasm_path_cjs.ts"]
+}

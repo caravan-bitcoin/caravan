@@ -1,0 +1,1 @@
+{"parent":null,"pid":865,"argv":["/usr/bin/node","/tiny-secp256k1/tests/index.js"],"execArgv":["--experimental-json-modules"],"cwd":"/tiny-secp256k1","time":1714751129604,"ppid":848,"coverageFilename":"/tiny-secp256k1/.nyc_output/f98a8089-53c9-416a-a7c7-6600e8f6907b.json","externalId":"","uuid":"f98a8089-53c9-416a-a7c7-6600e8f6907b","files":[]}

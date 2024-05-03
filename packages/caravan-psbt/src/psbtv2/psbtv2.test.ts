@@ -721,6 +721,15 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
+  beforeAll(() => {
+    global.console.warn = jest.fn().mockImplementation(() => {});
+    global.console.error = jest.fn().mockImplementation(() => {});
+  });
+  afterAll(() => {
+    (global.console.warn as jest.Mock).mockRestore();
+    (global.console.error as jest.Mock).mockRestore();
+  });
+
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
     (vect) => {
