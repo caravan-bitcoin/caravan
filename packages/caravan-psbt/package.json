@@ -5,7 +5,18 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
-  "type": "module",
+  "files": [
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "engines": {
     "node": ">=20"
   },
@@ -34,7 +45,8 @@
     "bitcoinjs-lib": "^6.1.5",
     "buffer": "^6.0.3",
     "bufio": "^1.2.1",
-    "esbuild-plugin-polyfill-node": "^0.3.0"
+    "esbuild-plugin-polyfill-node": "^0.3.0",
+    "uint8array-tools": "^0.0.7"
   },
   "author": "unchained capital",
   "license": "ISC",
