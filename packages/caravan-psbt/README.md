@@ -251,5 +251,17 @@ If a fork needs to be maintained and updated, to build and update the code, you 
 ```
 Then copy the resulting built code (ends up in the lib directory) into the vendor/tiny-secp256k1.
 
-Also note that the jest configs and the special prefix in the npm test scripts were needed
+### Experimental VM Modules
+This is related to the tiny-secp256k1 library which has difficulties importing in different environments.
+
+Note that the jest configs and the special prefix in the npm test scripts were needed
 to let jest understand the esmodule imports from the tiny-secp256k1 library.
+
+The npm script prefix in particular may result in a console warning when running tests:
+
+```
+ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+```
+
+This can be safely ignored. See the [documentation in jest](https://jestjs.io/docs/ecmascript-modules)
+for more information on running with `--experimental-vm-modules`.
