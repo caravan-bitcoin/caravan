@@ -8,7 +8,6 @@ describe("braidDetailsToWalletConfig", () => {
       const walletConfig: MultisigWalletConfig = braidDetailsToWalletConfig(
         fixture.braidDetails,
       );
-      console.log(walletConfig);
       expect(walletConfig).toHaveProperty("network");
       expect(walletConfig).toHaveProperty("addressType");
       expect(walletConfig).toHaveProperty("extendedPublicKeys");

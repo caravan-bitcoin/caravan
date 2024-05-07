@@ -50,7 +50,6 @@ import {
   SPEND_STEP_CREATE,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
-import { Transaction } from "bitcoinjs-lib";
 
 function sortInputs(a, b) {
   const x = a.txid.toLowerCase();

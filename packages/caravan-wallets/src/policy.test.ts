@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { Network, TEST_FIXTURES, BraidDetails } from "@caravan/bitcoin";
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   KeyOrigin,
   validateMultisigPolicyTemplate,
@@ -11,7 +11,7 @@ import {
   MultisigWalletPolicy,
 } from "./policy";
 import { POLICY_FIXTURE } from "./fixtures";
-import { MultisigWalletConfig } from "./types";
+import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
 
 describe("validateMultisigPolicyTemplate", () => {
   it("throws error if script type is not supported", () => {
