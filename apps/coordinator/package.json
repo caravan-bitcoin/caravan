@@ -113,7 +113,7 @@
     "bignumber.js": "^9.0.0",
     "bip32": "^2.0.4",
     "bitcoin-address-validation": "^1.0.2",
-    "bitcoinjs-lib": "^6.1.5",
+    "bitcoinjs-lib": "^5.1.7",
     "bowser": "^2.6.1",
     "buffer": "^6.0.3",
     "classnames": "^2.2.6",
