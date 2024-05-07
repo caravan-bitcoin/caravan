@@ -6,15 +6,15 @@ import {
   networkData,
   P2SH,
 } from "@caravan/bitcoin";
-import { Psbt, Transaction } from "bitcoinjs-lib";
+import { Psbt, Transaction } from "bitcoinjs-lib-v6";
 import { MultisigWalletConfig } from "@caravan/wallets";
-import { toOutputScript } from "bitcoinjs-lib/src/address";
-import * as bitcoin from "bitcoinjs-lib";
+import { toOutputScript } from "bitcoinjs-lib-v6/src/address";
 // asmjs version is less performant than wasm version however
 // it should avoid any configuration challenges. If these can
 // be sorted out and simplified then we can use the primary module with wasm
 import * as ecc from "../../vendor/tiny-secp256k1/tiny-secp256k1-asmjs/lib/index.js";
 import { GlobalXpub } from "bip174/src/lib/interfaces.js";
+import * as bitcoin from "bitcoinjs-lib-v6";
 bitcoin.initEccLib(ecc);
 
 export interface PsbtInput {

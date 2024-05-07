@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from "bufio";
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib-v6";
 
 import {
   Key,
