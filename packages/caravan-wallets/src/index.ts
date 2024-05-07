@@ -40,9 +40,14 @@ import {
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
 } from "./trezor";
-import { MultisigWalletConfig, TxInput } from "./types";
-import { braidDetailsToWalletConfig } from "./policy";
-import { unsignedMultisigPSBT, BraidDetails, Network } from "@caravan/bitcoin";
+import {
+  braidDetailsToWalletConfig,
+  MultisigWalletConfig,
+  LegacyInput,
+  LegacyOutput,
+  BraidDetails,
+} from "@caravan/multisig";
+import { unsignedMultisigPSBT, Network } from "@caravan/bitcoin";
 
 /**
  * Current @caravan/wallets version.
@@ -301,8 +306,8 @@ export function ExportExtendedPublicKey({
 export interface SignMultisigTransactionArgs {
   keystore: KEYSTORE_TYPES;
   network: Network;
-  inputs?: TxInput[];
-  outputs?: object[];
+  inputs?: LegacyInput[];
+  outputs?: LegacyOutput[];
   bip32Paths?: string[];
   psbt: string;
   keyDetails: { xfp: string; path: string };

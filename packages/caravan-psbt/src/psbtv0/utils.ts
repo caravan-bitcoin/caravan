@@ -17,13 +17,12 @@ import {
   P2SH_P2WSH,
   P2WSH,
 } from "@caravan/bitcoin";
-import { PsbtInput, PsbtOutput } from "./psbt";
-import BigNumber from "bignumber.js";
 import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
-} from "@caravan/wallets";
-
+} from "@caravan/multisig";
+import { PsbtInput, PsbtOutput } from "./psbt";
+import BigNumber from "bignumber.js";
 export const idToHash = (txid: string): Buffer => {
   return Buffer.from(txid, "hex").reverse();
 };
