@@ -25,6 +25,10 @@ export function networkData(network: Network) {
       return networks.bitcoin;
     case Network.TESTNET:
       return networks.testnet;
+    case Network.REGTEST:
+      return networks.regtest;
+    case Network.SIGNET:
+      throw new Error("Signet is not supported yet");
     default:
       return networks.testnet;
   }
