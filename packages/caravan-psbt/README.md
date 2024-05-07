@@ -249,7 +249,9 @@ If a fork needs to be maintained and updated, to build and update the code, you 
 % docker run -it --rm -v `pwd`:/tiny-secp256k1 -w /tiny-secp256k1 tiny-secp256k1
 # make build
 ```
-Then copy the resulting built code (ends up in the lib directory) into the vendor/tiny-secp256k1.
+Then copy the resulting built code (ends up in the lib directory) into the vendor/tiny-secp256k1. Currently
+we just use the asmjs build to avoid wasm complications in
+the build system.
 
 ### Experimental VM Modules
 This is related to the tiny-secp256k1 library which has difficulties importing in different environments.
