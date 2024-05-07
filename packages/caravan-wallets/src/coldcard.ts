@@ -31,6 +31,11 @@ import {
 import { P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 import { BitcoinNetwork } from "@caravan/bitcoin";
 import { WalletConfigKeyDerivation } from "./types";
+// import {
+//   convertLegacyInput,
+//   convertLegacyOutput,
+//   getUnsignedMultisigPsbtV0,
+// } from "@caravan/psbt";
 
 export const COLDCARD = "coldcard";
 // Our constants use 'P2SH-P2WSH', their file uses 'P2SH_P2WSH' :\
@@ -416,6 +421,11 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
     } else {
       try {
         this.psbt = unsignedMultisigPSBT(network, inputs, outputs);
+        // this.psbt = getUnsignedMultisigPsbtV0({
+        //   network,
+        //   inputs: inputs.map(convertLegacyInput),
+        //   outputs: outputs.map(convertLegacyOutput),
+        // });
       } catch (e) {
         throw new Error(
           "Unable to build the PSBT from the provided parameters."

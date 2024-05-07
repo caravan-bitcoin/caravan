@@ -15,6 +15,11 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
 } from "@caravan/bitcoin";
+// import {
+//   convertLegacyInput,
+//   convertLegacyOutput,
+//   getUnsignedMultisigPsbtV0,
+// } from "@caravan/psbt";
 import updateState from "./utils";
 import { SET_NETWORK, SET_ADDRESS_TYPE } from "../actions/settingsActions";
 import {
@@ -45,6 +50,7 @@ import {
   SPEND_STEP_CREATE,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
+import { Transaction } from "bitcoinjs-lib";
 
 function sortInputs(a, b) {
   const x = a.txid.toLowerCase();
@@ -288,6 +294,16 @@ function finalizeOutputs(state, action) {
     unsignedTransaction = unsignedTransactionObjectFromPSBT(
       unsignedTransactionPSBT,
     );
+    // const args = {
+    //   // network: state.network,
+    //   network: Network.REGTEST,
+    //   inputs: state.inputs.map(convertLegacyInput),
+    //   outputs: state.outputs.map(convertLegacyOutput),
+    // };
+    // const psbt = getUnsignedMultisigPsbtV0(args);
+    // unsignedTransaction = Transaction.fromHex(
+    //   psbt.data.globalMap.unsignedTx.toBuffer().toString("hex"),
+    // );
   } catch (e) {
     // probably has an input that isn't braid aware.
     unsignedTransaction = unsignedMultisigTransaction(
@@ -295,6 +311,16 @@ function finalizeOutputs(state, action) {
       state.inputs,
       state.outputs,
     ); // bitcoinjs-lib will throw a Deprecation warning for using TransactionBuilder
+    // const args = {
+    //   // network: state.network,
+    //   network: Network.REGTEST,
+    //   inputs: state.inputs.map(convertLegacyInput),
+    //   outputs: state.outputs.map(convertLegacyOutput),
+    // };
+    // const psbt = getUnsignedMultisigPsbtV0(args);
+    // unsignedTransaction = Transaction.fromHex(
+    //   psbt.data.globalMap.unsignedTx.toBuffer().toString("hex"),
+    // );
   }
   return {
     ...state,

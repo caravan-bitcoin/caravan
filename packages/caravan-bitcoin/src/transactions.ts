@@ -193,12 +193,13 @@ export function signedMultisigTransaction(
     inputSignatures.forEach((inputSignature) => {
       let publicKey;
       try {
+        // TODO: this needs an updated function for supporting taproot outputs
         publicKey = validateMultisigSignature(
           network,
           inputs,
           outputs,
           inputIndex,
-          inputSignature
+          inputSignature,
         );
       } catch (e) {
         throw new Error(

@@ -389,6 +389,7 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
+          // TODO: this needs an updated function for supporting taproot outputs
           publicKey = validateMultisigSignature(
             network,
             inputs,
@@ -482,6 +483,7 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
+              // TODO: this needs an updated function for supporting taproot outputs
               // This returns false if it completes with no error
               publicKey = validateMultisigSignature(
                 network,
