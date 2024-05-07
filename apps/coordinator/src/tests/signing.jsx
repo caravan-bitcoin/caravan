@@ -12,11 +12,11 @@ import {
   HERMIT,
   LEDGER,
   SignMultisigTransaction,
-  braidDetailsToWalletConfig,
 } from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 import Test from "./Test";
+import { braidDetailsToWalletConfig } from "@caravan/multisig";
 
 class SignMultisigTransactionTest extends Test {
   name() {

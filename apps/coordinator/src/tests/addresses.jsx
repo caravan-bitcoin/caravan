@@ -1,15 +1,12 @@
 import React from "react";
 
 import { blockExplorerAddressURL, TEST_FIXTURES } from "@caravan/bitcoin";
-import {
-  ConfirmMultisigAddress,
-  LEDGER,
-  braidDetailsToWalletConfig,
-} from "@caravan/wallets";
+import { ConfirmMultisigAddress, LEDGER } from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 
 import Test from "./Test";
+import { braidDetailsToWalletConfig } from "@caravan/multisig";
 
 class ConfirmMultisigAddressTest extends Test {
   name() {
