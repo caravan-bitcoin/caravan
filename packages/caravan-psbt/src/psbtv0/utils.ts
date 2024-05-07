@@ -116,7 +116,7 @@ export interface LegacyOutput {
   multisig?: LegacyMultisig;
 }
 
-export const convertLegacyInputs = (input: LegacyInput): PsbtInput => {
+export const convertLegacyInput = (input: LegacyInput): PsbtInput => {
   return {
     hash: idToHash(input.txid),
     index: input.index,
@@ -128,7 +128,7 @@ export const convertLegacyInputs = (input: LegacyInput): PsbtInput => {
   };
 };
 
-export const convertLegacyOutputs = (output: LegacyOutput): PsbtOutput => {
+export const convertLegacyOutput = (output: LegacyOutput): PsbtOutput => {
   return {
     address: output.address,
     value: new BigNumber(output.amountSats).toNumber(),
@@ -154,7 +154,7 @@ export const psbtArgsFromFixture = (
 } => {
   return {
     network: fixture.network as Network,
-    inputs: fixture.inputs.map(convertLegacyInputs),
-    outputs: fixture.outputs.map(convertLegacyOutputs),
+    inputs: fixture.inputs.map(convertLegacyInput),
+    outputs: fixture.outputs.map(convertLegacyOutput),
   };
 };
