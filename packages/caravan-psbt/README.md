@@ -267,3 +267,24 @@ ExperimentalWarning: VM Modules is an experimental feature and might change at a
 
 This can be safely ignored. See the [documentation in jest](https://jestjs.io/docs/ecmascript-modules)
 for more information on running with `--experimental-vm-modules`.
+
+
+### What's with the `bitcoinjs-lib-v6` dependency?
+
+npm workspaces and maybe vite have issues with nested dependencies with
+mismatched versions. `@caravan/psbt` requires v6 of bitcoinjs-lib but in order
+to avoid making massive breaking changes, other libraries like `@caravan/bitcoin` are
+still using bitcoinjs-lib v5. Unfortunately when being built altogether, it's possible
+that the wrong version takes precedence, causing the build to break.
+
+Because npm lacks a `nohoist` option for workspaces, the workaround is to use a kind
+of alias in the package.json. So we add `"bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",`
+to say that we want to use v6.1.5 from npm whenever use the alias `bitcoinjs-lib-v6`
+in imports in our code. This forces build systems to look for this reference and
+the correct version of the package and avoid using a mismatch. Unfortunately
+this was the only workaround that worked. `overrides` for example was not being
+respected.
+
+Learn more [here](https://github.com/vitejs/vite/issues/4245),
+[here](https://github.com/zackerydev/noist?tab=readme-ov-file), and
+[here](https://github.com/prisma/prisma/issues/9649).
