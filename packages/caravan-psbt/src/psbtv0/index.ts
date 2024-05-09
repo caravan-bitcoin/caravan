@@ -1,2 +1,3 @@
 export * from "./psbt";
-export * from "./utils";
+export { convertLegacyOutput, convertLegacyInput } from "./utils";
+export type { LegacyInput, LegacyOutput, LegacyMultisig } from "./utils";

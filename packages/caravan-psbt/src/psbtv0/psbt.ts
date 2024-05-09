@@ -53,6 +53,9 @@ export interface PsbtOutput {
 /**
  * This function seeks to be an updated version of the legacy `unsignedMultisigPSBT` function
  * from @caravan/bitcoin.
+ * It takes the network and a set of inputs and outputs which it creates a PSBT from.
+ * This combines several operator roles of the PSBT saga into one function, getting a PSBT
+ * ready to be signed. It optionally can also add the global xpubs to the PSBT.
  */
 export const getUnsignedMultisigPsbtV0 = ({
   network,
