@@ -1,9 +1,10 @@
 import { BufferReader, BufferWriter } from "bufio";
 
-import { bufferize, readAndSetKeyPairs, serializeMap } from "./functions";
+import { readAndSetKeyPairs, serializeMap } from "./functions";
 import { Key, KeyType, Value } from "./types";
 import { PSBT_MAGIC_BYTES } from "../constants";
 import { PsbtV2 } from "./psbtv2";
+import { bufferize } from "../functions";
 
 /**
  * This abstract class is provided for utility to allow for mapping, map
