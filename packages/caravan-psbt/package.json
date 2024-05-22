@@ -46,7 +46,6 @@
     "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",
     "buffer": "^6.0.3",
     "bufio": "^1.2.1",
-    "ecpair": "^2.1.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "uint8array-tools": "^0.0.7"
   },

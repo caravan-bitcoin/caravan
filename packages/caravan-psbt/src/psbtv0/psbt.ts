@@ -1,6 +1,7 @@
 import {
   ExtendedPublicKey,
   fingerprintToFixedLengthHex,
+  isValidSignature,
   MultisigAddressType,
   multisigSignatureBuffer,
   Network,
@@ -16,12 +17,10 @@ import { GlobalXpub } from "bip174/src/lib/interfaces.js";
 // it should avoid any configuration challenges. If these can
 // be sorted out and simplified then we can use the primary module with wasm
 import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
-import { ECPairFactory } from "ecpair";
 import * as bitcoin from "bitcoinjs-lib-v6";
 import { bufferize } from "../functions";
 import BigNumber from "bignumber.js";
 
-const ECPair = ECPairFactory(ecc);
 bitcoin.initEccLib(ecc);
 
 export interface PsbtInput {
@@ -231,7 +230,7 @@ export const validateMultisigPsbtSignature = (
   const msgHash = getHashForSignature(psbt, inputIndex, inputAmount);
 
   for (const { pubkey } of input.bip32Derivation ?? []) {
-    if (signatureValidator(pubkey, msgHash, signatureBuffer)) {
+    if (isValidSignature(pubkey, msgHash, signatureBuffer)) {
       return pubkey.toString("hex");
     }
   }
@@ -266,9 +265,3 @@ const getHashForSignature = (
   }
   throw new Error("No redeem or witness script found for input.");
 };
-
-const signatureValidator = (
-  pubkey: Buffer,
-  msghash: Buffer,
-  signature: Buffer,
-): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature);

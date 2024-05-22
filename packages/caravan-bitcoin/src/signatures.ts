@@ -26,11 +26,11 @@ export function validateMultisigSignature(
   inputs,
   outputs,
   inputIndex,
-  inputSignature
+  inputSignature,
 ) {
   const hash = multisigSignatureHash(network, inputs, outputs, inputIndex);
   const signatureBuffer = multisigSignatureBuffer(
-    signatureNoSighashType(inputSignature)
+    signatureNoSighashType(inputSignature),
   );
   const input = inputs[inputIndex];
   const publicKeys = multisigPublicKeys(input.multisig);
@@ -41,8 +41,7 @@ export function validateMultisigSignature(
   ) {
     const publicKey = publicKeys[publicKeyIndex];
     const publicKeyBuffer = Buffer.from(publicKey, "hex");
-    const keyPair = ECPair.fromPublicKey(publicKeyBuffer);
-    if (keyPair.verify(hash, signatureBuffer)) {
+    if (isValidSignature(publicKeyBuffer, hash, signatureBuffer)) {
       return publicKey;
     }
   }
@@ -65,7 +64,7 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
   const unsignedTransaction = unsignedMultisigTransaction(
     network,
     inputs,
-    outputs
+    outputs,
   );
   const input = inputs[inputIndex];
   if (
@@ -76,13 +75,13 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
       inputIndex,
       multisigWitnessScript(input.multisig).output,
       new BigNumber(input.amountSats).toNumber(),
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   } else {
     return unsignedTransaction.hashForSignature(
       inputIndex,
       multisigRedeemScript(input.multisig).output,
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   }
 }
@@ -117,3 +116,9 @@ export function multisigSignatureBuffer(signature) {
   signatureBuffer.set(Buffer.from(s), 64 - s.byteLength);
   return signatureBuffer;
 }
+
+export const isValidSignature = (
+  pubkey: Buffer,
+  msghash: Buffer,
+  signature: Buffer,
+): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature);
