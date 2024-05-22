@@ -3,7 +3,10 @@
  */
 
 import { TEST_FIXTURES } from "@caravan/bitcoin";
-import { getUnsignedMultisigPsbtV0 } from "./psbt";
+import {
+  getUnsignedMultisigPsbtV0,
+  validateMultisigPsbtSignature,
+} from "./psbt";
 
 import { psbtArgsFromFixture } from "./utils";
 
@@ -51,4 +54,41 @@ describe("getUnsignedMultisigPsbtV0", () => {
     const psbt = getUnsignedMultisigPsbtV0(psbtArgsFromFixture(fixture));
     expect(psbt.txOutputs[outputIndex].address).toEqual(taprootAddress);
   });
+});
+
+describe.only("validateMultisigSignaturePsbt", () => {
+  TEST_FIXTURES.transactions
+    .map((fixture) => [psbtArgsFromFixture(fixture), fixture])
+    .map(([args, fixture]) => [
+      getUnsignedMultisigPsbtV0(args).toHex(),
+      fixture,
+    ])
+    .forEach(([psbt, fixture]) => {
+      describe(`validating signature for a transaction which ${fixture.description}`, () => {
+        it("returns the public key corresponding to a valid input signature", () => {
+          fixture.inputs.forEach((input, inputIndex) => {
+            const pubkey = validateMultisigPsbtSignature(
+              psbt,
+              inputIndex,
+              fixture.signature[inputIndex],
+              input.amountSats,
+            );
+
+            expect(pubkey).toEqual(fixture.publicKeys[inputIndex]);
+          });
+        });
+
+        it("returns false for a valid signature for a different input", () => {
+          fixture.inputs.forEach((input) => {
+            const pubkey = validateMultisigPsbtSignature(
+              psbt,
+              0,
+              fixture.signature[1],
+              input.amountSats,
+            );
+            expect(pubkey).toEqual(false);
+          });
+        });
+      });
+    });
 });

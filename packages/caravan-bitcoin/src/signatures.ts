@@ -90,10 +90,10 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
 /**
  * Create a signature buffer that can be passed to ECPair.verify
  */
-function multisigSignatureBuffer(signature) {
+export function multisigSignatureBuffer(signature) {
   const encodedSignerInputSignatureBuffer = Buffer.from(signature, "hex");
   const decodedSignerInputSignatureBuffer = bip66.decode(
-    encodedSignerInputSignatureBuffer
+    encodedSignerInputSignatureBuffer,
   );
   const { r, s } = decodedSignerInputSignatureBuffer;
   // The value returned from the decodedSignerInputSignatureBuffer has

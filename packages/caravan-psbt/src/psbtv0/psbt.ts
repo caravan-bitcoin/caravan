@@ -2,9 +2,11 @@ import {
   ExtendedPublicKey,
   fingerprintToFixedLengthHex,
   MultisigAddressType,
+  multisigSignatureBuffer,
   Network,
   networkData,
   P2SH,
+  signatureNoSighashType,
 } from "@caravan/bitcoin";
 import { Psbt, Transaction } from "bitcoinjs-lib-v6";
 import { MultisigWalletConfig } from "@caravan/multisig";
@@ -14,7 +16,12 @@ import { GlobalXpub } from "bip174/src/lib/interfaces.js";
 // it should avoid any configuration challenges. If these can
 // be sorted out and simplified then we can use the primary module with wasm
 import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
+import { ECPairFactory } from "ecpair";
 import * as bitcoin from "bitcoinjs-lib-v6";
+import { bufferize } from "../functions";
+import BigNumber from "bignumber.js";
+
+const ECPair = ECPairFactory(ecc);
 bitcoin.initEccLib(ecc);
 
 export interface PsbtInput {
@@ -196,3 +203,72 @@ const formatGlobalXpub = (extendedPublicKey: ExtendedPublicKey) => {
 
   return global as GlobalXpub;
 };
+
+/**
+ * Validate the signature on a psbt for a given input. Returns false if no
+ * valid signature is found otherwise returns the public key that was signed for.
+ *
+ * This is a port of the validateMultisigSignature function from @caravan/bitcoin
+ * to support a newer API and be more PSBT-native.
+ */
+export const validateMultisigPsbtSignature = (
+  raw: string | Buffer,
+  inputIndex: number,
+  inputSignature: Buffer,
+  // input amount is required for segwit inputs as it is hashed along w/ tx
+  inputAmount?: string,
+): boolean | string => {
+  const psbt = Psbt.fromBuffer(bufferize(raw));
+
+  if (psbt.inputCount === 0 || psbt.inputCount < inputIndex + 1) {
+    throw new Error("Input index is out of range.");
+  }
+  const signatureBuffer = multisigSignatureBuffer(
+    signatureNoSighashType(inputSignature.toString("hex")),
+  );
+
+  const input = psbt.data.inputs[inputIndex];
+  const msgHash = getHashForSignature(psbt, inputIndex, inputAmount);
+
+  for (const { pubkey } of input.bip32Derivation ?? []) {
+    if (signatureValidator(pubkey, msgHash, signatureBuffer)) {
+      return pubkey.toString("hex");
+    }
+  }
+  return false;
+};
+
+const getHashForSignature = (
+  psbt: Psbt,
+  inputIndex: number,
+  // input amount is required for segwit inputs as it is hashed along w/ tx
+  inputAmount?: string,
+  sigHashFlag: number = Transaction.SIGHASH_ALL,
+): Buffer => {
+  const tx = Transaction.fromBuffer(psbt.data.globalMap.unsignedTx.toBuffer());
+
+  const input = psbt.data.inputs[inputIndex];
+
+  if (!input.witnessScript && input.redeemScript) {
+    return tx.hashForSignature(inputIndex, input.redeemScript, sigHashFlag);
+  } else if (input.witnessScript) {
+    if (!inputAmount) {
+      throw new Error("Input amount is required for segwit inputs.");
+    }
+
+    const amountSats = new BigNumber(inputAmount).toNumber();
+    return tx.hashForWitnessV0(
+      inputIndex,
+      input.witnessScript,
+      amountSats,
+      sigHashFlag,
+    );
+  }
+  throw new Error("No redeem or witness script found for input.");
+};
+
+const signatureValidator = (
+  pubkey: Buffer,
+  msghash: Buffer,
+  signature: Buffer,
+): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature);
