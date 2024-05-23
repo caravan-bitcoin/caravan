@@ -5,7 +5,7 @@
 
 import BigNumber from "bignumber.js";
 import bip66 from "bip66";
-import { ECPair, Transaction } from "bitcoinjs-lib";
+import { ECPair, Transaction } from "bitcoinjs-lib-v5";
 
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -20,6 +20,9 @@ import { unsignedMultisigTransaction } from "./transactions";
 
 /**
  * Validate a multisig signature for given input and public key.
+ * NOTICE: DEPRECATED in favor of @caravan/psbt validateMultisigSignaturePsbt
+ * as it uses the newer version of bitcoinjs-lib to support taproot outputs
+ * and is generally more PSBT friendly.
  */
 export function validateMultisigSignature(
   network,
@@ -59,6 +62,9 @@ export function signatureNoSighashType(signature) {
 
 /**
  * Returns the multisig Signature Hash for an input at inputIndex
+ * NOTICE: DEPRECATED in favor of @caravan/psbt getHashForSignature
+ * as it uses the newer version of bitcoinjs-lib to support taproot outputs
+ * and is generally more PSBT friendly.
  */
 function multisigSignatureHash(network, inputs, outputs, inputIndex) {
   const unsignedTransaction = unsignedMultisigTransaction(

@@ -4,7 +4,7 @@
  */
 
 import BigNumber from "bignumber.js";
-import { crypto } from "bitcoinjs-lib";
+import { crypto } from "bitcoinjs-lib-v5";
 
 // Without this, BigNumber will report strings as exponentials. 16 places covers
 // all possible values in satoshis.

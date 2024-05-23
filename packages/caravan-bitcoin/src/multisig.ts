@@ -36,7 +36,7 @@ import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
 import { toHexString } from "./utils";
 
-import { payments } from "bitcoinjs-lib";
+import { payments } from "bitcoinjs-lib-v5";
 
 /**
  * Describes the return type of several functions in the

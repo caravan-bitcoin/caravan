@@ -1,4 +1,4 @@
-import { networks } from "bitcoinjs-lib";
+import { networks } from "bitcoinjs-lib-v5";
 
 /**
  * This module exports network constants and provide some utility

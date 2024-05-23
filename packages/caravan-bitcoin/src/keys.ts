@@ -6,7 +6,7 @@
  * @module keys
  */
 
-import { ECPair } from "bitcoinjs-lib";
+import { ECPair } from "bitcoinjs-lib-v5";
 import * as bip32 from "bip32";
 import bs58check from "bs58check";
 import { Struct, BufferWriter, BufferReader } from "bufio";

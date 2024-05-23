@@ -77,7 +77,7 @@
     "bip32": "^2.0.5",
     "bip66": "^1.1.5",
     "bitcoin-address-validation": "^2.2.3",
-    "bitcoinjs-lib": "^5.1.10",
+    "bitcoinjs-lib-v5": "npm:bitcoinjs-lib@^5.1.10",
     "bs58check": "^2.1.2",
     "buffer": "^6.0.3",
     "bufio": "^1.2.0",

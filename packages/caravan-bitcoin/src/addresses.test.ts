@@ -94,7 +94,7 @@ describe("addresses", () => {
       });
     });
 
-    it.only("returns an empty string when the address is valid", () => {
+    it("returns an empty string when the address is valid", () => {
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].forEach((network) => {
         ADDRESS_TYPES.forEach((addressType) => {
           ADDRESSES[network][addressType].forEach((address) => {
