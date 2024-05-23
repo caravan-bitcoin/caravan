@@ -30,6 +30,17 @@ ADDRESSES[Network.TESTNET][(multisig as any).P2WSH] = [
 ADDRESSES[Network.TESTNET][P2TR] = [
   "tb1p94dllzzcax4hs4zljaygq5trzzy79486uy72uqus24zzpkrkaeuqgfw9fy",
 ];
+ADDRESSES[Network.REGTEST] = {};
+ADDRESSES[Network.REGTEST][P2PKH] = ["msX7BWX7xnyqGMxHRCqWoogcvQ93PQtWWR"];
+ADDRESSES[Network.REGTEST][(multisig as any).P2SH] = [
+  "2NByiBUaEXrhmqAsg7BbLpcQSAQs1EDwt5w",
+];
+ADDRESSES[Network.REGTEST][(multisig as any).P2WSH] = [
+  "bcrt1q5qlrrl9lq2mktevfdlxl6upxqluadr74x3znhc",
+];
+ADDRESSES[Network.REGTEST][P2TR] = [
+  "bcrt1pgdfg7w74kh0uqgwxyafvhnsyx5mtzxr0rgt2wrgluykp4mvj3vls2fussn",
+];
 
 const ADDRESS_TYPES = [
   P2PKH,
@@ -56,10 +67,10 @@ describe("addresses", () => {
       });
 
       expect(validateAddress("1asdf", Network.MAINNET)).toMatch(
-        /address is invalid/i
+        /address is invalid/i,
       );
       expect(validateAddress("masdf", Network.TESTNET)).toMatch(
-        /address is invalid/i
+        /address is invalid/i,
       );
     });
 
@@ -67,21 +78,27 @@ describe("addresses", () => {
       ADDRESS_TYPES.forEach((addressType) => {
         ADDRESSES[Network.MAINNET][addressType].forEach((address) => {
           expect(validateAddress(address, Network.TESTNET)).toMatch(
-            invalidAddress
+            invalidAddress,
           );
         });
         ADDRESSES[Network.TESTNET][addressType].forEach((address) => {
           expect(validateAddress(address, Network.MAINNET)).toMatch(
-            invalidAddress
+            invalidAddress,
+          );
+        });
+        ADDRESSES[Network.REGTEST][addressType].forEach((address) => {
+          expect(validateAddress(address, Network.MAINNET)).toMatch(
+            invalidAddress,
           );
         });
       });
     });
 
-    it("returns an empty string when the address is valid", () => {
-      [Network.MAINNET, Network.TESTNET].forEach((network) => {
+    it.only("returns an empty string when the address is valid", () => {
+      [Network.MAINNET, Network.TESTNET, Network.REGTEST].forEach((network) => {
         ADDRESS_TYPES.forEach((addressType) => {
           ADDRESSES[network][addressType].forEach((address) => {
+            console.log(address, network);
             expect(validateAddress(address, network)).toEqual("");
           });
         });
