@@ -57,7 +57,7 @@ const PrivateClientSettings = ({
             "Due to CORS requirements, you must use a proxy around the node. Instructions are available "
           }
           {externalLink(
-            "https://github.com/caravan-bitcoin/caravan#adding-cors-headers",
+            "https://github.com/caravan-bitcoin/caravan/tree/main/apps/coordinator#adding-cors-headers",
             "here",
           )}
           {"."}
