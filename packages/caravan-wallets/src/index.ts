@@ -47,12 +47,12 @@ import {
   LegacyOutput,
   BraidDetails,
 } from "@caravan/multisig";
-import { unsignedMultisigPSBT, Network } from "@caravan/bitcoin";
-// import {
-//   convertLegacyInput,
-//   convertLegacyOutput,
-//   getUnsignedMultisigPsbtV0,
-// } from "@caravan/psbt";
+import { Network } from "@caravan/bitcoin";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 
 /**
  * Current @caravan/wallets version.
@@ -359,12 +359,11 @@ export function SignMultisigTransaction({
     case LEDGER: {
       let _psbt = psbt;
       if (!_psbt)
-        _psbt = unsignedMultisigPSBT(network, inputs, outputs).data.toBase64();
-      // _psbt = getUnsignedMultisigPsbtV0({
-      //   network: Network.REGTEST,
-      //   inputs: inputs ? inputs.map(convertLegacyInput) : [],
-      //   outputs: outputs ? outputs.map(convertLegacyOutput) : [],
-      // }).toBase64();
+        _psbt = getUnsignedMultisigPsbtV0({
+          network,
+          inputs: inputs ? inputs.map(convertLegacyInput) : [],
+          outputs: outputs ? outputs.map(convertLegacyOutput) : [],
+        }).toBase64();
       return new LedgerSignMultisigTransaction({
         network,
         inputs,

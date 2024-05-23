@@ -139,6 +139,10 @@ By default, Caravan uses a free API provided by
 information about the bitcoin blockchain or to broadcast transactions. Blockstream.info is also available as a fallback
 option for a public API.
 
+Mainnet and Testnet are available options for connecting to any of the available
+consensus client options. Regtest can be available through an uploaded wallet
+configuration file, but only for the private client backend.
+
 ### Bitcoind client
 
 You can also ask Caravan to use your own private [bitcoind full

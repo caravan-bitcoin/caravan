@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom";
 import BigNumber from "bignumber.js";
 import {
   P2WSH,
