@@ -7,7 +7,6 @@ import {
   multisigBIP32Root,
   validateBIP32Path,
   getMaskedDerivation,
-  Network,
 } from "@caravan/bitcoin";
 import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
