@@ -51,7 +51,7 @@ class Transaction extends React.Component {
     let partiallySignedTransaction = psbt.toBase64();
     for (const signatureImporter of Object.values(signatureImporters)) {
       partiallySignedTransaction = addSignaturesToPSBT(
-        Network.REGTEST,
+        network,
         partiallySignedTransaction,
         signatureImporter.publicKeys.map((pubkey) =>
           Buffer.from(pubkey, "hex"),
