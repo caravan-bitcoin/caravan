@@ -98,7 +98,6 @@ describe("addresses", () => {
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].forEach((network) => {
         ADDRESS_TYPES.forEach((addressType) => {
           ADDRESSES[network][addressType].forEach((address) => {
-            console.log(address, network);
             expect(validateAddress(address, network)).toEqual("");
           });
         });

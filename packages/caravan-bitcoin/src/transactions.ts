@@ -193,7 +193,6 @@ export function signedMultisigTransaction(
     inputSignatures.forEach((inputSignature) => {
       let publicKey;
       try {
-        // TODO: this needs an updated function for supporting taproot outputs
         publicKey = validateMultisigSignature(
           network,
           inputs,
@@ -205,7 +204,7 @@ export function signedMultisigTransaction(
         throw new Error(
           `Invalid signature for input ${
             inputIndex + 1
-          }: ${inputSignature} (${e})`
+          }: ${inputSignature} (${e})`,
         );
       }
       if (inputSignaturesByPublicKey[publicKey]) {
