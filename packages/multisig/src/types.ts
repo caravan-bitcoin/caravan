@@ -88,6 +88,15 @@ export interface LegacyOutput {
   multisig?: LegacyMultisig;
 }
 
+/**
+ * A "Braid" is one of the two sources of derivation information for a
+ * multisig wallet (there will be a receive braid and a change braid).
+ * BraidDetails provide the data necessary to generate these addresses.
+ * This is manifestation in particular however is a somewhat legacy construction
+ * as some other objects in the caravan ecosystem would
+ * serialize braid details such as these in nested data structures (see LegacyMultisig).
+ *
+ */
 export interface BraidDetails {
   network: BitcoinNetwork;
   addressType: MultisigAddressType;

@@ -1,5 +1,6 @@
 import { PsbtV2, getPsbtVersionNumber } from "./psbtv2";
 import { test } from "@jest/globals";
+import { silenceDescribe } from "react-silence";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -720,11 +721,8 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  beforeAll(() => {
-    global.console.warn = jest.fn().mockImplementation(() => {});
-    global.console.error = jest.fn().mockImplementation(() => {});
-  });
-  afterAll(jest.restoreAllMocks);
+  silenceDescribe("error", "warn");
+
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
     (vect) => {
@@ -734,7 +732,7 @@ describe("PsbtV2", () => {
           expect(t).toThrow();
         }
       }
-    }
+    },
   );
 
   test.each(BIP_370_VECTORS_VALID_PSBT)(
@@ -751,13 +749,13 @@ describe("PsbtV2", () => {
           expect(psbt).toBe(vect[key]);
         }
       }
-    }
+    },
   );
 
   test.each(
     BIP_370_VECTORS_VALID_PSBT.filter(
-      (vect) => vect.inputs !== undefined && vect.outputs !== undefined
-    )
+      (vect) => vect.inputs !== undefined && vect.outputs !== undefined,
+    ),
   )("Returns proper input and output counts. $case", (vect) => {
     const psbt = new PsbtV2(vect.hex);
     expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(vect.inputs);
@@ -769,13 +767,13 @@ describe("PsbtV2", () => {
     (vect) => {
       const psbt = new PsbtV2(vect.hex);
       expect(psbt.PSBT_IN_SEQUENCE).toEqual(vect.sequences);
-    }
+    },
   );
 
   test.each(
     BIP_370_VECTORS_VALID_PSBT.filter(
-      (vect) => vect.heightLocks || vect.timeLocks
-    )
+      (vect) => vect.heightLocks || vect.timeLocks,
+    ),
   )("Returns input locktime fields. $case", (vect) => {
     if (vect.heightLocks) {
       const psbt = new PsbtV2(vect.hex);
@@ -792,7 +790,7 @@ describe("PsbtV2", () => {
     (vect) => {
       const psbt = new PsbtV2(vect.hex);
       expect(psbt.PSBT_GLOBAL_TX_MODIFIABLE).toEqual(vect.modifiable);
-    }
+    },
   );
 
   it("Returns all PSBTv2 specific fields", () => {
@@ -804,11 +802,11 @@ describe("PsbtV2", () => {
     const sequences = psbt.PSBT_IN_SEQUENCE.filter((el) => el !== null);
     expect(sequences.length).not.toBe(0);
     const timeLocks = psbt.PSBT_IN_REQUIRED_TIME_LOCKTIME.filter(
-      (el) => el !== null
+      (el) => el !== null,
     );
     expect(timeLocks.length).not.toBe(0);
     const heightLocks = psbt.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME.filter(
-      (el) => el !== null
+      (el) => el !== null,
     );
     expect(heightLocks.length).not.toBe(0);
   });

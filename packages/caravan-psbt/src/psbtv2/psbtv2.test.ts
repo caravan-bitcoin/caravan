@@ -1,5 +1,6 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
 import { test, jest } from "@jest/globals";
+import { silenceDescribe } from "react-silence";
 
 import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
 
@@ -722,11 +723,7 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  beforeAll(() => {
-    global.console.warn = jest.fn().mockImplementation(() => {});
-    global.console.error = jest.fn().mockImplementation(() => {});
-  });
-  afterAll(jest.restoreAllMocks);
+  silenceDescribe("error", "warn");
 
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
