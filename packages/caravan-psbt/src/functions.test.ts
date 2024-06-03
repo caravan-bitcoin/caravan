@@ -20,4 +20,9 @@ describe("bufferize", () => {
     const result = bufferize(buffer);
     expect(result).toBe(buffer);
   });
+
+  it("should fail when given an invalid input", () => {
+    // @ts-expect-error invalid input
+    expect(() => bufferize(123)).toThrowError("Input cannot be bufferized.");
+  });
 });
