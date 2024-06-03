@@ -8,6 +8,7 @@ const config: JestConfigWithTsJest = {
   testPathIgnorePatterns: ["./lib"],
   transform: {},
   setupFiles: ["<rootDir>/jest.setup.ts"],
+  moduleDirectories: ["node_modules", "<rootDir>"],
 };
 
 export default config;

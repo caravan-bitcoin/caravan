@@ -18,7 +18,7 @@ import { GlobalXpub } from "bip174/src/lib/interfaces.js";
 // be sorted out and simplified then we can use the primary module with wasm
 import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
 import * as bitcoin from "bitcoinjs-lib-v6";
-import { bufferize } from "../functions";
+import { bufferize } from "src/functions";
 import BigNumber from "bignumber.js";
 
 bitcoin.initEccLib(ecc);

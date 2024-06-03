@@ -56,7 +56,7 @@ describe("getUnsignedMultisigPsbtV0", () => {
   });
 });
 
-describe.only("validateMultisigSignaturePsbt", () => {
+describe("validateMultisigSignaturePsbt", () => {
   TEST_FIXTURES.transactions
     .map((fixture) => [psbtArgsFromFixture(fixture), fixture])
     .map(([args, fixture]) => [

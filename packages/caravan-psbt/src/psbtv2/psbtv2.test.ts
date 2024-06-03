@@ -1066,6 +1066,8 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
+  silenceDescribe("error", "warn");
+
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
     (vect) => {
@@ -1159,6 +1161,8 @@ describe("getPsbtVersionNumber", () => {
 });
 
 describe("PsbtV2.addPartialSig", () => {
+  silenceDescribe("error", "warn");
+
   let psbt;
 
   beforeEach(() => {
