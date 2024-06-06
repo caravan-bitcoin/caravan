@@ -1,5 +1,17 @@
 # @caravan/psbt
 
+## 1.3.0
+
+### Minor Changes
+
+- [#91](https://github.com/caravan-bitcoin/caravan/pull/91) [`0d81717`](https://github.com/caravan-bitcoin/caravan/commit/0d81717fade918ec337093e3dc4c3862662d20c3) Thanks [@bucko13](https://github.com/bucko13)! - export of new utils for psbt v0 handling. Primarily adds support for taproot outputs by upgrading to bitcoinjs-lib v6 depedency. Upgrades to a new API from legacy utils from caravan/bitcoin and includes some utilities and types for handling conversions.
+
+### Patch Changes
+
+- Updated dependencies [[`0d81717`](https://github.com/caravan-bitcoin/caravan/commit/0d81717fade918ec337093e3dc4c3862662d20c3), [`0d81717`](https://github.com/caravan-bitcoin/caravan/commit/0d81717fade918ec337093e3dc4c3862662d20c3), [`0d81717`](https://github.com/caravan-bitcoin/caravan/commit/0d81717fade918ec337093e3dc4c3862662d20c3)]:
+  - @caravan/bitcoin@0.2.0
+  - @caravan/multisig@2.0.0
+
 ## 1.2.0
 
 ### Minor Changes
