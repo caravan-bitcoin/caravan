@@ -48,20 +48,20 @@ export class Braid extends Struct {
     assert(
       Object.values(MULTISIG_ADDRESS_TYPES).includes(options.addressType),
       `Expected addressType to be one of:  ${Object.values(
-        MULTISIG_ADDRESS_TYPES
-      )}. You sent ${options.addressType}`
+        MULTISIG_ADDRESS_TYPES,
+      )}. You sent ${options.addressType}`,
     );
     this.addressType = options.addressType;
     assert(
       Object.values(Network).includes(options.network),
-      `Expected network to be one of:  ${Object.values(Network)}.`
+      `Expected network to be one of:  ${Object.values(Network)}.`,
     );
     this.network = options.network;
 
     options.extendedPublicKeys.forEach((xpub) => {
       const xpubValidationError = validateExtendedPublicKey(
         typeof xpub === "string" ? xpub : xpub.base58String,
-        this.network
+        this.network,
       );
       assert(!xpubValidationError.length, xpubValidationError);
     });
@@ -70,7 +70,7 @@ export class Braid extends Struct {
     assert(typeof options.requiredSigners === "number");
     assert(
       options.requiredSigners <= this.extendedPublicKeys.length,
-      `Can't have more requiredSigners than there are keys.`
+      `Can't have more requiredSigners than there are keys.`,
     );
     this.requiredSigners = options.requiredSigners;
 
@@ -158,7 +158,7 @@ export function validateBip32PathForBraid(braid, path) {
   const pathSequence = bip32PathToSequence(pathToCheck);
   assert(
     pathSequence[0].toString() === braid.index,
-    `Cannot derive paths outside of the braid's index: ${braid.index}`
+    `Cannot derive paths outside of the braid's index: ${braid.index}`,
   );
 }
 
@@ -177,7 +177,7 @@ function derivePublicKeyObjectsAtPath(braid, path) {
     const pubkey = deriveChildPublicKey(
       typeof xpub === "string" ? xpub : xpub.base58String,
       path,
-      braidNetwork(braid)
+      braidNetwork(braid),
     );
     // It's ok if this is faked - but at least one of them should be correct otherwise
     // signing won't work. On Coldcard, this must match what was included in the multisig
@@ -239,7 +239,7 @@ export function deriveMultisigByPath(braid, path) {
   return generateBraidAwareMultisigFromPublicKeys(
     braid,
     pubkeys,
-    bip32Derivation
+    bip32Derivation,
   );
 }
 
@@ -258,14 +258,14 @@ export function deriveMultisigByIndex(braid, index) {
 function generateBraidAwareMultisigFromPublicKeys(
   braid,
   pubkeys,
-  bip32Derivation
+  bip32Derivation,
 ): any {
   let braidAwareMultisig = {};
   const multisig = generateMultisigFromPublicKeys(
     braidNetwork(braid),
     braidAddressType(braid),
     braidRequiredSigners(braid),
-    ...pubkeys
+    ...pubkeys,
   );
   braidAwareMultisig = {
     ...multisig,
@@ -283,7 +283,7 @@ export function generateBraid(
   addressType,
   extendedPublicKeys,
   requiredSigners,
-  index
+  index,
 ) {
   return new Braid({
     network,

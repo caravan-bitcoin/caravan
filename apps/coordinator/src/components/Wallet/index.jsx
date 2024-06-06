@@ -278,11 +278,7 @@ class CreateWallet extends React.Component {
     setTotalSigners(walletConfiguration.quorum.totalSigners);
     setRequiredSigners(walletConfiguration.quorum.requiredSigners);
     setAddressType(walletConfiguration.addressType);
-    if (walletConfiguration.network === "regtest") {
-      setNetwork("testnet");
-    } else {
-      setNetwork(walletConfiguration.network);
-    }
+    setNetwork(walletConfiguration.network);
     updateWalletNameAction(0, walletConfiguration.name);
     updateWalletUuid(walletConfiguration.uuid);
 

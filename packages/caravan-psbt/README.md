@@ -2,22 +2,15 @@
 
 A set of utilities for working with PSBTs.
 
-## Table of contents
-
-- [PSBTv0](#psbtv0)
-  - [Exports](#psbtv0-exports)
+# Table of contents
+- [Constants](#constants)
+  - [Exports](#exports)
     - [`const PSBT_MAGIC_HEX`](#const-psbt_magic_hex)
     - [`const PSBT_MAGIC_B64`](#const-psbt_magic_b64)
     - [`const PSBT_MAGIC_BYTES`](#const-psbt_magic_bytes)
-    - [`function autoLoadPSBT`](#function-autoloadpsbt)
-    - [`function psbtInputFormatter`](#function-psbtinputformatter)
-    - [`function psbtOutputFormatter`](#function-psbtoutputformatter)
-    - [`function translatePSBT`](#function-translatepsbt)
-    - [`function addSignaturesToPSBT`](#function-addsignaturestopsbt)
-    - [`function parseSignaturesFromPSBT`](#function-parsesignaturesfrompsbt)
-    - [`function parseSignatureArrayFromPSBT`](#function-parsesignaturearrayfrompsbt)
+- [PSBTv0](#psbtv0)
 - [PSBTv2](#psbtv2)
-  - [Exports](#psbtv2-exports)
+  - [Exports](#exports-1)
     - [`class PsbtV2`](#class-psbtv2)
       - [`get isReadyForConstructor`](#get-isreadyforconstructor)
       - [`get isReadyForUpdater`](#get-isreadyforupdater)
@@ -40,11 +33,13 @@ A set of utilities for working with PSBTs.
 - [Concepts](#concepts)
   - [The operator role saga](#the-operator-role-saga)
 - [TODO](#todo)
+  - [PsbtV2](#psbtv2-1)
+    - [Operator role validation](#operator-role-validation)
+    - [Class constructor](#class-constructor)
+    - [Add input timelocks](#add-input-timelocks)
+    - [Add input sighash\_single](#add-input-sighash_single)
 
-## PSBTv0
-
-[BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
-
+## Constants
 ### Exports
 
 #### `const PSBT_MAGIC_HEX`
@@ -59,43 +54,13 @@ A utility constant for base64 encoded psbt magic bytes equal to `"cHNidP8"`.
 
 A utility constant for `Buffer` instance of psbt magic bytes.
 
-#### `function autoLoadPSBT`
 
-Given a string, try to create a Psbt object based on MAGIC (hex or Base64).
+## PSBTv0
 
-#### `function psbtInputFormatter`
+[BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
 
-Take a `MultisigTransactionInput` and turn it into a `MultisigTransactionPSBTInput`.
 
-#### `function psbtOutputFormatter`
 
-Take a `MultisigTransactionOutput` and turn it into a `MultisigTransactionPSBTOutput`.
-
-#### `function translatePSBT`
-
-Translates a PSBT into inputs/outputs consumable by supported non-PSBT devices in the `@caravan/wallets` library.
-
-#### `function addSignaturesToPSBT`
-
-Given an unsigned PSBT, an array of signing public key(s) (one per input), an array of signature(s) (one per input) in the same order as the pubkey(s), adds partial signature object(s) to each input and returns the PSBT with partial signature(s) included.
-
-#### `function parseSignaturesFromPSBT`
-
-Extracts the signature(s) from a PSBT.
-
-NOTE: there should be one signature per input, per signer.
-
-ADDITIONAL NOTE: because of the restrictions we place on braids to march their multisig addresses (slices) forward at the _same_ index across each chain of the braid, we do not run into a possible collision with this data structure. BUT - to have this method accommodate the _most_ general form of signature parsing, it would be wise to wrap this one level deeper like:
-
-```
-address: [pubkey : [signature(s)]]
-```
-
-that way if your braid only advanced one chain's (member's) index so that a pubkey could be used in more than one address, everything would still function properly.
-
-#### `function parseSignatureArrayFromPSBT`
-
-Extracts signatures in order of inputs and returns as array (or array of arrays if multiple signature sets).
 
 ## PSBTv2
 
@@ -246,22 +211,80 @@ Attempts to extract the version number as uint32LE from raw psbt regardless of p
 
 The PSBT is a resource which may be passed between several operators or services. It's best to look at the operator roles as stages of a saga. The next valid operator role(s) can be determined by the state of the PSBT. The actions allowed for a PSBT are determined by which operator role the PSBT can be now and which role it could be next. See the following blog article at Unchained for a more detailed illustration: [Operator roles: Life stages in the saga of a PSBT](https://unchained.com/blog/operator-roles-life-stages-in-the-saga-of-a-psbt/)
 
-### TODO
+## TODO
 
-#### PsbtV2
+### PsbtV2
 
-##### Operator role validation
+#### Operator role validation
 
 Work remains for determining readiness for operator roles Input Finalizer and Transaction Extractor. The getters responsible for these checks are `isReadyForInputFinalizer` and `isReadyForTransactionExtractor`. Work also remains to expand the PsbtV2 method functionality beyond the Signer role. A huge benefit might be gained from building methods aimed at the Combiner role.
 
-##### Class constructor
+#### Class constructor
 
 The constructor must be able to handle values which the Creator role is responsible for. Currently, the constructor can only accept an optional psbt which it parses to configure itself. It would be ideal if a fresh PsbtV2 instance could be initialized with minimal arguments for which the Creator role is responsible. See `private create()`.
 
-##### Add input timelocks
+#### Add input timelocks
 
 The `public addInput` must be able to properly handle input locktimes which interact with the global value.
 
-##### Add input sighash_single
+#### Add input sighash_single
 
 The `public addInput` must be able to properly handle new inputs when the psbt has a `SIGHASH_SINGLE` flag on `PSBT_GLOBAL_TX_MODIFIABLE`.
+
+## Troubleshooting and FAQ
+### What's with the vendor version of tiny-secp256k1?
+In v6 of bitcoinjs-lib, which @caravan/psbt upgraded to use relative v5 in the older psbt code in @caravan/bitcoin,
+some functions of the library require an elliptic curve library to be initialized w/ bitcoinjs-lib (see [this issue](https://github.com/bitcoinjs/bitcoinjs-lib/issues/1889#issuecomment-1443792692)), e.g. for taproot functionality.
+For some reason, the recommended library `tiny-secp256k1` fails on initialization saying the library is invalid. The cause
+seems to be a comparison of a Buffer with Uint8Array (see [this issue](https://github.com/bitcoinjs/tiny-secp256k1/issues/136) for more info).
+
+A proposed fix is pending review and approval [here](https://github.com/bitcoinjs/tiny-secp256k1/pull/137). Unfortunately, since there
+is a special build requirement to get the package code, the easiest way to get bitcoinjs initialized was to include patched vendor code in
+the caravan codebase for now.
+
+If a fork needs to be maintained and updated, to build and update the code, you can fork the repo, and run the docker build steps:
+
+```
+% docker build -t tiny-secp256k1 .
+% docker run -it --rm -v `pwd`:/tiny-secp256k1 -w /tiny-secp256k1 tiny-secp256k1
+# make build
+```
+Then copy the resulting built code (ends up in the lib directory) into the vendor/tiny-secp256k1. Currently
+we just use the asmjs build to avoid wasm complications in
+the build system.
+
+### Experimental VM Modules
+This is related to the tiny-secp256k1 library which has difficulties importing in different environments.
+
+Note that the jest configs and the special prefix in the npm test scripts were needed
+to let jest understand the esmodule imports from the tiny-secp256k1 library.
+
+The npm script prefix in particular may result in a console warning when running tests:
+
+```
+ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+```
+
+This can be safely ignored. See the [documentation in jest](https://jestjs.io/docs/ecmascript-modules)
+for more information on running with `--experimental-vm-modules`.
+
+
+### What's with the `bitcoinjs-lib-v6` dependency?
+
+npm workspaces and maybe vite have issues with nested dependencies with
+mismatched versions. `@caravan/psbt` requires v6 of bitcoinjs-lib but in order
+to avoid making massive breaking changes, other libraries like `@caravan/bitcoin` are
+still using bitcoinjs-lib v5. Unfortunately when being built altogether, it's possible
+that the wrong version takes precedence, causing the build to break.
+
+Because npm lacks a `nohoist` option for workspaces, the workaround is to use a kind
+of alias in the package.json. So we add `"bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",`
+to say that we want to use v6.1.5 from npm whenever use the alias `bitcoinjs-lib-v6`
+in imports in our code. This forces build systems to look for this reference and
+the correct version of the package and avoid using a mismatch. Unfortunately
+this was the only workaround that worked. `overrides` for example was not being
+respected.
+
+Learn more [here](https://github.com/vitejs/vite/issues/4245),
+[here](https://github.com/zackerydev/noist?tab=readme-ov-file), and
+[here](https://github.com/prisma/prisma/issues/9649).

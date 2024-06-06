@@ -5,7 +5,7 @@
 
 import BigNumber from "bignumber.js";
 import bip66 from "bip66";
-import { ECPair, Transaction } from "bitcoinjs-lib";
+import { ECPair, Transaction } from "bitcoinjs-lib-v5";
 
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -20,17 +20,20 @@ import { unsignedMultisigTransaction } from "./transactions";
 
 /**
  * Validate a multisig signature for given input and public key.
+ * NOTICE: DEPRECATED in favor of @caravan/psbt validateMultisigSignaturePsbt
+ * as it uses the newer version of bitcoinjs-lib to support taproot outputs
+ * and is generally more PSBT friendly.
  */
 export function validateMultisigSignature(
   network,
   inputs,
   outputs,
   inputIndex,
-  inputSignature
+  inputSignature,
 ) {
   const hash = multisigSignatureHash(network, inputs, outputs, inputIndex);
   const signatureBuffer = multisigSignatureBuffer(
-    signatureNoSighashType(inputSignature)
+    signatureNoSighashType(inputSignature),
   );
   const input = inputs[inputIndex];
   const publicKeys = multisigPublicKeys(input.multisig);
@@ -41,8 +44,7 @@ export function validateMultisigSignature(
   ) {
     const publicKey = publicKeys[publicKeyIndex];
     const publicKeyBuffer = Buffer.from(publicKey, "hex");
-    const keyPair = ECPair.fromPublicKey(publicKeyBuffer);
-    if (keyPair.verify(hash, signatureBuffer)) {
+    if (isValidSignature(publicKeyBuffer, hash, signatureBuffer)) {
       return publicKey;
     }
   }
@@ -60,12 +62,15 @@ export function signatureNoSighashType(signature) {
 
 /**
  * Returns the multisig Signature Hash for an input at inputIndex
+ * NOTICE: DEPRECATED in favor of @caravan/psbt getHashForSignature
+ * as it uses the newer version of bitcoinjs-lib to support taproot outputs
+ * and is generally more PSBT friendly.
  */
 function multisigSignatureHash(network, inputs, outputs, inputIndex) {
   const unsignedTransaction = unsignedMultisigTransaction(
     network,
     inputs,
-    outputs
+    outputs,
   );
   const input = inputs[inputIndex];
   if (
@@ -76,13 +81,13 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
       inputIndex,
       multisigWitnessScript(input.multisig).output,
       new BigNumber(input.amountSats).toNumber(),
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   } else {
     return unsignedTransaction.hashForSignature(
       inputIndex,
       multisigRedeemScript(input.multisig).output,
-      Transaction.SIGHASH_ALL
+      Transaction.SIGHASH_ALL,
     );
   }
 }
@@ -90,10 +95,10 @@ function multisigSignatureHash(network, inputs, outputs, inputIndex) {
 /**
  * Create a signature buffer that can be passed to ECPair.verify
  */
-function multisigSignatureBuffer(signature) {
+export function multisigSignatureBuffer(signature) {
   const encodedSignerInputSignatureBuffer = Buffer.from(signature, "hex");
   const decodedSignerInputSignatureBuffer = bip66.decode(
-    encodedSignerInputSignatureBuffer
+    encodedSignerInputSignatureBuffer,
   );
   const { r, s } = decodedSignerInputSignatureBuffer;
   // The value returned from the decodedSignerInputSignatureBuffer has
@@ -117,3 +122,9 @@ function multisigSignatureBuffer(signature) {
   signatureBuffer.set(Buffer.from(s), 64 - s.byteLength);
   return signatureBuffer;
 }
+
+export const isValidSignature = (
+  pubkey: Buffer,
+  msghash: Buffer,
+  signature: Buffer,
+): boolean => ECPair.fromPublicKey(pubkey).verify(msghash, signature);

@@ -40,9 +40,19 @@ import {
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
 } from "./trezor";
-import { MultisigWalletConfig, TxInput } from "./types";
-import { braidDetailsToWalletConfig } from "./policy";
-import { unsignedMultisigPSBT, BraidDetails, Network } from "@caravan/bitcoin";
+import {
+  braidDetailsToWalletConfig,
+  MultisigWalletConfig,
+  LegacyInput,
+  LegacyOutput,
+  BraidDetails,
+} from "@caravan/multisig";
+import { Network } from "@caravan/bitcoin";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 
 /**
  * Current @caravan/wallets version.
@@ -301,8 +311,8 @@ export function ExportExtendedPublicKey({
 export interface SignMultisigTransactionArgs {
   keystore: KEYSTORE_TYPES;
   network: Network;
-  inputs?: TxInput[];
-  outputs?: object[];
+  inputs?: LegacyInput[];
+  outputs?: LegacyOutput[];
   bip32Paths?: string[];
   psbt: string;
   keyDetails: { xfp: string; path: string };
@@ -349,7 +359,11 @@ export function SignMultisigTransaction({
     case LEDGER: {
       let _psbt = psbt;
       if (!_psbt)
-        _psbt = unsignedMultisigPSBT(network, inputs, outputs).data.toBase64();
+        _psbt = getUnsignedMultisigPsbtV0({
+          network,
+          inputs: inputs ? inputs.map(convertLegacyInput) : [],
+          outputs: outputs ? outputs.map(convertLegacyOutput) : [],
+        }).toBase64();
       return new LedgerSignMultisigTransaction({
         network,
         inputs,

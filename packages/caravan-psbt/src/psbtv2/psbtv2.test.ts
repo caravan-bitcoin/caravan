@@ -1,5 +1,7 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test } from "@jest/globals";
+import { test, jest } from "@jest/globals";
+import { silenceDescribe } from "react-silence";
+
 import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
@@ -721,6 +723,8 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
+  silenceDescribe("error", "warn");
+
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
     (vect) => {
@@ -1062,6 +1066,8 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
+  silenceDescribe("error", "warn");
+
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
     (vect) => {
@@ -1155,6 +1161,8 @@ describe("getPsbtVersionNumber", () => {
 });
 
 describe("PsbtV2.addPartialSig", () => {
+  silenceDescribe("error", "warn");
+
   let psbt;
 
   beforeEach(() => {

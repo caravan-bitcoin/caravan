@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from "bufio";
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib-v6";
 
 import {
   Key,
@@ -11,14 +11,13 @@ import {
   MapSelectorType,
 } from "./types";
 import {
-  bufferize,
   getNonUniqueKeyTypeValues,
   getOptionalMappedBytesAsHex,
   getOptionalMappedBytesAsUInt,
   parseDerivationPathNodesToBytes,
 } from "./functions";
 import { PsbtV2Maps } from "./psbtv2maps";
-
+import { bufferize } from "../functions";
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all

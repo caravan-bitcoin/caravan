@@ -1,4 +1,4 @@
-import { script } from "bitcoinjs-lib";
+import { script } from "bitcoinjs-lib-v5";
 
 /**
  * This module provides functions for converting generic bitcoin

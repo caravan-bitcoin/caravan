@@ -8,13 +8,16 @@ import {
   satoshisToBitcoins,
   bitcoinsToSatoshis,
   validateAddress,
-  unsignedMultisigTransaction,
-  unsignedMultisigPSBT,
-  unsignedTransactionObjectFromPSBT,
   checkFeeRateError,
   getFeeErrorMessage,
   FeeValidationError,
+  unsignedMultisigTransaction,
 } from "@caravan/bitcoin";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 import updateState from "./utils";
 import { SET_NETWORK, SET_ADDRESS_TYPE } from "../actions/settingsActions";
 import {
@@ -45,6 +48,7 @@ import {
   SPEND_STEP_CREATE,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
+import { Transaction } from "bitcoinjs-lib";
 
 function sortInputs(a, b) {
   const x = a.txid.toLowerCase();
@@ -280,16 +284,18 @@ function finalizeOutputs(state, action) {
   // First try to build the transaction via PSBT, if that fails (e.g. an input doesn't know about its braid),
   // then try to build it using the old TransactionBuilder plumbing.
   try {
-    const unsignedTransactionPSBT = unsignedMultisigPSBT(
-      state.network,
-      state.inputs,
-      state.outputs,
-    );
-    unsignedTransaction = unsignedTransactionObjectFromPSBT(
-      unsignedTransactionPSBT,
+    const args = {
+      network: state.network,
+      inputs: state.inputs.map(convertLegacyInput),
+      outputs: state.outputs.map(convertLegacyOutput),
+    };
+    const psbt = getUnsignedMultisigPsbtV0(args);
+    unsignedTransaction = Transaction.fromHex(
+      psbt.data.globalMap.unsignedTx.toBuffer().toString("hex"),
     );
   } catch (e) {
     // probably has an input that isn't braid aware.
+    // NOTE: This won't work for txs with taproot outputs
     unsignedTransaction = unsignedMultisigTransaction(
       state.network,
       state.inputs,

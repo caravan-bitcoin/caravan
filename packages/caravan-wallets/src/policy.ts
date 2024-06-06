@@ -6,11 +6,10 @@ import {
   validateBIP32Path,
   validateExtendedPublicKey,
   validateRootFingerprint,
-  BraidDetails,
   getMaskedDerivation,
 } from "@caravan/bitcoin";
 import { WalletPolicy } from "ledger-bitcoin";
-import { MultisigWalletConfig } from "./types";
+import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
 
 export class KeyOrigin {
   readonly xfp: string;

@@ -8,12 +8,12 @@
  * * CustomSignMultisigTransaction
  */
 import {
-  unsignedMultisigPSBT,
   parseSignaturesFromPSBT,
   Network,
   validateBIP32Path,
   validateRootFingerprint,
   ExtendedPublicKey,
+  BitcoinNetwork,
 } from "@caravan/bitcoin";
 import {
   IndirectKeystoreInteraction,
@@ -22,7 +22,11 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { BitcoinNetwork } from "@caravan/bitcoin";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 
 export const CUSTOM = "custom";
 
@@ -189,7 +193,11 @@ export class CustomSignMultisigTransaction extends CustomInteraction {
       this.psbt = psbt;
     } else {
       try {
-        this.psbt = unsignedMultisigPSBT(network, inputs, outputs);
+        this.psbt = getUnsignedMultisigPsbtV0({
+          network,
+          inputs: inputs.map(convertLegacyInput),
+          outputs: outputs.map(convertLegacyOutput),
+        });
       } catch (e) {
         throw new Error(
           "Unable to build the PSBT from the provided parameters."

@@ -1,5 +1,5 @@
-import { Psbt, Transaction } from "bitcoinjs-lib";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
+import { Psbt, Transaction } from "bitcoinjs-lib-v5";
+import { reverseBuffer } from "bitcoinjs-lib-v5/src/bufferutils.js";
 import { toHexString } from "./utils";
 import {
   generateMultisigFromHex,
@@ -66,7 +66,7 @@ function getBip32Derivation(multisig, index = 0) {
     config.addressType,
     config.extendedPublicKeys,
     config.requiredSigners,
-    config.index
+    config.index,
   );
   return generateBip32DerivationByIndex(braid, index);
 }
@@ -207,7 +207,7 @@ function getUnchainedInputsFromPSBT(network, addressType, psbt) {
     const multisig = generateMultisigFromHex(
       network,
       addressType,
-      dataInput.redeemScript.toString("hex")
+      dataInput.redeemScript.toString("hex"),
     );
 
     return {
@@ -242,7 +242,7 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
     const bip32Derivation = input.bip32Derivation.filter(
       (b32d) =>
         b32d.path.startsWith(signingKeyDetails.path) &&
-        b32d.masterFingerprint.toString("hex") === signingKeyDetails.xfp
+        b32d.masterFingerprint.toString("hex") === signingKeyDetails.xfp,
     );
 
     if (!bip32Derivation.length) {
@@ -261,7 +261,7 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
 export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   if (addressType !== P2SH) {
     throw new Error(
-      "Unsupported addressType -- only P2SH is supported right now"
+      "Unsupported addressType -- only P2SH is supported right now",
     );
   }
   const localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
@@ -277,7 +277,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   // First, we check that we actually do have any inputs to sign:
   const bip32Derivations = filterRelevantBip32Derivations(
     localPSBT,
-    signingKeyDetails
+    signingKeyDetails,
   );
 
   // The shape of these return objects are specific to existing code
@@ -285,7 +285,7 @@ export function translatePSBT(network, addressType, psbt, signingKeyDetails) {
   const unchainedInputs = getUnchainedInputsFromPSBT(
     network,
     addressType,
-    localPSBT
+    localPSBT,
   );
   const unchainedOutputs = getUnchainedOutputsFromPSBT(localPSBT);
 
@@ -338,7 +338,7 @@ export function addSignaturesToPSBT(network, psbt, pubkeys, signatures) {
       psbtWithSignatures,
       idx,
       pubkey,
-      sig
+      sig,
     );
   });
   return psbtWithSignatures.toBase64();
@@ -388,11 +388,11 @@ export function parseSignaturesFromPSBT(psbtFromFile) {
     for (let i = 0; i < inputs.length; i++) {
       for (let j = 0; j < numSigners; j++) {
         pubKey = toHexString(
-          Array.prototype.slice.call(inputs?.[i]?.partialSig?.[j].pubkey)
+          Array.prototype.slice.call(inputs?.[i]?.partialSig?.[j].pubkey),
         );
         if (pubKey in signatureSet) {
           signatureSet[pubKey].push(
-            inputs?.[i]?.partialSig?.[j].signature.toString("hex")
+            inputs?.[i]?.partialSig?.[j].signature.toString("hex"),
           );
         } else {
           signatureSet[pubKey] = [
@@ -418,7 +418,7 @@ export function parseSignatureArrayFromPSBT(psbtFromFile) {
 
   const signatureArrays: string[][] = Array.from(
     { length: numSigners },
-    () => []
+    () => [],
   );
 
   const { inputs } = psbt.data;
@@ -426,7 +426,8 @@ export function parseSignatureArrayFromPSBT(psbtFromFile) {
   if (numSigners >= 1) {
     for (let i = 0; i < inputs.length; i += 1) {
       for (let j = 0; j < numSigners; j += 1) {
-        const signature = inputs?.[i]?.partialSig?.[j].signature.toString("hex");
+        const signature =
+          inputs?.[i]?.partialSig?.[j].signature.toString("hex");
         if (signature) {
           signatureArrays[j].push(signature);
         }

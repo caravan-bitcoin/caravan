@@ -2,8 +2,8 @@ import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import {
-  signedMultisigTransaction,
   blockExplorerTransactionURL,
+  addSignaturesToPSBT,
 } from "@caravan/bitcoin";
 
 import {
@@ -21,6 +21,13 @@ import { updateBlockchainClient } from "../../actions/clientActions";
 import Copyable from "../Copyable";
 import { externalLink } from "utils/ExternalLink";
 import { setTXID } from "../../actions/transactionActions";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
+import { Psbt } from "bitcoinjs-lib";
+import { Buffer } from "buffer";
 
 class Transaction extends React.Component {
   constructor(props) {
@@ -34,14 +41,30 @@ class Transaction extends React.Component {
 
   buildSignedTransaction = () => {
     const { network, inputs, outputs, signatureImporters } = this.props;
-    return signedMultisigTransaction(
+    const args = {
       network,
-      inputs,
-      outputs,
-      Object.values(signatureImporters).map(
-        (signatureImporter) => signatureImporter.signature,
-      ),
-    );
+      inputs: inputs.map(convertLegacyInput),
+      outputs: outputs.map(convertLegacyOutput),
+    };
+    const psbt = getUnsignedMultisigPsbtV0(args);
+    let partiallySignedTransaction = psbt.toBase64();
+    for (const signatureImporter of Object.values(signatureImporters)) {
+      partiallySignedTransaction = addSignaturesToPSBT(
+        network,
+        partiallySignedTransaction,
+        signatureImporter.publicKeys.map((pubkey) =>
+          Buffer.from(pubkey, "hex"),
+        ),
+        signatureImporter.signature.map((signature) =>
+          Buffer.from(signature, "hex"),
+        ),
+      );
+    }
+
+    return Psbt.fromBase64(partiallySignedTransaction)
+      .finalizeAllInputs()
+      .extractTransaction()
+      .toHex();
   };
 
   handleBroadcast = async () => {
@@ -52,7 +75,7 @@ class Transaction extends React.Component {
     let txid = "";
     this.setState({ broadcasting: true });
     try {
-      txid = await client.broadcastTransaction(signedTransaction.toHex());
+      txid = await client.broadcastTransaction(signedTransaction);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
@@ -71,14 +94,13 @@ class Transaction extends React.Component {
 
   render() {
     const { error, broadcasting, txid } = this.state;
-    const signedTransaction = this.buildSignedTransaction();
-    const signedTransactionHex = signedTransaction.toHex();
+    const signedTransactionHex = this.buildSignedTransaction();
     return (
       <Card>
         <CardHeader title="Broadcast" />
         <CardContent>
           <form>
-            {signedTransaction && (
+            {signedTransactionHex && (
               <Box mt={4}>
                 <Typography variant="h6">Signed Transaction</Typography>
                 <Copyable text={signedTransactionHex} code showIcon />
@@ -89,7 +111,7 @@ class Transaction extends React.Component {
                 <Button
                   variant="contained"
                   color="primary"
-                  disabled={!signedTransaction || broadcasting}
+                  disabled={!signedTransactionHex || broadcasting}
                   onClick={this.handleBroadcast}
                 >
                   Broadcast Transaction

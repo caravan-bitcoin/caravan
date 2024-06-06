@@ -1,38 +1,13 @@
 import { BufferReader, BufferWriter } from "bufio";
-import {
-  validateHex,
-  validBase64,
-  validateBIP32Path,
-  PSBT_MAGIC_BYTES,
-} from "@caravan/bitcoin";
-
+import { validateBIP32Path } from "@caravan/bitcoin";
+import { PSBT_MAGIC_BYTES } from "../constants";
 import { Key, Value, NonUniqueKeyTypeValue, KeyType } from "./types";
 import {
   BIP_32_HARDENING_OFFSET,
   BIP_32_NODE_REGEX,
   PSBT_MAP_SEPARATOR,
 } from "./values";
-
-/**
- * Ensure base64 and hex strings are a buffer. No-op if already a buffer.
- */
-export function bufferize(psbt: string | Buffer): Buffer {
-  if (Buffer.isBuffer(psbt)) {
-    return psbt;
-  }
-
-  if (typeof psbt === "string") {
-    if (validateHex(psbt) === "") {
-      return Buffer.from(psbt, "hex");
-    }
-
-    if (validBase64(psbt)) {
-      return Buffer.from(psbt, "base64");
-    }
-  }
-
-  throw Error("Input cannot be bufferized.");
-}
+import { bufferize } from "../functions";
 
 /**
  * Some keytypes have keydata which allows for multiple unique keys of the same

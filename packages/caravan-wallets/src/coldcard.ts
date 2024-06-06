@@ -11,7 +11,6 @@
 import {
   deriveChildExtendedPublicKey,
   fingerprintToFixedLengthHex,
-  unsignedMultisigPSBT,
   parseSignaturesFromPSBT,
   ExtendedPublicKey,
   Network,
@@ -31,6 +30,11 @@ import {
 import { P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 import { BitcoinNetwork } from "@caravan/bitcoin";
 import { WalletConfigKeyDerivation } from "./types";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 
 export const COLDCARD = "coldcard";
 // Our constants use 'P2SH-P2WSH', their file uses 'P2SH_P2WSH' :\
@@ -415,8 +419,21 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
       this.psbt = psbt;
     } else {
       try {
-        this.psbt = unsignedMultisigPSBT(network, inputs, outputs);
+        if (!inputs?.length || !outputs?.length) {
+          // NOTE: This should be fine since a PSBT can be created
+          // as empty and added to. But the current API for psbts
+          // and expected interactions don't yet support the PSBT saga
+          // so we'll throw for now.
+          throw new Error("Missing inputs or outputs.");
+        }
+        this.psbt = getUnsignedMultisigPsbtV0({
+          network,
+          inputs: inputs.map(convertLegacyInput),
+          outputs: outputs.map(convertLegacyOutput),
+        });
+        console.log("HELLLO??", this.psbt);
       } catch (e) {
+        console.error("Error building PSBT", e);
         throw new Error(
           "Unable to build the PSBT from the provided parameters."
         );

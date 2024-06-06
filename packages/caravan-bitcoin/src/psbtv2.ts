@@ -10,7 +10,7 @@
  */
 
 import { BufferReader, BufferWriter } from "bufio";
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib-v5";
 
 import { validateHex, validBase64 } from "./utils";
 import { validateBIP32Path } from "./paths";

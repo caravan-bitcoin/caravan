@@ -1,13 +1,11 @@
 import React from "react";
 
 import { TEST_FIXTURES } from "@caravan/bitcoin";
-import {
-  RegisterWalletPolicy,
-  braidDetailsToWalletConfig,
-} from "@caravan/wallets";
+import { RegisterWalletPolicy } from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 
 import Test from "./Test";
+import { braidDetailsToWalletConfig } from "@caravan/multisig";
 
 class RegisterWalletPolicyTest extends Test {
   name() {

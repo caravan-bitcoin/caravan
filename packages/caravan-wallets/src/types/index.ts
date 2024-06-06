@@ -4,15 +4,6 @@ export interface DeviceError extends Error {
   message: string;
 }
 
-// TODO: could this be in @caravan/bitcoin?
-export interface TxInput {
-  // this one is messy in the way it's used
-  // and so we'll need to better define it as typescript
-  // conversion gets propagated
-  multisig: unknown;
-  transactionHex: string;
-  index: number;
-}
 
 // really should be interchangeable with KeyDerivations
 // but unfortunately there are inconsistent property names

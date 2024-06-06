@@ -3,7 +3,6 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import {
   validateHex,
-  validateMultisigSignature,
   multisigBIP32Path,
   multisigBIP32Root,
   validateBIP32Path,
@@ -38,6 +37,12 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+  validateMultisigPsbtSignature,
+} from "@caravan/psbt";
 
 const TEXT = "text";
 const UNKNOWN = "unknown";
@@ -389,12 +394,17 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
-          publicKey = validateMultisigSignature(
+          const args = {
             network,
-            inputs,
-            outputs,
+            inputs: inputs.map(convertLegacyInput),
+            outputs: outputs.map(convertLegacyOutput),
+          };
+          const psbt = getUnsignedMultisigPsbtV0(args);
+          publicKey = validateMultisigPsbtSignature(
+            psbt.toBase64(),
             inputIndex,
             inputSignature,
+            inputs[inputIndex].amountSats,
           );
         } catch (e) {
           errback(`Signature for input ${inputNumber} is invalid.`);
@@ -482,13 +492,17 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
-              // This returns false if it completes with no error
-              publicKey = validateMultisigSignature(
+              const args = {
                 network,
-                inputs,
-                outputs,
+                inputs: inputs.map(convertLegacyInput),
+                outputs: outputs.map(convertLegacyOutput),
+              };
+              const psbt = getUnsignedMultisigPsbtV0(args);
+              publicKey = validateMultisigPsbtSignature(
+                psbt.toBase64(),
                 inputIndex,
                 inputSignature,
+                inputs[inputIndex].amountSats,
               );
             } catch (e) {
               // eslint-disable-next-line no-console
@@ -579,7 +593,8 @@ SignatureImporter.propTypes = {
     }),
   ).isRequired,
   fee: PropTypes.string.isRequired,
-  inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  inputs: PropTypes.arrayOf(PropTypes.shape({ amountSats: PropTypes.string }))
+    .isRequired,
   inputsTotalSats: PropTypes.shape({}).isRequired,
   isWallet: PropTypes.bool.isRequired,
   network: PropTypes.string.isRequired,

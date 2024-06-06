@@ -5,7 +5,7 @@ import {
   getNetworkFromPrefix,
 } from "./networks";
 
-import { networks } from "bitcoinjs-lib";
+import { networks } from "bitcoinjs-lib-v5";
 
 describe("networks", () => {
   describe("networkLabel", () => {

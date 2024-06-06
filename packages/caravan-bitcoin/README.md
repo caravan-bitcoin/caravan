@@ -218,6 +218,16 @@ and provide a helpful error message otherwise.
 
 ## Developers
 
+### Troubleshooting and FAQ
+
+#### `bitcoinjs-lib-v5`
+This is to make sure that the legacy caravan/bitcoin functions
+use the legacy bitcoinjs-lib when being built in caravan/coordinator.
+
+Learn more [here](https://github.com/vitejs/vite/issues/4245),
+[here](https://github.com/zackerydev/noist?tab=readme-ov-file), and
+[here](https://github.com/prisma/prisma/issues/9649).
+
 ### Contributing
 
 Unchained Capital welcomes bug reports, new features, and better documentation for this library.

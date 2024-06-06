@@ -11,7 +11,7 @@ import {
   Transaction,
   script,
   payments,
-} from "bitcoinjs-lib";
+} from "bitcoinjs-lib-v5";
 import { networkData } from "./networks";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
@@ -92,12 +92,15 @@ export function unsignedMultisigPSBT(
     if (braidDetails && includeGlobalXpubs) {
       const braid = Braid.fromData(JSON.parse(braidDetails));
       braid.extendedPublicKeys.forEach((extendedPublicKeyData) => {
-        const extendedPublicKey = new ExtendedPublicKey(extendedPublicKeyData);
+        const extendedPublicKey = new ExtendedPublicKey({
+          ...extendedPublicKeyData,
+          network,
+        });
 
         const alreadyFound = globalExtendedPublicKeys.find(
           (existingExtendedPublicKey: any) =>
             existingExtendedPublicKey.toBase58() ===
-            extendedPublicKey.toBase58()
+            extendedPublicKey.toBase58(),
         );
 
         if (!alreadyFound) {
@@ -195,13 +198,13 @@ export function signedMultisigTransaction(
           inputs,
           outputs,
           inputIndex,
-          inputSignature
+          inputSignature,
         );
       } catch (e) {
         throw new Error(
           `Invalid signature for input ${
             inputIndex + 1
-          }: ${inputSignature} (${e})`
+          }: ${inputSignature} (${e})`,
         );
       }
       if (inputSignaturesByPublicKey[publicKey]) {

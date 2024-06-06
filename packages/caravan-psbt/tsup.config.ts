@@ -2,5 +2,12 @@ import { defineConfig } from 'tsup'
 import { polyfillNode } from "esbuild-plugin-polyfill-node";
 
 export default defineConfig({
-  esbuildPlugins: [polyfillNode()],
-})
+  esbuildPlugins: [
+    polyfillNode({
+      polyfills: {
+        fs: true,
+        crypto: true,
+      },
+    }),
+  ],
+});

@@ -12,7 +12,7 @@ import { TEST_FIXTURES } from "./fixtures";
 import { P2WSH } from "./p2wsh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 
-import { address } from "bitcoinjs-lib";
+import { address } from "bitcoinjs-lib-v5";
 
 // FIXME: transactionbuilder is deprecating, but we know this. remove this after addressing.
 console.warn = jest.fn();
@@ -52,15 +52,15 @@ describe("transactions", () => {
         const transaction = unsignedMultisigTransaction(
           fixture.network,
           fixture.inputs,
-          fixture.outputs
+          fixture.outputs,
         );
         if (fixture.psbt) {
           const transactionFromPSBT = unsignedTransactionObjectFromPSBT(
             unsignedMultisigPSBT(
               fixture.network,
               fixture.inputs,
-              fixture.outputs
-            )
+              fixture.outputs,
+            ),
           );
           expect(transaction).toEqual(transactionFromPSBT);
         }
@@ -72,18 +72,18 @@ describe("transactions", () => {
           const reversedTXIDBuffer = transaction.ins[inputIndex].hash;
           // Don't want to modify buffer in place so use Buffer.from
           expect(
-            toHexString(Buffer.from(reversedTXIDBuffer).reverse())
+            toHexString(Buffer.from(reversedTXIDBuffer).reverse()),
           ).toEqual(input.txid);
         });
         fixture.outputs.forEach((output, outputIndex) => {
           expect(transaction.outs[outputIndex].value).toEqual(
-            Number(output.amountSats)
+            Number(output.amountSats),
           );
           expect(
             address.fromOutputScript(
               transaction.outs[outputIndex].script,
-              networkData(fixture.network)
-            )
+              networkData(fixture.network),
+            ),
           ).toEqual(output.address);
         });
         expect(transaction.toHex()).toEqual(fixture.hex);
@@ -126,7 +126,7 @@ describe("transactions", () => {
           const psbt = unsignedMultisigPSBT(
             fixture.network,
             fixture.inputs,
-            fixture.outputs
+            fixture.outputs,
           );
           expect(fixture.psbt).toEqual(psbt.data.toBase64());
         }
@@ -140,7 +140,7 @@ describe("transactions", () => {
             fixture.network,
             fixture.inputs,
             fixture.outputs,
-            true
+            true,
           );
 
           expect(fixture.psbt).not.toEqual(psbt.data.toBase64());
@@ -182,7 +182,7 @@ describe("transactions", () => {
         signedMultisigTransaction(
           fixture.network,
           fixture.inputs,
-          fixture.outputs
+          fixture.outputs,
         );
       }).toThrow(/at least one transaction signature/i);
       expect(() => {
@@ -190,7 +190,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          []
+          [],
         );
       }).toThrow(/at least one transaction signature/i);
     });
@@ -201,7 +201,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          [[]]
+          [[]],
         );
       }).toThrow(/insufficient input signatures/i);
       expect(() => {
@@ -209,7 +209,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          [fixture.signature, []]
+          [fixture.signature, []],
         );
       }).toThrow(/insufficient input signatures/i);
     });
@@ -220,7 +220,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          [fixture.signature]
+          [fixture.signature],
         );
       }).toThrow(/insufficient signatures for input/i);
     });
@@ -231,7 +231,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          [fixture.signature, ["foo", "bar", "baz"]]
+          [fixture.signature, ["foo", "bar", "baz"]],
         );
       }).toThrow(/invalid signature for input/i);
     });
@@ -242,7 +242,7 @@ describe("transactions", () => {
           fixture.network,
           fixture.inputs,
           fixture.outputs,
-          [fixture.signature, fixture.signature]
+          [fixture.signature, fixture.signature],
         );
       }).toThrow(/duplicate signature for input/i);
     });
@@ -253,7 +253,7 @@ describe("transactions", () => {
       const multisig = generateMultisigFromHex(
         Network.TESTNET,
         P2SH,
-        redeemScriptHex
+        redeemScriptHex,
       );
 
       // This transaction has already been broadcast as
@@ -290,7 +290,7 @@ describe("transactions", () => {
         Network.TESTNET,
         inputs,
         outputs,
-        [transactionSignature1, transactionSignature2]
+        [transactionSignature1, transactionSignature2],
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
@@ -302,7 +302,7 @@ describe("transactions", () => {
       const multisig = generateMultisigFromHex(
         Network.TESTNET,
         P2SH_P2WSH,
-        witnessScriptHex
+        witnessScriptHex,
       );
 
       // This transaction has already been broadcast as
@@ -336,7 +336,7 @@ describe("transactions", () => {
         Network.TESTNET,
         inputs,
         outputs,
-        [transactionSignature1, transactionSignature2]
+        [transactionSignature1, transactionSignature2],
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
@@ -348,7 +348,7 @@ describe("transactions", () => {
       const multisig = generateMultisigFromHex(
         Network.TESTNET,
         P2WSH,
-        witnessScriptHex
+        witnessScriptHex,
       );
 
       // This transaction has already been broadcast as
@@ -383,7 +383,7 @@ describe("transactions", () => {
         Network.TESTNET,
         inputs,
         outputs,
-        [transactionSignature1, transactionSignature2]
+        [transactionSignature1, transactionSignature2],
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
