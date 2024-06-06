@@ -39,7 +39,9 @@ export function validateAddress(address: string, network: Network) {
   const address_regex = magic_byte_regex + address_body_regex;
   // This tests whether you've got the network lined up with address type or not
   if (!address.match(address_regex)) {
-    if (network === Network.TESTNET || network === Network.REGTEST) {
+    if (network == Network.REGTEST) {
+      return "Address must start with one of 'bcrt1', 'm', 'n', or '2' followed by letters or digits.";
+    } else if (network === Network.TESTNET) {
       return "Address must start with one of 'tb1', 'm', 'n', or '2' followed by letters or digits.";
     } else {
       return "Address must start with either of 'bc1', '1' or '3' followed by letters or digits.";
