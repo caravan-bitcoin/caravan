@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.3.2
+
+### Patch Changes
+
+- [#102](https://github.com/caravan-bitcoin/caravan/pull/102) [`7e34665`](https://github.com/caravan-bitcoin/caravan/commit/7e34665ec9c220407cb1713eaaea5c41bed26b1f) Thanks [@bucko13](https://github.com/bucko13)! - move internal deps to devDependencies
+
 ## 1.3.1
 
 ### Patch Changes
