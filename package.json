@@ -20,7 +20,7 @@
     "@changesets/changelog-github": "^0.5.0",
     "@changesets/cli": "^2.27.1",
     "prettier": "^3.1.1",
-    "turbo": "latest"
+    "turbo": "^2.0.3"
   },
   "dependencies": {
     "@ledgerhq/hw-transport-webusb": "6.27.12"
@@ -37,7 +37,7 @@
       "@ledgerhq/devices": "8.0.0"
     }
   },
-  "packageManager": "npm@10.2.3",
+  "packageManager": "npm@10.5.0",
   "workspaces": [
     "apps/*",
     "packages/*"
