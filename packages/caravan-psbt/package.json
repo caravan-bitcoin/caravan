@@ -40,7 +40,6 @@
   ],
   "dependencies": {
     "@caravan/bitcoin": "*",
-    "@caravan/multisig": "*",
     "bignumber.js": "^8.1.1",
     "bip174": "^2.1.1",
     "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",
@@ -52,6 +51,7 @@
   "author": "unchained capital",
   "license": "ISC",
   "devDependencies": {
+    "@caravan/multisig": "*",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
     "@inrupt/jest-jsdom-polyfills": "^3.2.1",

@@ -149,6 +149,26 @@ anything else that relies on it should be tested to make sure they're not broken
 If you want to break this coupling, a published package version can be referenced instead of
 using `*` (this is not recommended however).
 
+#### Note about internal packages
+
+Sometimes it makes sense to move code you want to share between packages into an internal package.
+In fact this is [recommended by Turborepo](https://turbo.build/repo/docs/crafting-your-repository/creating-an-internal-package#best-practices-for-internal-packages).
+
+> When you're creating Internal Packages, it's recommended to create packages that have a single "purpose".
+
+Internal packages should be added to the `devDependencies` list of the packages/apps that depend on them.
+This is because the bundlers (tsup by default in caravan) won't include `dependencies` into the bundle
+and then when the package is attempted to be installed by external downstream projects it will try
+and find the internal dependency in a remote registry (which will fail). By including it in the
+devDependency:
+
+* the dependency graph will be correct
+* the bundler will build it in with the final package
+* other projects won't try and install the internal dependency
+
+@caravan/multisig is an example of such a package that is depended on by other packages
+like @caravan/psbt and @caravan/wallets.
+
 ### Adding a new package
 NOTE: Turborepo provides [code generator capability](https://turbo.build/repo/docs/core-concepts/monorepos/code-generation)
 for bootstrapping a new project. You can run `turbo gen` or `npm run gen`
