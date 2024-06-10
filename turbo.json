@@ -23,6 +23,7 @@
       ]
     },
     "dev": {
+      "dependsOn": ["^dev"],
       "cache": false,
       "persistent": true
     }
