@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.3.1
+
+### Patch Changes
+
+- [#98](https://github.com/caravan-bitcoin/caravan/pull/98) [`24cfb7b`](https://github.com/caravan-bitcoin/caravan/commit/24cfb7bd41c6f767c195f40044d0377edcd6dff4) Thanks [@bucko13](https://github.com/bucko13)! - update caravan/multisig dependency to remove a "real" version
+
 ## 1.3.0
 
 ### Minor Changes
