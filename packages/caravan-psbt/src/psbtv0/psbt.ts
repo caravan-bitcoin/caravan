@@ -1,6 +1,7 @@
 import {
   ExtendedPublicKey,
   fingerprintToFixedLengthHex,
+  generateMultisigFromHex,
   isValidSignature,
   MultisigAddressType,
   multisigSignatureBuffer,
@@ -20,6 +21,8 @@ import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
 import * as bitcoin from "bitcoinjs-lib-v6";
 import { bufferize } from "src/functions";
 import BigNumber from "bignumber.js";
+import { PSBT_MAGIC_B64, PSBT_MAGIC_HEX } from "../constants";
+import { reverseBuffer } from "bitcoinjs-lib-v6/src/bufferutils.js";
 
 bitcoin.initEccLib(ecc);
 
@@ -265,3 +268,133 @@ const getHashForSignature = (
   }
   throw new Error("No redeem or witness script found for input.");
 };
+
+/**
+ * Given a string, try to create a Psbt object based on MAGIC (hex or Base64)
+ */
+export function autoLoadPSBT(psbtFromFile, options?: any) {
+  if (typeof psbtFromFile !== "string") return null;
+  // Auto-detect and decode Base64 and Hex.
+  if (psbtFromFile.substring(0, 10) === PSBT_MAGIC_HEX) {
+    return Psbt.fromHex(psbtFromFile, options);
+  } else if (psbtFromFile.substring(0, 7) === PSBT_MAGIC_B64) {
+    return Psbt.fromBase64(psbtFromFile, options);
+  } else {
+    return null;
+  }
+}
+
+/***
+ * These should be deprecated eventually once we have better typescript support
+ * and a more api for handling PSBT saga.
+ * They are ports over from the legacy psbt code in caravan/bitcoin
+ */
+
+/**
+ * Translates a PSBT into inputs/outputs consumable by supported non-PSBT devices in the
+ * `@caravan/wallets` library.
+ *
+ * FIXME - Have only confirmed this is working for P2SH addresses on Ledger on regtest
+ */
+export function translatePSBT(
+  network,
+  addressType,
+  psbt: string,
+  signingKeyDetails,
+) {
+  if (addressType !== P2SH) {
+    throw new Error(
+      "Unsupported addressType -- only P2SH is supported right now",
+    );
+  }
+
+  const localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
+
+  if (localPSBT === null) return null;
+
+  // The information we need to provide proper @caravan/wallets style objects to the supported
+  // non-PSBT devices, we need to grab info from different places from within the PSBT.
+  //    1. the "data inputs"
+  //    2. the "transaction inputs"
+  //
+  // We'll do that in the functions below.
+
+  // First, we check that we actually do have any inputs to sign:
+  const bip32Derivations = filterRelevantBip32Derivations(
+    localPSBT,
+    signingKeyDetails,
+  );
+
+  // The shape of these return objects are specific to existing code
+  // in @caravan/wallets for signing with Trezor and Ledger devices.
+  const unchainedInputs = getUnchainedInputsFromPSBT(
+    network,
+    addressType,
+    localPSBT,
+  );
+  const unchainedOutputs = getUnchainedOutputsFromPSBT(localPSBT);
+
+  return {
+    unchainedInputs,
+    unchainedOutputs,
+    bip32Derivations,
+  };
+}
+
+/**
+ * Create @caravan/wallets style transaction input objects from a PSBT
+ */
+function getUnchainedInputsFromPSBT(network, addressType, psbt) {
+  return psbt.txInputs.map((input, index) => {
+    const dataInput = psbt.data.inputs[index];
+
+    // FIXME - this is where we're currently only handling P2SH correctly
+    const fundingTxHex = dataInput.nonWitnessUtxo.toString("hex");
+    const fundingTx = Transaction.fromHex(fundingTxHex);
+    const multisig = generateMultisigFromHex(
+      network,
+      addressType,
+      dataInput.redeemScript.toString("hex"),
+    );
+
+    return {
+      amountSats: fundingTx.outs[input.index].value,
+      index: input.index,
+      transactionHex: fundingTxHex,
+      txid: reverseBuffer(input.hash).toString("hex"),
+      multisig,
+    };
+  });
+}
+
+/**
+ * Create @caravan/wallets style transaction output objects from a PSBT
+ */
+function getUnchainedOutputsFromPSBT(psbt) {
+  return psbt.txOutputs.map((output) => ({
+    address: output.address,
+    amountSats: output.value,
+  }));
+}
+
+/**
+ * Create @caravan/wallets style transaction input objects
+ *
+ * @param {Object} psbt - Psbt bitcoinjs-lib object
+ * @param {Object} signingKeyDetails - Object containing signing key details (Fingerprint + bip32path prefix)
+ * @return {Object[]} bip32Derivations - array of signing bip32Derivation objects
+ */
+function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
+  return psbt.data.inputs.map((input) => {
+    const bip32Derivation = input.bip32Derivation.filter(
+      (b32d) =>
+        b32d.path.startsWith(signingKeyDetails.path) &&
+        b32d.masterFingerprint.toString("hex") === signingKeyDetails.xfp,
+    );
+
+    if (!bip32Derivation.length) {
+      throw new Error("Signing key details not included in PSBT");
+    }
+    return bip32Derivation[0];
+  });
+}
