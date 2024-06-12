@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+### Patch Changes
+
+- [#105](https://github.com/caravan-bitcoin/caravan/pull/105) [`b495b9a`](https://github.com/caravan-bitcoin/caravan/commit/b495b9aac3e334b4d19f1d17967f5afff13d714b) Thanks [@robertshuford](https://github.com/robertshuford)! - Include @caravan/wallets@0.2.2 and @caravan/psbt@1.3.2
+
 ## 1.1.0
 
 ### Minor Changes
