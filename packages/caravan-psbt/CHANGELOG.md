@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.4.1
+
+### Patch Changes
+
+- [#108](https://github.com/caravan-bitcoin/caravan/pull/108) [`2a8f502`](https://github.com/caravan-bitcoin/caravan/commit/2a8f5022119dea9ce04903a2f1866de66fc39940) Thanks [@bucko13](https://github.com/bucko13)! - fixes an import issue when used in as an external dep
+
 ## 1.4.0
 
 ### Minor Changes
