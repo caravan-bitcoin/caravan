@@ -12,7 +12,7 @@ import {
 } from "@caravan/bitcoin";
 import { Psbt, Transaction } from "bitcoinjs-lib-v6";
 import { MultisigWalletConfig } from "@caravan/multisig";
-import { toOutputScript } from "bitcoinjs-lib-v6/src/address";
+import { toOutputScript } from "bitcoinjs-lib-v6/src/address.js";
 import { GlobalXpub } from "bip174/src/lib/interfaces.js";
 // asmjs version is less performant than wasm version however
 // it should avoid any configuration challenges. If these can
