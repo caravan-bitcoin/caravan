@@ -36,10 +36,10 @@ import {
   networkData,
   validateBIP32Path,
   fingerprintToFixedLengthHex,
-  translatePSBT,
   addSignaturesToPSBT,
   Network,
 } from "@caravan/bitcoin";
+import { translatePSBT } from "@caravan/psbt";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import {
@@ -710,7 +710,9 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
     } else {
       this.psbt = psbt;
       this.returnSignatureArray = returnSignatureArray || false;
-
+      if (typeof this.psbt !== "string") {
+        throw new Error("PSBT must be a string");
+      }
       const translatedPsbt = translatePSBT(
         network,
         P2SH,

@@ -31,7 +31,6 @@ import {
   unsignedMultisigTransaction,
   validateBIP32Path,
   fingerprintToFixedLengthHex,
-  translatePSBT,
   addSignaturesToPSBT,
   BitcoinNetwork,
   validateHex,
@@ -39,7 +38,7 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
-
+import { translatePSBT } from "@caravan/psbt";
 import {
   ACTIVE,
   PENDING,
