@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+### Minor Changes
+
+- [#104](https://github.com/caravan-bitcoin/caravan/pull/104) [`400cb08`](https://github.com/caravan-bitcoin/caravan/commit/400cb084f58d1549a7eee2ce35f3f8683f79f975) Thanks [@bucko13](https://github.com/bucko13)! - \* caravan/psbt has new functions ported from caravan/bitcoin for legacy interactions with upgraded libs
+  - caravan/wallets uses the upgraded versions of translatedPsbt to support taproot outputs
+  - caravan coordinator now supports S2TR, better regtest support and other QoL improvements
+
+### Patch Changes
+
+- Updated dependencies [[`400cb08`](https://github.com/caravan-bitcoin/caravan/commit/400cb084f58d1549a7eee2ce35f3f8683f79f975)]:
+  - @caravan/psbt@1.4.0
+  - @caravan/wallets@0.2.3
+
 ## 1.1.1
 
 ### Patch Changes
