@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.4
+
+### Patch Changes
+
+- [#108](https://github.com/caravan-bitcoin/caravan/pull/108) [`2a8f502`](https://github.com/caravan-bitcoin/caravan/commit/2a8f5022119dea9ce04903a2f1866de66fc39940) Thanks [@bucko13](https://github.com/bucko13)! - fixes an import issue when used in as an external dep
+
+- Updated dependencies [[`2a8f502`](https://github.com/caravan-bitcoin/caravan/commit/2a8f5022119dea9ce04903a2f1866de66fc39940)]:
+  - @caravan/psbt@1.4.1
+
 ## 0.2.3
 
 ### Patch Changes
