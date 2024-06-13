@@ -21,8 +21,8 @@ import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
 import * as bitcoin from "bitcoinjs-lib-v6";
 import { bufferize } from "src/functions";
 import BigNumber from "bignumber.js";
-import { PSBT_MAGIC_B64, PSBT_MAGIC_HEX } from "../constants";
 import { reverseBuffer } from "bitcoinjs-lib-v6/src/bufferutils.js";
+import { autoLoadPSBT } from "./utils";
 
 bitcoin.initEccLib(ecc);
 
@@ -268,21 +268,6 @@ const getHashForSignature = (
   }
   throw new Error("No redeem or witness script found for input.");
 };
-
-/**
- * Given a string, try to create a Psbt object based on MAGIC (hex or Base64)
- */
-export function autoLoadPSBT(psbtFromFile, options?: any) {
-  if (typeof psbtFromFile !== "string") return null;
-  // Auto-detect and decode Base64 and Hex.
-  if (psbtFromFile.substring(0, 10) === PSBT_MAGIC_HEX) {
-    return Psbt.fromHex(psbtFromFile, options);
-  } else if (psbtFromFile.substring(0, 7) === PSBT_MAGIC_B64) {
-    return Psbt.fromBase64(psbtFromFile, options);
-  } else {
-    return null;
-  }
-}
 
 /***
  * These should be deprecated eventually once we have better typescript support

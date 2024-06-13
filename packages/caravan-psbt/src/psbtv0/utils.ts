@@ -23,9 +23,13 @@ import {
 } from "@caravan/multisig";
 import { PsbtInput, PsbtOutput } from "./psbt";
 import BigNumber from "bignumber.js";
+import { Psbt } from "bitcoinjs-lib-v6";
 export const idToHash = (txid: string): Buffer => {
   return Buffer.from(txid, "hex").reverse();
 };
+import { PSBT_MAGIC_BYTES } from "../constants";
+import { bufferize } from "../functions";
+import { BufferReader } from "bufio";
 
 // pulling functions from the old transactions/psbt file
 // so we can work with the fixtures and their deeply
@@ -157,3 +161,25 @@ export const psbtArgsFromFixture = (
     outputs: fixture.outputs.map(convertLegacyOutput),
   };
 };
+
+/**
+ * Given a string, try to create a Psbt object based on MAGIC (hex or Base64)
+ */
+export function autoLoadPSBT(psbtFromFile, options?: any) {
+  let psbtBuff;
+  try {
+    psbtBuff = bufferize(psbtFromFile);
+  } catch (e) {
+    return null;
+  }
+  try {
+    const br = new BufferReader(psbtBuff);
+    if (!br.readBytes(PSBT_MAGIC_BYTES.length, true).equals(PSBT_MAGIC_BYTES)) {
+      return null;
+    }
+  } catch (e) {
+    return null;
+  }
+
+  return Psbt.fromBuffer(psbtBuff, options);
+}
