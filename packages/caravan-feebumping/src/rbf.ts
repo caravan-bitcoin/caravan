@@ -58,3 +58,18 @@ export async function createRBFTransaction(
 export function isTransactionRBF(transaction: Transaction): boolean {
   return transaction.ins.some((input) => input.sequence < 0xfffffffe);
 }
+
+//=== RBF SIGNALLING ===
+// In transaction.ts or a new rbf.ts file in @caravan/bitcoin ??
+
+// export function enableRBFSignaling(transaction: Transaction): Transaction {
+//   // Set nSequence to signal RBF
+//   transaction.ins.forEach(input => {
+//     input.sequence = 0xfffffffd;
+//   });
+//   return transaction;
+// }
+
+// export function isRBFSignaled(transaction: Transaction): boolean {
+//   return transaction.ins.some(input => input.sequence < 0xfffffffe);
+// };
