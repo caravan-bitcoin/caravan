@@ -1,0 +1,40 @@
+{
+  "name": "@caravan/feebumping",
+  "version": "0.0.0",
+  "description": "Utility library for fee bumping bitcoin transactions",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "npm run build -- --watch",
+    "test": "jest src",
+    "test:watch": "jest --watch src"
+  },
+  "keywords": [
+    "bitcoin",
+    "cpfp",
+    "rbf",
+    "feebumping",
+    "blockchain"
+  ],
+  "author": "Buck Perley",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@caravan/eslint-config": "*",
+    "tsconfig": "*"
+  },
+  "dependencies": {
+    "@caravan/bitcoin": "*"
+  }
+}
