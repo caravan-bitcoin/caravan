@@ -1,0 +1,1 @@
+export {privacyScore} from "./privacy";

@@ -1,0 +1,39 @@
+{
+  "name": "@caravan/health",
+  "version": "1.0.0",
+  "author": "Harshil Jani",
+  "description": "The core logic for analysing wallet health for privacy concerns and nature of spending fees.",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
+  "files": [
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "npm run build -- --watch",
+    "lint": "eslint src/",
+    "ci": "npm run lint && npm run test",
+    "test": "jest src",
+    "test:watch": "jest --watch src",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+  },
+  "dependencies": {
+    "@caravan/clients": "*"
+  }
+
+}
