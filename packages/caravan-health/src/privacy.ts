@@ -23,7 +23,7 @@ We have 5 categories of transaction type
 - Consolidation
 - CoinJoin
 */
-function privacyScoreOnIO(transaction: any, client: BlockchainClient): number {
+export function privacyScoreOnIO(transaction: any, client: BlockchainClient): number {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
@@ -86,7 +86,7 @@ function isSelfPayment(transaction: any, client: BlockchainClient): boolean {
 In order to score for address reuse we can check the amount being hold by reused UTXOs 
 with respect to the total amount
 */
-function addressReuseFactor(utxos: Array<any>): number {
+export function addressReuseFactor(utxos: Array<any>): number {
   let reused_amount : number = 0;
   let total_amount : number = 0;
   utxos.forEach((utxo) => {
@@ -103,7 +103,7 @@ If we are making payment to other wallet types then the privacy score should dec
 the change received will be at address of our wallet type and it will lead to derivation that 
 we still own that amount.
 */
-function addressTypeFactor(transactions : Array<any>, walletAddressType : string): number {
+export function addressTypeFactor(transactions : Array<any>, walletAddressType : string): number {
     let P2WSH : number = 0;
     let P2PKH : number = 0;
     let P2SH : number = 0;
@@ -141,7 +141,7 @@ The spread factor using standard deviation helps in assessing the dispersion of 
 In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for adversaries
 to link transactions and deduce the ownership and spending patterns of users.
 */
-function utxoSpreadFactor(utxos : Array<any>) : number {
+export function utxoSpreadFactor(utxos : Array<any>) : number {
     const amounts : Array<number> = utxos.map(utxo => utxo.amount);
     const mean : number = amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
     const variance : number = amounts.reduce((sum, amount) => sum + Math.pow(amount - mean, 2), 0) / amounts.length;
@@ -178,7 +178,7 @@ export function utxoSetLengthWeight(utxos : Array<any>) : number {
 UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
 It signifies the combined effect of how well spreaded the UTXO Set is and how many number of UTXOs are there.
 */
-function utxoValueWeightageFactor(utxos: Array<any>): number {
+export function utxoValueWeightageFactor(utxos: Array<any>): number {
   let W : number = utxoSetLengthWeight(utxos);
   let USF : number = utxoSpreadFactor(utxos);
   return (USF + W)*0.15 -0.15;
