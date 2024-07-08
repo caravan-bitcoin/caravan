@@ -1,3 +1,4 @@
+import {BlockchainClient} from '@caravan/clients'
 /*
 The methodology for calculating a privacy score (p_score) for Bitcoin transactions based 
 on the number of inputs and outputs is the primary point to define wallet health for privacy. 
@@ -22,7 +23,7 @@ We have 5 categories of transaction type
 - Consolidation
 - CoinJoin
 */
-function privacyScoreOnIO(transaction: any): number {
+function privacyScoreOnIO(transaction: any, client: BlockchainClient): number {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
@@ -42,7 +43,7 @@ function privacyScoreOnIO(transaction: any): number {
       // #Input = 1, #Output > 2
       score = 2 / 3 - 1 / numberOfOutputs;
     }
-    if (isSelfPayment(transaction)) {
+    if (isSelfPayment(transaction,client)) {
       return score * DENIABILITY_FACTOR;
     }
   } else {
@@ -57,7 +58,7 @@ function privacyScoreOnIO(transaction: any): number {
       // #Input >= 2, #Output >= 2
       let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
       score = (0.75 * x) / (1 + x);
-      if (isSelfPayment(transaction)) {
+      if (isSelfPayment(transaction,client)) {
         return score * DENIABILITY_FACTOR;
       }
     }
@@ -71,9 +72,13 @@ are the same entity. To check this, we make an RPC call to the watcher wallet as
 amount that a given address holds. If the call returns a number then it is part of wallet
 otherwise it is not a self payment.
 */
-function isSelfPayment(transaction: any): boolean {
-  /*TODO : Call getAddressStatus to check against bitcoind or block explorer*/
-  return false;
+function isSelfPayment(transaction: any, client: BlockchainClient): boolean {
+  transaction.vout.forEach(async op => {
+     if(await client.getAddressStatus(op.scriptPubKey.address) === undefined){
+       return false;
+     }
+  })
+  return true;
 }
 
 /* TODO : replace any type to custom types for Transactions and UTXOs*/
@@ -186,8 +191,8 @@ The privacy score is a combination of all the factors calculated above.
 - Address Type Factor (A.T.F) : p_adjusted = p_score * (1-A.T.F)
 - UTXO Value Weightage Factor (U.V.W.F) : p_adjusted = p_score + U.V.W.F
 */
-export function privacyScore(transactions : Array<any>, utxos : Array<any>, walletAddressType : string) : number {
-  let privacy_score = transactions.reduce((sum, tx) => sum + privacyScoreOnIO(tx), 0) / transactions.length;
+export function privacyScore(transactions : Array<any>, utxos : Array<any>, walletAddressType : string, client: BlockchainClient) : number {
+  let privacy_score = transactions.reduce((sum, tx) => sum + privacyScoreOnIO(tx,client), 0) / transactions.length;
   // Adjusting the privacy score based on the address reuse factor
   privacy_score = (privacy_score * (1 - (0.5 * addressReuseFactor(utxos)))) + (0.10 * (1 - addressReuseFactor(utxos)));
   // Adjusting the privacy score based on the address type factor
