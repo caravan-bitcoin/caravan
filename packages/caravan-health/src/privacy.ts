@@ -157,7 +157,7 @@ The weightage is ad-hoc to normalize the privacy score based on the number of UT
 - 0.75 for UTXO set length >= 5 and <= 14
 - 1 for UTXO set length < 5
 */
-function utxoSetLengthWeight(utxos : Array<any>) : number {
+export function utxoSetLengthWeight(utxos : Array<any>) : number {
   let utxo_set_length : number = utxos.length;
   let weight : number;
   if (utxo_set_length >= 50) {
