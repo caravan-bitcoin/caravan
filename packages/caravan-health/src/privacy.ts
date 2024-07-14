@@ -23,7 +23,7 @@ We have 5 categories of transaction type
 - Consolidation
 - CoinJoin
 */
-export function privacyScoreOnIO(transaction: any, client: BlockchainClient): number {
+export function privscyScoreByTxTopology(transaction: any, client: BlockchainClient): number {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
@@ -87,20 +87,20 @@ In order to score for address reuse we can check the amount being hold by reused
 with respect to the total amount
 */
 export function addressReuseFactor(utxos: Array<any>): number {
-  let reused_amount : number = 0;
-  let total_amount : number = 0;
+  let reusedAmount : number = 0;
+  let totalAmount : number = 0;
   utxos.forEach((utxo) => {
     if (utxo.reused) {
-      reused_amount += utxo.amount;
+      reusedAmount += utxo.amount;
     }
-    total_amount += utxo.amount;
+    totalAmount += utxo.amount;
   });
-  return reused_amount / total_amount;
+  return reusedAmount / totalAmount;
 }
 
 /*
 If we are making payment to other wallet types then the privacy score should decrease because 
-the change received will be at address of our wallet type and it will lead to derivation that 
+the change received will be to an address type matching our wallet and it will lead to a deduction that
 we still own that amount.
 */
 export function addressTypeFactor(transactions : Array<any>, walletAddressType : string): number {
@@ -158,15 +158,15 @@ The weightage is ad-hoc to normalize the privacy score based on the number of UT
 - 1 for UTXO set length < 5
 */
 export function utxoSetLengthWeight(utxos : Array<any>) : number {
-  let utxo_set_length : number = utxos.length;
+  let utxoSetLength : number = utxos.length;
   let weight : number;
-  if (utxo_set_length >= 50) {
+  if (utxoSetLength >= 50) {
       weight = 0;
-  } else if (utxo_set_length >= 25 && utxo_set_length <= 49) {
+  } else if (utxoSetLength >= 25 && utxoSetLength <= 49) {
       weight = 0.25;
-  } else if (utxo_set_length >= 15 && utxo_set_length <= 24) {
+  } else if (utxoSetLength >= 15 && utxoSetLength <= 24) {
       weight = 0.5;
-  } else if (utxo_set_length >= 5 && utxo_set_length <= 14) {
+  } else if (utxoSetLength >= 5 && utxoSetLength <= 14) {
       weight = 0.75;
   } else {
       weight = 1;
@@ -192,13 +192,13 @@ The privacy score is a combination of all the factors calculated above.
 - UTXO Value Weightage Factor (U.V.W.F) : p_adjusted = p_score + U.V.W.F
 */
 export function privacyScore(transactions : Array<any>, utxos : Array<any>, walletAddressType : string, client: BlockchainClient) : number {
-  let privacy_score = transactions.reduce((sum, tx) => sum + privacyScoreOnIO(tx,client), 0) / transactions.length;
+  let privacyScore = transactions.reduce((sum, tx) => sum + privscyScoreByTxTopology(tx,client), 0) / transactions.length;
   // Adjusting the privacy score based on the address reuse factor
-  privacy_score = (privacy_score * (1 - (0.5 * addressReuseFactor(utxos)))) + (0.10 * (1 - addressReuseFactor(utxos)));
+  privacyScore = (privacyScore * (1 - (0.5 * addressReuseFactor(utxos)))) + (0.10 * (1 - addressReuseFactor(utxos)));
   // Adjusting the privacy score based on the address type factor
-  privacy_score = privacy_score * (1 - addressTypeFactor(transactions,walletAddressType));
+  privacyScore = privacyScore * (1 - addressTypeFactor(transactions,walletAddressType));
   // Adjusting the privacy score based on the UTXO set length and value weightage factor
-  privacy_score = privacy_score + 0.1 * utxoValueWeightageFactor(utxos)
+  privacyScore = privacyScore + 0.1 * utxoValueWeightageFactor(utxos)
 
-  return privacy_score
+  return privacyScore
 }

@@ -63,7 +63,7 @@ if any transaction was done at expensive fees or nominal fees.
 This can be done by calculating the percentile of the fees paid by the user
 in the block of the transaction.
 */
-export function RelativeFeesScore(transactions: Array<any>): number {
+export function relativeFeesScore(transactions: Array<any>): number {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
   transactions.forEach(async (tx: any) => {
@@ -113,7 +113,7 @@ W (Weightage of number of UTXO) will increase and this justifies that, consolida
 increases the fees health since you don’t overpay them in long run.
 */
 export function feesScore(transactions: Array<any>, utxos: Array<any>): number {
-  let RFS: number = RelativeFeesScore(transactions);
+  let RFS: number = relativeFeesScore(transactions);
   let FAR: number = feesToAmountRatio(transactions);
   let W : number = utxoSetLengthWeight(utxos);
   return (0.35* RFS) + (0.35 * FAR) + (0.3 * W);
