@@ -1,1 +1,1 @@
-export {privacyScore} from "./privacy";
+export { privacyScore } from "./privacy";

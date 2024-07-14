@@ -1,6 +1,6 @@
 import { utxoSetLengthWeight } from "./privacy";
 
-// Utility function that helps to obtain the fee rate of the transaction 
+// Utility function that helps to obtain the fee rate of the transaction
 function getFeeRateForTransaction(transaction: any): number {
   // TODO : Please check that do we really get the fee rate and weight both from the transaction object
   let fees: number = transaction.fee;
@@ -12,7 +12,7 @@ function getFeeRateForTransaction(transaction: any): number {
 // Utility function that helps to obtain the percentile of the fees paid by user in tx block
 async function getFeeRatePercentileForTransaction(
   timestamp: any,
-  feeRate: number
+  feeRate: number,
 ) {
   const url: string =
     "https://mempool.space/api/v1/mining/blocks/fee-rates/all";
@@ -72,7 +72,7 @@ export function relativeFeesScore(transactions: Array<any>): number {
       let feeRate: number = getFeeRateForTransaction(tx);
       let RFS: number = await getFeeRatePercentileForTransaction(
         tx.blocktime,
-        feeRate
+        feeRate,
       );
       sumRFS += RFS;
     }
@@ -99,7 +99,7 @@ export function feesToAmountRatio(transactions: Array<any>): number {
       numberOfSendTx++;
     }
   });
-  return 100*(sumFeesToAmountRatio / numberOfSendTx);
+  return 100 * (sumFeesToAmountRatio / numberOfSendTx);
 }
 
 /*
@@ -115,6 +115,6 @@ increases the fees health since you don’t overpay them in long run.
 export function feesScore(transactions: Array<any>, utxos: Array<any>): number {
   let RFS: number = relativeFeesScore(transactions);
   let FAR: number = feesToAmountRatio(transactions);
-  let W : number = utxoSetLengthWeight(utxos);
-  return (0.35* RFS) + (0.35 * FAR) + (0.3 * W);
+  let W: number = utxoSetLengthWeight(utxos);
+  return 0.35 * RFS + 0.35 * FAR + 0.3 * W;
 }

@@ -28,12 +28,16 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "jest src",
     "test:watch": "jest --watch src",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
     "@caravan/clients": "*"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5"
   }
 
 }
