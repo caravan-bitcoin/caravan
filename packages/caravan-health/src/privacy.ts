@@ -23,6 +23,45 @@ We have 5 categories of transaction type
 - Consolidation
 - CoinJoin
 */
+enum SpendType {
+  SweepSpend = "SweepSpend",
+  SimpleSpend = "SimpleSpend",
+  UTXOFragmentation = "UTXOFragmentation",
+  Consolidation = "Consolidation",
+  MixingOrCoinJoin = "MixingOrCoinJoin",
+}
+
+function SpendTypeScores(
+  spendType: SpendType,
+  numberOfInputs: number,
+  numberOfOutputs: number,
+): number {
+  switch (spendType) {
+    case SpendType.SweepSpend:
+      return 1 / 2;
+    case SpendType.SimpleSpend:
+      return 4 / 9;
+    case SpendType.UTXOFragmentation:
+      return 2 / 3 - 1 / numberOfOutputs;
+    case SpendType.Consolidation:
+      return 1 / numberOfInputs;
+    case SpendType.MixingOrCoinJoin:
+      let x = Math.pow(numberOfOutputs, 2);
+      return (0.75 * x) / (1 + x);
+  }
+}
+
+function determineSpendType(inputs: number, outputs: number): SpendType {
+  if (inputs === 1) {
+    if (outputs === 1) return SpendType.SweepSpend;
+    if (outputs === 2) return SpendType.SimpleSpend;
+    return SpendType.UTXOFragmentation;
+  } else {
+    if (outputs === 1) return SpendType.Consolidation;
+    return SpendType.MixingOrCoinJoin;
+  }
+}
+
 export function privscyScoreByTxTopology(
   transaction: any,
   client: BlockchainClient,
@@ -30,41 +69,20 @@ export function privscyScoreByTxTopology(
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
-  let score: number;
-
-  if (numberOfInputs === 1) {
-    if (numberOfOutputs === 1) {
-      // Sweep Spend (No change Output)
-      // #Input = 1, #Output = 1
-      score = 1 / 2;
-    } else if (numberOfOutputs === 2) {
-      // Simple Spend (Single change output)
-      // #Input = 1, #Output = 2
-      score = 4 / 9;
-    } else {
-      // UTXO Fragmentation
-      // #Input = 1, #Output > 2
-      score = 2 / 3 - 1 / numberOfOutputs;
-    }
-    if (isSelfPayment(transaction, client)) {
-      return score * DENIABILITY_FACTOR;
-    }
-  } else {
-    if (numberOfOutputs === 1) {
-      // Consolidation
-      // #Input >= 2, #Output = 1
-      score = 1 / numberOfInputs;
-
-      // No D.F for consolidation
-    } else {
-      // Mixing or CoinJoin
-      // #Input >= 2, #Output >= 2
-      let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
-      score = (0.75 * x) / (1 + x);
-      if (isSelfPayment(transaction, client)) {
-        return score * DENIABILITY_FACTOR;
-      }
-    }
+  const spendType: SpendType = determineSpendType(
+    numberOfInputs,
+    numberOfOutputs,
+  );
+  const score: number = SpendTypeScores(
+    spendType,
+    numberOfInputs,
+    numberOfOutputs,
+  );
+  if (
+    isSelfPayment(transaction, client) &&
+    spendType !== SpendType.Consolidation
+  ) {
+    return score * DENIABILITY_FACTOR;
   }
   return score;
 }
