@@ -1,7 +1,7 @@
 import { BlockchainClient } from "@caravan/clients";
 import type { UTXO, Transaction } from "@caravan/clients/src/client";
 
-interface WalletUTXOs {
+export interface WalletUTXOs {
   address: string;
   utxos : Array<UTXO>;
 }
@@ -212,7 +212,7 @@ The weightage is ad-hoc to normalize the privacy score based on the number of UT
 - 1 for UTXO set length < 5
 */
 export function utxoSetLengthWeight(utxos: Array<WalletUTXOs>): number {
-  let utxoSetLength: number = utxos.length;
+  let utxoSetLength = utxos.reduce((sum, utxo) => sum + utxo.utxos.length, 0);
   let weight: number;
   if (utxoSetLength >= 50) {
     weight = 0;
