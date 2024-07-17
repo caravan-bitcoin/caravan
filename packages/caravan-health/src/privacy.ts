@@ -1,5 +1,11 @@
 import { BlockchainClient } from "@caravan/clients";
 import type { UTXO, Transaction } from "@caravan/clients/src/client";
+
+interface WalletUTXOs {
+  address: string;
+  utxos : Array<UTXO>;
+}
+
 /*
 The methodology for calculating a privacy score (p_score) for Bitcoin transactions based 
 on the number of inputs and outputs is the primary point to define wallet health for privacy. 
@@ -105,27 +111,33 @@ function isSelfPayment(transaction: Transaction, client: BlockchainClient): bool
   return true;
 }
 
-function isReusedAddress(): boolean {
-  // TODO : Fix this function
-  return false;
-}
 
 /* 
 In order to score for address reuse we can check the amount being hold by reused UTXOs 
 with respect to the total amount
 */
-export function addressReuseFactor(utxos: Array<UTXO>): number {
+export function addressReuseFactor(utxos: Array<WalletUTXOs>, client: BlockchainClient): number {
   let reusedAmount: number = 0;
   let totalAmount: number = 0;
+
   utxos.forEach((utxo) => {
-    if (isReusedAddress()) {
-      reusedAmount += utxo.value;
+    let address = utxo.address;
+    if (isReusedAddress(address,client)) {
+      reusedAmount += utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
     }
-    totalAmount += utxo.value;
+    totalAmount += utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
   });
   return reusedAmount / totalAmount;
 }
 
+function isReusedAddress(address: string, client: BlockchainClient): boolean {
+  client.getAddressTransactions(address).then((txs) => {
+    if (txs.length > 1) {
+      return true;
+    }
+  });
+  return false;
+}
 /*
 If we are making payment to other wallet types then the privacy score should decrease because 
 the change received will be to an address type matching our wallet and it will lead to a deduction that
@@ -180,8 +192,8 @@ The spread factor using standard deviation helps in assessing the dispersion of 
 In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for adversaries
 to link transactions and deduce the ownership and spending patterns of users.
 */
-export function utxoSpreadFactor(utxos: Array<UTXO>): number {
-  const amounts: Array<number> = utxos.map((utxo) => utxo.value);
+export function utxoSpreadFactor(utxos: Array<WalletUTXOs>): number {
+  const amounts : Array<number> = utxos.map((utxo) => utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0));
   const mean: number =
     amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
   const variance: number =
@@ -199,7 +211,7 @@ The weightage is ad-hoc to normalize the privacy score based on the number of UT
 - 0.75 for UTXO set length >= 5 and <= 14
 - 1 for UTXO set length < 5
 */
-export function utxoSetLengthWeight(utxos: Array<UTXO>): number {
+export function utxoSetLengthWeight(utxos: Array<WalletUTXOs>): number {
   let utxoSetLength: number = utxos.length;
   let weight: number;
   if (utxoSetLength >= 50) {
@@ -220,7 +232,7 @@ export function utxoSetLengthWeight(utxos: Array<UTXO>): number {
 UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
 It signifies the combined effect of how well spreaded the UTXO Set is and how many number of UTXOs are there.
 */
-export function utxoValueWeightageFactor(utxos: Array<UTXO>): number {
+export function utxoValueWeightageFactor(utxos: Array<WalletUTXOs>): number {
   let W: number = utxoSetLengthWeight(utxos);
   let USF: number = utxoSpreadFactor(utxos);
   return (USF + W) * 0.15 - 0.15;
@@ -235,22 +247,26 @@ The privacy score is a combination of all the factors calculated above.
 */
 export function privacyScore(
   transactions: Array<Transaction>,
-  utxos: Array<UTXO>,
+  utxos: Array<WalletUTXOs>,
   walletAddressType: string,
   client: BlockchainClient,
 ): number {
+
   let privacyScore =
     transactions.reduce(
       (sum, tx) => sum + privscyScoreByTxTopology(tx, client),
       0,
     ) / transactions.length;
+
   // Adjusting the privacy score based on the address reuse factor
   privacyScore =
-    privacyScore * (1 - 0.5 * addressReuseFactor(utxos)) +
-    0.1 * (1 - addressReuseFactor(utxos));
+    privacyScore * (1 - 0.5 * addressReuseFactor(utxos,client)) +
+    0.1 * (1 - addressReuseFactor(utxos,client));
+
   // Adjusting the privacy score based on the address type factor
   privacyScore =
     privacyScore * (1 - addressTypeFactor(transactions, walletAddressType));
+
   // Adjusting the privacy score based on the UTXO set length and value weightage factor
   privacyScore = privacyScore + 0.1 * utxoValueWeightageFactor(utxos);
 

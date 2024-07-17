@@ -194,6 +194,24 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+  public async getAddressTransactions(address: string): Promise<any> {
+    try {
+      if (this.type === ClientType.PRIVATE) {
+        return await callBitcoind(
+          this.bitcoindParams.url,
+          this.bitcoindParams.auth,
+          "listtransactions",
+          [this.bitcoindParams.walletName, 1000],
+        );
+      }
+      return await this.Get(`/address/${address}/txs`);
+    } catch (error: any) {
+      throw new Error(
+        `Failed to get transactions for address ${address}: ${error.message}`,
+      );
+    }
+  }
+
   public async broadcastTransaction(rawTx: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
