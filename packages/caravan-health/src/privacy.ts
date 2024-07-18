@@ -3,7 +3,7 @@ import type { UTXO, Transaction } from "@caravan/clients/src/client";
 
 export interface WalletUTXOs {
   address: string;
-  utxos : Array<UTXO>;
+  utxos: Array<UTXO>;
 }
 
 /*
@@ -53,7 +53,7 @@ function SpendTypeScores(
     case SpendType.Consolidation:
       return 1 / numberOfInputs;
     case SpendType.MixingOrCoinJoin:
-      let x = Math.pow(numberOfOutputs, 2);
+      let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
       return (0.75 * x) / (1 + x);
   }
 }
@@ -100,42 +100,51 @@ are the same entity. To check this, we make an RPC call to the watcher wallet as
 amount that a given address holds. If the call returns a number then it is part of wallet
 otherwise it is not a self payment.
 */
-function isSelfPayment(transaction: Transaction, client: BlockchainClient): boolean {
+function isSelfPayment(
+  transaction: Transaction,
+  client: BlockchainClient,
+): boolean {
   transaction.vout.forEach(async (op) => {
-    if (
-      (await client.getAddressStatus(op.scriptPubkeyAddress)) === undefined
-    ) {
+    if ((await client.getAddressStatus(op.scriptPubkeyAddress)) === undefined) {
       return false;
     }
   });
   return true;
 }
 
-
 /* 
 In order to score for address reuse we can check the amount being hold by reused UTXOs 
 with respect to the total amount
 */
-export function addressReuseFactor(utxos: Array<WalletUTXOs>, client: BlockchainClient): number {
+export async function addressReuseFactor(
+  utxos: Array<WalletUTXOs>,
+  client: BlockchainClient,
+): Promise<number> {
   let reusedAmount: number = 0;
   let totalAmount: number = 0;
 
-  utxos.forEach((utxo) => {
-    let address = utxo.address;
-    if (isReusedAddress(address,client)) {
-      reusedAmount += utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+  for (const utxo of utxos) {
+    const address = utxo.address;
+    const reused = await isReusedAddress(address, client);
+
+    const amount = utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    if (reused) {
+      reusedAmount += amount;
     }
-    totalAmount += utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
-  });
+    totalAmount += amount;
+  }
+
   return reusedAmount / totalAmount;
 }
 
-function isReusedAddress(address: string, client: BlockchainClient): boolean {
-  client.getAddressTransactions(address).then((txs) => {
-    if (txs.length > 1) {
-      return true;
-    }
-  });
+async function isReusedAddress(
+  address: string,
+  client: BlockchainClient,
+): Promise<boolean> {
+  let txs: Array<Transaction> = await client.getAddressTransactions(address);
+  if (txs.length > 1) {
+    return true;
+  }
   return false;
 }
 /*
@@ -193,7 +202,9 @@ In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for
 to link transactions and deduce the ownership and spending patterns of users.
 */
 export function utxoSpreadFactor(utxos: Array<WalletUTXOs>): number {
-  const amounts : Array<number> = utxos.map((utxo) => utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0));
+  const amounts: Array<number> = utxos.map((utxo) =>
+    utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0),
+  );
   const mean: number =
     amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
   const variance: number =
@@ -245,13 +256,12 @@ The privacy score is a combination of all the factors calculated above.
 - Address Type Factor (A.T.F) : p_adjusted = p_score * (1-A.T.F)
 - UTXO Value Weightage Factor (U.V.W.F) : p_adjusted = p_score + U.V.W.F
 */
-export function privacyScore(
+export async function privacyScore(
   transactions: Array<Transaction>,
   utxos: Array<WalletUTXOs>,
   walletAddressType: string,
   client: BlockchainClient,
-): number {
-
+): Promise<number> {
   let privacyScore =
     transactions.reduce(
       (sum, tx) => sum + privscyScoreByTxTopology(tx, client),
@@ -259,9 +269,10 @@ export function privacyScore(
     ) / transactions.length;
 
   // Adjusting the privacy score based on the address reuse factor
+  let addressReusedFactor = await addressReuseFactor(utxos, client);
   privacyScore =
-    privacyScore * (1 - 0.5 * addressReuseFactor(utxos,client)) +
-    0.1 * (1 - addressReuseFactor(utxos,client));
+    privacyScore * (1 - 0.5 * addressReusedFactor) +
+    0.1 * (1 - addressReusedFactor);
 
   // Adjusting the privacy score based on the address type factor
   privacyScore =
