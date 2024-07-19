@@ -1,5 +1,5 @@
 {
-  "name": "@caravan/feebumping",
+  "name": "@caravan/fees",
   "version": "0.0.0",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "feebumping",
     "blockchain"
   ],
-  "author": "Buck Perley",
+  "author": "",
   "license": "MIT",
   "engines": {
     "node": ">=20"
