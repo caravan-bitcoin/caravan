@@ -1,1 +1,3 @@
-export { privacyScore } from "./privacy";
+export * from "./privacy";
+export * from "./types";
+export * from "./feescore";
