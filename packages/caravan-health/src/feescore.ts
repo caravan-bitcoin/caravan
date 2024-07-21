@@ -1,8 +1,10 @@
-import { utxoSetLengthWeight } from "./privacy";
+import { utxoSetLengthScore } from "./privacy";
+import { Transaction, AddressUtxos } from "./types";
 
 // Utility function that helps to obtain the fee rate of the transaction
-function getFeeRateForTransaction(transaction: any): number {
+function getFeeRateForTransaction(transaction: Transaction): number {
   // TODO : Please check that do we really get the fee rate and weight both from the transaction object
+  // No we don't get fees
   let fees: number = transaction.fee;
   let weight: number = transaction.weight;
   return fees / weight;
@@ -11,7 +13,7 @@ function getFeeRateForTransaction(transaction: any): number {
 // TODO : Implement Caching or Ticker based mechanism to reduce network latency
 // Utility function that helps to obtain the percentile of the fees paid by user in tx block
 async function getFeeRatePercentileForTransaction(
-  timestamp: any,
+  timestamp: number,
   feeRate: number,
 ) {
   const url: string =
@@ -63,11 +65,11 @@ if any transaction was done at expensive fees or nominal fees.
 This can be done by calculating the percentile of the fees paid by the user
 in the block of the transaction.
 */
-export function relativeFeesScore(transactions: Array<any>): number {
+export function relativeFeesScore(transactions: Transaction[]): number {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
-  transactions.forEach(async (tx: any) => {
-    if (tx.category == "send") {
+  transactions.forEach(async (tx: Transaction) => {
+    if (tx.isSend === true) {
       numberOfSendTx++;
       let feeRate: number = getFeeRateForTransaction(tx);
       let RFS: number = await getFeeRatePercentileForTransaction(
@@ -90,11 +92,11 @@ Source : https://www.clearlypayments.com/blog/what-are-cross-border-fees-in-cred
 
 This ratio is a measure of our fees spending against the fiat charges we pay.
 */
-export function feesToAmountRatio(transactions: Array<any>): number {
+export function feesToAmountRatio(transactions: Transaction[]): number {
   let sumFeesToAmountRatio: number = 0;
   let numberOfSendTx: number = 0;
-  transactions.forEach((tx: any) => {
-    if (tx.category === "send") {
+  transactions.forEach((tx: Transaction) => {
+    if (tx.isSend === true) {
       sumFeesToAmountRatio += tx.fee / tx.amount;
       numberOfSendTx++;
     }
@@ -112,9 +114,12 @@ Assume the wallet is being consolidated, Thus number of UTXO will decrease and t
 W (Weightage of number of UTXO) will increase and this justifies that, consolidation 
 increases the fees health since you don’t overpay them in long run.
 */
-export function feesScore(transactions: Array<any>, utxos: Array<any>): number {
+export function feesScore(
+  transactions: Transaction[],
+  utxos: AddressUtxos,
+): number {
   let RFS: number = relativeFeesScore(transactions);
   let FAR: number = feesToAmountRatio(transactions);
-  let W: number = utxoSetLengthWeight(utxos);
+  let W: number = utxoSetLengthScore(utxos);
   return 0.35 * RFS + 0.35 * FAR + 0.3 * W;
 }

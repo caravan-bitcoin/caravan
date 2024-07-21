@@ -1,10 +1,6 @@
 import { BlockchainClient } from "@caravan/clients";
-import type { UTXO, Transaction } from "@caravan/clients/src/client";
-
-export interface WalletUTXOs {
-  address: string;
-  utxos: Array<UTXO>;
-}
+import { Transaction, AddressUtxos } from "./types";
+import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
 
 /*
 The methodology for calculating a privacy score (p_score) for Bitcoin transactions based 
@@ -26,7 +22,7 @@ change outputs and the type of transaction based on number of inputs and outputs
 We have 5 categories of transaction type
 - Sweep Spend
 - Simple Spend
-- UTXO Fragmentation
+- UTXO Fragmentation (any transaction with more than the standard 2 outputs)
 - Consolidation
 - CoinJoin
 */
@@ -38,7 +34,7 @@ enum SpendType {
   MixingOrCoinJoin = "MixingOrCoinJoin",
 }
 
-function SpendTypeScores(
+function spendTypeScores(
   spendType: SpendType,
   numberOfInputs: number,
   numberOfOutputs: number,
@@ -55,6 +51,8 @@ function SpendTypeScores(
     case SpendType.MixingOrCoinJoin:
       let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
       return (0.75 * x) / (1 + x);
+    default:
+      return -1;
   }
 }
 
@@ -69,7 +67,7 @@ function determineSpendType(inputs: number, outputs: number): SpendType {
   }
 }
 
-export function privscyScoreByTxTopology(
+export function privacyScoreByTxTopology(
   transaction: Transaction,
   client: BlockchainClient,
 ): number {
@@ -80,36 +78,15 @@ export function privscyScoreByTxTopology(
     numberOfInputs,
     numberOfOutputs,
   );
-  const score: number = SpendTypeScores(
+  const score: number = spendTypeScores(
     spendType,
     numberOfInputs,
     numberOfOutputs,
   );
-  if (
-    isSelfPayment(transaction, client) &&
-    spendType !== SpendType.Consolidation
-  ) {
+  if (transaction.isSend && spendType !== SpendType.Consolidation) {
     return score * DENIABILITY_FACTOR;
   }
   return score;
-}
-
-/*
-Determine whether a Bitcoin transaction is a self-payment, meaning the sender and recipient
-are the same entity. To check this, we make an RPC call to the watcher wallet asking for the
-amount that a given address holds. If the call returns a number then it is part of wallet
-otherwise it is not a self payment.
-*/
-function isSelfPayment(
-  transaction: Transaction,
-  client: BlockchainClient,
-): boolean {
-  transaction.vout.forEach(async (op) => {
-    if ((await client.getAddressStatus(op.scriptPubkeyAddress)) === undefined) {
-      return false;
-    }
-  });
-  return true;
 }
 
 /* 
@@ -117,23 +94,22 @@ In order to score for address reuse we can check the amount being hold by reused
 with respect to the total amount
 */
 export async function addressReuseFactor(
-  utxos: Array<WalletUTXOs>,
+  utxos: AddressUtxos,
   client: BlockchainClient,
 ): Promise<number> {
   let reusedAmount: number = 0;
   let totalAmount: number = 0;
 
-  for (const utxo of utxos) {
-    const address = utxo.address;
-    const reused = await isReusedAddress(address, client);
-
-    const amount = utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0);
-    if (reused) {
-      reusedAmount += amount;
+  for (const address in utxos) {
+    const addressUtxos = utxos[address];
+    for (const utxo of addressUtxos) {
+      totalAmount += utxo.value;
+      let isReused = await isReusedAddress(address, client);
+      if (isReused) {
+        reusedAmount += utxo.value;
+      }
     }
-    totalAmount += amount;
   }
-
   return reusedAmount / totalAmount;
 }
 
@@ -141,7 +117,7 @@ async function isReusedAddress(
   address: string,
   client: BlockchainClient,
 ): Promise<boolean> {
-  let txs: Array<Transaction> = await client.getAddressTransactions(address);
+  let txs: Transaction[] = await client.getAddressTransactions(address);
   if (txs.length > 1) {
     return true;
   }
@@ -153,47 +129,36 @@ the change received will be to an address type matching our wallet and it will l
 we still own that amount.
 */
 export function addressTypeFactor(
-  transactions: Array<Transaction>,
-  walletAddressType: string,
+  transactions: Transaction[],
+  walletAddressType: MultisigAddressType,
+  network: Network,
 ): number {
-  let P2WSH: number = 0;
-  let P2PKH: number = 0;
-  let P2SH: number = 0;
-  let atf: number = 1;
+  const addressCounts: Record<MultisigAddressType, number> = {
+    P2WSH: 0,
+    P2SH: 0,
+    P2PKH: 0,
+    P2TR: 0,
+    UNKNOWN: 0,
+    "P2SH-P2WSH": 0,
+  };
+
   transactions.forEach((tx) => {
     tx.vout.forEach((output) => {
-      let address = output.scriptPubkeyAddress;
-      if (address.startsWith("bc")) {
-        //Bech 32 Native Segwit (P2WSH) or Taproot
-        P2WSH += 1;
-      } else if (address.startsWith("1")) {
-        // Legacy (P2PKH)
-        P2PKH += 1;
-      } else {
-        // Segwith (P2SH)
-        P2SH += 1;
-      }
+      const addressType = getAddressType(output.scriptPubkeyAddress, network);
+      addressCounts[addressType]++;
     });
   });
 
-  if (walletAddressType == "P2WSH" && P2WSH != 0 && (P2SH != 0 || P2PKH != 0)) {
-    atf = 1 / (P2WSH + 1);
-  } else if (
-    walletAddressType == "P2PKH" &&
-    P2PKH != 0 &&
-    (P2SH != 0 || P2WSH != 0)
-  ) {
-    atf = 1 / (P2PKH + 1);
-  } else if (
-    walletAddressType == "P2SH" &&
-    P2SH != 0 &&
-    (P2WSH != 0 || P2PKH != 0)
-  ) {
-    atf = 1 / (P2SH + 1);
-  } else {
-    atf = 1;
+  const totalAddresses = Object.values(addressCounts).reduce(
+    (a, b) => a + b,
+    0,
+  );
+  const walletTypeCount = addressCounts[walletAddressType];
+
+  if (walletTypeCount === 0 || totalAddresses === walletTypeCount) {
+    return 1;
   }
-  return atf;
+  return 1 / (walletTypeCount + 1);
 }
 
 /* 
@@ -201,10 +166,15 @@ The spread factor using standard deviation helps in assessing the dispersion of 
 In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for adversaries
 to link transactions and deduce the ownership and spending patterns of users.
 */
-export function utxoSpreadFactor(utxos: Array<WalletUTXOs>): number {
-  const amounts: Array<number> = utxos.map((utxo) =>
-    utxo.utxos.reduce((sum, utxo) => sum + utxo.value, 0),
-  );
+export function utxoSpreadFactor(utxos: AddressUtxos): number {
+  const amounts: number[] = [];
+  for (const address in utxos) {
+    const addressUtxos = utxos[address];
+    addressUtxos.forEach((utxo) => {
+      amounts.push(utxo.value);
+    });
+  }
+
   const mean: number =
     amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
   const variance: number =
@@ -222,8 +192,12 @@ The weightage is ad-hoc to normalize the privacy score based on the number of UT
 - 0.75 for UTXO set length >= 5 and <= 14
 - 1 for UTXO set length < 5
 */
-export function utxoSetLengthWeight(utxos: Array<WalletUTXOs>): number {
-  let utxoSetLength = utxos.reduce((sum, utxo) => sum + utxo.utxos.length, 0);
+export function utxoSetLengthScore(utxos: AddressUtxos): number {
+  let utxoSetLength = 0;
+  for (const address in utxos) {
+    const addressUtxos = utxos[address];
+    utxoSetLength += addressUtxos.length;
+  }
   let weight: number;
   if (utxoSetLength >= 50) {
     weight = 0;
@@ -243,8 +217,8 @@ export function utxoSetLengthWeight(utxos: Array<WalletUTXOs>): number {
 UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
 It signifies the combined effect of how well spreaded the UTXO Set is and how many number of UTXOs are there.
 */
-export function utxoValueWeightageFactor(utxos: Array<WalletUTXOs>): number {
-  let W: number = utxoSetLengthWeight(utxos);
+export function utxoValueWeightageFactor(utxos: AddressUtxos): number {
+  let W: number = utxoSetLengthScore(utxos);
   let USF: number = utxoSpreadFactor(utxos);
   return (USF + W) * 0.15 - 0.15;
 }
@@ -257,14 +231,15 @@ The privacy score is a combination of all the factors calculated above.
 - UTXO Value Weightage Factor (U.V.W.F) : p_adjusted = p_score + U.V.W.F
 */
 export async function privacyScore(
-  transactions: Array<Transaction>,
-  utxos: Array<WalletUTXOs>,
-  walletAddressType: string,
+  transactions: Transaction[],
+  utxos: AddressUtxos,
+  walletAddressType: MultisigAddressType,
   client: BlockchainClient,
+  network: Network,
 ): Promise<number> {
   let privacyScore =
     transactions.reduce(
-      (sum, tx) => sum + privscyScoreByTxTopology(tx, client),
+      (sum, tx) => sum + privacyScoreByTxTopology(tx, client),
       0,
     ) / transactions.length;
 
@@ -276,7 +251,8 @@ export async function privacyScore(
 
   // Adjusting the privacy score based on the address type factor
   privacyScore =
-    privacyScore * (1 - addressTypeFactor(transactions, walletAddressType));
+    privacyScore *
+    (1 - addressTypeFactor(transactions, walletAddressType, network));
 
   // Adjusting the privacy score based on the UTXO set length and value weightage factor
   privacyScore = privacyScore + 0.1 * utxoValueWeightageFactor(utxos);
