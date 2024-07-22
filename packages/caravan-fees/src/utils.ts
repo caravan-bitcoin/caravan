@@ -1,14 +1,23 @@
 import { Transaction } from "bitcoinjs-lib-v5";
 import BigNumber from "bignumber.js";
 import { UTXO } from "./types";
-import { SATS_PER_BTC, DEFAULT_RBF_SEQUENCE } from "./constants";
+import { DEFAULT_RBF_SEQUENCE } from "./constants";
+
+export function calculateEffectiveFeeRate(
+  transaction: Transaction,
+  utxos: UTXO[]
+): number {
+  const fee = calculateTransactionFee(transaction, utxos);
+  const weight = transaction.weight();
+  return fee.dividedBy(weight).multipliedBy(4).toNumber(); // Convert to sat/vB
+}
 
 export function calculateTransactionFee(
   transaction: Transaction,
   inputs: UTXO[]
 ): BigNumber {
   const totalIn = inputs.reduce(
-    (sum, input) => sum.plus(input.value),
+    (sum, input) => sum.plus(input.amountSats),
     new BigNumber(0)
   );
   const totalOut = transaction.outs.reduce(
@@ -18,30 +27,8 @@ export function calculateTransactionFee(
   return totalIn.minus(totalOut);
 }
 
-export function estimateTransactionVsize(
-  inputCount: number,
-  outputCount: number
-): number {
-  // Will need to update this
-  const baseSize = 10; // Version (4 bytes) + Locktime (4 bytes) + Input count (1 byte) + Output count (1 byte)
-  const inputSize = 180; // Assuming P2SH multisig input
-  const outputSize = 34; // Assuming P2PKH output
-
-  return Math.ceil(
-    (baseSize + inputCount * inputSize + outputCount * outputSize) * 1.05
-  ); // Adding 5% buffer
-}
-
-export function satoshisToBitcoins(satoshis: BigNumber): BigNumber {
-  return satoshis.dividedBy(SATS_PER_BTC);
-}
-
-export function bitcoinsToSatoshis(bitcoins: BigNumber): BigNumber {
-  return bitcoins.multipliedBy(SATS_PER_BTC);
-}
-
 export function isRBFSignaled(transaction: Transaction): boolean {
-  return transaction.ins.some((input) => input.sequence < 0xfffffffe);
+  return transaction.ins.some((input) => input.sequence < DEFAULT_RBF_SEQUENCE);
 }
 
 export function enableRBFSignaling(transaction: Transaction): Transaction {
