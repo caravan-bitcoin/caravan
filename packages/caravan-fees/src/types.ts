@@ -1,11 +1,13 @@
-import { Transaction } from "bitcoinjs-lib-v5";
 import BigNumber from "bignumber.js";
 
 export interface UTXO {
   txid: string;
-  vout: number;
-  value: BigNumber;
-  script: string;
+  index: number;
+  amountSats: BigNumber;
+  address: string;
+  bip32Path: string;
+  checked?: boolean;
+  confirmed?: boolean;
 }
 
 export interface TransactionOutput {
@@ -13,42 +15,58 @@ export interface TransactionOutput {
   value: BigNumber;
 }
 
-export interface MultisigDetails {
-  addressType: string;
-  requiredSigners: number;
-  totalSigners: number;
+export interface TransactionAnalysis {
+  canRBF: boolean;
+  canCPFP: boolean;
+  currentFeeRate: number;
+  recommendedMethod: "RBF" | "CPFP" | null;
+}
+
+export interface FeeRate {
+  satoshisPerByte: number;
+  satoshisPerVbyte: number;
 }
 
 export interface FeeEstimate {
-  feeRate: number;
-  estimatedConfirmationTime: number;
+  lowFee: FeeRate;
+  mediumFee: FeeRate;
+  highFee: FeeRate;
 }
 
-export interface FeeBumpingAnalysis {
-  canRBF: boolean;
-  canCPFP: boolean;
-  recommendedMethod: "RBF" | "CPFP" | null;
-  currentFeeRate: number;
-  recommendedFeeRate: number;
-  estimatedNewConfirmationTime: number;
+export interface TransactionDetails {
+  txid: string;
+  version: number;
+  locktime: number;
+  vin: any[];
+  vout: any[];
+  size: number;
+  weight: number;
+  fee: BigNumber;
+}
+
+export interface BlockchainClientInterface {
+  getFeeEstimate: () => Promise<FeeEstimate>;
+  getTransaction: (txid: string) => Promise<TransactionDetails>;
+  broadcastTransaction: (txHex: string) => Promise<string>;
 }
 
 export interface RBFOptions {
-  maxFeeRate?: number;
-  maxTotalFee?: BigNumber;
-  feeIncreaseThreshold?: number;
+  newFeeRate: FeeRate;
+  inputs: UTXO[];
+  outputs: {
+    address: string;
+    value: BigNumber;
+  }[];
+  changeAddress: string;
 }
 
 export interface CPFPOptions {
-  maxFeeRate?: number;
-  maxTotalFee?: BigNumber;
-  childOutputAddress: string;
-}
-
-export interface FeeBumpingResult {
-  method: "RBF" | "CPFP";
-  newTransaction: Transaction;
-  newFeeRate: number;
-  totalFee: BigNumber;
-  estimatedConfirmationTime: number;
+  parentTxid: string;
+  newFeeRate: FeeRate;
+  inputs: UTXO[];
+  outputs: {
+    address: string;
+    value: BigNumber;
+  }[];
+  changeAddress: string;
 }
