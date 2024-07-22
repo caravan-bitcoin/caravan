@@ -1,30 +1,30 @@
 import BigNumber from "bignumber.js";
+import { Transaction } from "bitcoinjs-lib-v5";
+import { Network } from "@caravan/bitcoin";
 
 export interface UTXO {
   txid: string;
-  index: number;
-  amountSats: BigNumber;
+  vout: number;
+  value: BigNumber;
   address: string;
-  bip32Path: string;
-  checked?: boolean;
-  confirmed?: boolean;
+  scriptPubKey: string;
 }
 
 export interface TransactionOutput {
   address: string;
-  value: BigNumber;
+  amountSats: BigNumber;
 }
 
 export interface TransactionAnalysis {
   canRBF: boolean;
   canCPFP: boolean;
-  currentFeeRate: number;
+  currentFeeRate: FeeRate;
   recommendedMethod: "RBF" | "CPFP" | null;
+  reason: string;
 }
 
 export interface FeeRate {
   satoshisPerByte: number;
-  satoshisPerVbyte: number;
 }
 
 export interface FeeEstimate {
@@ -45,28 +45,32 @@ export interface TransactionDetails {
 }
 
 export interface BlockchainClientInterface {
-  getFeeEstimate: () => Promise<FeeEstimate>;
-  getTransaction: (txid: string) => Promise<TransactionDetails>;
+  getFeeEstimate: () => Promise<FeeRate>;
+  getTransaction: (txid: string) => Promise<Transaction>;
   broadcastTransaction: (txHex: string) => Promise<string>;
 }
 
 export interface RBFOptions {
+  transaction: Transaction;
   newFeeRate: FeeRate;
-  inputs: UTXO[];
-  outputs: {
-    address: string;
-    value: BigNumber;
-  }[];
-  changeAddress: string;
+  utxos: UTXO[];
+  subtractFromOutput?: boolean;
+  cancelTransaction?: boolean;
+  destinationAddress?: string;
+  network: Network;
 }
 
 export interface CPFPOptions {
-  parentTxid: string;
+  parentTransaction: Transaction;
   newFeeRate: FeeRate;
-  inputs: UTXO[];
-  outputs: {
-    address: string;
-    value: BigNumber;
-  }[];
-  changeAddress: string;
+  availableUTXOs: UTXO[];
+  destinationAddress: string;
+  network: Network;
+  multisigDetails: MultisigDetails;
+}
+
+export interface MultisigDetails {
+  addressType: string;
+  requiredSigners: number;
+  totalSigners: number;
 }

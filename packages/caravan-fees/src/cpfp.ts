@@ -1,98 +1,105 @@
-import { Transaction, networks } from "bitcoinjs-lib";
+import { Transaction } from "bitcoinjs-lib-v5";
+import { unsignedMultisigTransaction } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
-import {
-  UTXO,
-  TransactionOutput,
-  MultisigDetails,
-  CPFPOptions,
-  FeeBumpingResult,
-} from "./types";
-import { calculateTransactionFee, estimateTransactionVsize } from "./utils";
-import { FeeEstimator } from "./estimator";
-import { MIN_DUST_AMOUNT } from "./constants";
+import { CPFPOptions, UTXO } from "./types";
+import { estimateVirtualSize } from "./utils";
 
-export class CPFPHandler {
-  private network: networks.Network;
-  private feeEstimator: FeeEstimator;
+/**
+ * Prepare a CPFP (Child-Pays-for-Parent) transaction.
+ * This function doesn't broadcast the transaction, it just prepares it.
+ * @param options CPFP options including the parent transaction and new fee rate
+ * @returns A new transaction ready for signing and broadcasting
+ */
+export function prepareCPFPTransaction(options: CPFPOptions): Transaction {
+  const {
+    parentTransaction,
+    newFeeRate,
+    availableUTXOs,
+    destinationAddress,
+    network,
+    multisigDetails,
+  } = options;
 
-  constructor(network: networks.Network, feeEstimator: FeeEstimator) {
-    this.network = network;
-    this.feeEstimator = feeEstimator;
+  // Find suitable output from parent transaction to spend
+  const parentOutput = findSuitableParentOutput(
+    parentTransaction,
+    availableUTXOs
+  );
+  if (!parentOutput) {
+    throw new Error("No suitable output found in parent transaction for CPFP");
   }
 
-  async bumpFee(
-    parentTransaction: Transaction,
-    parentInputs: UTXO[],
-    unspentOutputIndex: number,
-    multisigDetails: MultisigDetails,
-    options: CPFPOptions
-  ): Promise<FeeBumpingResult> {
-    const parentFee = calculateTransactionFee(parentTransaction, parentInputs);
-    const parentVsize = estimateTransactionVsize(
-      parentInputs.length,
-      parentTransaction.outs.length,
-      multisigDetails
-    );
-    const parentFeeRate = parentFee.dividedBy(parentVsize).toNumber();
+  const childSize = estimateChildTransactionSize({
+    inputCount: 1, // We're spending one output from the parent
+    outputCount: 2, // Destination output and potentially change
+    addressType: multisigDetails.addressType,
+    requiredSigners: multisigDetails.requiredSigners,
+    totalSigners: multisigDetails.totalSigners,
+  });
+  // Calculate required fee for both transactions
+  const combinedSize = parentTransaction.virtualSize() + childSize;
+  const requiredFee = new BigNumber(combinedSize).multipliedBy(
+    newFeeRate.satoshisPerByte
+  );
 
-    const { feeRate: desiredFeeRate } =
-      await this.feeEstimator.getOptimalFeeRate(parentFeeRate, "medium");
+  // Calculate amount to send to destination
+  const outputAmount = new BigNumber(parentOutput.value).minus(requiredFee);
 
-    if (options.maxFeeRate && desiredFeeRate > options.maxFeeRate) {
-      throw new Error("Desired fee rate exceeds the maximum allowed rate");
-    }
-
-    const childInput: UTXO = {
-      txid: parentTransaction.getId(),
-      vout: unspentOutputIndex,
-      value: new BigNumber(parentTransaction.outs[unspentOutputIndex].value),
-      script: parentTransaction.outs[unspentOutputIndex].script.toString("hex"),
-    };
-
-    const childVsize = estimateTransactionVsize(1, 2, multisigDetails); // Assuming 1 input and 2 outputs for the child
-    const totalVsize = parentVsize + childVsize;
-
-    const desiredTotalFee = new BigNumber(desiredFeeRate).multipliedBy(
-      totalVsize
-    );
-    const childFee = desiredTotalFee.minus(parentFee);
-
-    if (options.maxTotalFee && desiredTotalFee.gt(options.maxTotalFee)) {
-      throw new Error("New total fee exceeds the maximum allowed fee");
-    }
-
-    const changeAmount = childInput.value.minus(childFee);
-
-    if (changeAmount.lt(MIN_DUST_AMOUNT)) {
-      throw new Error("CPFP transaction would create dust output");
-    }
-
-    const childTransaction = new Transaction();
-    childTransaction.addInput(
-      Buffer.from(childInput.txid, "hex").reverse(),
-      childInput.vout
-    );
-    childTransaction.addOutput(
-      Buffer.from(options.childOutputAddress, "hex"),
-      changeAmount.toNumber()
-    );
-
-    return {
-      method: "CPFP",
-      newTransaction: childTransaction,
-      newFeeRate: desiredFeeRate,
-      totalFee: desiredTotalFee,
-      estimatedConfirmationTime: 30, // Assuming medium priority (3 blocks * 10 minutes)
-    };
+  if (outputAmount.isLessThan(546)) {
+    // Check if output would be dust
+    throw new Error("CPFP transaction would create a dust output");
   }
 
-  findCPFPCandidates(
-    transaction: Transaction,
-    ownAddresses: string[]
-  ): number[] {
-    return transaction.outs
-      .map((out, index) => ({ index, address: out.script.toString("hex") }))
-      .filter((out) => ownAddresses.includes(out.address))
-      .map((out) => out.index);
+  const inputs = [{ ...parentOutput, txid: parentTransaction.getId() }];
+  const outputs = [{ address: destinationAddress, amountSats: outputAmount }];
+
+  // Use Caravan's unsignedMultisigTransaction function to create the new transaction
+  return unsignedMultisigTransaction(network, inputs, outputs, true); // true to enable RBF
+}
+
+/**
+ * Find a suitable output from the parent transaction to use for CPFP.
+ * @param parentTransaction The parent transaction
+ * @param availableUTXOs Available UTXOs that can be spent
+ * @returns A suitable output or null if none found
+ */
+function findSuitableParentOutput(
+  parentTransaction: Transaction,
+  availableUTXOs: UTXO[]
+): { index: number; value: number } | null {
+  for (let i = 0; i < parentTransaction.outs.length; i++) {
+    const output = parentTransaction.outs[i];
+    if (
+      availableUTXOs.some(
+        (utxo) => utxo.txid === parentTransaction.getId() && utxo.vout === i
+      )
+    ) {
+      return { index: i, value: output.value };
+    }
   }
+  return null;
+}
+
+function estimateChildTransactionSize(options: {
+  inputCount: number;
+  outputCount: number;
+  addressType: string;
+  requiredSigners: number;
+  totalSigners: number;
+}): number {
+  const {
+    inputCount,
+    outputCount,
+    addressType,
+    requiredSigners,
+    totalSigners,
+  } = options;
+
+  return estimateVirtualSize(
+    addressType,
+    inputCount,
+    outputCount,
+    requiredSigners,
+    totalSigners
+  );
 }
