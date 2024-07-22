@@ -67,10 +67,10 @@ function determineSpendType(inputs: number, outputs: number): SpendType {
   }
 }
 
-export function privacyScoreByTxTopology(
+export async function privacyScoreByTxTopology(
   transaction: Transaction,
   client: BlockchainClient,
-): number {
+): Promise<number> {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
@@ -83,10 +83,18 @@ export function privacyScoreByTxTopology(
     numberOfInputs,
     numberOfOutputs,
   );
-  if (transaction.isSend && spendType !== SpendType.Consolidation) {
-    return score * DENIABILITY_FACTOR;
+
+  if (spendType === SpendType.Consolidation) {
+    return score;
   }
-  return score;
+  for (let op of transaction.vout) {
+    let address = op.scriptPubkeyAddress;
+    let isResued = await isReusedAddress(address, client);
+    if (isResued === true) {
+      return score;
+    }
+  }
+  return score * DENIABILITY_FACTOR;
 }
 
 /* 
@@ -237,11 +245,12 @@ export async function privacyScore(
   client: BlockchainClient,
   network: Network,
 ): Promise<number> {
-  let privacyScore =
-    transactions.reduce(
-      (sum, tx) => sum + privacyScoreByTxTopology(tx, client),
-      0,
-    ) / transactions.length;
+  let privacyScore = 0;
+  for (let tx of transactions) {
+    let topologyScore = await privacyScoreByTxTopology(tx, client);
+    privacyScore += topologyScore;
+  }
+  privacyScore = privacyScore / transactions.length;
 
   // Adjusting the privacy score based on the address reuse factor
   let addressReusedFactor = await addressReuseFactor(utxos, client);
