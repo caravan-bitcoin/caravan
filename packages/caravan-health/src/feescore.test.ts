@@ -33,7 +33,7 @@ describe("Fees Score Functions", () => {
       const score: number = +(
         await relativeFeesScore(transactions, mockClient)
       ).toFixed(3);
-      expect(score).toBe(1);
+      expect(score).toBe(0.9);
     });
   });
 
@@ -91,7 +91,7 @@ describe("Fees Score Functions", () => {
       const score: number = +(
         await feesScore(transaction, utxos, mockClient)
       ).toFixed(3);
-      expect(score).toBe(0.685);
+      expect(score).toBe(0.65);
     });
   });
 });

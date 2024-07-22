@@ -22,7 +22,8 @@ function getFeeRateForTransaction(transaction: Transaction): number {
 Utility function that helps to obtain the percentile of the fees paid by user in tx block
 
 Expected Range : [0, 0.75]
--> 10% tile : 1
+-> 0% tile : 1
+-> 10% tile : 0.9
 -> 25% tile : 0.75
 -> 50% tile : 0.5
 -> 75% tile : 0.25
@@ -39,8 +40,10 @@ async function getFeeRatePercentileScore(
     feeRate,
   );
   switch (percentile) {
-    case 10:
+    case 0:
       return 1;
+    case 10:
+      return 0.9;
     case 25:
       return 0.75;
     case 50:
@@ -50,7 +53,7 @@ async function getFeeRatePercentileScore(
     case 90:
       return 0.1;
     case 100:
-      return 0.05;
+      return 0;
     default:
       throw new Error("Invalid percentile");
   }

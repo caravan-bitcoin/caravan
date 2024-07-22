@@ -41,6 +41,19 @@ export enum ClientType {
   BLOCKSTREAM = "blockstream",
   MEMPOOL = "mempool",
 }
+
+export interface FeeRatePercentile {
+  avgHeight: number;
+  timestamp: number;
+  avgFee_0: number;
+  avgFee_10: number;
+  avgFee_25: number;
+  avgFee_50: number;
+  avgFee_75: number;
+  avgFee_90: number;
+  avgFee_100: number;
+}
+
 const delay = () => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
@@ -341,37 +354,59 @@ export class BlockchainClient extends ClientBase {
     try {
       switch (this.type) {
         case ClientType.PRIVATE:
-        // TODO : Implement it for private client
+        // DOUBT : I don't think bitcoind or even blockstream gives this info. 
+        // Maybe we should compare it only against MEMPOOL with given timestamp and feerate.
         case ClientType.BLOCKSTREAM:
-        // TODO : Implement it for blockstream client
+        // DOUBT : Same as above
         case ClientType.MEMPOOL:
           let data = await this.Get(`v1/mining/blocks/fee-rates/all`);
+          let feeRatePercentileBlocks: FeeRatePercentile[] = [];
+          for (const block of data) {
+            let feeRatePercentile : FeeRatePercentile = {
+              avgHeight: block?.avgHeight,
+              timestamp: block?.timestamp,
+              avgFee_0: block?.avgFee_0,
+              avgFee_10: block?.avgFee_10,
+              avgFee_25: block?.avgFee_25,
+              avgFee_50: block?.avgFee_50,
+              avgFee_75: block?.avgFee_75,
+              avgFee_90: block?.avgFee_90,
+              avgFee_100: block?.avgFee_100,
+            }
+            feeRatePercentileBlocks.push(feeRatePercentile);
+          }
           // Find the closest entry by timestamp
-          let closestEntry: any;
+          let closestBlock: FeeRatePercentile | null = null;
           let closestDifference: number = Infinity;
 
-          data.forEach((item) => {
-            const difference = Math.abs(item.timestamp - timestamp);
+          for (const block of feeRatePercentileBlocks) {
+            const difference = Math.abs(block.timestamp - timestamp);
             if (difference < closestDifference) {
               closestDifference = difference;
-              closestEntry = item;
+              closestBlock = block;
             }
-          });
-          switch (closestEntry) {
-            case feeRate < closestEntry.avgFee_10:
+          }
+          if (!closestBlock) {
+            throw new Error("No fee rate data found");
+          }
+          // Find the closest fee rate percentile
+          switch(true) {
+            case feeRate < closestBlock.avgFee_0:
+              return 0;
+            case feeRate < closestBlock.avgFee_10:
               return 10;
-            case feeRate < closestEntry.avgFee_25:
+            case feeRate < closestBlock.avgFee_25:
               return 25;
-            case feeRate < closestEntry.avgFee_50:
+            case feeRate < closestBlock.avgFee_50:
               return 50;
-            case feeRate < closestEntry.avgFee_75:
+            case feeRate < closestBlock.avgFee_75:
               return 75;
-            case feeRate < closestEntry.avgFee_90:
+            case feeRate < closestBlock.avgFee_90:
               return 90;
-            case feeRate < closestEntry.avgFee_100:
+            case feeRate < closestBlock.avgFee_100:
               return 100;
             default:
-              return 0;
+              throw new Error("Invalid fee rate");
           }
         default:
           throw new Error("Invalid client type");

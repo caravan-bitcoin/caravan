@@ -147,7 +147,16 @@ async function isReusedAddress(
   client: BlockchainClient,
 ): Promise<boolean> {
   let txs: Transaction[] = await client.getAddressTransactions(address);
-  if (txs.length > 1) {
+  let countSend = 0;
+  let countReceive = 0;
+  for (const tx of txs) {
+    if(tx.isSend===true){
+      countSend++;
+    }else{
+      countReceive++;
+    }
+  }
+  if (countSend > 1 || countReceive > 1) {
     return true;
   }
   return false;
