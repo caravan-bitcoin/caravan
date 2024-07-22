@@ -1,3 +1,4 @@
+import { BlockchainClient } from "@caravan/clients";
 import { utxoSetLengthScore } from "./privacy";
 import { Transaction, AddressUtxos } from "./types";
 
@@ -10,48 +11,28 @@ function getFeeRateForTransaction(transaction: Transaction): number {
   return fees / weight;
 }
 
-// TODO : Implement Caching or Ticker based mechanism to reduce network latency
 // Utility function that helps to obtain the percentile of the fees paid by user in tx block
-async function getFeeRatePercentileForTransaction(
+async function getFeeRatePercentileScore(
   timestamp: number,
   feeRate: number,
+  client: BlockchainClient
 ) {
-  const url: string =
-    "https://mempool.space/api/v1/mining/blocks/fee-rates/all";
-  const headers: Headers = new Headers();
-  headers.set("Content-Type", "application/json");
-
-  const response: Response = await fetch(url, {
-    method: "GET",
-    headers: headers,
-  });
-
-  const data: Array<any> = await response.json();
-
-  // Find the closest entry by timestamp
-  let closestEntry: any;
-  let closestDifference: number = Infinity;
-
-  data.forEach((item) => {
-    const difference = Math.abs(item.timestamp - timestamp);
-    if (difference < closestDifference) {
-      closestDifference = difference;
-      closestEntry = item;
-    }
-  });
-
-  switch (true) {
-    case feeRate < closestEntry.avgFee_10:
+  let percentile: number = await client.getFeeRatePercentileForTransaction(
+    timestamp,
+    feeRate
+  );
+  switch (percentile) {
+    case 10:
       return 1;
-    case feeRate < closestEntry.avgFee_25:
+    case 25:
       return 0.9;
-    case feeRate < closestEntry.avgFee_50:
+    case 50:
       return 0.75;
-    case feeRate < closestEntry.avgFee_75:
+    case 75:
       return 0.5;
-    case feeRate < closestEntry.avgFee_90:
+    case 90:
       return 0.25;
-    case feeRate < closestEntry.avgFee_100:
+    case 100:
       return 0.1;
     default:
       return 0;
@@ -65,20 +46,24 @@ if any transaction was done at expensive fees or nominal fees.
 This can be done by calculating the percentile of the fees paid by the user
 in the block of the transaction.
 */
-export function relativeFeesScore(transactions: Transaction[]): number {
+export async function relativeFeesScore(
+  transactions: Transaction[],
+  client: BlockchainClient
+): Promise<number> {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
-  transactions.forEach(async (tx: Transaction) => {
+  for (const tx of transactions) {
     if (tx.isSend === true) {
       numberOfSendTx++;
       let feeRate: number = getFeeRateForTransaction(tx);
-      let RFS: number = await getFeeRatePercentileForTransaction(
+      let RFS: number = await getFeeRatePercentileScore(
         tx.blocktime,
         feeRate,
+        client
       );
       sumRFS += RFS;
     }
-  });
+  }
   return sumRFS / numberOfSendTx;
 }
 
@@ -101,7 +86,7 @@ export function feesToAmountRatio(transactions: Transaction[]): number {
       numberOfSendTx++;
     }
   });
-  return 100 * (sumFeesToAmountRatio / numberOfSendTx);
+  return sumFeesToAmountRatio / numberOfSendTx;
 }
 
 /*
@@ -114,11 +99,12 @@ Assume the wallet is being consolidated, Thus number of UTXO will decrease and t
 W (Weightage of number of UTXO) will increase and this justifies that, consolidation 
 increases the fees health since you don’t overpay them in long run.
 */
-export function feesScore(
+export async function feesScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
-): number {
-  let RFS: number = relativeFeesScore(transactions);
+  client: BlockchainClient
+): Promise<number> {
+  let RFS: number = await relativeFeesScore(transactions, client);
   let FAR: number = feesToAmountRatio(transactions);
   let W: number = utxoSetLengthScore(utxos);
   return 0.35 * RFS + 0.35 * FAR + 0.3 * W;

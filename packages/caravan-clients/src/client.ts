@@ -333,6 +333,54 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+  // TODO : Implement Caching or Ticker based mechanism to reduce network latency
+  public async getFeeRatePercentileForTransaction(
+    timestamp: number,
+    feeRate: number,
+  ): Promise<number> {
+    try {
+      switch (this.type) {
+        case ClientType.PRIVATE:
+        // TODO : Implement it for private client
+        case ClientType.BLOCKSTREAM:
+        // TODO : Implement it for blockstream client
+        case ClientType.MEMPOOL:
+          let data = await this.Get(`v1/mining/blocks/fee-rates/all`);
+          // Find the closest entry by timestamp
+          let closestEntry: any;
+          let closestDifference: number = Infinity;
+
+          data.forEach((item) => {
+            const difference = Math.abs(item.timestamp - timestamp);
+            if (difference < closestDifference) {
+              closestDifference = difference;
+              closestEntry = item;
+            }
+          });
+          switch (closestEntry) {
+            case feeRate < closestEntry.avgFee_10:
+              return 10;
+            case feeRate < closestEntry.avgFee_25:
+              return 25;
+            case feeRate < closestEntry.avgFee_50:
+              return 50;
+            case feeRate < closestEntry.avgFee_75:
+              return 75;
+            case feeRate < closestEntry.avgFee_90:
+              return 90;
+            case feeRate < closestEntry.avgFee_100:
+              return 100;
+            default:
+              return 0;
+          }
+        default:
+          throw new Error("Invalid client type");
+      }
+    } catch (error: any) {
+      throw new Error(`Failed to get fee estimate: ${error.message}`);
+    }
+  }
+
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
