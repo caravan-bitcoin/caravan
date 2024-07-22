@@ -6,7 +6,7 @@ import {
   utxoSetLengthScore,
   utxoValueWeightageFactor,
   privacyScore,
-} from "./privacy"; // Adjust the import according to the actual file name
+} from "./privacy";
 import { BlockchainClient } from "@caravan/clients";
 import { Transaction } from "./types";
 import { AddressUtxos } from "./types";

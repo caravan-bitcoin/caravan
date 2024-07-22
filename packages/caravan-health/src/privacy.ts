@@ -52,7 +52,7 @@ function spendTypeScores(
       let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
       return (0.75 * x) / (1 + x);
     default:
-      return -1;
+      throw new Error("Invalid spend type");
   }
 }
 
