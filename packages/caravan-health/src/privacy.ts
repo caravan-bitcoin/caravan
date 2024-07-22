@@ -34,6 +34,9 @@ enum SpendType {
   MixingOrCoinJoin = "MixingOrCoinJoin",
 }
 
+/*
+The deterministic scores or their formula for each spend type are as follows
+*/
 function spendTypeScores(
   spendType: SpendType,
   numberOfInputs: number,
@@ -50,7 +53,7 @@ function spendTypeScores(
       return 1 / numberOfInputs;
     case SpendType.MixingOrCoinJoin:
       let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
-      return (0.75 * x) / (1 + x);
+      return ((2 / 3) * x) / (1 + x);
     default:
       throw new Error("Invalid spend type");
   }
@@ -67,6 +70,17 @@ function determineSpendType(inputs: number, outputs: number): SpendType {
   }
 }
 
+/*
+The transaction topology refers to the type of transaction based on 
+number of inputs and outputs.
+
+Expected Range : [0, 0.75]
+-> Very Poor : [0, 0.15]
+-> Poor : (0.15, 0.3]
+-> Moderate : (0.3, 0.45]
+-> Good : (0.45, 0.6]
+-> Very Good : (0.6, 0.75] 
+*/
 export async function privacyScoreByTxTopology(
   transaction: Transaction,
   client: BlockchainClient,
@@ -100,6 +114,13 @@ export async function privacyScoreByTxTopology(
 /* 
 In order to score for address reuse we can check the amount being hold by reused UTXOs 
 with respect to the total amount
+
+Expected Range : [0,1]
+-> Very Poor : (0.8, 1]
+-> Poor : [0.6, 0.8)
+-> Moderate : [0.4, 0.6)
+-> Good : [0.2, 0.4)
+-> Very Good : [0 ,0.2) 
 */
 export async function addressReuseFactor(
   utxos: AddressUtxos,
@@ -131,10 +152,18 @@ async function isReusedAddress(
   }
   return false;
 }
+
 /*
 If we are making payment to other wallet types then the privacy score should decrease because 
 the change received will be to an address type matching our wallet and it will lead to a deduction that
 we still own that amount.
+
+Expected Range : (0,1]
+-> Very Poor : (0, 0.1]
+-> Poor : [0.1, 0.3)
+-> Moderate : [0.3, 0.4)
+-> Good : [0.4, 0.5)
+-> Very Good : [0.5 ,1] 
 */
 export function addressTypeFactor(
   transactions: Transaction[],
@@ -173,6 +202,13 @@ export function addressTypeFactor(
 The spread factor using standard deviation helps in assessing the dispersion of UTXO values.
 In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for adversaries
 to link transactions and deduce the ownership and spending patterns of users.
+
+Expected Range : [0,1)
+-> Very Poor : (0, 0.2]
+-> Poor : [0.2, 0.4)
+-> Moderate : [0.4, 0.6)
+-> Good : [0.6, 0.8)
+-> Very Good : [0.8 ,1] 
 */
 export function utxoSpreadFactor(utxos: AddressUtxos): number {
   const amounts: number[] = [];
@@ -194,6 +230,8 @@ export function utxoSpreadFactor(utxos: AddressUtxos): number {
 
 /* 
 The weightage is ad-hoc to normalize the privacy score based on the number of UTXOs in the set.
+
+Expected Range : [0,1]
 - 0 for UTXO set length >= 50
 - 0.25 for UTXO set length >= 25 and <= 49
 - 0.5 for UTXO set length >= 15 and <= 24
@@ -224,6 +262,13 @@ export function utxoSetLengthScore(utxos: AddressUtxos): number {
 /*
 UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
 It signifies the combined effect of how well spreaded the UTXO Set is and how many number of UTXOs are there.
+
+Expected Range : [-0.15,0.15]
+-> Very Poor : [-0.1, -0.05)
+-> Poor : [-0.05, 0)
+-> Moderate : [0, 0.05)
+-> Good : [0.05, 0.1)
+-> Very Good : [0.1 ,0.15] 
 */
 export function utxoValueWeightageFactor(utxos: AddressUtxos): number {
   let W: number = utxoSetLengthScore(utxos);
@@ -233,10 +278,17 @@ export function utxoValueWeightageFactor(utxos: AddressUtxos): number {
 
 /*
 The privacy score is a combination of all the factors calculated above.
-- Privacy Score based on Inputs and Outputs
-- Address Reuse Factor (R.F) : p_adjusted = p_score * (1 - 0.5 * r.f) + 0.10 * (1 - r.f)
-- Address Type Factor (A.T.F) : p_adjusted = p_score * (1-A.T.F)
-- UTXO Value Weightage Factor (U.V.W.F) : p_adjusted = p_score + U.V.W.F
+- Privacy Score based on Inputs and Outputs (i.e Tx Topology)
+- Address Reuse Factor (R.F)
+- Address Type Factor (A.T.F)
+- UTXO Value Weightage Factor (U.V.W.F)
+
+Expected Range : [0, 1]
+-> Very Poor : [0, 0.2]
+-> Poor : (0.2, 0.4]
+-> Moderate : (0.4, 0.6]
+-> Good : (0.6, 0.8]
+-> Very Good : (0.8, 1]
 */
 export async function privacyScore(
   transactions: Transaction[],

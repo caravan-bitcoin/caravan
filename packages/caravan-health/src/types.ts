@@ -1,9 +1,11 @@
 import { UTXO } from "@caravan/clients";
 
+// Represents the Unspent Outputs of the address
 export interface AddressUtxos {
   [address: string]: UTXO[];
 }
 
+// Expected Transaction object which should be built in order to consume @caravan-health functionalities
 export interface Transaction {
   txid: string;
   vin: Input[];

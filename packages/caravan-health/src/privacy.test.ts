@@ -55,7 +55,7 @@ describe("Privacy Score Functions", () => {
       const score: number = +(
         await privacyScoreByTxTopology(transaction, mockClient)
       ).toFixed(3);
-      expect(score).toBe(0.92);
+      expect(score).toBe(0.818);
     });
   });
 
