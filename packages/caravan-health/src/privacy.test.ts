@@ -29,13 +29,11 @@ describe("Privacy Score Functions", () => {
           {
             txid: "input1",
             vout: 0,
-            witness: [],
             sequence: 0,
           },
           {
             txid: "input2",
             vout: 0,
-            witness: [],
             sequence: 0,
           },
         ], // 2 inputs

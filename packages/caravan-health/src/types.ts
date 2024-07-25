@@ -21,7 +21,6 @@ export interface Transaction {
 interface Input {
   txid: string;
   vout: number;
-  witness: string[];
   sequence: number;
 }
 

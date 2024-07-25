@@ -18,6 +18,7 @@ import {
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
+import { Transaction } from "@caravan/health";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -185,17 +186,98 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async getAddressTransactions(address: string): Promise<any> {
+  public async bitcoindRawTxData(txid: string): Promise<any> {
+    return await callBitcoind(
+      this.bitcoindParams.url,
+      this.bitcoindParams.auth,
+      "decoderawtransaction",
+      [txid],
+    );
+  }
+
+  public async getAddressTransactions(address: string): Promise<Transaction[]> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind(
+        const data = await callBitcoind(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "listtransactions",
-          [this.bitcoindParams.walletName, 1000],
+          [this.bitcoindParams.walletName],
         );
+
+        const txs: Transaction[] = [];
+        for (const tx of data) {
+          if (tx.address === address) {
+            let isTxSend = tx.category === "send" ? true : false;
+            const rawTxData = await this.bitcoindRawTxData(tx.txid);
+            const transaction: Transaction = {
+              txid: tx.txid,
+              vin: [],
+              vout: [],
+              size: rawTxData.size,
+              weight: rawTxData.weight,
+              fee: tx.fee,
+              isSend: isTxSend,
+              amount: tx.amount,
+              blocktime: tx.blocktime,
+            };
+            for (const input of rawTxData.vin) {
+              transaction.vin.push({
+                txid: input.txid,
+                vout: input.vout,
+                sequence: input.sequence,
+              });
+            }
+            for (const output of rawTxData.vout) {
+              transaction.vout.push({
+                scriptPubkeyHex: output.scriptPubKey.hex,
+                scriptPubkeyAddress: output.scriptPubKey.addresses[0],
+                value: output.value,
+              });
+            }
+            txs.push(transaction);
+          }
+        }
+        return txs;
       }
-      return await this.Get(`/address/${address}/txs`);
+
+      // For Mempool and Blockstream
+      const data = await this.Get(`/address/${address}/txs`);
+      const txs: Transaction[] = [];
+      for (const tx of data.txs) {
+        const transaction: Transaction = {
+          txid: tx.txid,
+          vin: [],
+          vout: [],
+          size: tx.size,
+          weight: tx.weight,
+          fee: tx.fee,
+          isSend: false, // TODO : Need to implement this.
+          amount: 0,
+          blocktime: tx.status.block_time,
+        };
+
+        for (const input of tx.vin) {
+          transaction.vin.push({
+            txid: input.txid,
+            vout: input.vout,
+            sequence: input.sequence,
+          });
+        }
+
+        let total_amount = 0;
+        for (const output of tx.vout) {
+          total_amount += output.value;
+          transaction.vout.push({
+            scriptPubkeyHex: output.scriptpubkey,
+            scriptPubkeyAddress: output.scriptpubkey_address,
+            value: output.value,
+          });
+        }
+        transaction.amount = total_amount;
+        txs.push(transaction);
+      }
+      return txs;
     } catch (error: any) {
       throw new Error(
         `Failed to get transactions for address ${address}: ${error.message}`,
@@ -354,7 +436,7 @@ export class BlockchainClient extends ClientBase {
     try {
       switch (this.type) {
         case ClientType.PRIVATE:
-        // DOUBT : I don't think bitcoind or even blockstream gives this info. 
+        // DOUBT : I don't think bitcoind or even blockstream gives this info.
         // Maybe we should compare it only against MEMPOOL with given timestamp and feerate.
         case ClientType.BLOCKSTREAM:
         // DOUBT : Same as above
@@ -362,7 +444,7 @@ export class BlockchainClient extends ClientBase {
           let data = await this.Get(`v1/mining/blocks/fee-rates/all`);
           let feeRatePercentileBlocks: FeeRatePercentile[] = [];
           for (const block of data) {
-            let feeRatePercentile : FeeRatePercentile = {
+            let feeRatePercentile: FeeRatePercentile = {
               avgHeight: block?.avgHeight,
               timestamp: block?.timestamp,
               avgFee_0: block?.avgFee_0,
@@ -372,7 +454,7 @@ export class BlockchainClient extends ClientBase {
               avgFee_75: block?.avgFee_75,
               avgFee_90: block?.avgFee_90,
               avgFee_100: block?.avgFee_100,
-            }
+            };
             feeRatePercentileBlocks.push(feeRatePercentile);
           }
           // Find the closest entry by timestamp
@@ -390,7 +472,7 @@ export class BlockchainClient extends ClientBase {
             throw new Error("No fee rate data found");
           }
           // Find the closest fee rate percentile
-          switch(true) {
+          switch (true) {
             case feeRate < closestBlock.avgFee_0:
               return 0;
             case feeRate < closestBlock.avgFee_10:
