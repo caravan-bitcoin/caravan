@@ -27,6 +27,11 @@ export interface FeeRate {
   satoshisPerByte: number;
 }
 
+export interface RbfOptions {
+  subtractFeeFromOutput?: number;
+  dustThreshold?: string;
+}
+
 export interface FeeEstimate {
   lowFee: FeeRate;
   mediumFee: FeeRate;

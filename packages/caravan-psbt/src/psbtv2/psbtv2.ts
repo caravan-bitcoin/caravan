@@ -788,6 +788,70 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
+   * Sets the sequence number for a specific input in the transaction.
+   *
+   * This private helper method is crucial for implementing RBF and other
+   * sequence-based transaction features. It writes the provided sequence
+   * number as a 32-bit little-endian unsigned integer and stores it in the
+   * appropriate input's map using the PSBT_IN_SEQUENCE key.
+   *
+   * The sequence number has multiple uses in Bitcoin transactions:
+   * 1. Signaling RBF (values < 0xfffffffe)
+   * 2. Enabling nLockTime (values < 0xffffffff)
+   * 3. Relative timelock with BIP68 (if bit 31 is not set)
+   *
+   * Care should be taken when setting sequence numbers to ensure the desired
+   * transaction properties are correctly signaled.
+   */
+  private setInputSequence(inputIndex: number, sequence: number) {
+    const bw = new BufferWriter();
+    bw.writeUInt32LE(sequence);
+    this.inputMaps[inputIndex].set(KeyType.PSBT_IN_SEQUENCE, bw.render());
+  }
+
+  /**
+   * Enables Replace-by-Fee (RBF) for all inputs in the transaction.
+   *
+   * This method implements opt-in RBF as described in BIP125. It sets the
+   * sequence number of all inputs to 0xfffffffd, which is the standard value
+   * used to signal RBF opt-in. By enabling RBF, the transaction becomes
+   * eligible for fee bumping or replacement before it's confirmed in a block.
+   *
+   * BIP125: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   *
+   * Note: Enabling RBF should be done cautiously, especially for wallets or
+   * services that rely on zero-confirmation transactions, as it introduces
+   * the possibility of transaction replacement.
+   */
+  public enableRBF() {
+    for (let i = 0; i < this.inputMaps.length; i++) {
+      this.setInputSequence(i, 0xfffffffd);
+    }
+  }
+
+  /**
+   * Checks if the transaction signals Replace-by-Fee (RBF).
+   *
+   * This method determines whether the transaction is eligible for RBF by
+   * examining the sequence numbers of all inputs. As per BIP125, a transaction
+   * is considered to have opted in to RBF if it contains at least one input
+   * with a sequence number less than (0xffffffff - 1).
+   *
+   * Return value:
+   * - true: If any input has a sequence number < 0xfffffffe, indicating RBF.
+   * - false: If all inputs have sequence numbers >= 0xfffffffe, indicating no RBF.
+   *
+   * This method is useful for wallets, block explorers, or any service that
+   * needs to determine if a transaction can potentially be replaced before
+   * confirmation.
+   */
+  public isRBFSignaled(): boolean {
+    return this.PSBT_IN_SEQUENCE.some(
+      (seq) => seq !== null && seq < 0xfffffffe,
+    );
+  }
+
+  /**
    * This method is provided for compatibility issues and probably shouldn't be
    * used since a PsbtV2 with PSBT_GLOBAL_TX_VERSION = 1 is BIP0370
    * non-compliant. No guarantees can be made here that a serialized PsbtV2
@@ -833,6 +897,8 @@ export class PsbtV2 extends PsbtV2Maps {
     redeemScript,
     witnessScript,
     bip32Derivation,
+    rbf = false, // Add an optional RBF (Replace-By-Fee) parameter with a default value of false to signal fees replacement
+    // RBF is defined in BIP125: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
   }: {
     previousTxId: Buffer | string;
     outputIndex: number;
@@ -846,6 +912,7 @@ export class PsbtV2 extends PsbtV2Maps {
       masterFingerprint: Buffer;
       path: string;
     }[];
+    rbf?: boolean;
   }) {
     // TODO: This must accept and add appropriate locktime fields. There is
     // significant validation concerning this step detailed in the BIP0370
@@ -875,7 +942,14 @@ export class PsbtV2 extends PsbtV2Maps {
     map.set(KeyType.PSBT_IN_PREVIOUS_TXID, bw.render());
     bw.writeI32(outputIndex);
     map.set(KeyType.PSBT_IN_OUTPUT_INDEX, bw.render());
+
     if (sequence) {
+      /* If RBF is requested, set the sequence to the RBF opt-in value
+      regardless of the provided sequence
+      */
+      if (rbf) {
+        sequence = 0xfffffffd; // 0xfffffffd (4294967293) is the standard RBF opt-in sequence
+      }
       bw.writeI32(sequence);
       map.set(KeyType.PSBT_IN_SEQUENCE, bw.render());
     }
