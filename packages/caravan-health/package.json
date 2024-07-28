@@ -34,7 +34,8 @@
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
-    "@caravan/clients": "*"
+    "@caravan/clients": "*",
+    "@caravan/bitcoin": "*"
   },
   "devDependencies": {
     "prettier": "^3.2.5"
