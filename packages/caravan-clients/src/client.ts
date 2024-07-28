@@ -18,7 +18,6 @@ import {
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
-import { Transaction } from "@caravan/health";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -35,6 +34,30 @@ export interface UTXO {
     confirmed: boolean;
     block_time: number;
   };
+}
+
+export interface Transaction {
+  txid: string;
+  vin: Input[];
+  vout: Output[];
+  size: number;
+  weight: number;
+  fee: number;
+  isSend: boolean;
+  amount: number;
+  blocktime: number;
+}
+
+interface Input {
+  txid: string;
+  vout: number;
+  sequence: number;
+}
+
+interface Output {
+  scriptPubkeyHex: string;
+  scriptPubkeyAddress: string;
+  value: number;
 }
 
 export enum ClientType {

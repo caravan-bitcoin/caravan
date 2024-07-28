@@ -1,6 +1,6 @@
-import { BlockchainClient } from "@caravan/clients";
+import { BlockchainClient, Transaction } from "@caravan/clients";
 import { utxoSetLengthScore } from "./privacy";
-import { Transaction, AddressUtxos } from "./types";
+import { AddressUtxos } from "./types";
 
 /*
 Utility function that helps to obtain the fee rate of the transaction
@@ -33,11 +33,11 @@ Expected Range : [0, 0.75]
 async function getFeeRatePercentileScore(
   timestamp: number,
   feeRate: number,
-  client: BlockchainClient,
+  client: BlockchainClient
 ) {
   let percentile: number = await client.getFeeRatePercentileForTransaction(
     timestamp,
-    feeRate,
+    feeRate
   );
   switch (percentile) {
     case 0:
@@ -75,7 +75,7 @@ Expected Range : [0, 1]
 */
 export async function relativeFeesScore(
   transactions: Transaction[],
-  client: BlockchainClient,
+  client: BlockchainClient
 ): Promise<number> {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
@@ -86,7 +86,7 @@ export async function relativeFeesScore(
       let RFS: number = await getFeeRatePercentileScore(
         tx.blocktime,
         feeRate,
-        client,
+        client
       );
       sumRFS += RFS;
     }
@@ -136,7 +136,7 @@ Expected Range : [0, 1]
 export async function feesScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
-  client: BlockchainClient,
+  client: BlockchainClient
 ): Promise<number> {
   let RFS: number = await relativeFeesScore(transactions, client);
   let FAR: number = feesToAmountRatio(transactions);

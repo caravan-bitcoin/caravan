@@ -7,8 +7,7 @@ import {
   utxoValueWeightageFactor,
   privacyScore,
 } from "./privacy";
-import { BlockchainClient } from "@caravan/clients";
-import { Transaction } from "./types";
+import { BlockchainClient, Transaction } from "@caravan/clients";
 import { AddressUtxos } from "./types";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
 

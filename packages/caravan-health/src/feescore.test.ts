@@ -1,8 +1,6 @@
 import { feesScore, feesToAmountRatio, relativeFeesScore } from "./feescore";
 import { BlockchainClient } from "@caravan/clients";
-import { Transaction } from "./types";
-import { AddressUtxos } from "./types";
-import { MultisigAddressType, Network } from "@caravan/bitcoin";
+import { Transaction } from "@caravan/clients";
 
 describe("Fees Score Functions", () => {
   let mockClient: BlockchainClient;

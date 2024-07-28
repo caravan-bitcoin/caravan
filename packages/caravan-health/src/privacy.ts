@@ -1,5 +1,5 @@
-import { BlockchainClient } from "@caravan/clients";
-import { Transaction, AddressUtxos } from "./types";
+import { BlockchainClient, Transaction } from "@caravan/clients";
+import { AddressUtxos } from "./types";
 import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
 
 /*
