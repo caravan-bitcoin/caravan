@@ -1,3 +1,3 @@
 export { bitcoindImportDescriptors } from "./wallet";
 export { BlockchainClient, ClientType } from "./client";
-export type { UTXO, Transaction } from "./client";
+export type { UTXO, Transaction, FeeRatePercentile } from "./client";

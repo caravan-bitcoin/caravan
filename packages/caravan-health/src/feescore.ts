@@ -1,4 +1,8 @@
-import { BlockchainClient, Transaction } from "@caravan/clients";
+import {
+  BlockchainClient,
+  FeeRatePercentile,
+  Transaction,
+} from "@caravan/clients";
 import { utxoSetLengthScore } from "./privacy";
 import { AddressUtxos } from "./types";
 
@@ -30,14 +34,15 @@ Expected Range : [0, 0.75]
 -> 90% tile : 0.1
 -> 100% tile : 0.05
 */
-async function getFeeRatePercentileScore(
+function getFeeRatePercentileScore(
   timestamp: number,
   feeRate: number,
-  client: BlockchainClient
-) {
-  let percentile: number = await client.getFeeRatePercentileForTransaction(
+  feeRatePercentileHistory: FeeRatePercentile[]
+): number {
+  let percentile: number = getPercentile(
     timestamp,
-    feeRate
+    feeRate,
+    feeRatePercentileHistory
   );
   switch (percentile) {
     case 0:
@@ -59,6 +64,46 @@ async function getFeeRatePercentileScore(
   }
 }
 
+function getPercentile(
+  timestamp: number,
+  feeRate: number,
+  feeRatePercentileHistory: FeeRatePercentile[]
+): number {
+  // Find the closest entry by timestamp
+  let closestBlock: FeeRatePercentile | null = null;
+  let closestDifference: number = Infinity;
+
+  for (const block of feeRatePercentileHistory) {
+    const difference = Math.abs(block.timestamp - timestamp);
+    if (difference < closestDifference) {
+      closestDifference = difference;
+      closestBlock = block;
+    }
+  }
+  if (!closestBlock) {
+    throw new Error("No fee rate data found");
+  }
+  // Find the closest fee rate percentile
+  switch (true) {
+    case feeRate < closestBlock.avgFee_0:
+      return 0;
+    case feeRate < closestBlock.avgFee_10:
+      return 10;
+    case feeRate < closestBlock.avgFee_25:
+      return 25;
+    case feeRate < closestBlock.avgFee_50:
+      return 50;
+    case feeRate < closestBlock.avgFee_75:
+      return 75;
+    case feeRate < closestBlock.avgFee_90:
+      return 90;
+    case feeRate < closestBlock.avgFee_100:
+      return 100;
+    default:
+      throw new Error("Invalid fee rate");
+  }
+}
+
 /*
 R.F.S can be associated with all the transactions and we can give a measure 
 if any transaction was done at expensive fees or nominal fees.
@@ -73,20 +118,20 @@ Expected Range : [0, 1]
 -> Good : (0.6, 0.8]
 -> Very Good : (0.8, 1]
 */
-export async function relativeFeesScore(
+export function relativeFeesScore(
   transactions: Transaction[],
-  client: BlockchainClient
-): Promise<number> {
+  feeRatePercentileHistory: FeeRatePercentile[]
+): number {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
   for (const tx of transactions) {
     if (tx.isSend === true) {
       numberOfSendTx++;
       let feeRate: number = getFeeRateForTransaction(tx);
-      let RFS: number = await getFeeRatePercentileScore(
+      let RFS: number = getFeeRatePercentileScore(
         tx.blocktime,
         feeRate,
-        client
+        feeRatePercentileHistory
       );
       sumRFS += RFS;
     }
@@ -138,7 +183,8 @@ export async function feesScore(
   utxos: AddressUtxos,
   client: BlockchainClient
 ): Promise<number> {
-  let RFS: number = await relativeFeesScore(transactions, client);
+  let feeRatePercentileHistory: FeeRatePercentile[] = await client.getBlockFeeRatePercentileHistory();
+  let RFS: number = relativeFeesScore(transactions, feeRatePercentileHistory);
   let FAR: number = feesToAmountRatio(transactions);
   let W: number = utxoSetLengthScore(utxos);
   return 0.35 * RFS + 0.35 * FAR + 0.3 * W;

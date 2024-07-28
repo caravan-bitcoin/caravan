@@ -451,19 +451,8 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  // TODO : Implement Caching or Ticker based mechanism to reduce network latency
-  public async getFeeRatePercentileForTransaction(
-    timestamp: number,
-    feeRate: number,
-  ): Promise<number> {
+  public async getBlockFeeRatePercentileHistory(): Promise<FeeRatePercentile[]> {
     try {
-      switch (this.type) {
-        case ClientType.PRIVATE:
-        // DOUBT : I don't think bitcoind or even blockstream gives this info.
-        // Maybe we should compare it only against MEMPOOL with given timestamp and feerate.
-        case ClientType.BLOCKSTREAM:
-        // DOUBT : Same as above
-        case ClientType.MEMPOOL:
           let data = await this.Get(`v1/mining/blocks/fee-rates/all`);
           let feeRatePercentileBlocks: FeeRatePercentile[] = [];
           for (const block of data) {
@@ -480,44 +469,9 @@ export class BlockchainClient extends ClientBase {
             };
             feeRatePercentileBlocks.push(feeRatePercentile);
           }
-          // Find the closest entry by timestamp
-          let closestBlock: FeeRatePercentile | null = null;
-          let closestDifference: number = Infinity;
-
-          for (const block of feeRatePercentileBlocks) {
-            const difference = Math.abs(block.timestamp - timestamp);
-            if (difference < closestDifference) {
-              closestDifference = difference;
-              closestBlock = block;
-            }
-          }
-          if (!closestBlock) {
-            throw new Error("No fee rate data found");
-          }
-          // Find the closest fee rate percentile
-          switch (true) {
-            case feeRate < closestBlock.avgFee_0:
-              return 0;
-            case feeRate < closestBlock.avgFee_10:
-              return 10;
-            case feeRate < closestBlock.avgFee_25:
-              return 25;
-            case feeRate < closestBlock.avgFee_50:
-              return 50;
-            case feeRate < closestBlock.avgFee_75:
-              return 75;
-            case feeRate < closestBlock.avgFee_90:
-              return 90;
-            case feeRate < closestBlock.avgFee_100:
-              return 100;
-            default:
-              throw new Error("Invalid fee rate");
-          }
-        default:
-          throw new Error("Invalid client type");
-      }
+          return feeRatePercentileBlocks;
     } catch (error: any) {
-      throw new Error(`Failed to get fee estimate: ${error.message}`);
+      throw new Error(`Failed to get feerate percentile block: ${error.message}`);
     }
   }
 
