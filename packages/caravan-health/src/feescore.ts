@@ -158,6 +158,42 @@ export function feesToAmountRatio(transactions: Transaction[]): number {
 }
 
 /*
+Consider the waste score of the transaction which gives an idea of not spending a 
+particular output now (assuming fees are currently high), given that we may be able 
+to consolidate it later when fees are low.
+
+waste score = consolidation factor + cost of transaction
+waste score = weight (feerate - L) + change + excess
+
+weight: total weight of the input set
+feerate: the transaction's target feerate
+L: the long-term feerate estimate which the wallet might need to pay to redeem remaining UTXOs
+change: the cost of creating and spending a change output
+excess: the amount by which we exceed our selection target when creating a changeless transaction, 
+mutually exclusive with cost of change
+
+“excess” is if we don't make a change output and instead add the difference to the fees.
+If there is a change in output then the excess should be 0. 
+“change” includes the fees paid on this transaction's change output plus the fees that 
+will need to be paid to spend it later. Thus the quantity cost of  transaction is always a positive number.
+
+Now depending on the feerate in the long term the consolidation factor can be positive or a negative quantity.
+		
+		feerate (current) < L (long-term feerate)  –-> Consolidate now (-ve)
+		feerate (current) > L (long-term feerate)  –-> Wait for later when feerate go low (+ve)
+*/
+export function wasteMetric(
+  transaction: Transaction, // Amount that UTXO holds
+  amount: number, // Amount to be spent in the transaction
+  L: number, // Long term estimated fee-rate
+): number {
+  let weight: number = transaction.weight;
+  let feeRate: number = getFeeRateForTransaction(transaction);
+  let costOfTx: number = Math.abs(amount - transaction.amount);
+  return weight * (feeRate - L) + costOfTx;
+}
+
+/*
 35% Weightage of fees score depends on Percentile of fees paid
 35% Weightage of fees score depends fees paid with respect to amount spend
 30% Weightage of fees score depends on the number of UTXOs present in the wallet.
