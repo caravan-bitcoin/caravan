@@ -275,12 +275,15 @@ export class BlockchainClient extends ClientBase {
           size: tx.size,
           weight: tx.weight,
           fee: tx.fee,
-          isSend: false, // TODO : Need to implement this.
+          isSend: false,
           amount: 0,
           blocktime: tx.status.block_time,
         };
 
         for (const input of tx.vin) {
+          if(input.prevout.scriptpubkey_address === address) {
+            transaction.isSend = true;
+          }
           transaction.vin.push({
             txid: input.txid,
             vout: input.vout,
