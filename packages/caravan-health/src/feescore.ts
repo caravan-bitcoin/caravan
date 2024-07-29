@@ -75,7 +75,7 @@ function getPercentile(
 
   for (const block of feeRatePercentileHistory) {
     const difference = Math.abs(block.timestamp - timestamp);
-    if (difference < closestDifference) {
+    if (difference <= closestDifference) {
       closestDifference = difference;
       closestBlock = block;
     }
@@ -85,19 +85,19 @@ function getPercentile(
   }
   // Find the closest fee rate percentile
   switch (true) {
-    case feeRate < closestBlock.avgFee_0:
+    case feeRate <= closestBlock.avgFee_0:
       return 0;
-    case feeRate < closestBlock.avgFee_10:
+    case feeRate <= closestBlock.avgFee_10:
       return 10;
-    case feeRate < closestBlock.avgFee_25:
+    case feeRate <= closestBlock.avgFee_25:
       return 25;
-    case feeRate < closestBlock.avgFee_50:
+    case feeRate <= closestBlock.avgFee_50:
       return 50;
-    case feeRate < closestBlock.avgFee_75:
+    case feeRate <= closestBlock.avgFee_75:
       return 75;
-    case feeRate < closestBlock.avgFee_90:
+    case feeRate <= closestBlock.avgFee_90:
       return 90;
-    case feeRate < closestBlock.avgFee_100:
+    case feeRate <= closestBlock.avgFee_100:
       return 100;
     default:
       throw new Error("Invalid fee rate");

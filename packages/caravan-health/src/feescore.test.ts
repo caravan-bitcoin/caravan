@@ -1,6 +1,6 @@
 import { feesScore, feesToAmountRatio, relativeFeesScore } from "./feescore";
 import { BlockchainClient } from "@caravan/clients";
-import { Transaction } from "@caravan/clients";
+import { Transaction, FeeRatePercentile } from "@caravan/clients";
 
 describe("Fees Score Functions", () => {
   let mockClient: BlockchainClient;
@@ -9,29 +9,42 @@ describe("Fees Score Functions", () => {
     mockClient = {
       getAddressStatus: jest.fn(),
       getAddressTransactions: jest.fn().mockResolvedValue([{ txid: "tx1" }]),
-      getFeeRatePercentileForTransaction: jest.fn().mockResolvedValue(10),
     } as unknown as BlockchainClient;
   });
 
   describe("relativeFeesScore", () => {
-    it("Relative fees score for transaction", async () => {
+    it("Relative fees score for transaction", () => {
       const transactions: Transaction[] = [
         {
           vin: [],
           vout: [],
           txid: "tx1",
           size: 0,
-          weight: 0,
-          fee: 0,
+          weight: 1,
+          fee: 1,
           isSend: true,
           amount: 0,
-          blocktime: 0,
+          blocktime: 1234,
         },
       ];
-      const score: number = +(
-        await relativeFeesScore(transactions, mockClient)
+      const feeRatePercentileHistory: FeeRatePercentile[] = [
+        {
+          avgHeight: 0,
+          timestamp: 1234,
+          avgFee_0: 0,
+          avgFee_10: 0,
+          avgFee_25: 0.5,
+          avgFee_50: 1,
+          avgFee_75: 0,
+          avgFee_90: 0,
+          avgFee_100: 0,
+        },
+      ];
+      const score: number = +relativeFeesScore(
+        transactions,
+        feeRatePercentileHistory
       ).toFixed(3);
-      expect(score).toBe(0.9);
+      expect(score).toBe(0.5);
     });
   });
 
@@ -52,44 +65,6 @@ describe("Fees Score Functions", () => {
       ];
       const ratio: number = +feesToAmountRatio(transaction).toFixed(3);
       expect(ratio).toBe(0.1);
-    });
-  });
-
-  describe("feesScore", () => {
-    it("Fees score for transaction", async () => {
-      const transaction: Transaction[] = [
-        {
-          vin: [],
-          vout: [],
-          txid: "tx1",
-          size: 0,
-          weight: 0,
-          fee: 1,
-          isSend: true,
-          amount: 10,
-          blocktime: 0,
-        },
-      ];
-      const utxos = {
-        address1: [
-          {
-            txid: "tx1",
-            vout: 0,
-            value: 1,
-            status: { confirmed: true, block_time: 0 },
-          },
-          {
-            txid: "tx2",
-            vout: 0,
-            value: 2,
-            status: { confirmed: true, block_time: 0 },
-          },
-        ],
-      };
-      const score: number = +(
-        await feesScore(transaction, utxos, mockClient)
-      ).toFixed(3);
-      expect(score).toBe(0.65);
     });
   });
 });
