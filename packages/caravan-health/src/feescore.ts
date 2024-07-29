@@ -1,7 +1,4 @@
-import {
-  FeeRatePercentile,
-  Transaction,
-} from "@caravan/clients";
+import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { utxoSetLengthScore } from "./privacy";
 import { AddressUtxos } from "./types";
 
@@ -36,12 +33,12 @@ Expected Range : [0, 0.75]
 function getFeeRatePercentileScore(
   timestamp: number,
   feeRate: number,
-  feeRatePercentileHistory: FeeRatePercentile[]
+  feeRatePercentileHistory: FeeRatePercentile[],
 ): number {
   let percentile: number = getPercentile(
     timestamp,
     feeRate,
-    feeRatePercentileHistory
+    feeRatePercentileHistory,
   );
   switch (percentile) {
     case 0:
@@ -66,7 +63,7 @@ function getFeeRatePercentileScore(
 function getPercentile(
   timestamp: number,
   feeRate: number,
-  feeRatePercentileHistory: FeeRatePercentile[]
+  feeRatePercentileHistory: FeeRatePercentile[],
 ): number {
   // Find the closest entry by timestamp
   let closestBlock: FeeRatePercentile | null = null;
@@ -119,7 +116,7 @@ Expected Range : [0, 1]
 */
 export function relativeFeesScore(
   transactions: Transaction[],
-  feeRatePercentileHistory: FeeRatePercentile[]
+  feeRatePercentileHistory: FeeRatePercentile[],
 ): number {
   let sumRFS: number = 0;
   let numberOfSendTx: number = 0;
@@ -130,7 +127,7 @@ export function relativeFeesScore(
       let RFS: number = getFeeRatePercentileScore(
         tx.blocktime,
         feeRate,
-        feeRatePercentileHistory
+        feeRatePercentileHistory,
       );
       sumRFS += RFS;
     }
@@ -180,7 +177,7 @@ Expected Range : [0, 1]
 export async function feesScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
-  feeRatePercentileHistory: FeeRatePercentile[]
+  feeRatePercentileHistory: FeeRatePercentile[],
 ): Promise<number> {
   let RFS: number = relativeFeesScore(transactions, feeRatePercentileHistory);
   let FAR: number = feesToAmountRatio(transactions);

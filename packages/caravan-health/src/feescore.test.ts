@@ -42,7 +42,7 @@ describe("Fees Score Functions", () => {
       ];
       const score: number = +relativeFeesScore(
         transactions,
-        feeRatePercentileHistory
+        feeRatePercentileHistory,
       ).toFixed(3);
       expect(score).toBe(0.5);
     });
