@@ -1,12 +1,54 @@
-# Health
+# Caravan-Health
 
-# TODO
+The `caravan-health` package is designed to help users maintain the health of their bitcoin wallets. Wallet health is determined by various factors including financial privacy, transaction fees, and the avoidance of dust outputs. This README will guide you through understanding wallet health goals, scoring metrics, and how to use the caravan-health package to achieve optimal wallet health.
 
-- [x] Write logic for `isAddressReused` function in `privacy.ts`.
-- [x] Cover test cases for `privacy.ts`.
-- [x] Replace `any` types from `feescore.ts`
-- [x] Cover test-cases for `feescore.ts`
-- [ ] Implement `Transaction` type on the `getAddressTransaction` func.
-- [ ] Take a decision on doubt mentioned in `getFeeRatePercentileForTransaction`
-- [ ] Implement Caching or Ticker based mechanism to reduce network latency for percentile of feerate for a given block
-- [ ] Write Blog on health and Add link to blog post
+# Defining Wallet Health Goals
+Different users have diverse needs and preferences which impact their wallet health goals. Some users prioritize financial privacy, others focus on minimizing transaction fees, and some want a healthy wallet without delving into the technical details of UTXOs and transactions. The caravan-health package aims to research metrics that help label scores for wallet health and provide suggestions for improvement.
+
+# Wallet Health Goals:
+- Protect financial privacy
+- Minimize long-term and short-term fee rates
+- Avoid creating dust outputs
+- Determine when to consolidate and when to conserve UTXOs
+- Manage spending frequency and allow simultaneous payments
+
+---
+
+# Scoring Metrics for health analysis
+
+## Privacy Metrics
+
+1. Reuse Factor (R.F)
+
+Measures the extent to which addresses are reused. Lower reuse factor improves privacy.
+
+2. Address Type Factor (A.T.F)
+
+Assesses privacy based on the diversity of address types used in transactions.
+
+3. UTXO Spread Factor (U.S.F)
+
+Evaluates the spread of UTXO values to gauge privacy. Higher spread indicates better privacy.
+
+4. Weightage on Number of UTXOs (W)
+
+Considers the number of UTXOs in the wallet.
+
+5. UTXO Value Weightage Factor (U.V.W.F)
+
+Combines UTXO spread and weightage on number of UTXOs. Adjusts privacy score based on UTXO value dispersion and quantity.
+
+# Fees Metrics
+
+1. Relative Fee Score (R.F.S)
+
+Measures the fee rate compared to historical data. Higher score indicates lower fee rates.
+
+2. Fee-to-Amount Percent Score (F.A.P.S)
+
+Ratio of fees paid to the transaction amount. Lower percentage signifies better fee efficiency.
+
+3. Weightage on Number of UTXOs (W)
+
+Considers the number of UTXOs.
+
