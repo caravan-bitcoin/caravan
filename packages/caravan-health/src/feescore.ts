@@ -1,5 +1,4 @@
 import {
-  BlockchainClient,
   FeeRatePercentile,
   Transaction,
 } from "@caravan/clients";
@@ -181,9 +180,8 @@ Expected Range : [0, 1]
 export async function feesScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
-  client: BlockchainClient
+  feeRatePercentileHistory: FeeRatePercentile[]
 ): Promise<number> {
-  let feeRatePercentileHistory: FeeRatePercentile[] = await client.getBlockFeeRatePercentileHistory();
   let RFS: number = relativeFeesScore(transactions, feeRatePercentileHistory);
   let FAR: number = feesToAmountRatio(transactions);
   let W: number = utxoSetLengthScore(utxos);
