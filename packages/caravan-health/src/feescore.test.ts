@@ -1,4 +1,9 @@
-import { feesScore, feesToAmountRatio, relativeFeesScore } from "./feescore";
+import {
+  feesScore,
+  feesToAmountRatio,
+  relativeFeesScore,
+  wasteMetric,
+} from "./feescore";
 import { BlockchainClient } from "@caravan/clients";
 import { Transaction, FeeRatePercentile } from "@caravan/clients";
 
@@ -67,4 +72,35 @@ describe("Fees Score Functions", () => {
       expect(ratio).toBe(0.1);
     });
   });
+
+  describe("wasteMetric Function", () => {
+    it("should calculate the correct waste metric value", () => {
+      const transaction: Transaction = {
+        vin: [],
+        vout: [],
+        txid: "tx1",
+        size: 1000,
+        weight: 500,
+        fee: 2,
+        isSend: true,
+        amount: 50,
+        blocktime: 1234,
+      };
+
+      const amount = 30;
+      const L = 30;
+
+      const result = wasteMetric(transaction, amount, L);
+
+      const expectedWeight = transaction.weight;
+      const feeRate = transaction.fee / transaction.weight;
+      const costOfTx = Math.abs(amount - transaction.amount);
+      const expectedWasteMetric = expectedWeight * (feeRate - L) + costOfTx;
+
+      expect(result).toBe(expectedWasteMetric);
+    });
+  });
 });
+function getFeeRateForTransaction(transaction: Transaction) {
+  throw new Error("Function not implemented.");
+}
