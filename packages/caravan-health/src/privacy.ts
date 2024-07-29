@@ -40,7 +40,7 @@ The deterministic scores or their formula for each spend type are as follows
 function spendTypeScores(
   spendType: SpendType,
   numberOfInputs: number,
-  numberOfOutputs: number,
+  numberOfOutputs: number
 ): number {
   switch (spendType) {
     case SpendType.SweepSpend:
@@ -82,20 +82,32 @@ Expected Range : [0, 0.75]
 -> Very Good : (0.6, 0.75] 
 */
 export async function privacyScoreByTxTopology(
+  transactions: Transaction[],
+  client: BlockchainClient
+): Promise<number> {
+  let privacyScore = 0;
+  for (let tx of transactions) {
+    let topologyScore = await scoreForTxTopology(tx, client);
+    privacyScore += topologyScore;
+  }
+  return privacyScore / transactions.length;
+}
+
+export async function scoreForTxTopology(
   transaction: Transaction,
-  client: BlockchainClient,
+  client: BlockchainClient
 ): Promise<number> {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
   const spendType: SpendType = determineSpendType(
     numberOfInputs,
-    numberOfOutputs,
+    numberOfOutputs
   );
   const score: number = spendTypeScores(
     spendType,
     numberOfInputs,
-    numberOfOutputs,
+    numberOfOutputs
   );
 
   if (spendType === SpendType.Consolidation) {
@@ -124,7 +136,7 @@ Expected Range : [0,1]
 */
 export async function addressReuseFactor(
   utxos: AddressUtxos,
-  client: BlockchainClient,
+  client: BlockchainClient
 ): Promise<number> {
   let reusedAmount: number = 0;
   let totalAmount: number = 0;
@@ -144,12 +156,12 @@ export async function addressReuseFactor(
 
 async function isReusedAddress(
   address: string,
-  client: BlockchainClient,
+  client: BlockchainClient
 ): Promise<boolean> {
   let txs: Transaction[] = await client.getAddressTransactions(address);
   let countReceive = 0;
   for (const tx of txs) {
-    if(tx.isSend===false){
+    if (tx.isSend === false) {
       countReceive++;
     }
   }
@@ -174,7 +186,7 @@ Expected Range : (0,1]
 export function addressTypeFactor(
   transactions: Transaction[],
   walletAddressType: MultisigAddressType,
-  network: Network,
+  network: Network
 ): number {
   const addressCounts: Record<MultisigAddressType, number> = {
     P2WSH: 0,
@@ -194,7 +206,7 @@ export function addressTypeFactor(
 
   const totalAddresses = Object.values(addressCounts).reduce(
     (a, b) => a + b,
-    0,
+    0
   );
   const walletTypeCount = addressCounts[walletAddressType];
 
@@ -301,14 +313,9 @@ export async function privacyScore(
   utxos: AddressUtxos,
   walletAddressType: MultisigAddressType,
   client: BlockchainClient,
-  network: Network,
+  network: Network
 ): Promise<number> {
-  let privacyScore = 0;
-  for (let tx of transactions) {
-    let topologyScore = await privacyScoreByTxTopology(tx, client);
-    privacyScore += topologyScore;
-  }
-  privacyScore = privacyScore / transactions.length;
+  let privacyScore = await privacyScoreByTxTopology(transactions, client);
 
   // Adjusting the privacy score based on the address reuse factor
   let addressReusedFactor = await addressReuseFactor(utxos, client);

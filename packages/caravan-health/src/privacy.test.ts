@@ -1,5 +1,5 @@
 import {
-  privacyScoreByTxTopology,
+  scoreForTxTopology,
   addressReuseFactor,
   addressTypeFactor,
   utxoSpreadFactor,
@@ -50,7 +50,7 @@ describe("Privacy Score Functions", () => {
         blocktime: 0,
       };
       const score: number = +(
-        await privacyScoreByTxTopology(transaction, mockClient)
+        await scoreForTxTopology(transaction, mockClient)
       ).toFixed(3);
       expect(score).toBe(0.818);
     });
@@ -118,7 +118,7 @@ describe("Privacy Score Functions", () => {
       const factor: number = +addressTypeFactor(
         transactions,
         walletAddressType,
-        network,
+        network
       ).toFixed(3);
       expect(factor).toBe(1);
     });
@@ -249,7 +249,7 @@ describe("Privacy Score Functions", () => {
           utxos,
           walletAddressType,
           mockClient,
-          network,
+          network
         )
       ).toFixed(3);
       expect(score).toBe(0.005);
