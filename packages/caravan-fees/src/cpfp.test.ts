@@ -1,82 +1,227 @@
-import { prepareCPFPTransaction } from "./cpfp";
-import { Transaction } from "bitcoinjs-lib-v5";
-import { Network, unsignedMultisigTransaction } from "@caravan/bitcoin";
-import BigNumber from "bignumber.js";
-import { CPFPOptions, UTXO } from "./types";
+import { CPFPTransaction, prepareCPFPTransaction } from "./cpfp";
+import { PsbtV2 } from "@caravan/psbt";
+import { Network } from "@caravan/bitcoin";
+import {
+  parentPsbtFixture,
+  additionalUtxoFixture,
+  defaultOptions,
+} from "./cpfp.fixtures";
 
-jest.mock("@caravan/bitcoin");
-jest.mock("./utils");
+describe("CPFPTransaction", () => {
+  describe("constructor", () => {
+    it("should initialize with valid options", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      expect(cpfpTx).toBeDefined();
+    });
 
-describe("CPFP", () => {
-  let mockParentTransaction: Transaction;
-  let mockUTXOs: UTXO[];
-  let mockOptions: CPFPOptions;
+    it("should throw an error if parent PSBT has no inputs", () => {
+      const invalidPsbt = new PsbtV2();
+      expect(
+        () =>
+          new CPFPTransaction({ ...defaultOptions, parentPsbt: invalidPsbt }),
+      ).toThrow("Parent PSBT has no inputs.");
+    });
 
-  beforeEach(() => {
-    mockParentTransaction = {
-      getId: jest.fn().mockReturnValue("parentTxId"),
-      outs: [{ value: 100000, address: "address1" }],
-      virtualSize: jest.fn().mockReturnValue(200),
-      getAddressType: jest.fn().mockReturnValue("P2SH"),
-      getRequiredSigners: jest.fn().mockReturnValue(2),
-      getTotalSigners: jest.fn().mockReturnValue(3),
-    } as unknown as Transaction;
-    mockUTXOs = [
-      {
-        txid: "parentTxId",
-        vout: 0,
-        value: new BigNumber(100000),
-        address: "address1",
-        scriptPubKey: "script1",
-      },
-    ];
-    mockOptions = {
-      parentTransaction: mockParentTransaction,
-      newFeeRate: { satoshisPerByte: 10 },
-      availableUTXOs: mockUTXOs,
-      destinationAddress: "destinationAddress",
-      network: Network.TESTNET,
-    };
-
-    // Mock utility functions
-    jest.requireMock("./utils").estimateVirtualSize.mockReturnValue(200);
-    (unsignedMultisigTransaction as jest.Mock).mockReturnValue(
-      {} as Transaction
-    );
+    it("should throw an error if no spendable outputs are provided", () => {
+      expect(
+        () => new CPFPTransaction({ ...defaultOptions, spendableOutputs: [] }),
+      ).toThrow("No spendable outputs provided.");
+    });
   });
 
-  it("should prepare CPFP transaction", () => {
-    const result = prepareCPFPTransaction(mockOptions);
-    expect(result).toBeDefined();
-    expect(unsignedMultisigTransaction).toHaveBeenCalled();
+  describe("prepareCPFP", () => {
+    it("should create a valid child transaction", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      const childPsbt = cpfpTx.prepareCPFP();
+      expect(childPsbt).toBeInstanceOf(PsbtV2);
+      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(1);
+      expect(childPsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
+    });
+
+    it("should increase the fee rate", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      const combinedFee = cpfpTx.getCombinedFee();
+      const parentFee = cpfpTx.getParentFee();
+      expect(combinedFee.isGreaterThan(parentFee)).toBe(true);
+    });
+
+    it("should handle high urgency", () => {
+      const highUrgencyOptions = {
+        ...defaultOptions,
+        urgency: "high" as const,
+      };
+      const cpfpTx = new CPFPTransaction(highUrgencyOptions);
+      const combinedFee = cpfpTx.getCombinedFee();
+      const parentFee = cpfpTx.getParentFee();
+      expect(combinedFee.minus(parentFee).isGreaterThan(parentFee)).toBe(true);
+    });
+
+    it("should add additional inputs when necessary", () => {
+      const lowValueParentPsbt = new PsbtV2();
+      lowValueParentPsbt.addInput({
+        previousTxId:
+          "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        outputIndex: 0,
+        witnessUtxo: {
+          script: Buffer.from(
+            "0014000000000000000000000000000000000000",
+            "hex",
+          ),
+          amount: 10000, // 0.0001 BTC
+        },
+      });
+      lowValueParentPsbt.addOutput({
+        script: Buffer.from("0014111111111111111111111111111111111111", "hex"),
+        amount: 9000, // 0.00009 BTC
+      });
+
+      const optionsWithAdditionalUtxo = {
+        ...defaultOptions,
+        parentPsbt: lowValueParentPsbt,
+        additionalUtxos: [additionalUtxoFixture],
+      };
+
+      const cpfpTx = new CPFPTransaction(optionsWithAdditionalUtxo);
+      const childPsbt = cpfpTx.prepareCPFP();
+      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
+    });
+
+    it("should throw an error if resulting output would be dust", () => {
+      const tinyValueParentPsbt = new PsbtV2();
+      tinyValueParentPsbt.addInput({
+        previousTxId:
+          "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        outputIndex: 0,
+        witnessUtxo: {
+          script: Buffer.from(
+            "0014000000000000000000000000000000000000",
+            "hex",
+          ),
+          amount: 600, // 600 satoshis
+        },
+      });
+      tinyValueParentPsbt.addOutput({
+        script: Buffer.from("0014111111111111111111111111111111111111", "hex"),
+        amount: 550, // 550 satoshis
+      });
+
+      const optionsWithTinyValue = {
+        ...defaultOptions,
+        parentPsbt: tinyValueParentPsbt,
+      };
+
+      const cpfpTx = new CPFPTransaction(optionsWithTinyValue);
+      expect(() => cpfpTx.prepareCPFP()).toThrow(
+        "CPFP transaction would create a dust output",
+      );
+    });
   });
 
-  it("should throw error if no suitable parent output found", () => {
-    mockOptions.availableUTXOs = [];
-    expect(() => prepareCPFPTransaction(mockOptions)).toThrow(
-      "No suitable output found in parent transaction for CPFP"
-    );
+  describe("fee calculations", () => {
+    it("should correctly calculate child fee", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      cpfpTx.prepareCPFP();
+      const childFee = cpfpTx.getChildFee();
+      expect(childFee.isGreaterThan(0)).toBe(true);
+    });
+
+    it("should correctly calculate parent fee", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      const parentFee = cpfpTx.getParentFee();
+      expect(parentFee.toNumber()).toBe(10000); // 0.001 BTC - 0.0009 BTC
+    });
+
+    it("should correctly calculate combined fee", () => {
+      const cpfpTx = new CPFPTransaction(defaultOptions);
+      cpfpTx.prepareCPFP();
+      const combinedFee = cpfpTx.getCombinedFee();
+      const childFee = cpfpTx.getChildFee();
+      const parentFee = cpfpTx.getParentFee();
+      expect(
+        combinedFee.minus(childFee.plus(parentFee)).abs().isLessThan(1),
+      ).toBe(true);
+    });
   });
 
-  it("should throw error if CPFP transaction would create dust output", () => {
-    mockOptions.newFeeRate = { satoshisPerByte: 1000 }; // Unrealistically high fee to force dust output
-    expect(() => prepareCPFPTransaction(mockOptions)).toThrow(
-      "CPFP transaction would create a dust output"
-    );
+  describe("prepareCPFPTransaction function", () => {
+    it("should return a valid PsbtV2 instance", () => {
+      const childPsbt = prepareCPFPTransaction(defaultOptions);
+      expect(childPsbt).toBeInstanceOf(PsbtV2);
+    });
+
+    it("should throw an error with invalid options", () => {
+      const invalidOptions = { ...defaultOptions, parentPsbt: new PsbtV2() };
+      expect(() => prepareCPFPTransaction(invalidOptions)).toThrow(
+        "Parent PSBT has no inputs.",
+      );
+    });
   });
 
-  it("should calculate correct fee for child transaction", () => {
-    prepareCPFPTransaction(mockOptions);
-    const expectedFee = new BigNumber(400).multipliedBy(10); // (200 + 200) * 10
-    expect(unsignedMultisigTransaction).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.arrayContaining([
-        expect.objectContaining({
-          amountSats: new BigNumber(100000).minus(expectedFee),
-        }),
-      ]),
-      true
-    );
+  describe("edge cases", () => {
+    it("should handle maximum number of additional inputs", () => {
+      const manyAdditionalUtxos = Array(10).fill(additionalUtxoFixture);
+      const optionsWithManyUtxos = {
+        ...defaultOptions,
+        maxAdditionalInputs: 5,
+        additionalUtxos: manyAdditionalUtxos,
+      };
+
+      const cpfpTx = new CPFPTransaction(optionsWithManyUtxos);
+      const childPsbt = cpfpTx.prepareCPFP();
+      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBeLessThanOrEqual(6); // 1 parent output + 5 additional
+    });
+
+    it("should handle custom urgency multipliers", () => {
+      const customUrgencyOptions = {
+        ...defaultOptions,
+        urgency: "high" as const,
+        urgencyMultipliers: { low: 1.1, medium: 1.3, high: 1.8 },
+      };
+
+      const cpfpTx = new CPFPTransaction(customUrgencyOptions);
+      const combinedFee = cpfpTx.getCombinedFee();
+      const parentFee = cpfpTx.getParentFee();
+      const feeIncrease = combinedFee.minus(parentFee);
+      expect(feeIncrease.dividedBy(parentFee).isGreaterThan(0.7)).toBe(true);
+    });
+
+    it("should respect max child transaction size", () => {
+      const manyAdditionalUtxos = Array(100).fill(additionalUtxoFixture);
+      const optionsWithManyUtxos = {
+        ...defaultOptions,
+        maxChildTxSize: 5,
+        additionalUtxos: manyAdditionalUtxos,
+      };
+
+      const cpfpTx = new CPFPTransaction(optionsWithManyUtxos);
+      const childPsbt = cpfpTx.prepareCPFP();
+      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe("different address types", () => {
+    const addressTypes = ["P2SH", "P2WSH", "P2SH-P2WSH"];
+
+    addressTypes.forEach((addressType) => {
+      it(`should handle ${addressType} addresses`, () => {
+        const options = { ...defaultOptions, addressType };
+        const cpfpTx = new CPFPTransaction(options);
+        const childPsbt = cpfpTx.prepareCPFP();
+        expect(childPsbt).toBeInstanceOf(PsbtV2);
+      });
+    });
+  });
+
+  describe("different networks", () => {
+    it("should handle testnet", () => {
+      const testnetOptions = {
+        ...defaultOptions,
+        network: Network.TESTNET,
+        destinationAddress: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+      };
+      const cpfpTx = new CPFPTransaction(testnetOptions);
+      const childPsbt = cpfpTx.prepareCPFP();
+      expect(childPsbt).toBeInstanceOf(PsbtV2);
+    });
   });
 });

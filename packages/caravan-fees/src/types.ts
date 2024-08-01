@@ -1,13 +1,13 @@
 import BigNumber from "bignumber.js";
-import { Transaction } from "bitcoinjs-lib-v5";
+import { PsbtV2 } from "@caravan/psbt";
 import { Network } from "@caravan/bitcoin";
 
 export interface UTXO {
   txid: string;
   vout: number;
-  value: BigNumber;
-  address: string;
-  scriptPubKey: string;
+  value: number;
+  script: Buffer;
+  additionalData?: any; // For any additional data required for the input
 }
 
 export interface TransactionOutput {
@@ -23,13 +23,23 @@ export interface TransactionAnalysis {
   reason: string;
 }
 
+export type UrgencyLevel = "low" | "medium" | "high";
+
+export type AddressType = "P2SH" | "P2SH-P2WSH" | "P2WSH";
+
 export interface FeeRate {
   satoshisPerByte: number;
 }
 
 export interface RbfOptions {
-  subtractFeeFromOutput?: number;
-  dustThreshold?: string;
+  urgency?: UrgencyLevel;
+  subtractFeeFromOutput?: number | undefined;
+  dustThreshold?: string | number;
+  additionalUtxos?: UTXO[];
+  urgencyMultipliers?: Record<UrgencyLevel, number>;
+  requiredSigners: number;
+  totalSigners: number;
+  changeOutputIndices: number[];
 }
 
 export interface FeeEstimate {
@@ -39,43 +49,55 @@ export interface FeeEstimate {
 }
 
 export interface TransactionDetails {
-  txid: string;
-  version: number;
-  locktime: number;
-  vin: any[];
-  vout: any[];
-  size: number;
-  weight: number;
+  inputs: {
+    txid: string;
+    vout: number;
+    amount: BigNumber;
+  }[];
+  outputs: {
+    address: string;
+    amount: BigNumber;
+  }[];
   fee: BigNumber;
 }
 
-export interface BlockchainClientInterface {
-  getFeeEstimate: () => Promise<FeeRate>;
-  getTransaction: (txid: string) => Promise<Transaction>;
-  broadcastTransaction: (txHex: string) => Promise<string>;
+export interface RbfTransactionResult {
+  psbt: string; // Base64 encoded PSBT
+  details: TransactionDetails;
+  feeRate: FeeRate;
 }
 
-export interface RBFOptions {
-  transaction: Transaction;
-  newFeeRate: FeeRate;
-  utxos: UTXO[];
-  subtractFromOutput?: boolean;
-  cancelTransaction?: boolean;
-  destinationAddress?: string;
-  network: Network;
+export interface CancelTransactionResult extends RbfTransactionResult {
+  destinationAddress: string;
 }
 
 export interface CPFPOptions {
-  parentTransaction: Transaction;
-  newFeeRate: FeeRate;
-  availableUTXOs: UTXO[];
+  parentPsbt: PsbtV2 | string | Buffer;
+  spendableOutputs: number[];
   destinationAddress: string;
+  feeRate: FeeRate;
   network: Network;
-  multisigDetails: MultisigDetails;
+  urgency?: UrgencyLevel;
+  maxAdditionalInputs?: number;
+  maxChildTxSize?: number;
+  dustThreshold?: number;
+  additionalUtxos?: UTXO[];
+  urgencyMultipliers?: Record<UrgencyLevel, number>;
+  requiredSigners: number;
+  totalSigners: number;
+  addressType: string;
 }
 
 export interface MultisigDetails {
+  requiredSigners: number;
+  totalSigners: number;
+  addressType: AddressType;
+}
+
+export interface WalletConfig {
   addressType: string;
   requiredSigners: number;
   totalSigners: number;
+  addresses: string[];
+  // Add any other relevant wallet configuration details
 }
