@@ -15,37 +15,45 @@ export interface TransactionOutput {
   amountSats: BigNumber;
 }
 
-export interface TransactionAnalysis {
-  canRBF: boolean;
-  canCPFP: boolean;
-  currentFeeRate: FeeRate;
-  recommendedMethod: "RBF" | "CPFP" | null;
-  reason: string;
+export interface TransactionAnalyzerOptions {
+  psbt: PsbtV2 | string | Buffer;
+  network: Network;
+  dustThreshold?: number;
+  targetFeeRate: FeeRateSatsPerVByte;
+  additionalUtxos?: UTXO[];
+  spendableOutputs: { index: number; amount: BigNumber }[];
+  changeOutputs: { index: number; amount: BigNumber }[];
+  requiredSigners: number;
+  totalSigners: number;
 }
 
+export enum FeeBumpStrategy {
+  RBF = "RBF",
+  CPFP = "CPFP",
+  NONE = "NONE",
+}
 export type UrgencyLevel = "low" | "medium" | "high";
 
 export type AddressType = "P2SH" | "P2SH-P2WSH" | "P2WSH";
 
-export interface FeeRate {
-  satoshisPerByte: number;
-}
+export type FeeRateSatsPerVByte = number;
 
-export interface RbfOptions {
-  urgency?: UrgencyLevel;
-  subtractFeeFromOutput?: number | undefined;
+export interface RbfTransactionOptions {
+  psbt: PsbtV2 | string | Buffer;
+  network: Network;
+  targetFeeRate: FeeRateSatsPerVByte;
+  feeOutputIndex?: number;
   dustThreshold?: string | number;
   additionalUtxos?: UTXO[];
-  urgencyMultipliers?: Record<UrgencyLevel, number>;
   requiredSigners: number;
   totalSigners: number;
   changeOutputIndices: number[];
 }
 
 export interface FeeEstimate {
-  lowFee: FeeRate;
-  mediumFee: FeeRate;
-  highFee: FeeRate;
+  lowFee: FeeRateSatsPerVByte;
+  mediumFee: FeeRateSatsPerVByte;
+  highFee: FeeRateSatsPerVByte;
 }
 
 export interface TransactionDetails {
@@ -64,7 +72,7 @@ export interface TransactionDetails {
 export interface RbfTransactionResult {
   psbt: string; // Base64 encoded PSBT
   details: TransactionDetails;
-  feeRate: FeeRate;
+  feeRate: FeeRateSatsPerVByte;
 }
 
 export interface CancelTransactionResult extends RbfTransactionResult {
@@ -75,14 +83,12 @@ export interface CPFPOptions {
   parentPsbt: PsbtV2 | string | Buffer;
   spendableOutputs: number[];
   destinationAddress: string;
-  feeRate: FeeRate;
+  targetFeeRate: FeeRateSatsPerVByte;
   network: Network;
-  urgency?: UrgencyLevel;
   maxAdditionalInputs?: number;
   maxChildTxSize?: number;
   dustThreshold?: number;
   additionalUtxos?: UTXO[];
-  urgencyMultipliers?: Record<UrgencyLevel, number>;
   requiredSigners: number;
   totalSigners: number;
   addressType: string;

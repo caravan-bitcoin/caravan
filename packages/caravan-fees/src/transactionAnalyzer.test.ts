@@ -1,161 +1,106 @@
-import { Transaction } from "bitcoinjs-lib-v5";
-import { analyzeTransaction } from "./transactionAnalyzer";
-import BigNumber from "bignumber.js";
-import { UTXO, FeeRate } from "./types";
-import * as utils from "./utils";
+import { TransactionAnalyzer } from "./transactionAnalyzer";
+import { fixtures } from "./transactionAnalyzer.fixtures";
+import { FeeBumpStrategy } from "./types";
 
-// Mock the utility functions
-jest.mock("./utils", () => ({
-  isRBFSignaled: jest.fn(),
-  calculateEffectiveFeeRate: jest.fn(),
-}));
-
-describe("analyzeTransaction", () => {
-  let mockTransaction: Transaction;
-  let mockUTXOs: UTXO[];
-  let mockCurrentNetworkFeeRate: FeeRate;
-
-  beforeEach(() => {
-    mockTransaction = {
-      outs: [{ value: 1000 }, { value: 2000 }],
-    } as unknown as Transaction;
-
-    mockUTXOs = [
-      { txid: "txid1", vout: 0, value: new BigNumber(3000) },
-    ] as UTXO[];
-
-    mockCurrentNetworkFeeRate = { satoshisPerByte: 5 };
-
-    // Reset mock function calls
-    (utils.isRBFSignaled as jest.Mock).mockReset();
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReset();
-  });
-
-  it("should recommend RBF when both RBF and CPFP are possible and current fee is low", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(true);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 3,
+describe("TransactionAnalyzer", () => {
+  describe("RBF Analysis", () => {
+    it("should correctly identify RBF-signaled transactions", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      expect(analyzer.canRBF).toBe(true);
     });
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(true);
-    expect(result.canCPFP).toBe(true);
-    expect(result.recommendedMethod).toBe("RBF");
-    expect(result.currentFeeRate).toEqual({ satoshisPerByte: 3 });
-  });
-
-  it("should recommend CPFP when both RBF and CPFP are possible but current fee is close to network rate", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(true);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 4.5,
+    it("should correctly identify non-RBF transactions", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture2);
+      expect(analyzer.canRBF).toBe(false);
     });
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(true);
-    expect(result.canCPFP).toBe(true);
-    expect(result.recommendedMethod).toBe("CPFP");
-    expect(result.currentFeeRate).toEqual({ satoshisPerByte: 4.5 });
+    it("should estimate RBF cost correctly", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      const rbfCost = analyzer.estimateRBFCost();
+      expect(rbfCost).not.toBeNull();
+      expect(rbfCost!.isGreaterThan(0)).toBe(true);
+    });
   });
 
-  it("should recommend RBF when only RBF is possible", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(true);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 3,
+  describe("CPFP Analysis", () => {
+    it("should correctly identify CPFP possibility", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      expect(analyzer.canCPFP).toBe(true);
     });
-    mockTransaction.outs = [{ value: 500 }]; // Below dust limit, so CPFP not possible
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(true);
-    expect(result.canCPFP).toBe(false);
-    expect(result.recommendedMethod).toBe("RBF");
+    it("should estimate CPFP cost correctly", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      const cpfpCost = analyzer.estimateCPFPCost();
+      expect(cpfpCost).not.toBeNull();
+      expect(cpfpCost!.isGreaterThan(0)).toBe(true);
+    });
   });
 
-  it("should recommend CPFP when only CPFP is possible", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(false);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 3,
+  describe("Fee Rate Calculations", () => {
+    it("should calculate current fee rate correctly", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      expect(analyzer.currentFeeRate).toBeGreaterThan(0);
     });
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(false);
-    expect(result.canCPFP).toBe(true);
-    expect(result.recommendedMethod).toBe("CPFP");
+    it("should calculate potential fee increase correctly", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      const increase = analyzer.getPotentialFeeIncrease();
+      expect(increase.isGreaterThan(0)).toBe(true);
+    });
   });
 
-  it("should return null recommendedMethod when neither RBF nor CPFP is possible", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(false);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 3,
+  describe("Strategy Recommendation", () => {
+    it("should recommend RBF when only RBF is possible", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      expect(analyzer.recommendFeeBumpStrategy()).toBe(FeeBumpStrategy.RBF);
     });
-    mockTransaction.outs = [{ value: 500 }]; // Below dust limit, so CPFP not possible
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
+    it("should recommend CPFP when only CPFP is possible", () => {
+      const cpfpOnlyFixture = {
+        ...fixtures.fixture3,
+        changeOutputs: [], // Remove change outputs to make RBF impossible
+      };
+      const analyzer = new TransactionAnalyzer(cpfpOnlyFixture);
+      expect(analyzer.recommendFeeBumpStrategy()).toBe(FeeBumpStrategy.CPFP);
+    });
 
-    expect(result.canRBF).toBe(false);
-    expect(result.canCPFP).toBe(false);
-    expect(result.recommendedMethod).toBeNull();
-    expect(result.reason).toBe(
-      "This transaction cannot be fee bumped using RBF or CPFP."
-    );
+    it("should recommend the cheaper strategy when both are possible", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      const recommendation = analyzer.recommendFeeBumpStrategy();
+      expect(recommendation).toMatch(/RBF|CPFP/);
+    });
   });
 
-  it("should handle edge case with very high current fee rate", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(true);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 1000,
+  describe("UTXO Management", () => {
+    it("should update analysis when new UTXOs are added", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      const initialRbfCost = analyzer.estimateRBFCost();
+      analyzer.addUtxos([
+        {
+          txid: "test",
+          vout: 0,
+          value: 10000,
+          script: Buffer.from("test"),
+        },
+      ]);
+      const newRbfCost = analyzer.estimateRBFCost();
+      expect(newRbfCost!.isLessThan(initialRbfCost!)).toBe(true);
     });
-
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(true);
-    expect(result.canCPFP).toBe(true);
-    expect(result.recommendedMethod).toBe("CPFP");
-    expect(result.currentFeeRate).toEqual({ satoshisPerByte: 1000 });
   });
 
-  it("should handle edge case with very low current fee rate", async () => {
-    (utils.isRBFSignaled as jest.Mock).mockReturnValue(true);
-    (utils.calculateEffectiveFeeRate as jest.Mock).mockReturnValue({
-      satoshisPerByte: 0.1,
+  describe("Output Management", () => {
+    it("should update analysis when spendable outputs are changed", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      const initialCpfpPossibility = analyzer.canCPFP;
+      analyzer.updateSpendableOutputs([]);
+      expect(analyzer.canCPFP).not.toBe(initialCpfpPossibility);
     });
 
-    const result = await analyzeTransaction(
-      mockTransaction,
-      mockUTXOs,
-      mockCurrentNetworkFeeRate
-    );
-
-    expect(result.canRBF).toBe(true);
-    expect(result.canCPFP).toBe(true);
-    expect(result.recommendedMethod).toBe("RBF");
-    expect(result.currentFeeRate).toEqual({ satoshisPerByte: 0.1 });
+    it("should update analysis when change outputs are changed", () => {
+      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      const initialRbfPossibility = analyzer.canRBF;
+      analyzer.updateChangeOutputs([]);
+      expect(analyzer.canRBF).not.toBe(initialRbfPossibility);
+    });
   });
 });

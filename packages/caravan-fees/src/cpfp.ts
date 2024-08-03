@@ -1,6 +1,7 @@
 import { PsbtV2 } from "@caravan/psbt";
 import BigNumber from "bignumber.js";
-import { CPFPOptions, FeeRate } from "./types";
+import { Network } from "@caravan/bitcoin";
+import { CPFPOptions, FeeRateSatsPerVByte, UTXO } from "./types";
 import {
   DEFAULT_DUST_THRESHOLD,
   DEFAULT_MAX_CHILD_TX_SIZE,
@@ -12,7 +13,7 @@ import { createOutputScript } from "./utils";
  * CPFPTransaction Class
  *
  * This class implements Child-Pays-for-Parent (CPFP) functionality for Bitcoin transactions,
- * as described in BIP 125 (Replace-by-Fee) and commonly used in conjunction with BIP 174 (PSBT).
+ * commonly used in conjunction with BIP 174 (PSBT).
  * While CPFP is not explicitly defined in a BIP, it's a widely used technique for fee bumping.
  *
  * The class allows users to create a child transaction that spends one or more outputs from
@@ -20,14 +21,35 @@ import { createOutputScript } from "./utils";
  * transactions in a block. This is particularly useful when the parent transaction is stuck
  * due to low fees.
  *
+ *  Key Features:
+ * - Supports PSBTv2 format
+ * - Allows setting and getting of target fee rate
+ * - Provides methods to calculate the cost of fee bumping with CPFP
+ * - Supports additional input selection for fee coverage
+ *
+ * Usage:
+ * const cpfpTx = new CpfpTransaction(parentPsbt, options);
+ * cpfpTx.setTargetFeeRate(50); // sets target to 50 sats/vbyte
+ * const childPsbt = cpfpTx.createChildTransaction();
+ * const totalFees = cpfpTx.getAbsFees(); // gets total fees for parent + child
+ *
  * References:
- * - BIP 125: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+ * - Child pays for parent (CPFP): https://bitcoinops.org/en/topics/cpfp/
  * - BIP 174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export class CPFPTransaction {
-  private parentPsbt: PsbtV2;
+  private readonly parentPsbt: PsbtV2;
   private childPsbt: PsbtV2;
-  private options: Required<CPFPOptions>;
+  private readonly network: Network;
+  private _targetFeeRate: FeeRateSatsPerVByte;
+  private readonly dustThreshold: BigNumber;
+  private readonly maxAdditionalInputs: number;
+  private readonly spendableOutputs: number[];
+  private readonly maxChildTxSize: number;
+  private readonly additionalUtxos: UTXO[];
+  private readonly requiredSigners: number;
+  private readonly totalSigners: number;
+  private readonly destinationAddress: string;
 
   /**
    * Constructor for the CPFPTransaction class.
@@ -41,15 +63,19 @@ export class CPFPTransaction {
   constructor(options: CPFPOptions) {
     this.parentPsbt = this.initializePsbt(options.parentPsbt);
     this.childPsbt = new PsbtV2();
-    this.options = {
-      urgency: "medium",
-      maxAdditionalInputs: DEFAULT_MAX_ADDITIONAL_INPUTS,
-      maxChildTxSize: DEFAULT_MAX_CHILD_TX_SIZE,
-      dustThreshold: DEFAULT_DUST_THRESHOLD,
-      additionalUtxos: [],
-      urgencyMultipliers: { low: 1.2, medium: 1.5, high: 2 },
-      ...options,
-    };
+    this.network = options.network;
+    this._targetFeeRate = options.targetFeeRate;
+    this.dustThreshold = new BigNumber(
+      options.dustThreshold || DEFAULT_DUST_THRESHOLD,
+    );
+    this.additionalUtxos = options.additionalUtxos || [];
+    this.maxAdditionalInputs =
+      options.maxAdditionalInputs || DEFAULT_MAX_ADDITIONAL_INPUTS;
+    this.maxChildTxSize = options.maxChildTxSize || DEFAULT_MAX_CHILD_TX_SIZE;
+    this.requiredSigners = options.requiredSigners;
+    this.totalSigners = options.totalSigners;
+    this.destinationAddress = options.destinationAddress;
+    this.spendableOutputs = options.spendableOutputs;
     this.validateParentPsbt();
   }
 
@@ -99,11 +125,119 @@ export class CPFPTransaction {
     if (this.parentPsbt.PSBT_GLOBAL_OUTPUT_COUNT === 0) {
       throw new Error("Parent PSBT has no outputs.");
     }
-    if (this.options.spendableOutputs.length === 0) {
+    if (this.spendableOutputs.length === 0) {
       throw new Error("No spendable outputs provided.");
     }
   }
 
+  // Getters and setters
+
+  get targetFeeRate(): FeeRateSatsPerVByte {
+    return this._targetFeeRate;
+  }
+
+  set targetFeeRate(rate: FeeRateSatsPerVByte) {
+    this._targetFeeRate = rate;
+  }
+
+  /**
+   * Calculates the total input value of the child transaction.
+   *
+   * This method sums up the values of all inputs in the child transaction.
+   * It's used to determine if additional inputs are needed and to calculate fees.
+   *
+   * @private
+   * @returns {BigNumber} The total input value
+   */
+  get totalInputValue(): BigNumber {
+    return this.childPsbt.PSBT_IN_WITNESS_UTXO.reduce(
+      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
+      new BigNumber(0),
+    );
+  }
+
+  /**
+   * Calculates the required amount for the child transaction.
+   *
+   * This method determines the total amount needed to cover both the desired
+   * output and the estimated fee. It's used to check if additional inputs are required.
+   *
+   * @private
+   * @returns {BigNumber} The required amount
+   */
+  get requiredAmount(): BigNumber {
+    const outputValue = new BigNumber(
+      this.childPsbt.PSBT_OUT_AMOUNT[0]?.toString() || "0",
+    );
+    return outputValue.plus(this.estimatedRequiredFee);
+  }
+
+  /**
+   * Estimates the required fee for the child transaction.
+   *
+   * This method calculates the estimated fee based on the virtual size of the
+   * transaction and the new fee rate. It's crucial for determining the appropriate
+   * fee to ensure the CPFP transaction is effective.
+   *
+   * @private
+   * @returns {BigNumber} The estimated required fee
+   */
+  get estimatedRequiredFee(): BigNumber {
+    const vsize = this.estimateVsize();
+    return new BigNumber(vsize).multipliedBy(this.targetFeeRate);
+  }
+
+  /**
+   * Retrieves the fee for the parent transaction.
+   *
+   * This method calculates the fee of the parent transaction by subtracting
+   * the total output value from the total input value. It's useful for
+   * comparing the original fee to the new combined fee.
+   *
+   * @public
+   * @returns {BigNumber} The parent transaction fee
+   */
+  get parentFee(): BigNumber {
+    const inputValue = this.parentPsbt.PSBT_IN_WITNESS_UTXO.reduce(
+      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
+      new BigNumber(0),
+    );
+    const outputValue = this.parentPsbt.PSBT_OUT_AMOUNT.reduce(
+      (sum, amount) => sum.plus(new BigNumber(amount.toString())),
+      new BigNumber(0),
+    );
+    return inputValue.minus(outputValue);
+  }
+
+  /**
+   * Retrieves the fee for the child transaction.
+   *
+   * This public method allows users to get the current fee of the child transaction.
+   * It's useful for displaying fee information to users or for further calculations.
+   *
+   * @public
+   * @returns {BigNumber} The child transaction fee
+   */
+  get childFee(): BigNumber {
+    return this.totalInputValue.minus(
+      new BigNumber(this.childPsbt.PSBT_OUT_AMOUNT[0]?.toString() || "0"),
+    );
+  }
+
+  /**
+   * Calculates the combined fee of both parent and child transactions.
+   *
+   * This method sums the fees of both transactions, providing the total fee
+   * that will incentivize miners to include both transactions in a block.
+   *
+   * @public
+   * @returns {BigNumber} The combined fee of parent and child transactions
+   */
+  get combinedFee(): BigNumber {
+    return this.childFee.plus(this.parentFee);
+  }
+
+  // Methods
   /**
    * Prepares the CPFP transaction.
    *
@@ -123,52 +257,11 @@ export class CPFPTransaction {
     return this.childPsbt;
   }
 
-  /**
-   * Retrieves the fee for the child transaction.
-   *
-   * This public method allows users to get the current fee of the child transaction.
-   * It's useful for displaying fee information to users or for further calculations.
-   *
-   * @public
-   * @returns {BigNumber} The child transaction fee
-   */
-  public getChildFee(): BigNumber {
-    return this.calculateCurrentFee();
-  }
-
-  /**
-   * Retrieves the fee for the parent transaction.
-   *
-   * This method calculates the fee of the parent transaction by subtracting
-   * the total output value from the total input value. It's useful for
-   * comparing the original fee to the new combined fee.
-   *
-   * @public
-   * @returns {BigNumber} The parent transaction fee
-   */
-  public getParentFee(): BigNumber {
-    const inputValue = this.parentPsbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    );
-    const outputValue = this.parentPsbt.PSBT_OUT_AMOUNT.reduce(
-      (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-      new BigNumber(0),
-    );
-    return inputValue.minus(outputValue);
-  }
-
-  /**
-   * Calculates the combined fee of both parent and child transactions.
-   *
-   * This method sums the fees of both transactions, providing the total fee
-   * that will incentivize miners to include both transactions in a block.
-   *
-   * @public
-   * @returns {BigNumber} The combined fee of parent and child transactions
-   */
-  public getCombinedFee(): BigNumber {
-    return this.getChildFee().plus(this.getParentFee());
+  public getAbsFees(customFeeRate?: FeeRateSatsPerVByte): string {
+    const feeRate = customFeeRate || this.targetFeeRate;
+    const totalSize =
+      this.parentPsbt.PSBT_GLOBAL_INPUT_COUNT + this.estimateVsize();
+    return new BigNumber(feeRate).multipliedBy(totalSize).toString();
   }
 
   /**
@@ -185,7 +278,7 @@ export class CPFPTransaction {
    * @throws {Error} If the resulting output would be dust
    */
   private createChildTransaction(): void {
-    for (const outputIndex of this.options.spendableOutputs) {
+    for (const outputIndex of this.spendableOutputs) {
       const output = {
         script: Buffer.from(
           this.parentPsbt.PSBT_OUT_SCRIPT[outputIndex],
@@ -208,16 +301,15 @@ export class CPFPTransaction {
       this.childPsbt.addInput(input);
     }
 
-    const estimatedFee = this.estimateRequiredFee();
-    const outputAmount = this.calculateTotalInputValue().minus(estimatedFee);
+    const outputAmount = this.totalInputValue.minus(this.estimatedRequiredFee);
 
-    if (outputAmount.isLessThan(this.options.dustThreshold)) {
+    if (outputAmount.isLessThan(this.dustThreshold)) {
       throw new Error("CPFP transaction would create a dust output");
     }
 
     const outputScript = createOutputScript(
-      this.options.destinationAddress,
-      this.options.network,
+      this.destinationAddress,
+      this.network,
     );
     const output = {
       script: outputScript,
@@ -227,11 +319,8 @@ export class CPFPTransaction {
   }
 
   private addAdditionalInputsIfNeeded(): void {
-    const currentInputValue = this.calculateTotalInputValue();
-    const requiredAmount = this.calculateRequiredAmount();
-
-    if (currentInputValue.isLessThan(requiredAmount)) {
-      this.addAdditionalInputs(requiredAmount.minus(currentInputValue));
+    if (this.totalInputValue.isLessThan(this.requiredAmount)) {
+      this.addAdditionalInputs(this.requiredAmount.minus(this.totalInputValue));
     }
   }
 
@@ -250,11 +339,11 @@ export class CPFPTransaction {
     let addedAmount = new BigNumber(0);
     let addedInputs = 0;
 
-    for (const utxo of this.options.additionalUtxos) {
+    for (const utxo of this.additionalUtxos) {
       if (
         addedAmount.isGreaterThanOrEqualTo(requiredAmount) ||
-        addedInputs >= this.options.maxAdditionalInputs ||
-        this.childPsbt.PSBT_GLOBAL_INPUT_COUNT >= this.options.maxChildTxSize
+        addedInputs >= this.maxAdditionalInputs ||
+        this.childPsbt.PSBT_GLOBAL_INPUT_COUNT >= this.maxChildTxSize
       ) {
         break;
       }
@@ -264,7 +353,7 @@ export class CPFPTransaction {
         outputIndex: utxo.vout,
         witnessUtxo: {
           script: utxo.script,
-          amount: utxo.value, // Changed from 'value' to 'amount'
+          amount: utxo.value,
         },
       });
 
@@ -293,114 +382,23 @@ export class CPFPTransaction {
   private adjustFeeRate(): void {
     const combinedSize =
       this.parentPsbt.PSBT_GLOBAL_INPUT_COUNT + this.estimateVsize();
-    const newFee = new BigNumber(this.calculateNewFeeRate().satoshisPerByte)
+    const newFee = new BigNumber(this.targetFeeRate)
       .multipliedBy(combinedSize)
       .integerValue(BigNumber.ROUND_CEIL);
 
-    const currentFee = this.calculateCurrentFee();
-    if (newFee.isLessThanOrEqualTo(currentFee)) {
+    if (newFee.isLessThanOrEqualTo(this.childFee)) {
       throw new Error("New fee must be higher than the current fee");
     }
 
-    // Adjust the output amount to reflect the new fee
     const output = this.childPsbt.PSBT_OUT_AMOUNT[0];
     const newOutputAmount = new BigNumber(output.toString()).minus(
-      newFee.minus(currentFee),
+      newFee.minus(this.childFee),
     );
 
-    if (newOutputAmount.isLessThan(this.options.dustThreshold)) {
+    if (newOutputAmount.isLessThan(this.dustThreshold)) {
       throw new Error("Adjusted output would be dust");
     }
     this.childPsbt.PSBT_OUT_AMOUNT[0] = BigInt(newOutputAmount.toFixed(0));
-  }
-
-  /**
-   * Calculates the new fee rate based on the current market rate and urgency.
-   *
-   * This method applies an urgency multiplier to the base fee rate to determine
-   * the new fee rate for the CPFP transaction. The urgency levels (low, medium, high)
-   * allow users to balance the trade-off between cost and confirmation speed.
-   *
-   * @private
-   * @returns {FeeRate} The calculated new fee rate
-   */
-  private calculateNewFeeRate(): FeeRate {
-    const urgencyMultiplier =
-      this.options.urgencyMultipliers[this.options.urgency];
-
-    return {
-      satoshisPerByte: Math.ceil(
-        this.options.feeRate.satoshisPerByte * urgencyMultiplier,
-      ),
-    };
-  }
-
-  /**
-   * Calculates the total input value of the child transaction.
-   *
-   * This method sums up the values of all inputs in the child transaction.
-   * It's used to determine if additional inputs are needed and to calculate fees.
-   *
-   * @private
-   * @returns {BigNumber} The total input value
-   */
-  private calculateTotalInputValue(): BigNumber {
-    return this.childPsbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    );
-  }
-
-  /**
-   * Calculates the required amount for the child transaction.
-   *
-   * This method determines the total amount needed to cover both the desired
-   * output and the estimated fee. It's used to check if additional inputs are required.
-   *
-   * @private
-   * @returns {BigNumber} The required amount
-   */
-  private calculateRequiredAmount(): BigNumber {
-    const outputValue = new BigNumber(
-      this.childPsbt.PSBT_OUT_AMOUNT[0].toString(),
-    );
-    const estimatedFee = this.estimateRequiredFee();
-    return outputValue.plus(estimatedFee);
-  }
-
-  /**
-   * Estimates the required fee for the child transaction.
-   *
-   * This method calculates the estimated fee based on the virtual size of the
-   * transaction and the new fee rate. It's crucial for determining the appropriate
-   * fee to ensure the CPFP transaction is effective.
-   *
-   * @private
-   * @returns {BigNumber} The estimated required fee
-   */
-  private estimateRequiredFee(): BigNumber {
-    const vsize = this.estimateVsize();
-    return new BigNumber(vsize).multipliedBy(
-      this.calculateNewFeeRate().satoshisPerByte,
-    );
-  }
-
-  /**
-   * Calculates the current fee of the child transaction.
-   *
-   * This method computes the difference between the total input value and the
-   * output value, which represents the current fee. It's used to compare against
-   * the new fee when adjusting the fee rate.
-   *
-   * @private
-   * @returns {BigNumber} The current fee
-   */
-  private calculateCurrentFee(): BigNumber {
-    const inputValue = this.calculateTotalInputValue();
-    const outputValue = new BigNumber(
-      this.childPsbt.PSBT_OUT_AMOUNT[0].toString(),
-    );
-    return inputValue.minus(outputValue);
   }
 
   private estimateVsize(): number {
@@ -427,7 +425,7 @@ export class CPFPTransaction {
     const witnessScript = this.childPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
     if (witnessUtxo) {
       // Segwit input
-      const m = this.options.requiredSigners;
+      const m = this.requiredSigners;
       weight += (73 * m + 34) * 4; // signatures + pubkeys + OP_m + OP_n + OP_CHECKMULTISIG
       if (redeemScript) {
         // P2SH-P2WSH
@@ -439,8 +437,7 @@ export class CPFPTransaction {
     } else {
       // Legacy P2SH input
       const scriptSigSize =
-        1 +
-        (73 * this.options.requiredSigners + 34 * this.options.totalSigners);
+        1 + (73 * this.requiredSigners + 34 * this.totalSigners);
       weight += scriptSigSize * 4;
     }
     return weight;
