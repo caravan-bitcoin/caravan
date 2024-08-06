@@ -2,219 +2,228 @@ import {
   RbfTransaction,
   prepareRbfTransaction,
   prepareCancelTransaction,
-} from "../src/rbf";
+} from "./rbf";
 import { PsbtV2 } from "@caravan/psbt";
+import { RBF_FIXTURES } from "./rbf.fixtures";
 import BigNumber from "bignumber.js";
-import {
-  mockNetwork,
-  mockFeeRate,
-  mockPsbt,
-  mockOptions,
-  mockDestinationAddress,
-} from "./rbf.fixtures";
 
 describe("RbfTransaction", () => {
-  let rbfTx: RbfTransaction;
+  describe("Constructor", () => {
+    it("should initialize correctly with valid options", () => {
+      const fixture = RBF_FIXTURES[0];
+      const rbfTx = new RbfTransaction(fixture);
+      expect(rbfTx).toBeInstanceOf(RbfTransaction);
+      expect(rbfTx.targetFeeRate).toBe(fixture.targetFeeRate);
+    });
 
-  beforeEach(() => {
-    rbfTx = new RbfTransaction(mockPsbt, mockFeeRate, mockOptions, mockNetwork);
+    it("should throw an error if the transaction is not signaling RBF", () => {
+      const invalidFixture = {
+        ...RBF_FIXTURES[0],
+        psbt: "cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAAAA",
+      };
+      expect(() => new RbfTransaction(invalidFixture)).toThrow(
+        "This transaction is not signaling RBF.",
+      );
+    });
   });
 
-  describe("constructor", () => {
-    it("should initialize with a PsbtV2 instance", () => {
-      expect(rbfTx).toBeInstanceOf(RbfTransaction);
+  describe("Getters", () => {
+    let rbfTx: RbfTransaction;
+
+    beforeEach(() => {
+      rbfTx = new RbfTransaction(RBF_FIXTURES[0]);
     });
 
-    it("should initialize with a hex string", () => {
-      const rbfTxFromHex = new RbfTransaction(
-        mockPsbt.serialize("hex"),
-        mockFeeRate,
-        mockOptions,
-        mockNetwork,
-      );
-      expect(rbfTxFromHex).toBeInstanceOf(RbfTransaction);
+    it("should return the correct target fee rate", () => {
+      expect(rbfTx.targetFeeRate).toBe(RBF_FIXTURES[0].targetFeeRate);
     });
 
-    it("should throw an error for non-RBF transactions", () => {
-      const nonRbfPsbt = new PsbtV2();
+    it("should calculate the total input value correctly", () => {
+      expect(rbfTx.totalInputValue).toBe("1000000");
+    });
 
-      // Add an input to the PSBT
-      nonRbfPsbt.addInput({
-        previousTxId: Buffer.alloc(32, 0), // A dummy transaction hash
-        outputIndex: 0,
-        sequence: 0xffffffff, // Non-RBF sequence
-      });
+    it("should calculate the total output value correctly", () => {
+      expect(rbfTx.totalOutputValue).toBe("999000");
+    });
 
-      // Set the sequence to a non-RBF value using setInputSequence
-      nonRbfPsbt.setInputSequence(0, 0xffffffff);
+    it("should calculate the current fee correctly", () => {
+      expect(rbfTx.currentFee).toBe("1000");
+    });
 
-      expect(
-        () =>
-          new RbfTransaction(nonRbfPsbt, mockFeeRate, mockOptions, mockNetwork),
-      ).toThrow("This transaction is not signaling RBF.");
+    it("should calculate the required fee correctly", () => {
+      expect(rbfTx.requiredFee).toBe("3000");
+    });
+
+    it("should calculate the fee increase correctly", () => {
+      expect(rbfTx.feeIncrease).toBe("2000");
     });
   });
 
   describe("prepareAccelerated", () => {
-    it("should return a new PsbtV2 instance", () => {
-      const result = rbfTx.prepareAccelerated();
-      expect(result).toBeInstanceOf(PsbtV2);
-    });
+    it("should create a valid accelerated transaction", () => {
+      const fixture = RBF_FIXTURES[0];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
 
-    it("should increase the fee rate", () => {
-      const originalFee = rbfTx["calculateCurrentFee"]();
-      const result = rbfTx.prepareAccelerated();
-      const newFee = result.PSBT_IN_WITNESS_UTXO.reduce(
-        (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-        new BigNumber(0),
-      ).minus(
-        result.PSBT_OUT_AMOUNT.reduce(
-          (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-          new BigNumber(0),
-        ),
+      expect(acceleratedTx).toBeInstanceOf(RbfTransaction);
+      expect(acceleratedTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        fixture.expectedOutputCount,
       );
-      expect(newFee.isGreaterThan(originalFee)).toBe(true);
-    });
-
-    it("should update sequence numbers", () => {
-      const result = rbfTx.prepareAccelerated();
-      expect(result.PSBT_IN_SEQUENCE.every((seq) => seq === 0xfffffffd)).toBe(
-        true,
+      expect(acceleratedTx.feeIncrease).toBe(
+        fixture.expectedFeeIncrease.toString(),
+      );
+      expect(acceleratedTx.currentFee).toBe(
+        fixture.expectedTotalFee.toString(),
       );
     });
 
-    it("should subtract fee from specified output when option is set", () => {
-      const optionsWithSubtract = { ...mockOptions, subtractFeeFromOutput: 0 };
-      const rbfTxWithSubtract = new RbfTransaction(
-        mockPsbt,
-        mockFeeRate,
-        optionsWithSubtract,
-        mockNetwork,
+    it("should adjust outputs correctly when subtracting fee from a specific output", () => {
+      const fixture = RBF_FIXTURES[0];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
+
+      const feeOutputAmount = new BigNumber(
+        acceleratedTx.psbt.PSBT_OUT_AMOUNT[fixture.feeOutputIndex!].toString(),
       );
-      const result = rbfTxWithSubtract.prepareAccelerated();
-      const newAmount = new BigNumber(result.PSBT_OUT_AMOUNT[0].toString());
-      const originalAmount = new BigNumber(
-        mockPsbt.PSBT_OUT_AMOUNT[0].toString(),
+      const expectedAmount = new BigNumber(500000).minus(
+        fixture.expectedFeeIncrease,
       );
-      expect(newAmount.isLessThan(originalAmount)).toBe(true);
+      expect(feeOutputAmount.isEqualTo(expectedAmount)).toBe(true);
     });
 
     it("should add additional inputs if needed", () => {
-      const highFeeRate = { satoshisPerByte: 1000 };
-      const rbfTxHighFee = new RbfTransaction(
-        mockPsbt,
-        highFeeRate,
-        mockOptions,
-        mockNetwork,
+      const fixture = RBF_FIXTURES[1];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
+
+      expect(acceleratedTx.psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
+      expect(acceleratedTx.totalInputValue).toBe("1100000");
+    });
+
+    it("should throw an error if the new fee is not higher than the current fee", () => {
+      const invalidFixture = { ...RBF_FIXTURES[0], targetFeeRate: 1 };
+      const rbfTx = new RbfTransaction(invalidFixture);
+      expect(() => rbfTx.prepareAccelerated()).toThrow(
+        "New fee must be higher than the current fee",
       );
-      const result = rbfTxHighFee.prepareAccelerated();
-      expect(result.PSBT_GLOBAL_INPUT_COUNT).toBeGreaterThan(
-        mockPsbt.PSBT_GLOBAL_INPUT_COUNT,
+    });
+  });
+  describe("prepareAccelerated", () => {
+    it("should create a valid accelerated transaction", () => {
+      const fixture = RBF_FIXTURES[0];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
+      const currentFee = new BigNumber(rbfTx.currentFee);
+      const feeIncrease = new BigNumber(rbfTx.currentFee);
+
+      expect(acceleratedTx).toBeInstanceOf(PsbtV2);
+      expect(acceleratedTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        fixture.expectedOutputCount,
+      );
+      expect(rbfTx.feeIncrease.toString()).toBe(
+        fixture.expectedFeeIncrease.toString(),
+      );
+      expect(currentFee.plus(feeIncrease).toString()).toBe(
+        fixture.expectedTotalFee.toString(),
       );
     });
 
-    it("should throw an error if new fee is not higher than current fee", () => {
-      const lowFeeRate = { satoshisPerByte: 1 };
-      const rbfTxLowFee = new RbfTransaction(
-        mockPsbt,
-        lowFeeRate,
-        mockOptions,
-        mockNetwork,
+    it("should adjust outputs correctly when subtracting fee from a specific output", () => {
+      const fixture = RBF_FIXTURES[0];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
+
+      const feeOutputAmount = new BigNumber(
+        acceleratedTx.psbt.PSBT_OUT_AMOUNT[fixture.feeOutputIndex!].toString(),
       );
-      expect(() => rbfTxLowFee.prepareAccelerated()).toThrow(
+      const expectedAmount = new BigNumber(500000).minus(
+        fixture.expectedFeeIncrease,
+      );
+      expect(feeOutputAmount.isEqualTo(expectedAmount)).toBe(true);
+    });
+
+    it("should add additional inputs if needed", () => {
+      const fixture = RBF_FIXTURES[1];
+      const rbfTx = new RbfTransaction(fixture);
+      const acceleratedTx = rbfTx.prepareAccelerated();
+
+      expect(acceleratedTx.psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
+      expect(rbfTx.totalInputValue.toString()).toBe("1100000");
+    });
+
+    it("should throw an error if the new fee is not higher than the current fee", () => {
+      const invalidFixture = { ...RBF_FIXTURES[0], targetFeeRate: 1 };
+      const rbfTx = new RbfTransaction(invalidFixture);
+      expect(() => rbfTx.prepareAccelerated()).toThrow(
         "New fee must be higher than the current fee",
       );
     });
   });
 
   describe("prepareCanceled", () => {
-    it("should return a new PsbtV2 instance", () => {
-      const result = rbfTx.prepareCanceled(mockDestinationAddress);
-      expect(result).toBeInstanceOf(PsbtV2);
-    });
+    it("should create a valid cancellation transaction", () => {
+      const fixture = RBF_FIXTURES[2];
+      const rbfTx = new RbfTransaction(fixture);
+      const currentFee = new BigNumber(rbfTx.currentFee);
+      const feeIncrease = new BigNumber(rbfTx.currentFee);
 
-    it("should create a single output to the destination address", () => {
-      const result = rbfTx.prepareCanceled(mockDestinationAddress);
-      expect(result.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
-      expect(result.PSBT_OUT_SCRIPT[0]).toEqual(
-        expect.stringContaining(mockDestinationAddress),
+      const canceledTx = rbfTx.prepareCanceled(
+        fixture.cancelDestinationAddress!,
+      );
+
+      expect(canceledTx).toBeInstanceOf(PsbtV2);
+      expect(canceledTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        fixture.expectedOutputCount,
+      );
+      expect(rbfTx.feeIncrease.toString()).toBe(
+        fixture.expectedFeeIncrease.toString(),
+      );
+      expect(currentFee.plus(feeIncrease).toString()).toBe(
+        fixture.expectedTotalFee.toString(),
       );
     });
 
-    it("should set the output amount to the input amount minus the new fee", () => {
-      const result = rbfTx.prepareCanceled(mockDestinationAddress);
-      const inputAmount = rbfTx["calculateTotalInputValue"]();
-      const outputAmount = new BigNumber(result.PSBT_OUT_AMOUNT[0].toString());
-      const fee = inputAmount.minus(outputAmount);
-      expect(fee.isGreaterThan(rbfTx["calculateCurrentFee"]())).toBe(true);
-    });
-  });
-
-  describe("estimateVsize", () => {
-    it("should return a number", () => {
-      const vsize = rbfTx["estimateVsize"]();
-      expect(typeof vsize).toBe("number");
-    });
-
-    it("should estimate different vsizes for different input types", () => {
-      const p2shPsbt = new PsbtV2();
-      p2shPsbt.addInput({
-        previousTxId: "0".repeat(64),
-        outputIndex: 0,
-        redeemScript: Buffer.alloc(20),
-      });
-      p2shPsbt.addOutput({ script: Buffer.alloc(25), amount: 10000 });
-
-      const p2wshPsbt = new PsbtV2();
-      p2wshPsbt.addInput({
-        previousTxId: "0".repeat(64),
-        outputIndex: 0,
-        witnessScript: Buffer.alloc(20),
-      });
-      p2wshPsbt.addOutput({ script: Buffer.alloc(25), amount: 10000 });
-
-      const rbfTxP2sh = new RbfTransaction(
-        p2shPsbt,
-        mockFeeRate,
-        mockOptions,
-        mockNetwork,
-      );
-      const rbfTxP2wsh = new RbfTransaction(
-        p2wshPsbt,
-        mockFeeRate,
-        mockOptions,
-        mockNetwork,
+    it("should create a single output to the specified address", () => {
+      const fixture = RBF_FIXTURES[2];
+      const rbfTx = new RbfTransaction(fixture);
+      const canceledTx = rbfTx.prepareCanceled(
+        fixture.cancelDestinationAddress!,
       );
 
-      const vsizeP2sh = rbfTxP2sh["estimateVsize"]();
-      const vsizeP2wsh = rbfTxP2wsh["estimateVsize"]();
-
-      expect(vsizeP2sh).not.toEqual(vsizeP2wsh);
+      expect(canceledTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
+      expect(canceledTx.psbt.PSBT_OUT_SCRIPT[0]).toBeDefined();
     });
   });
-});
 
-describe("prepareRbfTransaction", () => {
-  it("should return a PsbtV2 instance", () => {
-    const result = prepareRbfTransaction(
-      mockPsbt,
-      mockFeeRate,
-      mockOptions,
-      mockNetwork,
-    );
-    expect(result).toBeInstanceOf(PsbtV2);
+  describe("prepareRbfTransaction", () => {
+    it("should prepare an accelerated RBF transaction", () => {
+      const fixture = RBF_FIXTURES[0];
+      const acceleratedTx = prepareRbfTransaction(fixture);
+
+      expect(acceleratedTx).toBeInstanceOf(PsbtV2);
+      expect(acceleratedTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        fixture.expectedOutputCount,
+      );
+    });
   });
-});
 
-describe("prepareCancelTransaction", () => {
-  it("should return a PsbtV2 instance", () => {
-    const result = prepareCancelTransaction(
-      mockPsbt,
-      mockFeeRate,
-      mockDestinationAddress,
-      mockOptions,
-      mockNetwork,
-    );
-    expect(result).toBeInstanceOf(PsbtV2);
+  describe("prepareCancelTransaction", () => {
+    it("should prepare a cancellation RBF transaction", () => {
+      const fixture = RBF_FIXTURES[2];
+      const canceledTx = prepareCancelTransaction(
+        {
+          ...fixture,
+          psbt: fixture.psbt,
+          network: fixture.network,
+          targetFeeRate: fixture.targetFeeRate,
+        },
+        fixture.cancelDestinationAddress!,
+      );
+
+      expect(canceledTx).toBeInstanceOf(PsbtV2);
+      expect(canceledTx.psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        fixture.expectedOutputCount,
+      );
+    });
   });
 });

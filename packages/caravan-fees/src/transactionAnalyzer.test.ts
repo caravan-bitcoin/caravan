@@ -1,106 +1,152 @@
 import { TransactionAnalyzer } from "./transactionAnalyzer";
-import { fixtures } from "./transactionAnalyzer.fixtures";
+import { mockFixtures, createMockPsbt } from "./transactionAnalyzer.fixtures";
 import { FeeBumpStrategy } from "./types";
 
 describe("TransactionAnalyzer", () => {
   describe("RBF Analysis", () => {
-    it("should correctly identify RBF-signaled transactions", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+    it("should correctly identify RBF possibility when enabled", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
       expect(analyzer.canRBF).toBe(true);
     });
 
-    it("should correctly identify non-RBF transactions", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture2);
+    it("should correctly identify RBF impossibility when disabled", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfDisabled);
       expect(analyzer.canRBF).toBe(false);
     });
 
-    it("should estimate RBF cost correctly", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+    it("should calculate correct RBF cost", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
       const rbfCost = analyzer.estimateRBFCost();
       expect(rbfCost).not.toBeNull();
-      expect(rbfCost!.isGreaterThan(0)).toBe(true);
+      expect(Number(rbfCost)).toBeGreaterThan(0);
+    });
+
+    it("should return null RBF cost when not possible", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfDisabled);
+      expect(analyzer.estimateRBFCost()).toBeNull();
     });
   });
 
   describe("CPFP Analysis", () => {
     it("should correctly identify CPFP possibility", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      const analyzer = new TransactionAnalyzer(mockFixtures.cpfpPossible);
       expect(analyzer.canCPFP).toBe(true);
     });
 
-    it("should estimate CPFP cost correctly", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+    it("should correctly identify CPFP impossibility", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.neitherPossible);
+      expect(analyzer.canCPFP).toBe(false);
+    });
+
+    it("should calculate correct CPFP cost", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.cpfpPossible);
       const cpfpCost = analyzer.estimateCPFPCost();
       expect(cpfpCost).not.toBeNull();
-      expect(cpfpCost!.isGreaterThan(0)).toBe(true);
+      expect(Number(cpfpCost)).toBeGreaterThan(0);
+    });
+
+    it("should return null CPFP cost when not possible", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.neitherPossible);
+      expect(analyzer.estimateCPFPCost()).toBeNull();
     });
   });
 
-  describe("Fee Rate Calculations", () => {
-    it("should calculate current fee rate correctly", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+  describe("Fee Analysis", () => {
+    it("should calculate correct current fee rate", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
       expect(analyzer.currentFeeRate).toBeGreaterThan(0);
     });
 
-    it("should calculate potential fee increase correctly", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+    it("should calculate correct potential fee increase", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
       const increase = analyzer.getPotentialFeeIncrease();
-      expect(increase.isGreaterThan(0)).toBe(true);
+      expect(Number(increase)).toBeGreaterThan(0);
     });
   });
 
   describe("Strategy Recommendation", () => {
     it("should recommend RBF when only RBF is possible", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
       expect(analyzer.recommendFeeBumpStrategy()).toBe(FeeBumpStrategy.RBF);
     });
 
     it("should recommend CPFP when only CPFP is possible", () => {
-      const cpfpOnlyFixture = {
-        ...fixtures.fixture3,
-        changeOutputs: [], // Remove change outputs to make RBF impossible
-      };
-      const analyzer = new TransactionAnalyzer(cpfpOnlyFixture);
+      const analyzer = new TransactionAnalyzer(mockFixtures.cpfpPossible);
       expect(analyzer.recommendFeeBumpStrategy()).toBe(FeeBumpStrategy.CPFP);
     });
 
+    it("should recommend no strategy when neither is possible", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.neitherPossible);
+      expect(analyzer.recommendFeeBumpStrategy()).toBe(FeeBumpStrategy.NONE);
+    });
+
     it("should recommend the cheaper strategy when both are possible", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
+      const bothPossible = {
+        ...mockFixtures.rbfEnabled,
+        spendableOutputs: [{ index: 0, amount: 90000 }],
+      };
+      const analyzer = new TransactionAnalyzer(bothPossible);
       const recommendation = analyzer.recommendFeeBumpStrategy();
       expect(recommendation).toMatch(/RBF|CPFP/);
     });
   });
 
-  describe("UTXO Management", () => {
+  describe("Dynamic Updates", () => {
     it("should update analysis when new UTXOs are added", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
-      const initialRbfCost = analyzer.estimateRBFCost();
-      analyzer.addUtxos([
-        {
-          txid: "test",
-          vout: 0,
-          value: 10000,
-          script: Buffer.from("test"),
-        },
-      ]);
-      const newRbfCost = analyzer.estimateRBFCost();
-      expect(newRbfCost!.isLessThan(initialRbfCost!)).toBe(true);
+      const analyzer = new TransactionAnalyzer(mockFixtures.neitherPossible);
+      expect(analyzer.canRBF).toBe(false);
+
+      const utxosToAdd = mockFixtures.rbfEnabled.additionalUtxos;
+      if (utxosToAdd && utxosToAdd.length > 0) {
+        analyzer.addUtxos(utxosToAdd);
+        expect(analyzer.canRBF).toBe(true);
+      } else {
+        console.warn("No additional UTXOs to add in this test");
+      }
+    });
+
+    it("should update analysis when spendable outputs are changed", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.neitherPossible);
+      expect(analyzer.canCPFP).toBe(false);
+      analyzer.updateSpendableOutputs([{ index: 0, amount: 100000 }]);
+      expect(analyzer.canCPFP).toBe(true);
+    });
+
+    it("should update analysis when target fee rate is changed", () => {
+      const analyzer = new TransactionAnalyzer(mockFixtures.rbfEnabled);
+      const initialIncrease = analyzer.getPotentialFeeIncrease();
+      analyzer.targetFeeRate = 10;
+      const newIncrease = analyzer.getPotentialFeeIncrease();
+      expect(Number(newIncrease)).toBeGreaterThan(Number(initialIncrease));
     });
   });
 
-  describe("Output Management", () => {
-    it("should update analysis when spendable outputs are changed", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture3);
-      const initialCpfpPossibility = analyzer.canCPFP;
-      analyzer.updateSpendableOutputs([]);
-      expect(analyzer.canCPFP).not.toBe(initialCpfpPossibility);
+  describe("Edge Cases", () => {
+    it("should handle transactions with no inputs", () => {
+      const noInputs = {
+        ...mockFixtures.neitherPossible,
+        psbt: createMockPsbt(0, 1, false),
+      };
+      const analyzer = new TransactionAnalyzer(noInputs);
+      expect(() => analyzer.currentFeeRate).not.toThrow();
     });
 
-    it("should update analysis when change outputs are changed", () => {
-      const analyzer = new TransactionAnalyzer(fixtures.fixture1);
-      const initialRbfPossibility = analyzer.canRBF;
-      analyzer.updateChangeOutputs([]);
-      expect(analyzer.canRBF).not.toBe(initialRbfPossibility);
+    it("should handle transactions with no outputs", () => {
+      const noOutputs = {
+        ...mockFixtures.neitherPossible,
+        psbt: createMockPsbt(1, 0, false),
+      };
+      const analyzer = new TransactionAnalyzer(noOutputs);
+      expect(() => analyzer.currentFeeRate).not.toThrow();
+    });
+
+    it("should handle very large transactions", () => {
+      const largeTransaction = {
+        ...mockFixtures.rbfEnabled,
+        psbt: createMockPsbt(1000, 1000, true),
+      };
+      const analyzer = new TransactionAnalyzer(largeTransaction);
+      expect(() => analyzer.estimateRBFCost()).not.toThrow();
     });
   });
 });

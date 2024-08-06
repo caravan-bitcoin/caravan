@@ -7,6 +7,11 @@ import {
   TransactionAnalyzerOptions,
   FeeBumpStrategy,
 } from "./types";
+import {
+  initializePsbt,
+  calculateTotalInputValue,
+  calculateTotalOutputValue,
+} from "./utils";
 import { DEFAULT_DUST_THRESHOLD } from "./constants";
 
 /**
@@ -47,34 +52,21 @@ export class TransactionAnalyzer {
   private _potentialFeeIncrease: BigNumber | null = null;
 
   constructor(options: TransactionAnalyzerOptions) {
-    this._psbt = this.initializePsbt(options.psbt);
+    this._psbt = initializePsbt(options.psbt);
     this._network = options.network;
     this._dustThreshold = new BigNumber(
       options.dustThreshold || DEFAULT_DUST_THRESHOLD,
     );
     this._targetFeeRate = options.targetFeeRate;
     this._additionalUtxos = options.additionalUtxos || [];
-    this._spendableOutputs = options.spendableOutputs;
-    this._changeOutputs = options.changeOutputs;
+    this._spendableOutputs = this.convertToBigNumberArray(
+      options.spendableOutputs,
+    );
+    this._changeOutputs = this.convertToBigNumberArray(options.changeOutputs);
     this.requiredSigners = options.requiredSigners;
     this.totalSigners = options.totalSigners;
 
     this.analyze();
-  }
-
-  private initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
-    if (psbt instanceof PsbtV2) return psbt;
-    try {
-      return new PsbtV2(psbt);
-    } catch (error) {
-      try {
-        return PsbtV2.FromV0(psbt);
-      } catch (conversionError) {
-        throw new Error(
-          "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
-        );
-      }
-    }
   }
 
   // Getters
@@ -87,8 +79,8 @@ export class TransactionAnalyzer {
     return this._network;
   }
 
-  get dustThreshold(): BigNumber {
-    return this._dustThreshold;
+  get dustThreshold(): string {
+    return this._dustThreshold.toString();
   }
 
   get targetFeeRate(): FeeRateSatsPerVByte {
@@ -99,12 +91,12 @@ export class TransactionAnalyzer {
     return [...this._additionalUtxos];
   }
 
-  get spendableOutputs(): { index: number; amount: BigNumber }[] {
-    return [...this._spendableOutputs];
+  get spendableOutputs(): { index: number; amount: string }[] {
+    return this.convertToStringArray(this._spendableOutputs);
   }
 
-  get changeOutputs(): { index: number; amount: BigNumber }[] {
-    return [...this._changeOutputs];
+  get changeOutputs(): { index: number; amount: string }[] {
+    return this.convertToStringArray(this._changeOutputs);
   }
 
   get canRBF(): boolean {
@@ -123,18 +115,12 @@ export class TransactionAnalyzer {
     return Number(txFee.dividedBy(vsize).toFixed(2));
   }
 
-  get totalInputValue(): BigNumber {
-    return this._psbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    );
+  get totalInputValue(): string {
+    return calculateTotalInputValue(this._psbt).toString();
   }
 
-  get totalOutputValue(): BigNumber {
-    return this._psbt.PSBT_OUT_AMOUNT.reduce(
-      (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-      new BigNumber(0),
-    );
+  get totalOutputValue(): string {
+    return calculateTotalOutputValue(this._psbt).toString();
   }
 
   // Setters
@@ -151,8 +137,10 @@ export class TransactionAnalyzer {
    * @param utxos - Array of new UTXOs to add
    */
   public addUtxos(utxos: UTXO[]): void {
-    this._additionalUtxos = [...this._additionalUtxos, ...utxos];
-    this.analyze();
+    if (utxos.length > 0) {
+      this._additionalUtxos = [...this._additionalUtxos, ...utxos];
+      this.analyze();
+    }
   }
 
   /**
@@ -160,9 +148,9 @@ export class TransactionAnalyzer {
    * @param outputs - Array of spendable outputs
    */
   public updateSpendableOutputs(
-    outputs: { index: number; amount: BigNumber }[],
+    outputs: { index: number; amount: number }[],
   ): void {
-    this._spendableOutputs = outputs;
+    this._spendableOutputs = this.convertToBigNumberArray(outputs);
     this.analyze();
   }
 
@@ -171,9 +159,9 @@ export class TransactionAnalyzer {
    * @param outputs - Array of change outputs
    */
   public updateChangeOutputs(
-    outputs: { index: number; amount: BigNumber }[],
+    outputs: { index: number; amount: number }[],
   ): void {
-    this._changeOutputs = outputs;
+    this._changeOutputs = this.convertToBigNumberArray(outputs);
     this.analyze();
   }
 
@@ -181,18 +169,18 @@ export class TransactionAnalyzer {
    * Calculates the potential fee increase based on the target fee rate
    * @returns The potential fee increase in satoshis
    */
-  public getPotentialFeeIncrease(): BigNumber {
+  public getPotentialFeeIncrease(): string {
     if (this._potentialFeeIncrease === null) {
       this._potentialFeeIncrease = this.calculatePotentialFeeIncrease();
     }
-    return this._potentialFeeIncrease;
+    return this._potentialFeeIncrease.toString();
   }
 
   /**
    * Estimates the cost of performing an RBF transaction
    * @returns The estimated cost in satoshis, or null if RBF is not possible
    */
-  public estimateRBFCost(): BigNumber | null {
+  public estimateRBFCost(): string | null {
     if (!this.canRBF) return null;
     return this.getPotentialFeeIncrease();
   }
@@ -201,10 +189,12 @@ export class TransactionAnalyzer {
    * Estimates the cost of performing a CPFP transaction
    * @returns The estimated cost in satoshis, or null if CPFP is not possible
    */
-  public estimateCPFPCost(): BigNumber | null {
+  public estimateCPFPCost(): string | null {
     if (!this.canCPFP) return null;
     const childTxSize = this.estimateChildTxSize();
-    return new BigNumber(this._targetFeeRate).multipliedBy(childTxSize);
+    return new BigNumber(this._targetFeeRate)
+      .multipliedBy(childTxSize)
+      .toString();
   }
 
   /**
@@ -224,8 +214,8 @@ export class TransactionAnalyzer {
       return FeeBumpStrategy.CPFP;
     }
 
-    const rbfCost = this.estimateRBFCost()!;
-    const cpfpCost = this.estimateCPFPCost()!;
+    const rbfCost = new BigNumber(this.estimateRBFCost()!);
+    const cpfpCost = new BigNumber(this.estimateCPFPCost()!);
 
     return rbfCost.isLessThan(cpfpCost)
       ? FeeBumpStrategy.RBF
@@ -239,6 +229,7 @@ export class TransactionAnalyzer {
   }
 
   private analyzeRBFPossibility(): boolean {
+    console.log("this.psbt.isRBFSignaled", this.psbt.isRBFSignaled);
     if (!this.psbt.isRBFSignaled) return false;
     const availableFunds = this._changeOutputs.reduce(
       (sum, output) => sum.plus(output.amount),
@@ -278,7 +269,9 @@ export class TransactionAnalyzer {
   }
 
   private calculateTxFee(): BigNumber {
-    return this.totalInputValue.minus(this.totalOutputValue);
+    const inputValue = new BigNumber(this.totalInputValue);
+    const outputValue = new BigNumber(this.totalOutputValue);
+    return inputValue.minus(outputValue);
   }
 
   private calculatePotentialFeeIncrease(): BigNumber {
@@ -287,6 +280,25 @@ export class TransactionAnalyzer {
       this.estimateVsize(),
     );
     return BigNumber.maximum(potentialFee.minus(currentFee), new BigNumber(0));
+  }
+
+  // Utility methods for conversion
+  private convertToBigNumberArray(
+    outputs: { index: number; amount: number }[],
+  ): { index: number; amount: BigNumber }[] {
+    return outputs.map((output) => ({
+      index: output.index,
+      amount: new BigNumber(output.amount),
+    }));
+  }
+
+  private convertToStringArray(
+    outputs: { index: number; amount: BigNumber }[],
+  ): { index: number; amount: string }[] {
+    return outputs.map((output) => ({
+      index: output.index,
+      amount: output.amount.toString(),
+    }));
   }
 
   /**

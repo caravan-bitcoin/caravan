@@ -8,36 +8,14 @@ import {
   Network,
   validateAddress,
 } from "@caravan/bitcoin";
-import { Transaction } from "bitcoinjs-lib-v5";
+import { PsbtV2 } from "@caravan/psbt";
 import BigNumber from "bignumber.js";
-import { UTXO, FeeRate } from "./types";
-import { payments, address as bitcoinAddress, networks } from "bitcoinjs-lib";
-
-/**
- * Calculate the effective fee rate of a transaction.
- * @param transaction The transaction to analyze
- * @param utxos The UTXOs spent in the transaction
- * @returns The effective fee rate in satoshis per byte
- */
-export function calculateEffectiveFeeRate(
-  transaction: Transaction,
-  utxos: UTXO[],
-): FeeRate {
-  const totalInput = utxos.reduce(
-    (sum, utxo) => sum.plus(utxo.value),
-    new BigNumber(0),
-  );
-  const totalOutput = transaction.outs.reduce(
-    (sum, output) => sum.plus(output.value),
-    new BigNumber(0),
-  );
-  const fee = totalInput.minus(totalOutput);
-  const feeRate = fee
-    .dividedBy(transaction.virtualSize())
-    .integerValue(BigNumber.ROUND_CEIL);
-
-  return { satoshisPerByte: feeRate.toNumber() };
-}
+import {
+  payments,
+  address as bitcoinAddress,
+  networks,
+  Transaction,
+} from "bitcoinjs-lib-v6";
 
 /**
  * Estimate the virtual size of a transaction based on its address type and input/output count.
@@ -130,6 +108,135 @@ export function createOutputScript(
       throw new Error("Unsupported address type");
     } catch (segwitError) {
       throw new Error(`Invalid or unsupported address: ${destinationAddress}`);
+    }
+  }
+}
+
+/**
+ * Calculates the total input value from the given PSBT.
+ *
+ * This function aggregates the total value of all inputs, considering both
+ * witness and non-witness UTXOs. It uses helper functions to parse and sum up
+ * the values of each input.
+ *
+ * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
+ * @returns The total input value as a BigNumber.
+ */
+export function calculateTotalInputValue(psbt: PsbtV2): BigNumber {
+  let total = new BigNumber(0);
+
+  for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+    const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[i];
+    const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[i];
+
+    if (witnessUtxo) {
+      total = total.plus(parseWitnessUtxoValue(witnessUtxo, i));
+    } else if (nonWitnessUtxo) {
+      total = total.plus(parseNonWitnessUtxoValue(nonWitnessUtxo, i, psbt));
+    } else {
+      console.warn(`No UTXO data found for input at index ${i}`);
+    }
+  }
+
+  return total;
+}
+
+/**
+ * Parses the value of a witness UTXO.
+ *
+ * Witness UTXOs are expected to have their value encoded in the first 8 bytes
+ * of the hex string in little-endian byte order. This function extracts and
+ * converts that value to a BigNumber.
+ *
+ * @param utxo - The hex string representing the witness UTXO.
+ * @param index - The index of the UTXO in the PSBT input list.
+ * @returns The parsed value as a BigNumber.
+ */
+export function parseWitnessUtxoValue(utxo: string, index: number): BigNumber {
+  try {
+    const valueHex = utxo.slice(0, 16);
+    const valueReversed = Buffer.from(valueHex, "hex").reverse();
+    const value = new BigNumber(valueReversed.toString("hex"), 16);
+    return value;
+  } catch (error) {
+    console.warn(`Failed to parse witness UTXO at index ${index}:`, error);
+    return new BigNumber(0);
+  }
+}
+
+/**
+ * Parses the value of a non-witness UTXO.
+ *
+ * Non-witness UTXOs require parsing the raw transaction hex to retrieve the
+ * correct output value based on the output index specified in the PSBT. This
+ * function handles that parsing and conversion.
+ *
+ * @param rawTx - The raw transaction hex string.
+ * @param index - The index of the non-witness UTXO in the PSBT input list.
+ * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
+ * @returns The parsed value as a BigNumber.
+ */
+export function parseNonWitnessUtxoValue(
+  rawTx: string,
+  index: number,
+  psbt: PsbtV2,
+): BigNumber {
+  try {
+    const psbtInstance = psbt;
+    const tx = Transaction.fromHex(rawTx);
+    const outputIndex = psbtInstance.PSBT_IN_OUTPUT_INDEX[index];
+    if (outputIndex === undefined) {
+      throw new Error(
+        `Output index for non-witness UTXO at index ${index} is undefined`,
+      );
+    }
+    const output = tx.outs[outputIndex];
+    return new BigNumber(output.value);
+  } catch (error) {
+    console.warn(`Failed to parse non-witness UTXO at index ${index}:`, error);
+    return new BigNumber(0);
+  }
+}
+
+/**
+ * Calculates the total output value from the given PSBT.
+ *
+ * This function sums the values of all outputs in the PSBT.
+ *
+ * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
+ * @returns The total output value as a BigNumber.
+ */
+export function calculateTotalOutputValue(psbt: PsbtV2): BigNumber {
+  return psbt.PSBT_OUT_AMOUNT.reduce(
+    (sum, amount) => sum.plus(new BigNumber(amount.toString())),
+    new BigNumber(0),
+  );
+}
+
+/**
+ * Initializes a PSBT instance from various input formats.
+ *
+ * This function attempts to create a PsbtV2 instance from the input, whether it is
+ * already a PsbtV2 instance, a hex string, or a Buffer. It also tries to handle
+ * PSBT V0 format if the input is not recognized as a V2 format.
+ *
+ * @param psbt - The input PSBT which can be a PsbtV2 instance, a hex string, or a Buffer.
+ * @returns The initialized PsbtV2 instance.
+ * @throws Error if the input format is not recognized as either V2 or V0.
+ */
+export function initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
+  if (psbt instanceof PsbtV2) {
+    return psbt;
+  }
+  try {
+    return new PsbtV2(psbt);
+  } catch (error) {
+    try {
+      return PsbtV2.FromV0(psbt);
+    } catch (conversionError) {
+      throw new Error(
+        "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
+      );
     }
   }
 }

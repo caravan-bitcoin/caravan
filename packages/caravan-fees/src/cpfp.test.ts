@@ -1,227 +1,186 @@
-import { CPFPTransaction, prepareCPFPTransaction } from "./cpfp";
+import { CPFPTransaction } from "./cpfp";
+import { test } from "@jest/globals";
 import { PsbtV2 } from "@caravan/psbt";
 import { Network } from "@caravan/bitcoin";
-import {
-  parentPsbtFixture,
-  additionalUtxoFixture,
-  defaultOptions,
-} from "./cpfp.fixtures";
+import BigNumber from "bignumber.js";
+import { CPFP_FIXTURES } from "./cpfp.fixtures";
 
 describe("CPFPTransaction", () => {
-  describe("constructor", () => {
-    it("should initialize with valid options", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      expect(cpfpTx).toBeDefined();
+  const firstFixture = CPFP_FIXTURES[0];
+
+  test("CPFP transaction with multiple parent outputs and additional UTXOs", () => {
+    const {
+      parentPsbt,
+      network,
+      targetFeeRate,
+      spendableOutputs,
+      destinationAddress,
+      requiredSigners,
+      totalSigners,
+      additionalUtxos,
+      expectedChildInputCount,
+      expectedChildOutputCount,
+      expectedFeeIncrease,
+    } = firstFixture;
+
+    const cpfpTx = new CPFPTransaction({
+      parentPsbt,
+      network: network as Network,
+      targetFeeRate,
+      spendableOutputs,
+      destinationAddress,
+      requiredSigners,
+      totalSigners,
+      additionalUtxos,
     });
 
-    it("should throw an error if parent PSBT has no inputs", () => {
-      const invalidPsbt = new PsbtV2();
-      expect(
-        () =>
-          new CPFPTransaction({ ...defaultOptions, parentPsbt: invalidPsbt }),
-      ).toThrow("Parent PSBT has no inputs.");
-    });
+    const childPsbt = cpfpTx.prepareCPFP();
 
-    it("should throw an error if no spendable outputs are provided", () => {
-      expect(
-        () => new CPFPTransaction({ ...defaultOptions, spendableOutputs: [] }),
-      ).toThrow("No spendable outputs provided.");
-    });
+    // Check that the child PSBT is valid
+    expect(childPsbt).toBeInstanceOf(PsbtV2);
+
+    // Check input and output counts
+    expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(expectedChildInputCount);
+    expect(childPsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(expectedChildOutputCount);
+
+    // Check that the fee increase is as expected
+    const feeIncrease = new BigNumber(cpfpTx.childFee)
+      .plus(cpfpTx.parentFee)
+      .minus(cpfpTx.parentFee);
+    expect(feeIncrease.isGreaterThanOrEqualTo(expectedFeeIncrease)).toBe(true);
+
+    // Check that the target fee rate is achieved
+    const estimatedFee = new BigNumber(cpfpTx.estimatedRequiredFee);
+    expect(estimatedFee.isGreaterThanOrEqualTo(targetFeeRate)).toBe(true);
   });
-
-  describe("prepareCPFP", () => {
-    it("should create a valid child transaction", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      const childPsbt = cpfpTx.prepareCPFP();
-      expect(childPsbt).toBeInstanceOf(PsbtV2);
-      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(1);
-      expect(childPsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
-    });
-
-    it("should increase the fee rate", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      const combinedFee = cpfpTx.getCombinedFee();
-      const parentFee = cpfpTx.getParentFee();
-      expect(combinedFee.isGreaterThan(parentFee)).toBe(true);
-    });
-
-    it("should handle high urgency", () => {
-      const highUrgencyOptions = {
-        ...defaultOptions,
-        urgency: "high" as const,
-      };
-      const cpfpTx = new CPFPTransaction(highUrgencyOptions);
-      const combinedFee = cpfpTx.getCombinedFee();
-      const parentFee = cpfpTx.getParentFee();
-      expect(combinedFee.minus(parentFee).isGreaterThan(parentFee)).toBe(true);
-    });
-
-    it("should add additional inputs when necessary", () => {
-      const lowValueParentPsbt = new PsbtV2();
-      lowValueParentPsbt.addInput({
-        previousTxId:
-          "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        outputIndex: 0,
-        witnessUtxo: {
-          script: Buffer.from(
-            "0014000000000000000000000000000000000000",
-            "hex",
-          ),
-          amount: 10000, // 0.0001 BTC
-        },
-      });
-      lowValueParentPsbt.addOutput({
-        script: Buffer.from("0014111111111111111111111111111111111111", "hex"),
-        amount: 9000, // 0.00009 BTC
-      });
-
-      const optionsWithAdditionalUtxo = {
-        ...defaultOptions,
-        parentPsbt: lowValueParentPsbt,
-        additionalUtxos: [additionalUtxoFixture],
-      };
-
-      const cpfpTx = new CPFPTransaction(optionsWithAdditionalUtxo);
-      const childPsbt = cpfpTx.prepareCPFP();
-      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
-    });
-
-    it("should throw an error if resulting output would be dust", () => {
-      const tinyValueParentPsbt = new PsbtV2();
-      tinyValueParentPsbt.addInput({
-        previousTxId:
-          "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        outputIndex: 0,
-        witnessUtxo: {
-          script: Buffer.from(
-            "0014000000000000000000000000000000000000",
-            "hex",
-          ),
-          amount: 600, // 600 satoshis
-        },
-      });
-      tinyValueParentPsbt.addOutput({
-        script: Buffer.from("0014111111111111111111111111111111111111", "hex"),
-        amount: 550, // 550 satoshis
-      });
-
-      const optionsWithTinyValue = {
-        ...defaultOptions,
-        parentPsbt: tinyValueParentPsbt,
-      };
-
-      const cpfpTx = new CPFPTransaction(optionsWithTinyValue);
-      expect(() => cpfpTx.prepareCPFP()).toThrow(
-        "CPFP transaction would create a dust output",
-      );
-    });
-  });
-
-  describe("fee calculations", () => {
-    it("should correctly calculate child fee", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      cpfpTx.prepareCPFP();
-      const childFee = cpfpTx.getChildFee();
-      expect(childFee.isGreaterThan(0)).toBe(true);
-    });
-
-    it("should correctly calculate parent fee", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      const parentFee = cpfpTx.getParentFee();
-      expect(parentFee.toNumber()).toBe(10000); // 0.001 BTC - 0.0009 BTC
-    });
-
-    it("should correctly calculate combined fee", () => {
-      const cpfpTx = new CPFPTransaction(defaultOptions);
-      cpfpTx.prepareCPFP();
-      const combinedFee = cpfpTx.getCombinedFee();
-      const childFee = cpfpTx.getChildFee();
-      const parentFee = cpfpTx.getParentFee();
-      expect(
-        combinedFee.minus(childFee.plus(parentFee)).abs().isLessThan(1),
-      ).toBe(true);
-    });
-  });
-
-  describe("prepareCPFPTransaction function", () => {
-    it("should return a valid PsbtV2 instance", () => {
-      const childPsbt = prepareCPFPTransaction(defaultOptions);
-      expect(childPsbt).toBeInstanceOf(PsbtV2);
-    });
-
-    it("should throw an error with invalid options", () => {
-      const invalidOptions = { ...defaultOptions, parentPsbt: new PsbtV2() };
-      expect(() => prepareCPFPTransaction(invalidOptions)).toThrow(
-        "Parent PSBT has no inputs.",
-      );
-    });
-  });
-
-  describe("edge cases", () => {
-    it("should handle maximum number of additional inputs", () => {
-      const manyAdditionalUtxos = Array(10).fill(additionalUtxoFixture);
-      const optionsWithManyUtxos = {
-        ...defaultOptions,
-        maxAdditionalInputs: 5,
-        additionalUtxos: manyAdditionalUtxos,
-      };
-
-      const cpfpTx = new CPFPTransaction(optionsWithManyUtxos);
-      const childPsbt = cpfpTx.prepareCPFP();
-      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBeLessThanOrEqual(6); // 1 parent output + 5 additional
-    });
-
-    it("should handle custom urgency multipliers", () => {
-      const customUrgencyOptions = {
-        ...defaultOptions,
-        urgency: "high" as const,
-        urgencyMultipliers: { low: 1.1, medium: 1.3, high: 1.8 },
-      };
-
-      const cpfpTx = new CPFPTransaction(customUrgencyOptions);
-      const combinedFee = cpfpTx.getCombinedFee();
-      const parentFee = cpfpTx.getParentFee();
-      const feeIncrease = combinedFee.minus(parentFee);
-      expect(feeIncrease.dividedBy(parentFee).isGreaterThan(0.7)).toBe(true);
-    });
-
-    it("should respect max child transaction size", () => {
-      const manyAdditionalUtxos = Array(100).fill(additionalUtxoFixture);
-      const optionsWithManyUtxos = {
-        ...defaultOptions,
-        maxChildTxSize: 5,
-        additionalUtxos: manyAdditionalUtxos,
-      };
-
-      const cpfpTx = new CPFPTransaction(optionsWithManyUtxos);
-      const childPsbt = cpfpTx.prepareCPFP();
-      expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBeLessThanOrEqual(5);
-    });
-  });
-
-  describe("different address types", () => {
-    const addressTypes = ["P2SH", "P2WSH", "P2SH-P2WSH"];
-
-    addressTypes.forEach((addressType) => {
-      it(`should handle ${addressType} addresses`, () => {
-        const options = { ...defaultOptions, addressType };
-        const cpfpTx = new CPFPTransaction(options);
-        const childPsbt = cpfpTx.prepareCPFP();
-        expect(childPsbt).toBeInstanceOf(PsbtV2);
-      });
-    });
-  });
-
-  describe("different networks", () => {
-    it("should handle testnet", () => {
-      const testnetOptions = {
-        ...defaultOptions,
+  test("Throws error when parent PSBT has no inputs", () => {
+    const invalidParentPsbt = new PsbtV2();
+    expect(() => {
+      new CPFPTransaction({
+        parentPsbt: invalidParentPsbt,
         network: Network.TESTNET,
-        destinationAddress: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
-      };
-      const cpfpTx = new CPFPTransaction(testnetOptions);
-      const childPsbt = cpfpTx.prepareCPFP();
-      expect(childPsbt).toBeInstanceOf(PsbtV2);
+        targetFeeRate: 20,
+        spendableOutputs: [0],
+        destinationAddress: "tb1q6kn73d8cmmv8smgz5qks068r6zhjm9spncgsyv",
+        requiredSigners: 2,
+        totalSigners: 3,
+      });
+    }).toThrow("Parent PSBT has no inputs.");
+  });
+
+  test("Throws error when parent PSBT has no outputs", () => {
+    const invalidParentPsbt = new PsbtV2();
+    invalidParentPsbt.addInput({
+      previousTxId: Buffer.alloc(32, 0),
+      outputIndex: 0,
     });
+    expect(() => {
+      new CPFPTransaction({
+        parentPsbt: invalidParentPsbt,
+        network: Network.TESTNET,
+        targetFeeRate: 20,
+        spendableOutputs: [0],
+        destinationAddress: "tb1q6kn73d8cmmv8smgz5qks068r6zhjm9spncgsyv",
+        requiredSigners: 2,
+        totalSigners: 3,
+      });
+    }).toThrow("Parent PSBT has no outputs.");
+  });
+
+  test("Throws error when no spendable outputs are provided", () => {
+    const {
+      parentPsbt,
+      network,
+      targetFeeRate,
+      spendableOutputs,
+      destinationAddress,
+      requiredSigners,
+      totalSigners,
+      additionalUtxos,
+    } = CPFP_FIXTURES[2];
+
+    expect(() => {
+      new CPFPTransaction({
+        parentPsbt,
+        network: network as Network,
+        targetFeeRate,
+        spendableOutputs,
+        destinationAddress,
+        requiredSigners,
+        totalSigners,
+        additionalUtxos,
+      });
+    }).toThrow("No spendable outputs provided.");
+  });
+
+  test("Allows setting and getting target fee rate", () => {
+    const cpfpTx = new CPFPTransaction({
+      parentPsbt: CPFP_FIXTURES[0].parentPsbt,
+      network: Network.TESTNET,
+      targetFeeRate: 20,
+      spendableOutputs: [1],
+      destinationAddress:
+        "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+      requiredSigners: 2,
+      totalSigners: 3,
+    });
+
+    expect(cpfpTx.targetFeeRate).toBe(20);
+
+    cpfpTx.targetFeeRate = 30;
+    expect(cpfpTx.targetFeeRate).toBe(30);
+  });
+
+  test("Calculates correct absolute fees", () => {
+    const cpfpTx = new CPFPTransaction({
+      parentPsbt: CPFP_FIXTURES[0].parentPsbt,
+      network: Network.TESTNET,
+      targetFeeRate: 20,
+      spendableOutputs: [1],
+      destinationAddress: "tb1q6kn73d8cmmv8smgz5qks068r6zhjm9spncgsyv",
+      requiredSigners: 2,
+      totalSigners: 3,
+    });
+
+    const absFees = cpfpTx.getAbsFees();
+    expect(new BigNumber(absFees).isGreaterThan(0)).toBe(true);
+
+    const customFeeRate = 50;
+    const customAbsFees = cpfpTx.getAbsFees(customFeeRate);
+    expect(new BigNumber(customAbsFees).isGreaterThan(absFees)).toBe(true);
+  });
+
+  test("Handles additional UTXOs correctly", () => {
+    const cpfpTx = new CPFPTransaction({
+      parentPsbt: CPFP_FIXTURES[0].parentPsbt,
+      network: Network.TESTNET,
+      targetFeeRate: 30,
+      spendableOutputs: [1],
+      destinationAddress:
+        "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+      requiredSigners: 2,
+      totalSigners: 3,
+      additionalUtxos: CPFP_FIXTURES[0].additionalUtxos,
+    });
+
+    const childPsbt = cpfpTx.prepareCPFP();
+    expect(childPsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2); // 1 from parent + 1 additional
+  });
+
+  test("Throws error when insufficient funds for CPFP", () => {
+    const cpfpTx = new CPFPTransaction({
+      parentPsbt: CPFP_FIXTURES[1].parentPsbt,
+      network: Network.TESTNET,
+      targetFeeRate: 1000, // Unrealistically high fee rate
+      spendableOutputs: [1],
+      destinationAddress:
+        "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+      requiredSigners: 2,
+      totalSigners: 3,
+    });
+
+    expect(() => {
+      cpfpTx.prepareCPFP();
+    }).toThrow("Insufficient funds in additional UTXOs to cover CPFP fee");
   });
 });

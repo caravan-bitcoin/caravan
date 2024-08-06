@@ -1,94 +1,115 @@
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
 import { Network } from "@caravan/bitcoin";
-import { TransactionAnalyzerOptions } from "./types";
+import { PsbtV2 } from "@caravan/psbt";
+import { TransactionAnalyzerOptions, UTXO } from "./types";
 
-// Mock PsbtV2 class
-class MockPsbtV2 {
-  PSBT_GLOBAL_INPUT_COUNT: number;
-  PSBT_GLOBAL_OUTPUT_COUNT: number;
-  PSBT_IN_WITNESS_UTXO: string[];
-  PSBT_OUT_AMOUNT: bigint[];
-  PSBT_IN_SEQUENCE: number[];
-  PSBT_IN_REDEEM_SCRIPT: Buffer[];
-  PSBT_IN_WITNESS_SCRIPT: Buffer[];
-  PSBT_OUT_SCRIPT: string[];
-  isRBFSignaled: boolean;
+export function createMockPsbt(
+  inputs: number,
+  outputs: number,
+  isRBF: boolean,
+): PsbtV2 {
+  const psbt = new PsbtV2();
+  for (let i = 0; i < inputs; i++) {
+    const input = {
+      previousTxId: Buffer.from("0".repeat(64), "hex"),
+      outputIndex: i,
+      sequence: isRBF ? 0xfffffffd : 0xffffffff,
+    };
+    psbt.addInput(input);
 
-  constructor(options: any) {
-    this.PSBT_GLOBAL_INPUT_COUNT = options.inputs.length;
-    this.PSBT_GLOBAL_OUTPUT_COUNT = options.outputs.length;
-    this.PSBT_IN_WITNESS_UTXO = options.inputs.map(
-      (i: any) => `${i.value},${i.script}`,
-    );
-    this.PSBT_OUT_AMOUNT = options.outputs.map((o: any) => BigInt(o.value));
-    this.PSBT_IN_SEQUENCE = options.inputs.map((i: any) => i.sequence);
-    this.PSBT_IN_REDEEM_SCRIPT = options.inputs.map((i: any) => i.redeemScript);
-    this.PSBT_IN_WITNESS_SCRIPT = options.inputs.map(
-      (i: any) => i.witnessScript,
-    );
-    this.PSBT_OUT_SCRIPT = options.outputs.map((o: any) => o.script);
-    this.isRBFSignaled = options.isRBFSignaled;
+    // Add witness UTXO data
+    const witnessUtxo = {
+      script: Buffer.from(
+        "76a914000000000000000000000000000000000000000088ac",
+        "hex",
+      ), // P2PKH script
+      value: 200000, // 0.002 BTC
+    };
+    psbt.PSBT_IN_WITNESS_UTXO[i] = Buffer.concat([
+      Buffer.from(witnessUtxo.value.toString(16).padStart(16, "0"), "hex"),
+      Buffer.from([witnessUtxo.script.length]),
+      witnessUtxo.script,
+    ]).toString("hex");
+
+    // Add non-witness UTXO data (a dummy transaction)
+    const dummyTx = {
+      version: 1,
+      inputs: [
+        {
+          hash: Buffer.alloc(32),
+          index: 0,
+          script: Buffer.alloc(0),
+          sequence: 0xffffffff,
+        },
+      ],
+      outputs: [{ value: 200000, script: witnessUtxo.script }],
+      locktime: 0,
+    };
+    psbt.PSBT_IN_NON_WITNESS_UTXO[i] = Buffer.from(
+      JSON.stringify(dummyTx),
+      "utf8",
+    ).toString("hex");
   }
+
+  for (let i = 0; i < outputs; i++) {
+    psbt.addOutput({
+      script: Buffer.from(
+        "76a914000000000000000000000000000000000000000088ac",
+        "hex",
+      ),
+      amount: 100000,
+    });
+  }
+  return psbt;
 }
+// Mock UTXOs
+const mockUTXOs: UTXO[] = [
+  { txid: "1".repeat(64), vout: 0, value: 50000, script: Buffer.from("") },
+  { txid: "2".repeat(64), vout: 1, value: 75000, script: Buffer.from("") },
+];
 
-// Fixture 1: RBF-signaled transaction with change output
-const fixture1: TransactionAnalyzerOptions = {
-  psbt: new MockPsbtV2({
-    inputs: [{ value: 100000, script: "input_script_1", sequence: 0xfffffffd }],
-    outputs: [
-      { value: 50000, script: "output_script_1" },
-      { value: 49000, script: "change_script_1" },
-    ],
-    isRBFSignaled: true,
-  }) as unknown as PsbtV2,
-  network: Network.TESTNET,
-  targetFeeRate: 5,
-  spendableOutputs: [{ index: 1, amount: new BigNumber(49000) }],
-  changeOutputs: [{ index: 1, amount: new BigNumber(49000) }],
-  requiredSigners: 1,
-  totalSigners: 1,
-};
+// Mock fixtures
+export const mockFixtures = {
+  rbfEnabled: {
+    psbt: createMockPsbt(2, 2, true),
+    network: Network.TESTNET,
+    targetFeeRate: 5,
+    additionalUtxos: mockUTXOs,
+    spendableOutputs: [{ index: 0, amount: 90000 }],
+    changeOutputs: [{ index: 1, amount: 10000 }],
+    requiredSigners: 2,
+    totalSigners: 3,
+  } as TransactionAnalyzerOptions,
 
-// Fixture 2: Non-RBF transaction
-const fixture2: TransactionAnalyzerOptions = {
-  psbt: new MockPsbtV2({
-    inputs: [{ value: 100000, script: "input_script_1", sequence: 0xffffffff }],
-    outputs: [{ value: 99000, script: "output_script_1" }],
-    isRBFSignaled: false,
-  }) as unknown as PsbtV2,
-  network: Network.TESTNET,
-  targetFeeRate: 5,
-  spendableOutputs: [],
-  changeOutputs: [],
-  requiredSigners: 1,
-  totalSigners: 1,
-};
+  rbfDisabled: {
+    psbt: createMockPsbt(2, 2, false),
+    network: Network.TESTNET,
+    targetFeeRate: 5,
+    additionalUtxos: [],
+    spendableOutputs: [{ index: 0, amount: 90000 }],
+    changeOutputs: [{ index: 1, amount: 10000 }],
+    requiredSigners: 2,
+    totalSigners: 3,
+  } as TransactionAnalyzerOptions,
 
-// Fixture 3: Multi-input, multi-output transaction with CPFP possibility
-const fixture3: TransactionAnalyzerOptions = {
-  psbt: new MockPsbtV2({
-    inputs: [
-      { value: 100000, script: "input_script_1", sequence: 0xfffffffd },
-      { value: 50000, script: "input_script_2", sequence: 0xfffffffd },
-    ],
-    outputs: [
-      { value: 70000, script: "output_script_1" },
-      { value: 50000, script: "output_script_2" },
-      { value: 29000, script: "change_script_1" },
-    ],
-    isRBFSignaled: true,
-  }) as unknown as PsbtV2,
-  network: Network.TESTNET,
-  targetFeeRate: 10,
-  spendableOutputs: [{ index: 2, amount: new BigNumber(29000) }],
-  changeOutputs: [{ index: 2, amount: new BigNumber(29000) }],
-  requiredSigners: 2,
-  totalSigners: 3,
-};
+  cpfpPossible: {
+    psbt: createMockPsbt(1, 2, false),
+    network: Network.TESTNET,
+    targetFeeRate: 5,
+    additionalUtxos: [],
+    spendableOutputs: [{ index: 0, amount: 90000 }],
+    changeOutputs: [],
+    requiredSigners: 2,
+    totalSigners: 3,
+  } as TransactionAnalyzerOptions,
 
-export const fixtures = {
-  fixture1,
-  fixture2,
-  fixture3,
+  neitherPossible: {
+    psbt: createMockPsbt(1, 1, false),
+    network: Network.TESTNET,
+    targetFeeRate: 5,
+    additionalUtxos: [],
+    spendableOutputs: [],
+    changeOutputs: [],
+    requiredSigners: 2,
+    totalSigners: 3,
+  } as TransactionAnalyzerOptions,
 };

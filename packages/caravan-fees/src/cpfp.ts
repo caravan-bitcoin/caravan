@@ -7,7 +7,14 @@ import {
   DEFAULT_MAX_CHILD_TX_SIZE,
   DEFAULT_MAX_ADDITIONAL_INPUTS,
 } from "./constants";
-import { createOutputScript } from "./utils";
+import {
+  createOutputScript,
+  initializePsbt,
+  calculateTotalInputValue,
+  calculateTotalOutputValue,
+  parseWitnessUtxoValue,
+  parseNonWitnessUtxoValue,
+} from "./utils";
 
 /**
  * CPFPTransaction Class
@@ -61,7 +68,7 @@ export class CPFPTransaction {
    * @throws {Error} If the parent PSBT is invalid or no spendable outputs are provided
    */
   constructor(options: CPFPOptions) {
-    this.parentPsbt = this.initializePsbt(options.parentPsbt);
+    this.parentPsbt = initializePsbt(options.parentPsbt);
     this.childPsbt = new PsbtV2();
     this.network = options.network;
     this._targetFeeRate = options.targetFeeRate;
@@ -77,35 +84,6 @@ export class CPFPTransaction {
     this.destinationAddress = options.destinationAddress;
     this.spendableOutputs = options.spendableOutputs;
     this.validateParentPsbt();
-  }
-
-  /**
-   * Initializes the parent PSBT from various input formats.
-   *
-   * This method supports initializing from a PsbtV2 object, a serialized PSBT string,
-   * or a Buffer. It attempts to parse the input as a PsbtV2 and falls back to PsbtV0
-   * if necessary, providing backwards compatibility.
-   *
-   * @private
-   * @param {PsbtV2 | string | Buffer} psbt - The parent PSBT in various formats
-   * @returns {PsbtV2} An initialized PsbtV2 object
-   * @throws {Error} If the PSBT cannot be parsed or converted
-   */
-  private initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
-    if (psbt instanceof PsbtV2) {
-      return psbt;
-    }
-    try {
-      return new PsbtV2(psbt);
-    } catch (error) {
-      try {
-        return PsbtV2.FromV0(psbt);
-      } catch (conversionError) {
-        throw new Error(
-          "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
-        );
-      }
-    }
   }
 
   /**
@@ -147,13 +125,37 @@ export class CPFPTransaction {
    * It's used to determine if additional inputs are needed and to calculate fees.
    *
    * @private
-   * @returns {BigNumber} The total input value
+   * @returns {string} The total input value
    */
-  get totalInputValue(): BigNumber {
-    return this.childPsbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    );
+
+  get totalInputValue(): string {
+    try {
+      let total = new BigNumber(0);
+
+      for (let i = 0; i < this.childPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+        const witnessUtxo = this.childPsbt.PSBT_IN_WITNESS_UTXO[i];
+        const nonWitnessUtxo = this.childPsbt.PSBT_IN_NON_WITNESS_UTXO[i];
+
+        if (witnessUtxo) {
+          total = total.plus(parseWitnessUtxoValue(witnessUtxo, i));
+        } else if (nonWitnessUtxo) {
+          total = total.plus(
+            parseNonWitnessUtxoValue(nonWitnessUtxo, i, this.childPsbt),
+          );
+        } else {
+          console.warn(`No UTXO data found for input at index ${i}`);
+        }
+      }
+
+      if (total.isNaN()) {
+        throw new Error("Total input value calculation resulted in NaN");
+      }
+
+      return total.toString();
+    } catch (error) {
+      console.error("Error calculating total input value:", error);
+      throw error;
+    }
   }
 
   /**
@@ -163,13 +165,13 @@ export class CPFPTransaction {
    * output and the estimated fee. It's used to check if additional inputs are required.
    *
    * @private
-   * @returns {BigNumber} The required amount
+   * @returns {string} The required amount
    */
-  get requiredAmount(): BigNumber {
+  get requiredAmount(): string {
     const outputValue = new BigNumber(
       this.childPsbt.PSBT_OUT_AMOUNT[0]?.toString() || "0",
     );
-    return outputValue.plus(this.estimatedRequiredFee);
+    return outputValue.plus(this.estimatedRequiredFee).toString();
   }
 
   /**
@@ -180,11 +182,11 @@ export class CPFPTransaction {
    * fee to ensure the CPFP transaction is effective.
    *
    * @private
-   * @returns {BigNumber} The estimated required fee
+   * @returns {string} The estimated required fee
    */
-  get estimatedRequiredFee(): BigNumber {
+  get estimatedRequiredFee(): string {
     const vsize = this.estimateVsize();
-    return new BigNumber(vsize).multipliedBy(this.targetFeeRate);
+    return new BigNumber(vsize).multipliedBy(this.targetFeeRate).toString();
   }
 
   /**
@@ -195,18 +197,17 @@ export class CPFPTransaction {
    * comparing the original fee to the new combined fee.
    *
    * @public
-   * @returns {BigNumber} The parent transaction fee
+   * @returns {string} The parent transaction fee
    */
-  get parentFee(): BigNumber {
-    const inputValue = this.parentPsbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    );
-    const outputValue = this.parentPsbt.PSBT_OUT_AMOUNT.reduce(
-      (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-      new BigNumber(0),
-    );
-    return inputValue.minus(outputValue);
+  get parentFee(): string {
+    try {
+      const inputValue = calculateTotalInputValue(this.parentPsbt);
+      const outputValue = calculateTotalOutputValue(this.parentPsbt);
+      return inputValue.minus(outputValue).toString();
+    } catch (error) {
+      console.error("Error calculating parent fee:", error);
+      throw error;
+    }
   }
 
   /**
@@ -216,12 +217,14 @@ export class CPFPTransaction {
    * It's useful for displaying fee information to users or for further calculations.
    *
    * @public
-   * @returns {BigNumber} The child transaction fee
+   * @returns {string} The child transaction fee
    */
-  get childFee(): BigNumber {
-    return this.totalInputValue.minus(
-      new BigNumber(this.childPsbt.PSBT_OUT_AMOUNT[0]?.toString() || "0"),
+  get childFee(): string {
+    const totalInput = new BigNumber(this.totalInputValue);
+    const output = new BigNumber(
+      this.childPsbt.PSBT_OUT_AMOUNT[0]?.toString() || "0",
     );
+    return totalInput.minus(output).toString();
   }
 
   /**
@@ -231,10 +234,10 @@ export class CPFPTransaction {
    * that will incentivize miners to include both transactions in a block.
    *
    * @public
-   * @returns {BigNumber} The combined fee of parent and child transactions
+   * @returns {string} The combined fee of parent and child transactions
    */
-  get combinedFee(): BigNumber {
-    return this.childFee.plus(this.parentFee);
+  get combinedFee(): string {
+    return new BigNumber(this.childFee).plus(this.parentFee).toString();
   }
 
   // Methods
@@ -300,8 +303,10 @@ export class CPFPTransaction {
 
       this.childPsbt.addInput(input);
     }
+    const totalInputValue = new BigNumber(this.totalInputValue);
+    const estimatedFee = new BigNumber(this.estimatedRequiredFee);
 
-    const outputAmount = this.totalInputValue.minus(this.estimatedRequiredFee);
+    const outputAmount = totalInputValue.minus(estimatedFee);
 
     if (outputAmount.isLessThan(this.dustThreshold)) {
       throw new Error("CPFP transaction would create a dust output");
@@ -311,6 +316,7 @@ export class CPFPTransaction {
       this.destinationAddress,
       this.network,
     );
+
     const output = {
       script: outputScript,
       amount: outputAmount.toNumber(),
@@ -319,11 +325,12 @@ export class CPFPTransaction {
   }
 
   private addAdditionalInputsIfNeeded(): void {
-    if (this.totalInputValue.isLessThan(this.requiredAmount)) {
-      this.addAdditionalInputs(this.requiredAmount.minus(this.totalInputValue));
+    const totalInput = new BigNumber(this.totalInputValue);
+    const required = new BigNumber(this.requiredAmount);
+    if (totalInput.isLessThan(required)) {
+      this.addAdditionalInputs(required.minus(totalInput));
     }
   }
-
   /**
    * Adds additional inputs to the child transaction if needed.
    *
@@ -360,7 +367,6 @@ export class CPFPTransaction {
       addedAmount = addedAmount.plus(utxo.value);
       addedInputs++;
     }
-
     if (addedAmount.isLessThan(requiredAmount)) {
       throw new Error(
         "Insufficient funds in additional UTXOs to cover CPFP fee",
@@ -371,33 +377,38 @@ export class CPFPTransaction {
   /**
    * Adjusts the fee rate of the child transaction.
    *
-   * This method calculates the new fee based on the combined size of the parent
-   * and child transactions and the desired fee rate (factoring in urgency).
-   * It then adjusts the output amount of the child transaction to accommodate
-   * the new fee, ensuring that the output doesn't become dust in the process.
+   * This method :
+   *   - Calculates the total size of both transactions.
+   *   - Determines the total desired fee for both transactions combined (parent + child) .
+   *   - Subtracts the parent's existing fee to find out how much additional fee is needed.
+   *   - Adjusts the child's output to pay this additional fee.
    *
    * @private
    * @throws {Error} If the new fee is not higher than the current fee or if the adjusted output would be dust
    */
   private adjustFeeRate(): void {
-    const combinedSize =
-      this.parentPsbt.PSBT_GLOBAL_INPUT_COUNT + this.estimateVsize();
-    const newFee = new BigNumber(this.targetFeeRate)
+    const parentSize = this.parentPsbt.PSBT_GLOBAL_INPUT_COUNT;
+    const childSize = this.estimateVsize();
+    const combinedSize = parentSize + childSize;
+
+    const totalDesiredFee = new BigNumber(this.targetFeeRate)
       .multipliedBy(combinedSize)
       .integerValue(BigNumber.ROUND_CEIL);
 
-    if (newFee.isLessThanOrEqualTo(this.childFee)) {
-      throw new Error("New fee must be higher than the current fee");
+    const parentFee = new BigNumber(this.parentFee);
+    const requiredAdditionalFee = totalDesiredFee.minus(parentFee);
+
+    if (requiredAdditionalFee.isLessThanOrEqualTo(0)) {
+      throw new Error("Parent fee is already sufficient");
     }
 
-    const output = this.childPsbt.PSBT_OUT_AMOUNT[0];
-    const newOutputAmount = new BigNumber(output.toString()).minus(
-      newFee.minus(this.childFee),
-    );
+    const currentChildInput = new BigNumber(this.totalInputValue);
+    const newOutputAmount = currentChildInput.minus(requiredAdditionalFee);
 
     if (newOutputAmount.isLessThan(this.dustThreshold)) {
       throw new Error("Adjusted output would be dust");
     }
+
     this.childPsbt.PSBT_OUT_AMOUNT[0] = BigInt(newOutputAmount.toFixed(0));
   }
 
@@ -419,38 +430,82 @@ export class CPFPTransaction {
 
   private estimateInputWeight(inputIndex: number): number {
     // Base input weight
-    let weight = 41 * 4; // outpoint (36) + sequence (4) + count (1)
+    let weight = 32 * 4; // prevout (32 bytes)
+    weight += 4 * 4; // sequence (4 bytes)
+
     const witnessUtxo = this.childPsbt.PSBT_IN_WITNESS_UTXO[inputIndex];
+    const nonWitnessUtxo = this.childPsbt.PSBT_IN_NON_WITNESS_UTXO[inputIndex];
     const redeemScript = this.childPsbt.PSBT_IN_REDEEM_SCRIPT[inputIndex];
     const witnessScript = this.childPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
+
     if (witnessUtxo) {
       // Segwit input
-      const m = this.requiredSigners;
-      weight += (73 * m + 34) * 4; // signatures + pubkeys + OP_m + OP_n + OP_CHECKMULTISIG
       if (redeemScript) {
         // P2SH-P2WSH
-        weight += redeemScript.length * 4;
+        weight += 23 * 4; // scriptSig length (1) + scriptSig (22)
+        weight += this.estimateWitnessWeight(inputIndex);
+      } else if (witnessScript) {
+        // Native P2WSH
+        weight += 1 * 4; // scriptSig length (1), empty scriptSig
+        weight += this.estimateWitnessWeight(inputIndex);
+      } else {
+        // Native P2WPKH
+        weight += 1 * 4; // scriptSig length (1), empty scriptSig
+        weight += (1 + 73 + 34) * 1; // witness elements count (1) + signature (73) + pubkey (34)
       }
-      if (witnessScript) {
-        weight += witnessScript.length;
+    } else if (nonWitnessUtxo) {
+      // Legacy input
+      if (redeemScript) {
+        // P2SH
+        const scriptSigSize =
+          1 +
+          (73 * this.requiredSigners + 34 * this.totalSigners) +
+          redeemScript.length;
+        weight += (1 + scriptSigSize) * 4; // scriptSig length (1) + scriptSig
+      } else {
+        // P2PKH
+        weight += (1 + 73 + 34) * 4; // scriptSig length (1) + signature (73) + pubkey (34)
       }
     } else {
-      // Legacy P2SH input
-      const scriptSigSize =
-        1 + (73 * this.requiredSigners + 34 * this.totalSigners);
-      weight += scriptSigSize * 4;
+      console.warn(`No UTXO data found for input at index ${inputIndex}`);
     }
+
+    return weight;
+  }
+
+  private estimateWitnessWeight(inputIndex: number): number {
+    const witnessScript = this.childPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
+    if (!witnessScript) {
+      console.warn(`No witness script found for input at index ${inputIndex}`);
+      return 0;
+    }
+
+    let weight = 0;
+    weight += 1; // witness elements count
+    weight += this.requiredSigners * (1 + 73); // signature length (1) + signature (73) for each required signer
+    weight += this.totalSigners * (1 + 34); // pubkey length (1) + pubkey (34) for each total signer
+    weight += 1 + witnessScript.length; // witness script length (1) + witness script
+
     return weight;
   }
 
   private estimateOutputWeight(outputIndex: number): number {
-    // 8 bytes for value, 1 byte for script length
-    let weight = 9 * 4;
+    // 8 bytes for value
+    let weight = 8 * 4;
+
     const script = Buffer.from(
       this.childPsbt.PSBT_OUT_SCRIPT[outputIndex],
       "hex",
     );
+    if (!script) {
+      console.warn(`No output script found for output at index ${outputIndex}`);
+      return weight;
+    }
+
+    // 1 byte for script length + script length
+    weight += 1 * 4;
     weight += script.length * 4;
+
     return weight;
   }
 }

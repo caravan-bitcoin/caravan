@@ -1,7 +1,12 @@
 import { PsbtV2 } from "@caravan/psbt";
 import { Network } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
-import { createOutputScript } from "./utils";
+import {
+  createOutputScript,
+  initializePsbt,
+  calculateTotalInputValue,
+  calculateTotalOutputValue,
+} from "./utils";
 import { DEFAULT_DUST_THRESHOLD, RBF_SEQUENCE } from "./constants";
 import { RbfTransactionOptions, FeeRateSatsPerVByte, UTXO } from "./types";
 
@@ -48,7 +53,7 @@ export class RbfTransaction {
    * @throws {Error} If the PSBT is not in a valid format or not signaling RBF
    */
   constructor(options: RbfTransactionOptions) {
-    this.originalPsbt = this.initializePsbt(options.psbt);
+    this.originalPsbt = initializePsbt(options.psbt);
     this.newPsbt = new PsbtV2();
     this.originalPsbt.copy(this.newPsbt);
     this.network = options.network;
@@ -64,41 +69,47 @@ export class RbfTransaction {
     this.validatePsbt();
   }
 
-  /**
-   * Initializes the parent PSBT from various input formats.
-   *
-   * This method supports initializing from a PsbtV2 object, a serialized PSBT string,
-   * or a Buffer. It attempts to parse the input as a PsbtV2 and falls back to PsbtV0
-   * if necessary, providing backwards compatibility.
-   *
-   * @private
-   * @param {PsbtV2 | string | Buffer} psbt - The parent PSBT in various formats
-   * @returns {PsbtV2} An initialized PsbtV2 object
-   * @throws {Error} If the PSBT cannot be parsed or converted
-   */
-  private initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
-    if (psbt instanceof PsbtV2) {
-      return psbt;
-    }
-    try {
-      return new PsbtV2(psbt);
-    } catch (error) {
-      try {
-        return PsbtV2.FromV0(psbt);
-      } catch (conversionError) {
-        throw new Error(
-          "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
-        );
-      }
-    }
-  }
-
   private validatePsbt(): void {
     if (!this.newPsbt.isRBFSignaled) {
       throw new Error("This transaction is not signaling RBF.");
     }
   }
 
+  // getters
+
+  get psbt(): PsbtV2 {
+    return this.newPsbt;
+  }
+
+  get targetFeeRate(): FeeRateSatsPerVByte {
+    return this._targetFeeRate;
+  }
+
+  get totalInputValue(): string {
+    return calculateTotalInputValue(this.newPsbt).toString();
+  }
+
+  get totalOutputValue(): string {
+    return calculateTotalOutputValue(this.newPsbt).toString();
+  }
+
+  get currentFee(): string {
+    return new BigNumber(this.totalInputValue)
+      .minus(this.totalOutputValue)
+      .toString();
+  }
+
+  get requiredFee(): string {
+    return new BigNumber(this.estimateVsize())
+      .multipliedBy(this.targetFeeRate)
+      .toString();
+  }
+
+  get feeIncrease(): string {
+    return new BigNumber(this.requiredFee).minus(this.currentFee).toString();
+  }
+
+  // Methods
   /**
    * Sets a new target fee rate for the RBF transaction.
    *
@@ -125,40 +136,6 @@ export class RbfTransaction {
 
   public getFinalPsbt(): PsbtV2 {
     return this.newPsbt;
-  }
-
-  get targetFeeRate(): FeeRateSatsPerVByte {
-    return this._targetFeeRate;
-  }
-
-  get totalInputValue(): string {
-    return this.newPsbt.PSBT_IN_WITNESS_UTXO.reduce(
-      (sum, utxo) => sum.plus(utxo ? new BigNumber(utxo.split(",")[0]) : 0),
-      new BigNumber(0),
-    ).toString();
-  }
-
-  get totalOutputValue(): string {
-    return this.newPsbt.PSBT_OUT_AMOUNT.reduce(
-      (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-      new BigNumber(0),
-    ).toString();
-  }
-
-  get currentFee(): string {
-    return new BigNumber(this.totalInputValue)
-      .minus(this.totalOutputValue)
-      .toString();
-  }
-
-  get requiredFee(): string {
-    return new BigNumber(this.estimateVsize())
-      .multipliedBy(this.targetFeeRate)
-      .toString();
-  }
-
-  get feeIncrease(): string {
-    return new BigNumber(this.requiredFee).minus(this.currentFee).toString();
   }
 
   /**
@@ -443,43 +420,79 @@ export class RbfTransaction {
   }
 
   private estimateInputWeight(inputIndex: number): number {
-    // Base input weight
-    let weight = 41 * 4; // outpoint (36) + sequence (4) + count (1)
+    let weight = 32 * 4; // prevout (32 bytes)
+    weight += 4 * 4; // sequence (4 bytes)
 
     const witnessUtxo = this.newPsbt.PSBT_IN_WITNESS_UTXO[inputIndex];
+    const nonWitnessUtxo = this.newPsbt.PSBT_IN_NON_WITNESS_UTXO[inputIndex];
     const redeemScript = this.newPsbt.PSBT_IN_REDEEM_SCRIPT[inputIndex];
     const witnessScript = this.newPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
 
     if (witnessUtxo) {
       // Segwit input
-      const m = this.requiredSigners;
-      weight += (73 * m + 34) * 4; // signatures + pubkeys + OP_m + OP_n + OP_CHECKMULTISIG
       if (redeemScript) {
         // P2SH-P2WSH
-        weight += redeemScript.length * 4;
+        weight += 23 * 4; // scriptSig length (1) + scriptSig (22)
+        weight += this.estimateWitnessWeight(inputIndex);
+      } else if (witnessScript) {
+        // Native P2WSH
+        weight += 1 * 4; // scriptSig length (1), empty scriptSig
+        weight += this.estimateWitnessWeight(inputIndex);
+      } else {
+        // Native P2WPKH
+        weight += 1 * 4; // scriptSig length (1), empty scriptSig
+        weight += (1 + 73 + 34) * 1; // witness elements count (1) + signature (73) + pubkey (34)
       }
-      if (witnessScript) {
-        weight += witnessScript.length;
+    } else if (nonWitnessUtxo) {
+      // Legacy input
+      if (redeemScript) {
+        // P2SH
+        const scriptSigSize =
+          1 +
+          (73 * this.requiredSigners + 34 * this.totalSigners) +
+          redeemScript.length;
+        weight += (1 + scriptSigSize) * 4; // scriptSig length (1) + scriptSig
+      } else {
+        // P2PKH
+        weight += (1 + 73 + 34) * 4; // scriptSig length (1) + signature (73) + pubkey (34)
       }
     } else {
-      // Legacy P2SH input
-      const scriptSigSize =
-        1 + (73 * this.requiredSigners + 34 * this.totalSigners);
-      weight += scriptSigSize * 4;
+      console.warn(`No UTXO data found for input at index ${inputIndex}`);
     }
 
     return weight;
   }
 
+  private estimateWitnessWeight(inputIndex: number): number {
+    const witnessScript = this.newPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
+    if (!witnessScript) {
+      console.warn(`No witness script found for input at index ${inputIndex}`);
+      return 0;
+    }
+
+    let weight = 0;
+    weight += 1; // witness elements count
+    weight += this.requiredSigners * (1 + 73); // signature length (1) + signature (73) for each required signer
+    weight += this.totalSigners * (1 + 34); // pubkey length (1) + pubkey (34) for each total signer
+    weight += 1 + witnessScript.length; // witness script length (1) + witness script
+
+    return weight;
+  }
+
   private estimateOutputWeight(outputIndex: number): number {
-    // 8 bytes for value, 1 byte for script length
-    let weight = 9 * 4;
+    let weight = 8 * 4; // 8 bytes for value
 
     const script = Buffer.from(
       this.newPsbt.PSBT_OUT_SCRIPT[outputIndex],
       "hex",
     );
-    weight += script.length * 4;
+    if (!script) {
+      console.warn(`No output script found for output at index ${outputIndex}`);
+      return weight;
+    }
+
+    weight += 1 * 4; // 1 byte for script length
+    weight += script.length * 4; // script length
 
     return weight;
   }

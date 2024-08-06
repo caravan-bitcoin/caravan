@@ -1,4 +1,3 @@
-import BigNumber from "bignumber.js";
 import { PsbtV2 } from "@caravan/psbt";
 import { Network } from "@caravan/bitcoin";
 
@@ -10,19 +9,14 @@ export interface UTXO {
   additionalData?: any; // For any additional data required for the input
 }
 
-export interface TransactionOutput {
-  address: string;
-  amountSats: BigNumber;
-}
-
 export interface TransactionAnalyzerOptions {
   psbt: PsbtV2 | string | Buffer;
   network: Network;
   dustThreshold?: number;
-  targetFeeRate: FeeRateSatsPerVByte;
+  targetFeeRate: number; // FeeRateSatsPerVByte as a plain number
   additionalUtxos?: UTXO[];
-  spendableOutputs: { index: number; amount: BigNumber }[];
-  changeOutputs: { index: number; amount: BigNumber }[];
+  spendableOutputs: { index: number; amount: number }[]; // Amount in satoshis
+  changeOutputs: { index: number; amount: number }[]; // Amount in satoshis
   requiredSigners: number;
   totalSigners: number;
 }
@@ -32,9 +26,6 @@ export enum FeeBumpStrategy {
   CPFP = "CPFP",
   NONE = "NONE",
 }
-export type UrgencyLevel = "low" | "medium" | "high";
-
-export type AddressType = "P2SH" | "P2SH-P2WSH" | "P2WSH";
 
 export type FeeRateSatsPerVByte = number;
 
@@ -50,35 +41,6 @@ export interface RbfTransactionOptions {
   changeOutputIndices: number[];
 }
 
-export interface FeeEstimate {
-  lowFee: FeeRateSatsPerVByte;
-  mediumFee: FeeRateSatsPerVByte;
-  highFee: FeeRateSatsPerVByte;
-}
-
-export interface TransactionDetails {
-  inputs: {
-    txid: string;
-    vout: number;
-    amount: BigNumber;
-  }[];
-  outputs: {
-    address: string;
-    amount: BigNumber;
-  }[];
-  fee: BigNumber;
-}
-
-export interface RbfTransactionResult {
-  psbt: string; // Base64 encoded PSBT
-  details: TransactionDetails;
-  feeRate: FeeRateSatsPerVByte;
-}
-
-export interface CancelTransactionResult extends RbfTransactionResult {
-  destinationAddress: string;
-}
-
 export interface CPFPOptions {
   parentPsbt: PsbtV2 | string | Buffer;
   spendableOutputs: number[];
@@ -91,19 +53,4 @@ export interface CPFPOptions {
   additionalUtxos?: UTXO[];
   requiredSigners: number;
   totalSigners: number;
-  addressType: string;
-}
-
-export interface MultisigDetails {
-  requiredSigners: number;
-  totalSigners: number;
-  addressType: AddressType;
-}
-
-export interface WalletConfig {
-  addressType: string;
-  requiredSigners: number;
-  totalSigners: number;
-  addresses: string[];
-  // Add any other relevant wallet configuration details
 }

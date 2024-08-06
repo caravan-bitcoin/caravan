@@ -1,37 +1,69 @@
-import { PsbtV2 } from "@caravan/psbt";
-import { Network } from "@caravan/bitcoin";
-
-const parentPsbtFixture = new PsbtV2();
-parentPsbtFixture.addInput({
-  previousTxId:
-    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-  outputIndex: 0,
-  witnessUtxo: {
-    script: Buffer.from("0014000000000000000000000000000000000000", "hex"),
-    amount: 100000, // 0.001 BTC
+export const CPFP_FIXTURES = [
+  {
+    case: "CPFP transaction with multiple parent outputs and additional UTXOs",
+    parentPsbt:
+      "cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAAAA",
+    network: "testnet",
+    targetFeeRate: 20,
+    spendableOutputs: [1],
+    destinationAddress:
+      "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+    requiredSigners: 2,
+    totalSigners: 3,
+    additionalUtxos: [
+      {
+        txid: "1234567890123456789012345678901234567890123456789012345678901234",
+        vout: 0,
+        value: 100000,
+        script: Buffer.from(
+          "0014000102030405060708090a0b0c0d0e0f10111213",
+          "hex",
+        ),
+      },
+    ],
+    expectedChildInputCount: 2,
+    expectedChildOutputCount: 1,
+    expectedFeeIncrease: 2000,
   },
-});
-parentPsbtFixture.addOutput({
-  script: Buffer.from("0014111111111111111111111111111111111111", "hex"),
-  amount: 90000, // 0.0009 BTC
-});
-
-const additionalUtxoFixture = {
-  txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-  vout: 0,
-  value: 50000, // 0.0005 BTC
-  script: Buffer.from("0014222222222222222222222222222222222222", "hex"),
-};
-
-const defaultOptions = {
-  parentPsbt: parentPsbtFixture,
-  spendableOutputs: [0],
-  destinationAddress: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
-  feeRate: { satoshisPerByte: 2 },
-  network: Network.MAINNET,
-  requiredSigners: 2,
-  totalSigners: 3,
-  addressType: "P2WSH",
-};
-
-export { parentPsbtFixture, additionalUtxoFixture, defaultOptions };
+  {
+    case: "CPFP transaction with high fee requirement",
+    parentPsbt:
+      "cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAAAA",
+    network: "testnet",
+    targetFeeRate: 100,
+    spendableOutputs: [1],
+    destinationAddress:
+      "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+    requiredSigners: 2,
+    totalSigners: 3,
+    expectedChildInputCount: 1,
+    expectedChildOutputCount: 1,
+    expectedFeeIncrease: 15000,
+  },
+  {
+    case: "CPFP transaction with no spendable outputs requirement",
+    parentPsbt:
+      "cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAAAA",
+    network: "testnet",
+    targetFeeRate: 20,
+    spendableOutputs: [],
+    destinationAddress:
+      "tb1qhjtyry0qwm5l6v5v7y27hc6m60vm0d8exlr3cswdrxsgaygqvd2q5zsl0n",
+    requiredSigners: 2,
+    totalSigners: 3,
+    additionalUtxos: [
+      {
+        txid: "1234567890123456789012345678901234567890123456789012345678901234",
+        vout: 0,
+        value: 100000,
+        script: Buffer.from(
+          "0014000102030405060708090a0b0c0d0e0f10111213",
+          "hex",
+        ),
+      },
+    ],
+    expectedChildInputCount: 2,
+    expectedChildOutputCount: 1,
+    expectedFeeIncrease: 2000,
+  },
+];
