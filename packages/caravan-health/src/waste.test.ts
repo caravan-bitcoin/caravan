@@ -1,22 +1,11 @@
 import {
-  feesScore,
   feesToAmountRatio,
   relativeFeesScore,
   wasteMetric,
-} from "./feescore";
-import { BlockchainClient } from "@caravan/clients";
+} from "./waste";
 import { Transaction, FeeRatePercentile } from "@caravan/clients";
 
 describe("Fees Score Functions", () => {
-  let mockClient: BlockchainClient;
-
-  beforeEach(() => {
-    mockClient = {
-      getAddressStatus: jest.fn(),
-      getAddressTransactions: jest.fn().mockResolvedValue([{ txid: "tx1" }]),
-    } as unknown as BlockchainClient;
-  });
-
   describe("relativeFeesScore", () => {
     it("Relative fees score for transaction", () => {
       const transactions: Transaction[] = [
@@ -101,6 +90,3 @@ describe("Fees Score Functions", () => {
     });
   });
 });
-function getFeeRateForTransaction(transaction: Transaction) {
-  throw new Error("Function not implemented.");
-}

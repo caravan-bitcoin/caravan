@@ -21,7 +21,7 @@ export interface Transaction {
 }
 
 interface Input {
-  txid: string;
+  prevTxId: string;
   vout: number;
   sequence: number;
 }

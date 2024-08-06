@@ -19,31 +19,43 @@ const DENIABILITY_FACTOR = 1.5;
 The p_score is calculated by evaluating the likelihood of self-payments, the involvement of 
 change outputs and the type of transaction based on number of inputs and outputs.
 
-We have 5 categories of transaction type
-- Sweep Spend
-- Simple Spend
-- UTXO Fragmentation (any transaction with more than the standard 2 outputs)
-- Consolidation
-- CoinJoin
+We have 5 categories of transaction type each with their own impact on privacy score
+- Perfect Spend (1 input, 1 output)
+- Simple Spend (1 input, 2 outputs)
+- UTXO Fragmentation (1 input, more than 2 standard outputs)
+- Consolidation (more than 1 input, 1 output)
+- CoinJoin or Mixing (more than 1 input, more than 1 output)
 */
 enum SpendType {
-  SweepSpend = "SweepSpend",
+  PerfectSpend = "PerfectSpend",
   SimpleSpend = "SimpleSpend",
   UTXOFragmentation = "UTXOFragmentation",
   Consolidation = "Consolidation",
   MixingOrCoinJoin = "MixingOrCoinJoin",
 }
 
+function determineSpendType(inputs: number, outputs: number): SpendType {
+  if (inputs === 1) {
+    if (outputs === 1) return SpendType.PerfectSpend;
+    if (outputs === 2) return SpendType.SimpleSpend;
+    return SpendType.UTXOFragmentation;
+  } else {
+    if (outputs === 1) return SpendType.Consolidation;
+    return SpendType.MixingOrCoinJoin;
+  }
+}
+
 /*
 The deterministic scores or their formula for each spend type are as follows
+Refer to the link mentioned <TODO : link> to understand the mathematical derivation of the scores.
 */
-function spendTypeScores(
+function getSpendTypeScore(
   spendType: SpendType,
   numberOfInputs: number,
   numberOfOutputs: number,
 ): number {
   switch (spendType) {
-    case SpendType.SweepSpend:
+    case SpendType.PerfectSpend:
       return 1 / 2;
     case SpendType.SimpleSpend:
       return 4 / 9;
@@ -59,20 +71,8 @@ function spendTypeScores(
   }
 }
 
-function determineSpendType(inputs: number, outputs: number): SpendType {
-  if (inputs === 1) {
-    if (outputs === 1) return SpendType.SweepSpend;
-    if (outputs === 2) return SpendType.SimpleSpend;
-    return SpendType.UTXOFragmentation;
-  } else {
-    if (outputs === 1) return SpendType.Consolidation;
-    return SpendType.MixingOrCoinJoin;
-  }
-}
-
 /*
-The transaction topology refers to the type of transaction based on 
-number of inputs and outputs.
+The transaction topology score evaluates privacy metrics based on the number of inputs and outputs.
 
 Expected Range : [0, 0.75]
 -> Very Poor : [0, 0.15]
@@ -81,19 +81,19 @@ Expected Range : [0, 0.75]
 -> Good : (0.45, 0.6]
 -> Very Good : (0.6, 0.75] 
 */
-export async function privacyScoreByTxTopology(
+export async function getMeanTopologyScore(
   transactions: Transaction[],
   client: BlockchainClient,
 ): Promise<number> {
   let privacyScore = 0;
   for (let tx of transactions) {
-    let topologyScore = await scoreForTxTopology(tx, client);
+    let topologyScore = await getTopologyScore(tx, client);
     privacyScore += topologyScore;
   }
   return privacyScore / transactions.length;
 }
 
-export async function scoreForTxTopology(
+export async function getTopologyScore(
   transaction: Transaction,
   client: BlockchainClient,
 ): Promise<number> {
@@ -104,7 +104,7 @@ export async function scoreForTxTopology(
     numberOfInputs,
     numberOfOutputs,
   );
-  const score: number = spendTypeScores(
+  const score: number = getSpendTypeScore(
     spendType,
     numberOfInputs,
     numberOfOutputs,
@@ -113,8 +113,8 @@ export async function scoreForTxTopology(
   if (spendType === SpendType.Consolidation) {
     return score;
   }
-  for (let op of transaction.vout) {
-    let address = op.scriptPubkeyAddress;
+  for (let output of transaction.vout) {
+    let address = output.scriptPubkeyAddress;
     let isResued = await isReusedAddress(address, client);
     if (isResued === true) {
       return score;
@@ -124,7 +124,7 @@ export async function scoreForTxTopology(
 }
 
 /* 
-In order to score for address reuse we can check the amount being hold by reused UTXOs 
+In order to score for address reuse we can check the amount being held by reused addresses 
 with respect to the total amount
 
 Expected Range : [0,1]
@@ -164,9 +164,7 @@ async function isReusedAddress(
     if (tx.isSend === false) {
       countReceive++;
     }
-  }
-  if (countReceive > 1) {
-    return true;
+    if (countReceive > 1) return true;
   }
   return false;
 }
@@ -247,7 +245,7 @@ export function utxoSpreadFactor(utxos: AddressUtxos): number {
 }
 
 /* 
-The weightage is ad-hoc to normalize the privacy score based on the number of UTXOs in the set.
+The score is ad-hoc to normalize the privacy score based on the number of UTXOs in the set.
 
 Expected Range : [0,1]
 - 0 for UTXO set length >= 50
@@ -262,24 +260,24 @@ export function utxoSetLengthScore(utxos: AddressUtxos): number {
     const addressUtxos = utxos[address];
     utxoSetLength += addressUtxos.length;
   }
-  let weight: number;
+  let score: number;
   if (utxoSetLength >= 50) {
-    weight = 0;
+    score = 0;
   } else if (utxoSetLength >= 25 && utxoSetLength <= 49) {
-    weight = 0.25;
+    score = 0.25;
   } else if (utxoSetLength >= 15 && utxoSetLength <= 24) {
-    weight = 0.5;
+    score = 0.5;
   } else if (utxoSetLength >= 5 && utxoSetLength <= 14) {
-    weight = 0.75;
+    score = 0.75;
   } else {
-    weight = 1;
+    score = 1;
   }
-  return weight;
+  return score;
 }
 
 /*
 UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
-It signifies the combined effect of how well spreaded the UTXO Set is and how many number of UTXOs are there.
+It signifies the combined effect of how much variance is there in the UTXO Set values is and how many number of UTXOs are there.
 
 Expected Range : [-0.15,0.15]
 -> Very Poor : [-0.1, -0.05)
@@ -288,7 +286,7 @@ Expected Range : [-0.15,0.15]
 -> Good : [0.05, 0.1)
 -> Very Good : [0.1 ,0.15] 
 */
-export function utxoValueWeightageFactor(utxos: AddressUtxos): number {
+export function utxoValueDispersionFactor(utxos: AddressUtxos): number {
   let W: number = utxoSetLengthScore(utxos);
   let USF: number = utxoSpreadFactor(utxos);
   return (USF + W) * 0.15 - 0.15;
@@ -308,14 +306,14 @@ Expected Range : [0, 1]
 -> Good : (0.6, 0.8]
 -> Very Good : (0.8, 1]
 */
-export async function privacyScore(
+export async function getWalletPrivacyScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
   walletAddressType: MultisigAddressType,
   client: BlockchainClient,
   network: Network,
 ): Promise<number> {
-  let privacyScore = await privacyScoreByTxTopology(transactions, client);
+  let privacyScore = await getMeanTopologyScore(transactions, client);
 
   // Adjusting the privacy score based on the address reuse factor
   let addressReusedFactor = await addressReuseFactor(utxos, client);
@@ -329,7 +327,7 @@ export async function privacyScore(
     (1 - addressTypeFactor(transactions, walletAddressType, network));
 
   // Adjusting the privacy score based on the UTXO set length and value weightage factor
-  privacyScore = privacyScore + 0.1 * utxoValueWeightageFactor(utxos);
+  privacyScore = privacyScore + 0.1 * utxoValueDispersionFactor(utxos);
 
   return privacyScore;
 }

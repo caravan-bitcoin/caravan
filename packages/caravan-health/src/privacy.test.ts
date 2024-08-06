@@ -1,11 +1,11 @@
 import {
-  scoreForTxTopology,
+  getTopologyScore,
   addressReuseFactor,
   addressTypeFactor,
   utxoSpreadFactor,
   utxoSetLengthScore,
-  utxoValueWeightageFactor,
-  privacyScore,
+  utxoValueDispersionFactor,
+  getWalletPrivacyScore,
 } from "./privacy";
 import { BlockchainClient, Transaction } from "@caravan/clients";
 import { AddressUtxos } from "./types";
@@ -26,12 +26,12 @@ describe("Privacy Score Functions", () => {
       const transaction: Transaction = {
         vin: [
           {
-            txid: "input1",
+            prevTxId: "input1",
             vout: 0,
             sequence: 0,
           },
           {
-            txid: "input2",
+            prevTxId: "input2",
             vout: 0,
             sequence: 0,
           },
@@ -50,7 +50,7 @@ describe("Privacy Score Functions", () => {
         blocktime: 0,
       };
       const score: number = +(
-        await scoreForTxTopology(transaction, mockClient)
+        await getTopologyScore(transaction, mockClient)
       ).toFixed(3);
       expect(score).toBe(0.818);
     });
@@ -91,13 +91,12 @@ describe("Privacy Score Functions", () => {
 
   describe("addressTypeFactor", () => {
     it("P2PKH address", () => {
-      const transactions = [
+      const transactions: Transaction[] = [
         {
           vin: [
             {
-              txid: "input1",
+              prevTxId: "input1",
               vout: 0,
-              witness: [],
               sequence: 0,
             },
           ],
@@ -194,20 +193,19 @@ describe("Privacy Score Functions", () => {
           },
         ],
       };
-      const factor: number = +utxoValueWeightageFactor(utxos).toFixed(3);
+      const factor: number = +utxoValueDispersionFactor(utxos).toFixed(3);
       expect(factor).toBe(0.05);
     });
   });
 
   describe("privacyScore", () => {
     it("Privacy score", async () => {
-      const transactions = [
+      const transactions: Transaction[] = [
         {
           vin: [
             {
-              txid: "input1",
+              prevTxId: "input1",
               vout: 0,
-              witness: [],
               sequence: 0,
             },
           ],
@@ -244,7 +242,7 @@ describe("Privacy Score Functions", () => {
       const walletAddressType: MultisigAddressType = "P2PKH";
       const network: Network = Network["MAINNET"];
       const score: number = +(
-        await privacyScore(
+        await getWalletPrivacyScore(
           transactions,
           utxos,
           walletAddressType,

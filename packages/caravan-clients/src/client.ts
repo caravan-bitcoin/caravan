@@ -201,7 +201,7 @@ export class BlockchainClient extends ClientBase {
             };
             for (const input of rawTxData.vin) {
               transaction.vin.push({
-                txid: input.txid,
+                prevTxId: input.txid,
                 vout: input.vout,
                 sequence: input.sequence,
               });
@@ -240,7 +240,7 @@ export class BlockchainClient extends ClientBase {
             transaction.isSend = true;
           }
           transaction.vin.push({
-            txid: input.txid,
+            prevTxId: input.txid,
             vout: input.vout,
             sequence: input.sequence,
           });
@@ -411,7 +411,7 @@ export class BlockchainClient extends ClientBase {
 
   public async getBlockFeeRatePercentileHistory(): Promise<FeeRatePercentile[]> {
     try {
-          let data = await this.Get(`v1/mining/blocks/fee-rates/all`);
+          let data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
           let feeRatePercentileBlocks: FeeRatePercentile[] = [];
           for (const block of data) {
             let feeRatePercentile: FeeRatePercentile = {

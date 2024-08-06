@@ -3,7 +3,7 @@
 The `caravan-health` package is designed to help users maintain the health of their bitcoin wallets. Wallet health is determined by various factors including financial privacy, transaction fees, and the avoidance of dust outputs. This README will guide you through understanding wallet health goals, scoring metrics, and how to use the caravan-health package to achieve optimal wallet health.
 
 # Defining Wallet Health Goals
-Different users have diverse needs and preferences which impact their wallet health goals. Some users prioritize financial privacy, others focus on minimizing transaction fees, and some want a healthy wallet without delving into the technical details of UTXOs and transactions. The caravan-health package aims to research metrics that help label scores for wallet health and provide suggestions for improvement.
+Different users have diverse needs and preferences which impact their wallet health goals. Some users prioritize financial privacy, others focus on minimizing transaction fees, and some want a healthy wallet without delving into the technical details of UTXOs and transactions. The caravan-health package aims to highlight metrics for wallet health and provide suggestions for improvement.
 
 # Wallet Health Goals:
 - Protect financial privacy
@@ -34,15 +34,16 @@ Evaluates the spread of UTXO values to gauge privacy. Higher spread indicates be
 
 Considers the number of UTXOs in the wallet.
 
-5. UTXO Value Weightage Factor (U.V.W.F)
+5. UTXO Value Dispersion Factor (U.V.D.F)
 
 Combines UTXO spread and weightage on number of UTXOs. Adjusts privacy score based on UTXO value dispersion and quantity.
 
-# Fees Metrics
+# Waste Metrics
 
 1. Relative Fee Score (R.F.S)
 
-Measures the fee rate compared to historical data. Higher score indicates lower fee rates.
+Measures the fee rate compared to historical data. It can be associated with all the transactions and we can give a measure 
+if any transaction was done at expensive fees or nominal fees.
 
 2. Fee-to-Amount Percent Score (F.A.P.S)
 

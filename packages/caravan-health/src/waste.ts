@@ -40,24 +40,7 @@ function getFeeRatePercentileScore(
     feeRate,
     feeRatePercentileHistory,
   );
-  switch (percentile) {
-    case 0:
-      return 1;
-    case 10:
-      return 0.9;
-    case 25:
-      return 0.75;
-    case 50:
-      return 0.5;
-    case 75:
-      return 0.25;
-    case 90:
-      return 0.1;
-    case 100:
-      return 0;
-    default:
-      throw new Error("Invalid percentile");
-  }
+  return 1-(percentile/100);
 }
 
 function getPercentile(
@@ -136,14 +119,13 @@ export function relativeFeesScore(
 }
 
 /* 
-Measure of how much the wallet is burning in fees is that we take the ratio of 
-amount being paid and the fees consumed.
+The measure of how much the wallet is affected by fees is determined by the ratio of the amount paid to the fees incurred.
 
 Mastercard charges 0.6% cross-border fee for international transactions in US dollars, 
 but if the transaction is in any other currency the fee goes up to 1%. 
 Source : https://www.clearlypayments.com/blog/what-are-cross-border-fees-in-credit-card-payments/
 
-This ratio is a measure of our fees spending against the fiat charges we pay.
+This ratio is a measure of transaction fees compared with market rates for fiat processing fees.
 */
 export function feesToAmountRatio(transactions: Transaction[]): number {
   let sumFeesToAmountRatio: number = 0;
@@ -158,16 +140,15 @@ export function feesToAmountRatio(transactions: Transaction[]): number {
 }
 
 /*
-Consider the waste score of the transaction which gives an idea of not spending a 
-particular output now (assuming fees are currently high), given that we may be able 
-to consolidate it later when fees are low.
+Consider the waste score of the transaction which can inform whether or not it is economical to spend a
+particular output now (assuming fees are currently high) or wait to consolidate it later when fees are low.
 
 waste score = consolidation factor + cost of transaction
-waste score = weight (feerate - L) + change + excess
+waste score = weight (fee rate - L) + change + excess
 
-weight: total weight of the input set
-feerate: the transaction's target feerate
-L: the long-term feerate estimate which the wallet might need to pay to redeem remaining UTXOs
+weight: Transaction weight units
+feeRate: the transaction's target fee rate
+L: the long-term fee rate estimate which the wallet might need to pay to redeem remaining UTXOs
 change: the cost of creating and spending a change output
 excess: the amount by which we exceed our selection target when creating a changeless transaction, 
 mutually exclusive with cost of change
@@ -177,10 +158,9 @@ If there is a change in output then the excess should be 0.
 “change” includes the fees paid on this transaction's change output plus the fees that 
 will need to be paid to spend it later. Thus the quantity cost of  transaction is always a positive number.
 
-Now depending on the feerate in the long term the consolidation factor can be positive or a negative quantity.
-		
-		feerate (current) < L (long-term feerate)  –-> Consolidate now (-ve)
-		feerate (current) > L (long-term feerate)  –-> Wait for later when feerate go low (+ve)
+Depending on the fee rate in the long term, the consolidation factor can either be positive or negative.		
+		fee rate (current) < L (long-term fee rate)  –-> Consolidate now (-ve)
+		fee rate (current) > L (long-term fee rate)  –-> Wait for later when fee rate go low (+ve)
 */
 export function wasteMetric(
   transaction: Transaction, // Amount that UTXO holds
