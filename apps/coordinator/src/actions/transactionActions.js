@@ -114,6 +114,11 @@ export function setChangeAddressAction(value) {
   };
 }
 
+export const setRBF = (enabled) => ({
+  type: "SET_RBF",
+  value: enabled,
+});
+
 export function setChangeOutput({ value, address }) {
   return (dispatch, getState) => {
     const {
