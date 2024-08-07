@@ -10,6 +10,7 @@ import {
   bitcoindSendRawTransaction,
   isWalletAddressNotFoundError,
   callBitcoind,
+  bitcoindRawTxData,
 } from "./bitcoind";
 import {
   bitcoindGetAddressStatus,
@@ -164,15 +165,6 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async bitcoindRawTxData(txid: string): Promise<any> {
-    return await callBitcoind(
-      this.bitcoindParams.url,
-      this.bitcoindParams.auth,
-      "decoderawtransaction",
-      [txid],
-    );
-  }
-
   public async getAddressTransactions(address: string): Promise<Transaction[]> {
     try {
       if (this.type === ClientType.PRIVATE) {
@@ -187,7 +179,7 @@ export class BlockchainClient extends ClientBase {
         for (const tx of data) {
           if (tx.address === address) {
             let isTxSend = tx.category === "send" ? true : false;
-            const rawTxData = await this.bitcoindRawTxData(tx.txid);
+            const rawTxData = await bitcoindRawTxData(tx.txid);
             const transaction: Transaction = {
               txid: tx.txid,
               vin: [],
