@@ -68,14 +68,20 @@ describe("Waste metrics that accounts for nature of fees spending for a wallet",
     };
 
     const amount = 30;
-    const L = 30;
+    // Reference on estimatedLongTermFeeRate : https://bitcoincore.reviews/17331#l-164
+    const estimatedLongTermFeeRate = 30;
 
-    const result = wasteMetric(transaction, amount, L);
+    const result = wasteMetric(
+      transaction,
+      amount,
+      estimatedLongTermFeeRate,
+    );
 
     const expectedWeight = transaction.weight;
     const feeRate = transaction.fee / transaction.weight;
     const costOfTx = Math.abs(amount - transaction.amount);
-    const expectedWasteMetric = expectedWeight * (feeRate - L) + costOfTx;
+    const expectedWasteMetric =
+      expectedWeight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
 
     expect(result).toBe(expectedWasteMetric);
   });

@@ -40,7 +40,7 @@ function getFeeRatePercentileScore(
     feeRate,
     feeRatePercentileHistory,
   );
-  return 1-(percentile/100);
+  return 1 - percentile / 100;
 }
 
 function getPercentile(
@@ -144,11 +144,14 @@ Consider the waste score of the transaction which can inform whether or not it i
 particular output now (assuming fees are currently high) or wait to consolidate it later when fees are low.
 
 waste score = consolidation factor + cost of transaction
-waste score = weight (fee rate - L) + change + excess
+waste score = weight (fee rate - estimatedLongTermFeeRate) + change + excess
+
+// Reference on estimatedLongTermFeeRate : https://bitcoincore.reviews/17331#l-164
+// It is upper bound for spending the UTXO in the future
 
 weight: Transaction weight units
 feeRate: the transaction's target fee rate
-L: the long-term fee rate estimate which the wallet might need to pay to redeem remaining UTXOs
+estimatedLongTermFeeRate: the long-term fee rate estimate which the wallet might need to pay to redeem remaining UTXOs
 change: the cost of creating and spending a change output
 excess: the amount by which we exceed our selection target when creating a changeless transaction, 
 mutually exclusive with cost of change
@@ -159,18 +162,18 @@ If there is a change in output then the excess should be 0.
 will need to be paid to spend it later. Thus the quantity cost of  transaction is always a positive number.
 
 Depending on the fee rate in the long term, the consolidation factor can either be positive or negative.		
-		fee rate (current) < L (long-term fee rate)  –-> Consolidate now (-ve)
-		fee rate (current) > L (long-term fee rate)  –-> Wait for later when fee rate go low (+ve)
+		fee rate (current) < estimatedLongTermFeeRate (long-term fee rate)  –-> Consolidate now (-ve)
+		fee rate (current) > estimatedLongTermFeeRate (long-term fee rate)  –-> Wait for later when fee rate go low (+ve)
 */
 export function wasteMetric(
   transaction: Transaction, // Amount that UTXO holds
   amount: number, // Amount to be spent in the transaction
-  L: number, // Long term estimated fee-rate
+  estimatedLongTermFeeRate: number, // Long term estimated fee-rate
 ): number {
   let weight: number = transaction.weight;
   let feeRate: number = getFeeRateForTransaction(transaction);
   let costOfTx: number = Math.abs(amount - transaction.amount);
-  return weight * (feeRate - L) + costOfTx;
+  return weight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
 }
 
 /*
