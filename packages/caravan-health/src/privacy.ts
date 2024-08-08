@@ -276,7 +276,7 @@ export function utxoSetLengthScore(utxos: AddressUtxos): number {
 }
 
 /*
-UTXO Value Weightage Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
+UTXO Value Dispersion Factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
 It signifies the combined effect of how much variance is there in the UTXO Set values is and how many number of UTXOs are there.
 
 Expected Range : [-0.15,0.15]
@@ -287,9 +287,9 @@ Expected Range : [-0.15,0.15]
 -> Very Good : [0.1 ,0.15] 
 */
 export function utxoValueDispersionFactor(utxos: AddressUtxos): number {
-  let W: number = utxoSetLengthScore(utxos);
+  let UMF: number = utxoSetLengthScore(utxos);
   let USF: number = utxoSpreadFactor(utxos);
-  return (USF + W) * 0.15 - 0.15;
+  return (USF + UMF) * 0.15 - 0.15;
 }
 
 /*
@@ -297,7 +297,7 @@ The privacy score is a combination of all the factors calculated above.
 - Privacy Score based on Inputs and Outputs (i.e Tx Topology)
 - Address Reuse Factor (R.F)
 - Address Type Factor (A.T.F)
-- UTXO Value Weightage Factor (U.V.W.F)
+- UTXO Value Dispersion Factor (U.V.D.F)
 
 Expected Range : [0, 1]
 -> Very Poor : [0, 0.2]
@@ -326,7 +326,7 @@ export async function getWalletPrivacyScore(
     privacyScore *
     (1 - addressTypeFactor(transactions, walletAddressType, network));
 
-  // Adjusting the privacy score based on the UTXO set length and value weightage factor
+  // Adjusting the privacy score based on the UTXO set length and value dispersion factor
   privacyScore = privacyScore + 0.1 * utxoValueDispersionFactor(utxos);
 
   return privacyScore;

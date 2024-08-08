@@ -32,13 +32,13 @@ Assesses privacy based on the diversity of address types used in transactions.
 
 Evaluates the spread of UTXO values to gauge privacy. Higher spread indicates better privacy.
 
-4. Weightage on Number of UTXOs (W)
+4. UTXO Mass Factor score which accounts for Number of UTXOs present in a wallet (U.M.F)
 
 Considers the number of UTXOs in the wallet.
 
 5. UTXO Value Dispersion Factor (U.V.D.F)
 
-Combines UTXO spread and weightage on number of UTXOs. Adjusts privacy score based on UTXO value dispersion and quantity.
+Combines the scores of UTXO spread and UTXO mass.
 
 # Waste Metrics
 
@@ -51,7 +51,7 @@ if any transaction was done at expensive fees or nominal fees.
 
 Ratio of fees paid to the transaction amount. Lower percentage signifies better fee efficiency.
 
-3. Weightage on Number of UTXOs (W)
+3. UTXO Mass Factor on Number of UTXOs (UMF)
 
 Considers the number of UTXOs.
 

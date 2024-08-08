@@ -178,9 +178,9 @@ export function wasteMetric(
 35% Weightage of fees score depends fees paid with respect to amount spend
 30% Weightage of fees score depends on the number of UTXOs present in the wallet.
 
-Q : What role does W plays in the fees score?
+Q : What role does UMF plays in the fees score?
 Assume the wallet is being consolidated, Thus number of UTXO will decrease and thus 
-W (Weightage of number of UTXO) will increase and this justifies that, consolidation 
+UMF (UTXO Mass Factor) will increase and this justifies that, consolidation 
 increases the fees health since you don’t overpay them in long run.
 
 Expected Range : [0, 1]
@@ -197,6 +197,6 @@ export async function feesScore(
 ): Promise<number> {
   let RFS: number = relativeFeesScore(transactions, feeRatePercentileHistory);
   let FAR: number = feesToAmountRatio(transactions);
-  let W: number = utxoSetLengthScore(utxos);
-  return 0.35 * RFS + 0.35 * FAR + 0.3 * W;
+  let UMS: number = utxoSetLengthScore(utxos);
+  return 0.35 * RFS + 0.35 * FAR + 0.3 * UMS;
 }
