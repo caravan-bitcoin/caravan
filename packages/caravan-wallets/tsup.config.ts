@@ -7,4 +7,5 @@ export default defineConfig({
       globals: { process: false },
     }),
   ],
+  external: ['bitbox-api'],
 });
