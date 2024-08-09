@@ -94,9 +94,7 @@ describe("Privacy Score Metrics", () => {
       amount: 0,
       blocktime: 0,
     };
-    const score: number = +(
-      await getTopologyScore(transaction, mockClient)
-    ).toFixed(3);
+    const score: number = await getTopologyScore(transaction, mockClient);
     expect(score).toBe(0.75);
   });
 
@@ -124,9 +122,7 @@ describe("Privacy Score Metrics", () => {
       amount: 0,
       blocktime: 0,
     };
-    const score: number = +(
-      await getTopologyScore(transaction, mockClient)
-    ).toFixed(3);
+    const score: number = await getTopologyScore(transaction, mockClient);
     expect(score).toBe(0.5);
   });
 
@@ -178,10 +174,8 @@ describe("Privacy Score Metrics", () => {
         blocktime: 0,
       },
     ];
-    const score: number = +(
-      await getMeanTopologyScore(transactions, mockClient)
-    ).toFixed(3);
-    expect(score).toBe(0.708);
+    const score: number = await getMeanTopologyScore(transactions, mockClient);
+    expect(score).toBeCloseTo(0.708);
   });
 
   it("Address Reuse Factor accounts for Unspent coins that are on reused address with respect to total amount in wallet", async () => {
@@ -217,9 +211,7 @@ describe("Privacy Score Metrics", () => {
         .fn()
         .mockResolvedValue(mockTransactionsAddressNotReused),
     } as unknown as BlockchainClient;
-    const factor: number = +(
-      await addressReuseFactor(utxos, mockClient)
-    ).toFixed(3);
+    const factor: number = await addressReuseFactor(utxos, mockClient);
     expect(factor).toBe(0);
 
     // All addresses were reused
@@ -229,9 +221,7 @@ describe("Privacy Score Metrics", () => {
         .fn()
         .mockResolvedValue(mockTransactionsAddressReused),
     } as unknown as BlockchainClient;
-    const factor2: number = +(
-      await addressReuseFactor(utxos, mockClient)
-    ).toFixed(3);
+    const factor2: number = await addressReuseFactor(utxos, mockClient);
     expect(factor2).toBe(1);
   });
 
@@ -257,11 +247,11 @@ describe("Privacy Score Metrics", () => {
     ];
     const walletAddressType: MultisigAddressType = "P2PKH";
     const network: Network = Network["MAINNET"];
-    const factor: number = +addressTypeFactor(
+    const factor: number = addressTypeFactor(
       transactions,
       walletAddressType,
       network,
-    ).toFixed(3);
+    );
     expect(factor).toBe(1);
   });
 
@@ -285,8 +275,8 @@ describe("Privacy Score Metrics", () => {
       ],
     };
     // Value 1 and 2 is so close to each other so the scoring is bad.
-    const factor: number = +utxoSpreadFactor(utxos).toFixed(3);
-    expect(factor).toBe(0.333);
+    const factor: number = utxoSpreadFactor(utxos);
+    expect(factor).toBe(1 / 3);
 
     const utxos2 = {
       address1: [
@@ -307,8 +297,8 @@ describe("Privacy Score Metrics", () => {
       ],
     };
     // Value 1 and 200 is so far from each other so the scoring is good.
-    const factor2: number = +utxoSpreadFactor(utxos2).toFixed(3);
-    expect(factor2).toBe(0.99);
+    const factor2: number = utxoSpreadFactor(utxos2);
+    expect(factor2).toBeCloseTo(0.99);
   });
 
   it("Gives a score on the basis of number of UTXOs present in the wallet", () => {
@@ -361,7 +351,7 @@ describe("Privacy Score Metrics", () => {
       ], // 6 UTXOs for address 2
     };
     // 7 UTXOs in total - which will give 0.75 as score
-    const score: number = +utxoSetLengthScore(utxos).toFixed(3);
+    const score: number = utxoSetLengthScore(utxos);
     expect(score).toBe(0.75);
   });
 
@@ -414,8 +404,8 @@ describe("Privacy Score Metrics", () => {
         },
       ], // 6 UTXOs for address 2
     };
-    const factor: number = +utxoValueDispersionFactor(utxos).toFixed(3);
-    expect(factor).toBe(0.112);
+    const factor: number = utxoValueDispersionFactor(utxos);
+    expect(factor).toBeCloseTo(0.112);
   });
 
   it("Overall Privacy Score taking into consideration all parameters for UTXO and Transaction History", async () => {
@@ -458,15 +448,13 @@ describe("Privacy Score Metrics", () => {
     };
     const walletAddressType: MultisigAddressType = "P2PKH";
     const network: Network = Network["MAINNET"];
-    const score: number = +(
-      await getWalletPrivacyScore(
-        transactions,
-        utxos,
-        walletAddressType,
-        mockClient,
-        network,
-      )
-    ).toFixed(3);
-    expect(score).toBe(0.005);
+    const score: number = await getWalletPrivacyScore(
+      transactions,
+      utxos,
+      walletAddressType,
+      mockClient,
+      network,
+    );
+    expect(score).toBeCloseTo(0.005);
   });
 });

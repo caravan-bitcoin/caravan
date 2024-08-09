@@ -29,10 +29,10 @@ describe("Waste metric scoring", () => {
         avgFee_100: 0,
       },
     ];
-    const score: number = +relativeFeesScore(
+    const score: number = relativeFeesScore(
       transactions,
       feeRatePercentileHistory,
-    ).toFixed(3);
+    );
     expect(score).toBe(0.5);
   });
 
@@ -50,7 +50,7 @@ describe("Waste metric scoring", () => {
         blocktime: 0,
       },
     ];
-    const ratio: number = +feesToAmountRatio(transaction).toFixed(3);
+    const ratio: number = feesToAmountRatio(transaction);
     expect(ratio).toBe(0.1);
   });
 
