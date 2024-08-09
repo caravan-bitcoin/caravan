@@ -178,7 +178,6 @@ export class BlockchainClient extends ClientBase {
         const txs: Transaction[] = [];
         for (const tx of data) {
           if (tx.address === address) {
-            let isTxSend = tx.category === "send" ? true : false;
             const rawTxData = await bitcoindRawTxData(tx.txid);
             const transaction: Transaction = {
               txid: tx.txid,
@@ -187,7 +186,7 @@ export class BlockchainClient extends ClientBase {
               size: rawTxData.size,
               weight: rawTxData.weight,
               fee: tx.fee,
-              isSend: isTxSend,
+              isSend: tx.category === "send" ? true : false,
               amount: tx.amount,
               blocktime: tx.blocktime,
             };
@@ -228,7 +227,7 @@ export class BlockchainClient extends ClientBase {
         };
 
         for (const input of tx.vin) {
-          if(input.prevout.scriptpubkey_address === address) {
+          if (input.prevout.scriptpubkey_address === address) {
             transaction.isSend = true;
           }
           transaction.vin.push({
@@ -401,27 +400,31 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async getBlockFeeRatePercentileHistory(): Promise<FeeRatePercentile[]> {
+  public async getBlockFeeRatePercentileHistory(): Promise<
+    FeeRatePercentile[]
+  > {
     try {
-          let data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
-          let feeRatePercentileBlocks: FeeRatePercentile[] = [];
-          for (const block of data) {
-            let feeRatePercentile: FeeRatePercentile = {
-              avgHeight: block?.avgHeight,
-              timestamp: block?.timestamp,
-              avgFee_0: block?.avgFee_0,
-              avgFee_10: block?.avgFee_10,
-              avgFee_25: block?.avgFee_25,
-              avgFee_50: block?.avgFee_50,
-              avgFee_75: block?.avgFee_75,
-              avgFee_90: block?.avgFee_90,
-              avgFee_100: block?.avgFee_100,
-            };
-            feeRatePercentileBlocks.push(feeRatePercentile);
-          }
-          return feeRatePercentileBlocks;
+      let data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
+      let feeRatePercentileBlocks: FeeRatePercentile[] = [];
+      for (const block of data) {
+        let feeRatePercentile: FeeRatePercentile = {
+          avgHeight: block?.avgHeight,
+          timestamp: block?.timestamp,
+          avgFee_0: block?.avgFee_0,
+          avgFee_10: block?.avgFee_10,
+          avgFee_25: block?.avgFee_25,
+          avgFee_50: block?.avgFee_50,
+          avgFee_75: block?.avgFee_75,
+          avgFee_90: block?.avgFee_90,
+          avgFee_100: block?.avgFee_100,
+        };
+        feeRatePercentileBlocks.push(feeRatePercentile);
+      }
+      return feeRatePercentileBlocks;
     } catch (error: any) {
-      throw new Error(`Failed to get feerate percentile block: ${error.message}`);
+      throw new Error(
+        `Failed to get feerate percentile block: ${error.message}`,
+      );
     }
   }
 

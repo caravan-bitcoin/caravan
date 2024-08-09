@@ -155,7 +155,7 @@ async function isReusedAddress(
   let txs: Transaction[] = await client.getAddressTransactions(address);
   let countReceive = 0;
   for (const tx of txs) {
-    if (tx.isSend === false) {
+    if (!tx.isSend) {
       countReceive++;
     }
     if (countReceive > 1) return true;
