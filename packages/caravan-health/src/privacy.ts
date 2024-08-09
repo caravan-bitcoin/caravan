@@ -7,8 +7,6 @@ The methodology for calculating a privacy score (p_score) for Bitcoin transactio
 on the number of inputs and outputs is the primary point to define wallet health for privacy. 
 The score is further influenced by several factors such as address reuse, 
 address types and UTXO set fingerprints etc.
-
-More on the algorithms for scoring privacy: <TODO : Add Link to Blog Post>
 */
 
 // A normalizing quantity that increases the score by a certain factor in cases of self-payment.
@@ -45,11 +43,7 @@ function determineSpendType(inputs: number, outputs: number): SpendType {
   }
 }
 
-/*
-The deterministic scores or their formula for each spend type are as follows
-Refer to the link mentioned <TODO : link> to understand the mathematical derivation of the scores.
-*/
-function getSpendTypeScore(
+export function getSpendTypeScore(
   spendType: SpendType,
   numberOfInputs: number,
   numberOfOutputs: number,

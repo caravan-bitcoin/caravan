@@ -57,4 +57,5 @@ Considers the number of UTXOs.
 
 ## TODOs
 
-- [] Extent the test cases for privacy and waste metrics to cover every possible case.
+- [] Expand the test cases for privacy and waste metrics to cover every possible case.
+- [] Add links to each algorithm and the corresponding explanation in final research document.

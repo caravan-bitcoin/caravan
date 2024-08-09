@@ -1,8 +1,8 @@
 import { feesToAmountRatio, relativeFeesScore, wasteMetric } from "./waste";
 import { Transaction, FeeRatePercentile } from "@caravan/clients";
 
-describe("Waste metrics that accounts for nature of fees spending for a wallet", () => {
-  it("Relative fees score for transaction with respect to international fiat payment charges", () => {
+describe("Waste metric scoring", () => {
+  it("calculates fee score based on tx fee rate relative to percentile in the block where a set of send tx were mined", () => {
     const transactions: Transaction[] = [
       {
         vin: [],
@@ -71,11 +71,7 @@ describe("Waste metrics that accounts for nature of fees spending for a wallet",
     // Reference on estimatedLongTermFeeRate : https://bitcoincore.reviews/17331#l-164
     const estimatedLongTermFeeRate = 30;
 
-    const result = wasteMetric(
-      transaction,
-      amount,
-      estimatedLongTermFeeRate,
-    );
+    const result = wasteMetric(transaction, amount, estimatedLongTermFeeRate);
 
     const expectedWeight = transaction.weight;
     const feeRate = transaction.fee / transaction.weight;
