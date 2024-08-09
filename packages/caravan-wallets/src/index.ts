@@ -3,6 +3,15 @@
 import { version } from "../package.json";
 import { UNSUPPORTED, UnsupportedInteraction } from "./interaction";
 import {
+  BITBOX,
+  BitBoxGetMetadata,
+  BitBoxExportPublicKey,
+  BitBoxExportExtendedPublicKey,
+  BitBoxConfirmMultisigAddress,
+  BitBoxRegisterWalletPolicy,
+  BitBoxSignMultisigTransaction,
+} from "./bitbox";
+import {
   COLDCARD,
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
@@ -65,6 +74,7 @@ export const MULTISIG_ROOT = "m/45'";
  * Keystores which support direct interactions.
  */
 export const DIRECT_KEYSTORES = {
+  BITBOX,
   TREZOR,
   LEDGER,
   LEDGER_V2,
@@ -94,7 +104,7 @@ export type KEYSTORE_TYPES = (typeof KEYSTORES)[KEYSTORE_KEYS];
  * Return an interaction class for obtaining metadata from the given
  * `keystore`.
  *
- * **Supported keystores:** Trezor, Ledger
+ * **Supported keystores:** BitBox, Trezor, Ledger
  *
  * @example
  * import {GetMetadata, TREZOR} from "@caravan/wallets";
@@ -104,6 +114,8 @@ export type KEYSTORE_TYPES = (typeof KEYSTORES)[KEYSTORE_KEYS];
  */
 export function GetMetadata({ keystore }: { keystore: KEYSTORE_TYPES }) {
   switch (keystore) {
+    case BITBOX:
+      return new BitBoxGetMetadata();
     case LEDGER:
       return new LedgerGetMetadata();
     case TREZOR:
@@ -141,6 +153,12 @@ export function ExportPublicKey({
   includeXFP: boolean;
 }) {
   switch (keystore) {
+    case BITBOX:
+      return new BitBoxExportPublicKey({
+        network,
+        bip32Path,
+        includeXFP,
+      });
     case COLDCARD:
       return new ColdcardExportPublicKey({
         network,
@@ -224,6 +242,12 @@ export function ExportExtendedPublicKey({
   includeXFP: boolean;
 }) {
   switch (keystore) {
+    case BITBOX:
+      return new BitBoxExportExtendedPublicKey({
+        bip32Path,
+        network,
+        includeXFP,
+      });
     case COLDCARD:
       return new ColdcardExportExtendedPublicKey({
         bip32Path,
@@ -335,6 +359,20 @@ export function SignMultisigTransaction({
   progressCallback,
 }: SignMultisigTransactionArgs) {
   switch (keystore) {
+    case BITBOX: {
+      let _psbt = psbt;
+      if (!_psbt)
+        _psbt = getUnsignedMultisigPsbtV0({
+          network,
+          inputs: inputs ? inputs.map(convertLegacyInput) : [],
+          outputs: outputs ? outputs.map(convertLegacyOutput) : [],
+        }).toBase64();
+      return new BitBoxSignMultisigTransaction({
+        walletConfig,
+        psbt,
+        returnSignatureArray,
+      });
+    }
     case COLDCARD:
       return new ColdcardSignMultisigTransaction({
         network,
@@ -480,6 +518,16 @@ export function ConfirmMultisigAddress({
   walletConfig?: MultisigWalletConfig;
 }) {
   switch (keystore) {
+    case BITBOX: {
+      const braidDetails: BraidDetails = JSON.parse(multisig.braidDetails);
+      const _walletConfig =
+        walletConfig || braidDetailsToWalletConfig(braidDetails);
+      return new BitBoxConfirmMultisigAddress({
+        network,
+        bip32Path,
+        walletConfig: _walletConfig,
+      });
+    }
     case TREZOR:
       return new TrezorConfirmMultisigAddress({
         network,
@@ -514,7 +562,7 @@ export function ConfirmMultisigAddress({
 
 /**
  * Return a class for registering a wallet policy.
- * **Supported keystores:** Ledger
+ * **Supported keystores:** BitBox, Ledger
  */
 // TODO: superfluous with the ConfigAdapter?
 // This name sounds better, but ConfigAdapter can cover Coldcard too
@@ -529,6 +577,10 @@ export function RegisterWalletPolicy({
   verify: boolean;
 } & MultisigWalletConfig) {
   switch (keystore) {
+    case BITBOX:
+      return new BitBoxRegisterWalletPolicy({
+        walletConfig,
+      });
     case LEDGER:
       return new LedgerRegisterWalletPolicy({
         ...walletConfig,
@@ -557,6 +609,17 @@ export function ConfigAdapter({
   policyHmac?: string;
 }) {
   switch (KEYSTORE) {
+    case BITBOX: {
+      let walletConfig: MultisigWalletConfig;
+      if (typeof jsonConfig === "string") {
+        walletConfig = JSON.parse(jsonConfig);
+      } else {
+        walletConfig = jsonConfig;
+      }
+      return new BitBoxRegisterWalletPolicy({
+        walletConfig,
+      });
+    }
     case COLDCARD:
       return new ColdcardMultisigWalletConfig({
         jsonConfig,
@@ -580,6 +643,7 @@ export function ConfigAdapter({
 }
 
 export * from "./interaction";
+export * from "./bitbox";
 export * from "./bcur";
 export * from "./coldcard";
 export * from "./custom";

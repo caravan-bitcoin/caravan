@@ -19,6 +19,7 @@ import { getWalletConfig } from "../../selectors/wallet";
 import PolicyRegistrationTable from "../RegisterWallet/PolicyRegistrationsTable";
 import {
   DownloadColdardConfigButton,
+  RegisterBitBoxButton,
   RegisterLedgerButton,
 } from "../RegisterWallet";
 
@@ -89,6 +90,9 @@ const WalletRegistrations = () => {
         <AccordionDetails>
           <Box>
             <Grid container spacing={2}>
+              <Grid item>
+                <RegisterBitBoxButton />
+              </Grid>
               <Grid item>
                 <RegisterLedgerButton />
               </Grid>

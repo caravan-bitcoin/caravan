@@ -8,7 +8,7 @@ import {
   validateExtendedPublicKey,
   Network,
 } from "@caravan/bitcoin";
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -82,6 +82,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             variant="standard"
             onChange={this.handleMethodChange}
           >
+            <MenuItem value={BITBOX}>BitBox</MenuItem>
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={COLDCARD}>Coldcard</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
@@ -105,7 +106,7 @@ class ExtendedPublicKeyImporter extends React.Component {
     } = this.props;
     const { method } = extendedPublicKeyImporter;
 
-    if (method === TREZOR || method === LEDGER) {
+    if (method === BITBOX || method === TREZOR || method === LEDGER) {
       return (
         <DirectExtendedPublicKeyImporter
           extendedPublicKeyImporter={extendedPublicKeyImporter}

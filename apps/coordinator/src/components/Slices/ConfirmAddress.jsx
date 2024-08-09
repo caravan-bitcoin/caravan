@@ -23,6 +23,7 @@ import {
   multisigTotalSigners,
 } from "@caravan/bitcoin";
 import {
+  BITBOX,
   TREZOR,
   LEDGER,
   COLDCARD,
@@ -138,6 +139,7 @@ const ConfirmAddress = ({ slice, network }) => {
       }
       // FIXME - hardcoded to just show up for trezor
       if (
+        extendedPublicKeyImporter.method === BITBOX ||
         extendedPublicKeyImporter.method === TREZOR ||
         extendedPublicKeyImporter.method === LEDGER
       ) {
@@ -230,6 +232,7 @@ const ConfirmAddress = ({ slice, network }) => {
               variant="standard"
             >
               <MenuItem value="">{"< Select method >"}</MenuItem>
+              <MenuItem value={BITBOX}>BitBox</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD} disabled>
