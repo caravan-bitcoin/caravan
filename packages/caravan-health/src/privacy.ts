@@ -248,7 +248,7 @@ Expected Range : [0,1]
 - 0.75 for UTXO set length >= 5 and <= 14
 - 1 for UTXO set length < 5
 */
-export function utxoSetLengthScore(utxos: AddressUtxos): number {
+export function utxoMassFactor(utxos: AddressUtxos): number {
   let utxoSetLength = 0;
   for (const address in utxos) {
     const addressUtxos = utxos[address];
@@ -281,7 +281,7 @@ Expected Range : [-0.15,0.15]
 -> Very Good : [0.1 ,0.15] 
 */
 export function utxoValueDispersionFactor(utxos: AddressUtxos): number {
-  let UMF: number = utxoSetLengthScore(utxos);
+  let UMF: number = utxoMassFactor(utxos);
   let USF: number = utxoSpreadFactor(utxos);
   return (USF + UMF) * 0.15 - 0.15;
 }

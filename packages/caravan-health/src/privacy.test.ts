@@ -3,7 +3,7 @@ import {
   addressReuseFactor,
   addressTypeFactor,
   utxoSpreadFactor,
-  utxoSetLengthScore,
+  utxoMassFactor,
   utxoValueDispersionFactor,
   getWalletPrivacyScore,
   getMeanTopologyScore,
@@ -351,7 +351,7 @@ describe("Privacy Score Metrics", () => {
       ], // 6 UTXOs for address 2
     };
     // 7 UTXOs in total - which will give 0.75 as score
-    const score: number = utxoSetLengthScore(utxos);
+    const score: number = utxoMassFactor(utxos);
     expect(score).toBe(0.75);
   });
 
