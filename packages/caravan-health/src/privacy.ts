@@ -1,6 +1,16 @@
-import { BlockchainClient, Transaction } from "@caravan/clients";
+import { Transaction } from "@caravan/clients";
 import { AddressUtxos } from "./types";
 import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
+
+export class PrivacyMetric {
+  // TODO : Will implement this real quick
+  /*
+    Name :
+    Definition :
+    Calculation :
+    Expected Range :
+  */
+}
 
 /*
 The methodology for calculating a privacy score (p_score) for Bitcoin transactions based 
@@ -75,22 +85,20 @@ Expected Range : [0, 0.75]
 -> Good : (0.45, 0.6]
 -> Very Good : (0.6, 0.75] 
 */
-export async function getMeanTopologyScore(
+export function getMeanTopologyScore(
   transactions: Transaction[],
-  client: BlockchainClient,
-): Promise<number> {
+): number {
   let privacyScore = 0;
   for (let tx of transactions) {
-    let topologyScore = await getTopologyScore(tx, client);
+    let topologyScore = getTopologyScore(tx);
     privacyScore += topologyScore;
   }
   return privacyScore / transactions.length;
 }
 
-export async function getTopologyScore(
-  transaction: Transaction,
-  client: BlockchainClient,
-): Promise<number> {
+export function getTopologyScore(
+  transaction: Transaction
+): number {
   const numberOfInputs: number = transaction.vin.length;
   const numberOfOutputs: number = transaction.vout.length;
 
@@ -109,7 +117,7 @@ export async function getTopologyScore(
   }
   for (let output of transaction.vout) {
     let address = output.scriptPubkeyAddress;
-    let isResued = await isReusedAddress(address, client);
+    let isResued = isReusedAddress(address);
     if (isResued === true) {
       return score;
     }
@@ -128,10 +136,9 @@ Expected Range : [0,1]
 -> Good : [0.2, 0.4)
 -> Very Good : [0 ,0.2) 
 */
-export async function addressReuseFactor(
+export function addressReuseFactor(
   utxos: AddressUtxos,
-  client: BlockchainClient,
-): Promise<number> {
+): number {
   let reusedAmount: number = 0;
   let totalAmount: number = 0;
 
@@ -139,7 +146,7 @@ export async function addressReuseFactor(
     const addressUtxos = utxos[address];
     for (const utxo of addressUtxos) {
       totalAmount += utxo.value;
-      let isReused = await isReusedAddress(address, client);
+      let isReused = isReusedAddress(address);
       if (isReused) {
         reusedAmount += utxo.value;
       }
@@ -148,18 +155,10 @@ export async function addressReuseFactor(
   return reusedAmount / totalAmount;
 }
 
-async function isReusedAddress(
-  address: string,
-  client: BlockchainClient,
-): Promise<boolean> {
-  let txs: Transaction[] = await client.getAddressTransactions(address);
-  let countReceive = 0;
-  for (const tx of txs) {
-    if (!tx.isSend) {
-      countReceive++;
-    }
-    if (countReceive > 1) return true;
-  }
+function isReusedAddress(
+  address: string
+): boolean {
+  // TODO :  Implement a function to check if the address is reused
   return false;
 }
 
@@ -300,17 +299,16 @@ Expected Range : [0, 1]
 -> Good : (0.6, 0.8]
 -> Very Good : (0.8, 1]
 */
-export async function getWalletPrivacyScore(
+export function getWalletPrivacyScore(
   transactions: Transaction[],
   utxos: AddressUtxos,
   walletAddressType: MultisigAddressType,
-  client: BlockchainClient,
   network: Network,
-): Promise<number> {
-  let privacyScore = await getMeanTopologyScore(transactions, client);
+): number {
+  let privacyScore = getMeanTopologyScore(transactions);
 
   // Adjusting the privacy score based on the address reuse factor
-  let addressReusedFactor = await addressReuseFactor(utxos, client);
+  let addressReusedFactor = addressReuseFactor(utxos);
   privacyScore =
     privacyScore * (1 - 0.5 * addressReusedFactor) +
     0.1 * (1 - addressReusedFactor);
