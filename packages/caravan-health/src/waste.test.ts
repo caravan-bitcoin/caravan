@@ -1,4 +1,5 @@
-import { WasteMetric } from "./waste";
+import { AddressUtxos } from "./types";
+import { WasteMetrics } from "./waste";
 
 const transactions = [
   {
@@ -39,8 +40,49 @@ const feeRatePercentileHistory = [
   },
 ];
 
+const utxos: AddressUtxos = {
+  address1: [
+    {
+      txid: "tx1",
+      vout: 0,
+      value: 0.1,
+      status: {
+        confirmed: true,
+        block_time: 1234,
+      },
+    },
+    {
+      txid: "tx2",
+      vout: 0,
+      value: 0.2,
+      status: {
+        confirmed: true,
+        block_time: 1234,
+      },
+    },
+    {
+      txid: "tx3",
+      vout: 0,
+      value: 0.3,
+      status: {
+        confirmed: true,
+        block_time: 1234,
+      },
+    },
+    {
+      txid: "tx4",
+      vout: 0,
+      value: 0.4,
+      status: {
+        confirmed: true,
+        block_time: 1234,
+      },
+    },
+  ],
+};
+
 describe("Waste metric scoring", () => {
-  const wasteMetric = new WasteMetric();
+  const wasteMetric = new WasteMetrics();
 
   describe("Relative Fees Score (R.F.S)", () => {
     it("calculates fee score based on tx fee rate relative to percentile in the block where a set of send tx were mined", () => {
@@ -53,7 +95,7 @@ describe("Waste metric scoring", () => {
   });
 
   describe("Fees to Amount Ratio (F.A.R)", () => {
-    it("Fees paid over total amount spent as ratio for a 'send' type transaction", async () => {
+    it("Fees paid over total amount spent as ratio for a 'send' type transaction", () => {
       const ratio: number = wasteMetric.feesToAmountRatio(transactions);
       expect(ratio).toBe(0.1);
     });
@@ -83,6 +125,17 @@ describe("Waste metric scoring", () => {
       expect(wasteAmount).toBe(1850);
       // This number is positive this means that in future if we wait for the fee rate to go down,
       // we can save 1850 sats
+    });
+  });
+
+  describe("Weighted Waste Score (W.W.S)", () => {
+    it("calculates the overall waste of the wallet based on the relative fees score, fees to amount ratio and the UTXO mass factor", () => {
+      const score: number = wasteMetric.weightedWasteScore(
+        transactions,
+        utxos,
+        feeRatePercentileHistory,
+      );
+      expect(score).toBe(0.21);
     });
   });
 });

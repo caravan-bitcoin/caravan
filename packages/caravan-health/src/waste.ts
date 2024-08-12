@@ -1,9 +1,8 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { utxoSetLengthMass} from "./privacy";
 import { AddressUtxos } from "./types";
-import { getFeeRateForTransaction, getFeeRatePercentileScore } from "./utils";
+import { WalletMetrics } from "../dist";
 
-export class WasteMetric {
+export class WasteMetrics extends WalletMetrics {
   /*
     Name : 
       Relative Fees Score (R.F.S)
@@ -32,8 +31,8 @@ export class WasteMetric {
     for (const tx of transactions) {
       if (tx.isSend === true) {
         numberOfSendTx++;
-        let feeRate: number = getFeeRateForTransaction(tx);
-        let RFS: number = getFeeRatePercentileScore(
+        let feeRate: number = this.getFeeRateForTransaction(tx);
+        let RFS: number = this.getFeeRatePercentileScore(
           tx.blocktime,
           feeRate,
           feeRatePercentileHistory,
@@ -153,7 +152,7 @@ export class WasteMetric {
   ): number {
     let RFS = this.relativeFeesScore(transactions, feeRatePercentileHistory);
     let FAR = this.feesToAmountRatio(transactions);
-    let UMF = utxoSetLengthMass(utxos);
+    let UMF = 0;
     return 0.35 * RFS + 0.35 * FAR + 0.3 * UMF;
   }
 }

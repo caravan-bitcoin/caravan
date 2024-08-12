@@ -1,8 +1,81 @@
 import { Transaction } from "@caravan/clients";
-import { AddressUtxos } from "./types";
+import { AddressUtxos, SpendType } from "./types";
 import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
+import { WalletMetrics} from "./wallet";
 
-export class PrivacyMetric {
+// Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
+// More about deniability : https://www.truthcoin.info/blog/deniability/
+const DENIABILITY_FACTOR = 1.5;
+
+export class PrivacyMetrics extends WalletMetrics {
+  /*
+    Name : Spend Type Determination
+
+    Definition :
+      The type of spend transaction is obtained based on the number of inputs and outputs which 
+      influence the topology type of the transaction and has a role in determining the fingerprints
+      behind privacy for wallets.
+
+    Calculation :
+      We have 5 categories of transaction type each with their own impact on privacy score
+      - Perfect Spend (1 input, 1 output)
+      - Simple Spend (1 input, 2 outputs)
+      - UTXO Fragmentation (1 input, more than 2 standard outputs)
+      - Consolidation (more than 1 input, 1 output)
+      - CoinJoin or Mixing (more than 1 input, more than 1 output)
+  */
+  determineSpendType(inputs: number, outputs: number): SpendType {
+    if (inputs === 1) {
+      if (outputs === 1) return SpendType.PerfectSpend;
+      if (outputs === 2) return SpendType.SimpleSpend;
+      return SpendType.UTXOFragmentation;
+    } else {
+      if (outputs === 1) return SpendType.Consolidation;
+      return SpendType.MixingOrCoinJoin;
+    }
+  }
+
+  /* 
+    Name : Spend Type Score
+    Definition :
+      Statistical derivations are used to calculate the score based on the spend type of the transaction.
+
+    Calculation : 
+      - Perfect Spend :  P(“An output cannot be a self-payment) * (1 - P(“involvement of any change output”))
+      - Simple Spend : P(“An output cannot be a self-payment) * (1 - P(“involvement of any change output”))
+      - UTXO Fragmentation : 2/3 - 1/number of outputs
+      - Consolidation : 1/number of inputs
+      - Mixing or CoinJoin : (2/3) * (number of outputs^2) / number of inputs * (1 + (number of outputs^2) / number of inputs)
+
+    Expected Range : [0,0.85]
+    -> Very Poor : [0, 0.15]
+    -> Poor : (0.15, 0.3]
+    -> Moderate : (0.3, 0.45]
+    -> Good : (0.45, 0.6]
+    -> Very Good : (0.6, 0.85]
+  */
+  getSpendTypeScore(
+    spendType: SpendType,
+    numberOfInputs: number,
+    numberOfOutputs: number,
+  ): number {
+    switch (spendType) {
+      case SpendType.PerfectSpend:
+        return 1 / 2;
+      case SpendType.SimpleSpend:
+        return 4 / 9;
+      case SpendType.UTXOFragmentation:
+        return 2 / 3 - 1 / numberOfOutputs;
+      case SpendType.Consolidation:
+        return 1 / numberOfInputs;
+      case SpendType.MixingOrCoinJoin:
+        let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
+        return ((1 / 2) * x) / (1 + x);
+      default:
+        throw new Error("Invalid spend type");
+    }
+  }
+
   /*
     Name : Topology Score
 
@@ -22,11 +95,11 @@ export class PrivacyMetric {
     const numberOfInputs: number = transaction.vin.length;
     const numberOfOutputs: number = transaction.vout.length;
 
-    const spendType: SpendType = determineSpendType(
+    const spendType: SpendType = this.determineSpendType(
       numberOfInputs,
       numberOfOutputs,
     );
-    const score: number = getSpendTypeScore(
+    const score: number = this.getSpendTypeScore(
       spendType,
       numberOfInputs,
       numberOfOutputs,
@@ -37,7 +110,7 @@ export class PrivacyMetric {
     }
     for (let output of transaction.vout) {
       let address = output.scriptPubkeyAddress;
-      let isResued = isReusedAddress(address);
+      let isResued = this.isReusedAddress(address);
       if (isResued === true) {
         return score;
       }
@@ -98,7 +171,7 @@ export class PrivacyMetric {
       const addressUtxos = utxos[address];
       for (const utxo of addressUtxos) {
         totalAmount += utxo.value;
-        let isReused = isReusedAddress(address);
+        let isReused = this.isReusedAddress(address);
         if (isReused) {
           reusedAmount += utxo.value;
         }
@@ -111,7 +184,7 @@ export class PrivacyMetric {
     Name : Address Type Factor (ATF)
 
     Definition :
-      The address type factor evaluates the address type distribution of the wallet. 
+      The address type factor evaluates the address type distribution of the wallet transactions. 
       It signifies the privacy health of the wallet based on the address types used.
 
     Calculation :
@@ -200,27 +273,10 @@ export class PrivacyMetric {
   }
 
   /*
-    Name : UTXO Mass Factor
-
-    Calculation :
-      The mass factor is calculated based on the number of UTXOs in the set.
-
-    Expected Range : [0,1]
-    - 0 for UTXO set length >= 50
-    - 0.25 for UTXO set length >= 25 and <= 49
-    - 0.5 for UTXO set length >= 15 and <= 24
-    - 0.75 for UTXO set length >= 5 and <= 14
-    - 1 for UTXO set length < 5
-  */
-  utxoMassFactor(utxos: AddressUtxos): number {
-    return utxoSetLengthMass(utxos);
-  }
-
-  /*
     Name : UTXO Value Dispersion Factor
 
     Definition :
-      The UTXO value dispersion factor is a combination of UTXO Spread Factor and UTXO Set Length Weight.
+      The UTXO value dispersion factor is a combination of UTXO Spread Factor and UTXO Mass Factor.
       It signifies the combined effect of how much variance is there in the UTXO Set values is and 
       how many number of UTXOs are there.
 
@@ -272,93 +328,4 @@ export class PrivacyMetric {
 
     return WPS;
   }
-}
-
-/*
-The methodology for calculating a privacy score (p_score) for Bitcoin transactions based 
-on the number of inputs and outputs is the primary point to define wallet health for privacy. 
-The score is further influenced by several factors such as address reuse, 
-address types and UTXO set fingerprints etc.
-*/
-
-// A normalizing quantity that increases the score by a certain factor in cases of self-payment.
-// More about deniability : https://www.truthcoin.info/blog/deniability/
-const DENIABILITY_FACTOR = 1.5;
-
-/*
-The p_score is calculated by evaluating the likelihood of self-payments, the involvement of 
-change outputs and the type of transaction based on number of inputs and outputs.
-
-We have 5 categories of transaction type each with their own impact on privacy score
-- Perfect Spend (1 input, 1 output)
-- Simple Spend (1 input, 2 outputs)
-- UTXO Fragmentation (1 input, more than 2 standard outputs)
-- Consolidation (more than 1 input, 1 output)
-- CoinJoin or Mixing (more than 1 input, more than 1 output)
-*/
-enum SpendType {
-  PerfectSpend = "PerfectSpend",
-  SimpleSpend = "SimpleSpend",
-  UTXOFragmentation = "UTXOFragmentation",
-  Consolidation = "Consolidation",
-  MixingOrCoinJoin = "MixingOrCoinJoin",
-}
-
-function determineSpendType(inputs: number, outputs: number): SpendType {
-  if (inputs === 1) {
-    if (outputs === 1) return SpendType.PerfectSpend;
-    if (outputs === 2) return SpendType.SimpleSpend;
-    return SpendType.UTXOFragmentation;
-  } else {
-    if (outputs === 1) return SpendType.Consolidation;
-    return SpendType.MixingOrCoinJoin;
-  }
-}
-
-export function getSpendTypeScore(
-  spendType: SpendType,
-  numberOfInputs: number,
-  numberOfOutputs: number,
-): number {
-  switch (spendType) {
-    case SpendType.PerfectSpend:
-      return 1 / 2;
-    case SpendType.SimpleSpend:
-      return 4 / 9;
-    case SpendType.UTXOFragmentation:
-      return 2 / 3 - 1 / numberOfOutputs;
-    case SpendType.Consolidation:
-      return 1 / numberOfInputs;
-    case SpendType.MixingOrCoinJoin:
-      let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
-      return ((2 / 3) * x) / (1 + x);
-    default:
-      throw new Error("Invalid spend type");
-  }
-}
-
-function isReusedAddress(address: string): boolean {
-  // TODO :  Implement a function to check if the address is reused
-  return false;
-}
-
-export function utxoSetLengthMass(utxos: AddressUtxos): number {
-  let utxoSetLength = 0;
-  for (const address in utxos) {
-    const addressUtxos = utxos[address];
-    utxoSetLength += addressUtxos.length;
-  }
-  let utxoMassFactor: number;
-  if (utxoSetLength >= 50) {
-    utxoMassFactor = 0;
-  } else if (utxoSetLength >= 25 && utxoSetLength <= 49) {
-    utxoMassFactor = 0.25;
-  } else if (utxoSetLength >= 15 && utxoSetLength <= 24) {
-    utxoMassFactor = 0.5;
-  } else if (utxoSetLength >= 5 && utxoSetLength <= 14) {
-    utxoMassFactor = 0.75;
-  } else {
-    utxoMassFactor = 1;
-  }
-  return utxoMassFactor;
-}
+} 
