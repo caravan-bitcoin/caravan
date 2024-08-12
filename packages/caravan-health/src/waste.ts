@@ -1,5 +1,5 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { utxoMassFactor } from "./privacy";
+import { utxoSetLengthMass} from "./privacy";
 import { AddressUtxos } from "./types";
 import { getFeeRateForTransaction, getFeeRatePercentileScore } from "./utils";
 
@@ -153,7 +153,7 @@ export class WasteMetric {
   ): number {
     let RFS = this.relativeFeesScore(transactions, feeRatePercentileHistory);
     let FAR = this.feesToAmountRatio(transactions);
-    let UMF = utxoMassFactor(utxos);
+    let UMF = utxoSetLengthMass(utxos);
     return 0.35 * RFS + 0.35 * FAR + 0.3 * UMF;
   }
 }
