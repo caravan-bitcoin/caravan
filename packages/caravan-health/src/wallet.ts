@@ -1,5 +1,5 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { AddressUtxos } from "./types";
+import { AddressUtxos, AddressUsageMap } from "./types";
 
 export class WalletMetrics {
   /*
@@ -104,11 +104,28 @@ export class WalletMetrics {
     }
   }
 
+  constructAddressUsageMap(transactions: Transaction[]): AddressUsageMap {
+    let addressUsageMap: AddressUsageMap = {};
+    for (const tx of transactions) {
+      for (const output of tx.vout) {
+        let address = output.scriptPubkeyAddress;
+        if (addressUsageMap[address]) {
+          addressUsageMap[address] = true;
+        } else {
+          addressUsageMap[address] = false;
+        }
+      }
+    }
+    return addressUsageMap;
+  }
+
   /* 
-    Utility function to check if the given address was used alreadyin past transactions
+    Utility function to check if the given address was used already in past transactions
   */
-  isReusedAddress(address: string): boolean {
-    // TODO :  Implement a function to check if the address is reused
+  isReusedAddress(address: string, addressUsageMap: AddressUsageMap): boolean {
+    if (addressUsageMap[address]) {
+      return true;
+    }
     return false;
   }
 }

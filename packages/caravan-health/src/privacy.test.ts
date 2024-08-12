@@ -117,6 +117,7 @@ const utxos: AddressUtxos = {
 
 describe("Waste metric scoring", () => {
   const privacyMetric = new PrivacyMetrics();
+  const addressUsageMap = privacyMetric.constructAddressUsageMap(transactions);
 
   describe("Determine Spend Type", () => {
     it("Perfect Spend are transactions with 1 input and 1 output", () => {
@@ -314,26 +315,36 @@ describe("Waste metric scoring", () => {
 
   describe("Transaction Topology Score", () => {
     it("Calculates the transaction topology score based on the spend type", () => {
-      const score: number = privacyMetric.getTopologyScore(transactions[0]);
+      const score: number = privacyMetric.getTopologyScore(
+        transactions[0],
+        addressUsageMap,
+      );
       expect(score).toBe(0.75);
 
-      const score2: number = privacyMetric.getTopologyScore(transactions[1]);
+      const score2: number = privacyMetric.getTopologyScore(
+        transactions[1],
+        addressUsageMap,
+      );
       expect(score2).toBeCloseTo(0.67);
     });
   });
 
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
-      const meanScore: number =
-        privacyMetric.getMeanTopologyScore(transactions);
+      const meanScore: number = privacyMetric.getMeanTopologyScore(
+        transactions,
+        addressUsageMap,
+      );
       expect(meanScore).toBeCloseTo(0.71);
     });
   });
 
   describe("Address Reuse Factor", () => {
     it("Calculates the amount being held by reused addresses with respect to the total amount", () => {
-      const addressReuseFactor: number =
-        privacyMetric.addressReuseFactor(utxos);
+      const addressReuseFactor: number = privacyMetric.addressReuseFactor(
+        utxos,
+        addressUsageMap,
+      );
       expect(addressReuseFactor).toBe(0);
     });
   });
