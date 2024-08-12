@@ -17,7 +17,7 @@ export interface Transaction {
   fee: number;
   isSend: boolean;
   amount: number;
-  blocktime: number;
+  block_time: number;
 }
 
 interface Input {

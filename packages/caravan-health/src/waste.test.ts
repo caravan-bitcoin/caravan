@@ -11,7 +11,7 @@ const transactions = [
     fee: 1, // Fee paid in the transaction
     isSend: true, // Transaction is a send transaction
     amount: 10, // Amount spent in the transaction
-    blocktime: 1234, // Blocktime of the block where the transactions were mined
+    block_time: 1234, // Blocktime of the block where the transactions were mined
   },
   {
     vin: [],
@@ -22,7 +22,7 @@ const transactions = [
     fee: 1,
     isSend: false,
     amount: 10,
-    blocktime: 1234,
+    block_time: 1234,
   },
 ];
 

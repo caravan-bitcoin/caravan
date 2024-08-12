@@ -188,7 +188,7 @@ export class BlockchainClient extends ClientBase {
               fee: tx.fee,
               isSend: tx.category === "send" ? true : false,
               amount: tx.amount,
-              blocktime: tx.blocktime,
+              block_time: tx.blocktime,
             };
             for (const input of rawTxData.vin) {
               transaction.vin.push({
@@ -223,7 +223,7 @@ export class BlockchainClient extends ClientBase {
           fee: tx.fee,
           isSend: false,
           amount: 0,
-          blocktime: tx.status.block_time,
+          block_time: tx.status.block_time,
         };
 
         for (const input of tx.vin) {

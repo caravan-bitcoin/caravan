@@ -25,7 +25,7 @@ const transactions: Transaction[] = [
     fee: 1,
     isSend: true,
     amount: 1,
-    blocktime: 1234,
+    block_time: 1234,
   },
   // transactions[1] is a coin join transaction
   {
@@ -69,7 +69,7 @@ const transactions: Transaction[] = [
     fee: 0,
     isSend: true,
     amount: 0,
-    blocktime: 0,
+    block_time: 0,
   },
 ];
 

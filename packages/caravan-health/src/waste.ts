@@ -33,7 +33,7 @@ export class WasteMetrics extends WalletMetrics {
         numberOfSendTx++;
         let feeRate: number = this.getFeeRateForTransaction(tx);
         let RFS: number = this.getFeeRatePercentileScore(
-          tx.blocktime,
+          tx.block_time,
           feeRate,
           feeRatePercentileHistory,
         );
