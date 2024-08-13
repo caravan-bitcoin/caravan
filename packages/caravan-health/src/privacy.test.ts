@@ -115,8 +115,8 @@ const utxos: AddressUtxos = {
   ],
 };
 
-describe("Waste metric scoring", () => {
-  const privacyMetric = new PrivacyMetrics();
+describe("Privacy metric scoring", () => {
+  const privacyMetric = new PrivacyMetrics(transactions);
   const addressUsageMap = privacyMetric.constructAddressUsageMap(transactions);
 
   describe("Determine Spend Type", () => {
@@ -316,14 +316,12 @@ describe("Waste metric scoring", () => {
   describe("Transaction Topology Score", () => {
     it("Calculates the transaction topology score based on the spend type", () => {
       const score: number = privacyMetric.getTopologyScore(
-        transactions[0],
-        addressUsageMap,
+        transactions[0]
       );
       expect(score).toBe(0.75);
 
       const score2: number = privacyMetric.getTopologyScore(
-        transactions[1],
-        addressUsageMap,
+        transactions[1]
       );
       expect(score2).toBeCloseTo(0.67);
     });
@@ -332,8 +330,7 @@ describe("Waste metric scoring", () => {
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
       const meanScore: number = privacyMetric.getMeanTopologyScore(
-        transactions,
-        addressUsageMap,
+        transactions
       );
       expect(meanScore).toBeCloseTo(0.71);
     });

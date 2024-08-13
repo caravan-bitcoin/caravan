@@ -1,7 +1,7 @@
 import { Transaction } from "@caravan/clients";
 import { AddressUtxos, SpendType, AddressUsageMap } from "./types";
 import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
-import { WalletMetrics} from "./wallet";
+import { WalletMetrics } from "./wallet";
 
 // Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
 // More about deniability : https://www.truthcoin.info/blog/deniability/
@@ -91,7 +91,7 @@ export class PrivacyMetrics extends WalletMetrics {
       - Consolidation (more than 1 input, 1 output)
       - CoinJoin or Mixing (more than 1 input, more than 1 output)
   */
-  getTopologyScore(transaction: Transaction, addressUsageMap: AddressUsageMap): number {
+  getTopologyScore(transaction: Transaction): number {
     const numberOfInputs: number = transaction.vin.length;
     const numberOfOutputs: number = transaction.vout.length;
 
@@ -110,7 +110,7 @@ export class PrivacyMetrics extends WalletMetrics {
     }
     for (let output of transaction.vout) {
       let address = output.scriptPubkeyAddress;
-      let isResued = this.isReusedAddress(address, addressUsageMap);
+      let isResued = this.isReusedAddress(address);
       if (isResued === true) {
         return score;
       }
@@ -136,10 +136,10 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : (0.45, 0.6]
     -> Very Good : (0.6, 0.75)
   */
-  getMeanTopologyScore(transactions: Transaction[], addressUsageMap: AddressUsageMap): number {
+  getMeanTopologyScore(transactions: Transaction[]): number {
     let privacyScore = 0;
     for (let tx of transactions) {
-      let topologyScore = this.getTopologyScore(tx, addressUsageMap);
+      let topologyScore = this.getTopologyScore(tx);
       privacyScore += topologyScore;
     }
     return privacyScore / transactions.length;
@@ -163,7 +163,10 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : [0.2, 0.4)
     -> Very Good : [0 ,0.2) 
   */
-  addressReuseFactor(utxos: AddressUtxos, addressUsageMap: AddressUsageMap): number {
+  addressReuseFactor(
+    utxos: AddressUtxos,
+    addressUsageMap: AddressUsageMap,
+  ): number {
     let reusedAmount: number = 0;
     let totalAmount: number = 0;
 
@@ -171,7 +174,7 @@ export class PrivacyMetrics extends WalletMetrics {
       const addressUtxos = utxos[address];
       for (const utxo of addressUtxos) {
         totalAmount += utxo.value;
-        let isReused = this.isReusedAddress(address, addressUsageMap);
+        let isReused = this.isReusedAddress(address);
         if (isReused) {
           reusedAmount += utxo.value;
         }
@@ -318,7 +321,7 @@ export class PrivacyMetrics extends WalletMetrics {
     network: Network,
   ): number {
     let addressUsageMap = this.constructAddressUsageMap(transactions);
-    let meanTopologyScore = this.getMeanTopologyScore(transactions, addressUsageMap);
+    let meanTopologyScore = this.getMeanTopologyScore(transactions);
     let ARF = this.addressReuseFactor(utxos, addressUsageMap);
     let ATF = this.addressTypeFactor(transactions, walletAddressType, network);
     let UVDF = this.utxoValueDispersionFactor(utxos);
@@ -329,4 +332,4 @@ export class PrivacyMetrics extends WalletMetrics {
 
     return WPS;
   }
-} 
+}

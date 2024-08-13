@@ -2,6 +2,11 @@ import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { AddressUtxos, AddressUsageMap } from "./types";
 
 export class WalletMetrics {
+  private addressUsageMap: AddressUsageMap;
+
+  constructor(transactions: Transaction[]) {
+    this.addressUsageMap = this.constructAddressUsageMap(transactions);
+  }
   /*
     Name : UTXO Mass Factor
 
@@ -122,8 +127,8 @@ export class WalletMetrics {
   /* 
     Utility function to check if the given address was used already in past transactions
   */
-  isReusedAddress(address: string, addressUsageMap: AddressUsageMap): boolean {
-    if (addressUsageMap[address]) {
+  isReusedAddress(address: string): boolean {
+    if (this.addressUsageMap[address]) {
       return true;
     }
     return false;

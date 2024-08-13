@@ -82,7 +82,7 @@ const utxos: AddressUtxos = {
 };
 
 describe("Waste metric scoring", () => {
-  const wasteMetric = new WasteMetrics();
+  const wasteMetric = new WasteMetrics(transactions);
 
   describe("Relative Fees Score (R.F.S)", () => {
     it("calculates fee score based on tx fee rate relative to percentile in the block where a set of send tx were mined", () => {

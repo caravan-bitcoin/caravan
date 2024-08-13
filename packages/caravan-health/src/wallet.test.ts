@@ -115,7 +115,7 @@ const utxos: AddressUtxos = {
 };
 
 describe("Wallet Metrics", () => {
-  const walletMetrics = new WalletMetrics();
+  const walletMetrics = new WalletMetrics(transactions);
   describe("UTXO Mass Factor", () => {
     it("should return 1 for UTXO set length = 4", () => {
       expect(walletMetrics.utxoMassFactor(utxos)).toBe(1);
