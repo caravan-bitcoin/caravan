@@ -404,6 +404,14 @@ export class BlockchainClient extends ClientBase {
     FeeRatePercentile[]
   > {
     try {
+      if (
+        this.type === ClientType.PRIVATE ||
+        this.type === ClientType.BLOCKSTREAM
+      ) {
+        throw new Error(
+          "Not supported for private clients and blockstream. Currently only supported for mempool",
+        );
+      }
       let data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
       let feeRatePercentileBlocks: FeeRatePercentile[] = [];
       for (const block of data) {
