@@ -200,7 +200,7 @@ export class BlockchainClient extends ClientBase {
             for (const output of rawTxData.vout) {
               transaction.vout.push({
                 scriptPubkeyHex: output.scriptPubKey.hex,
-                scriptPubkeyAddress: output.scriptPubKey.addresses[0],
+                scriptPubkeyAddress: output.scriptPubKey.address,
                 value: output.value,
               });
             }
@@ -412,7 +412,10 @@ export class BlockchainClient extends ClientBase {
           "Not supported for private clients and blockstream. Currently only supported for mempool",
         );
       }
-      let data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
+      const response = await fetch(
+        "https://mempool.space/api/v1/mining/blocks/fee-rates/all",
+      );
+      const data = await response.json();
       let feeRatePercentileBlocks: FeeRatePercentile[] = [];
       for (const block of data) {
         let feeRatePercentile: FeeRatePercentile = {
