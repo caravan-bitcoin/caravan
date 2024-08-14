@@ -800,33 +800,47 @@ export class PsbtV2 extends PsbtV2Maps {
    * 2. Enabling nLockTime (values < 0xffffffff)
    * 3. Relative timelock with BIP68 (if bit 31 is not set)
    *
+   * According to BIP125 (Opt-in Full Replace-by-Fee Signaling):
+   *
+   * - For a transaction to be considered opt-in RBF, it must have at least
+   *   one input with a sequence number < 0xfffffffe.
+   * - The recommended sequence for RBF is 0xffffffff-2 (0xfffffffd).
+   *
+   * Sequence number meanings:
+   * - = 0xffffffff: Then the transaction is final no matter the nLockTime.
+   * - < 0xfffffffe: Transaction signals for RBF.
+   * - < 0xefffffff : Then the transaction signals BIP68 relative locktime.
+   *
+   * For using nLocktime along with Opt-in RBF, the sequence value
+   * should be between 0xf0000000 and 0xfffffffd.
+   *
    * Care should be taken when setting sequence numbers to ensure the desired
-   * transaction properties are correctly signaled.
+   * transaction properties are correctly signaled. Improper use can lead to
+   * unexpected transaction behavior or rejection by the network.
+   *
+   * References:
+   * - BIP125: Opt-in Full Replace-by-Fee Signaling
+   *   https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   * - BIP68: Relative lock-time using consensus-enforced sequence numbers
+   *   https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
    */
-  private setInputSequence(inputIndex: number, sequence: number) {
-    const bw = new BufferWriter();
-    bw.writeUInt32LE(sequence);
-    this.inputMaps[inputIndex].set(KeyType.PSBT_IN_SEQUENCE, bw.render());
-  }
-
-  /**
-   * Enables Replace-by-Fee (RBF) for all inputs in the transaction.
-   *
-   * This method implements opt-in RBF as described in BIP125. It sets the
-   * sequence number of all inputs to 0xfffffffd, which is the standard value
-   * used to signal RBF opt-in. By enabling RBF, the transaction becomes
-   * eligible for fee bumping or replacement before it's confirmed in a block.
-   *
-   * BIP125: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
-   *
-   * Note: Enabling RBF should be done cautiously, especially for wallets or
-   * services that rely on zero-confirmation transactions, as it introduces
-   * the possibility of transaction replacement.
-   */
-  public enableRBF() {
-    for (let i = 0; i < this.inputMaps.length; i++) {
-      this.setInputSequence(i, 0xfffffffd);
+  public setInputSequence(inputIndex: number, sequence: number) {
+    // Check if the PSBT is ready for the Updater role
+    if (!this.isReadyForUpdater) {
+      throw new Error(
+        "PSBT is not ready for the Updater role. Sequence cannot be changed.",
+      );
     }
+
+    // Check if the input exists
+    if (inputIndex < 0 || inputIndex >= this.inputMaps.length) {
+      throw new Error(`Input at index ${inputIndex} does not exist.`);
+    }
+
+    // Set the sequence number
+    const bw = new BufferWriter();
+    bw.writeU32(sequence);
+    this.inputMaps[inputIndex].set(KeyType.PSBT_IN_SEQUENCE, bw.render());
   }
 
   /**
@@ -844,8 +858,12 @@ export class PsbtV2 extends PsbtV2Maps {
    * This method is useful for wallets, block explorers, or any service that
    * needs to determine if a transaction can potentially be replaced before
    * confirmation.
+   *
+   * References:
+   * - BIP125: Opt-in Full Replace-by-Fee Signaling
+   *   https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
    */
-  public isRBFSignaled(): boolean {
+  get isRBFSignaled(): boolean {
     return this.PSBT_IN_SEQUENCE.some(
       (seq) => seq !== null && seq < 0xfffffffe,
     );
@@ -897,8 +915,6 @@ export class PsbtV2 extends PsbtV2Maps {
     redeemScript,
     witnessScript,
     bip32Derivation,
-    rbf = false, // Add an optional RBF (Replace-By-Fee) parameter with a default value of false to signal fees replacement
-    // RBF is defined in BIP125: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
   }: {
     previousTxId: Buffer | string;
     outputIndex: number;
@@ -912,7 +928,6 @@ export class PsbtV2 extends PsbtV2Maps {
       masterFingerprint: Buffer;
       path: string;
     }[];
-    rbf?: boolean;
   }) {
     // TODO: This must accept and add appropriate locktime fields. There is
     // significant validation concerning this step detailed in the BIP0370
@@ -944,12 +959,6 @@ export class PsbtV2 extends PsbtV2Maps {
     map.set(KeyType.PSBT_IN_OUTPUT_INDEX, bw.render());
 
     if (sequence) {
-      /* If RBF is requested, set the sequence to the RBF opt-in value
-      regardless of the provided sequence
-      */
-      if (rbf) {
-        sequence = 0xfffffffd; // 0xfffffffd (4294967293) is the standard RBF opt-in sequence
-      }
       bw.writeI32(sequence);
       map.set(KeyType.PSBT_IN_SEQUENCE, bw.render());
     }
