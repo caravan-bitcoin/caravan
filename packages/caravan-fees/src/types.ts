@@ -33,12 +33,19 @@ export interface RbfTransactionOptions {
   psbt: PsbtV2 | string | Buffer;
   network: Network;
   targetFeeRate: FeeRateSatsPerVByte;
+  /**
+   * The index of the output from which to subtract the increased fee.
+   * If specified, the fee increase will be subtracted entirely from this output.
+   * If not specified, the fee increase will be subtracted proportionally from all non-change outputs.
+   * Note: This should typically be the index of a change output to avoid modifying recipient amounts.
+   */
   feeOutputIndex?: number;
   dustThreshold?: string | number;
   additionalUtxos?: UTXO[];
   requiredSigners: number;
   totalSigners: number;
   changeOutputIndices: number[];
+  incrementalRelayFee: number;
 }
 
 export interface CPFPOptions {
