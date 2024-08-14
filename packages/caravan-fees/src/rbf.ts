@@ -141,13 +141,13 @@ export class RbfTransaction {
   }
 
   /**
-   * Get the required fee based on the target fee rate
+   * Get the required fee based on the target fee rate, uses calculateFeeIncrease method
    *
    * @returns {string} The required fee in satoshis
    */
   get requiredFee(): string {
-    return new BigNumber(this.estimateVsize())
-      .multipliedBy(this.targetFeeRate)
+    return this.calculateFeeIncrease()
+      .plus(new BigNumber(this.currentFee))
       .toString();
   }
 
@@ -428,13 +428,16 @@ export class RbfTransaction {
   private addAdditionalInputsIfNeeded(): void {
     const totalInputValue = new BigNumber(this.totalInputValue);
     const totalOutputValue = new BigNumber(this.totalOutputValue);
-    const requiredFee = this.calculateFeeIncrease().plus(
-      new BigNumber(this.currentFee),
-    );
 
-    if (totalInputValue.isLessThan(totalOutputValue.plus(requiredFee))) {
+    if (
+      totalInputValue.isLessThan(
+        totalOutputValue.plus(new BigNumber(this.requiredFee)),
+      )
+    ) {
       this.addAdditionalInputs(
-        totalOutputValue.plus(requiredFee).minus(totalInputValue),
+        totalOutputValue
+          .plus(new BigNumber(this.requiredFee))
+          .minus(totalInputValue),
       );
     }
   }
@@ -484,10 +487,7 @@ export class RbfTransaction {
     const newFee = calculateTotalInputValue(this.modifiedPsbt).minus(
       calculateTotalOutputValue(this.modifiedPsbt),
     );
-    const requiredFee = this.calculateFeeIncrease().plus(
-      new BigNumber(this.currentFee),
-    );
-    if (newFee.isLessThan(requiredFee)) {
+    if (newFee.isLessThan(new BigNumber(this.requiredFee))) {
       throw new Error("New fee must be higher than the required fee for RBF");
     }
   }
