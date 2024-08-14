@@ -145,7 +145,7 @@ export class RbfTransaction {
    *
    * @returns {string} The required fee in satoshis
    */
-  get requiredFee(): string {
+  get requiredAbsoluteFee(): string {
     return this.calculateFeeIncrease()
       .plus(new BigNumber(this.currentFee))
       .toString();
@@ -431,12 +431,12 @@ export class RbfTransaction {
 
     if (
       totalInputValue.isLessThan(
-        totalOutputValue.plus(new BigNumber(this.requiredFee)),
+        totalOutputValue.plus(new BigNumber(this.requiredAbsoluteFee)),
       )
     ) {
       this.addAdditionalInputs(
         totalOutputValue
-          .plus(new BigNumber(this.requiredFee))
+          .plus(new BigNumber(this.requiredAbsoluteFee))
           .minus(totalInputValue),
       );
     }
@@ -469,7 +469,7 @@ export class RbfTransaction {
 
   private createCancelOutput(destinationAddress: string): void {
     const cancelAmount = new BigNumber(this.totalInputValue).minus(
-      this.requiredFee,
+      this.requiredAbsoluteFee,
     );
     // Remove all existing outputs
     for (let i = this.modifiedPsbt.PSBT_GLOBAL_OUTPUT_COUNT - 1; i >= 0; i--) {
@@ -487,7 +487,7 @@ export class RbfTransaction {
     const newFee = calculateTotalInputValue(this.modifiedPsbt).minus(
       calculateTotalOutputValue(this.modifiedPsbt),
     );
-    if (newFee.isLessThan(new BigNumber(this.requiredFee))) {
+    if (newFee.isLessThan(new BigNumber(this.requiredAbsoluteFee))) {
       throw new Error("New fee must be higher than the required fee for RBF");
     }
   }
