@@ -184,4 +184,18 @@ describe("Wallet Metrics", () => {
       ).toBe(50);
     });
   });
+
+  describe("Address Reuse Map", () => {
+    it("should return a map of all the used or unused addresses", () => {
+      const addressUsageMap =
+        walletMetrics.constructAddressUsageMap(transactions);
+
+      const expectedMap = {
+        scriptPubkeyAddress1: false,
+        scriptPubkeyAddress2: false,
+      };
+
+      expect(addressUsageMap).toEqual(expectedMap);
+    });
+  });
 });
