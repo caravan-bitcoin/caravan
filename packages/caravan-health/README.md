@@ -12,23 +12,22 @@ Different users have diverse needs and preferences which impact their wallet hea
 
 The `PrivacyMetrics` class offers tools to assess the privacy of Bitcoin transactions and wallets:
 
-- **Spend Type Determination  :** Categorizes transactions based on input and output patterns.
-- **Topology Score  :** Evaluates transaction privacy based on input/output structure.
-- **Mean Transaction Topology Score  :** Calculates the average privacy score across all wallet transactions.
-- **Address Reuse Factor (ARF)  :** Measures the extent of address reuse within the wallet.
-- **Address Type Factor (ATF)  :** Evaluates the diversity of address types used in transactions.
-- **UTXO Spread Factor  :** Assesses the dispersion of UTXO values to gauge traceability resistance.
-- **UTXO Value Dispersion Factor  :** Combines UTXO spread and mass factors for a comprehensive view.
-- **Weighted Privacy Score  :** Provides an overall privacy health score for the wallet.
+- **Topology Score :** Evaluates transaction privacy based on input/output structure.
+- **Mean Transaction Topology Score :** Calculates the average privacy score across all wallet transactions.
+- **Address Reuse Factor (ARF) :** Measures the extent of address reuse within the wallet.
+- **Address Type Factor (ATF) :** Evaluates the diversity of address types used in transactions.
+- **UTXO Spread Factor :** Assesses the dispersion of UTXO values to gauge traceability resistance.
+- **UTXO Value Dispersion Factor :** Combines UTXO spread and mass factors for a comprehensive view.
+- **Weighted Privacy Score :** Provides an overall privacy health score for the wallet.
 
 ## Waste Metrics
 
 The `WasteMetrics` class focuses on transaction fee efficiency and UTXO management:
 
-- **Relative Fees Score (RFS)  :** Compares transaction fees to others in the same block.
-- **Fees To Amount Ratio (FAR)  :** Evaluates the proportion of fees to transaction amounts.
-- **Spend Waste Score (SWS)  :** Determines the economic efficiency of spending UTXOs.
-- **Weighted Waste Score (WWS)  :** Combines various metrics for an overall efficiency score.
+- **Relative Fees Score (RFS) :** Compares transaction fees to others in the same block.
+- **Fees To Amount Ratio (FAR) :** Evaluates the proportion of fees to transaction amounts.
+- **Spend Waste Score (SWS) :** Determines the economic efficiency of spending UTXOs.
+- **Weighted Waste Score (WWS) :** Combines various metrics for an overall efficiency score.
 
 # Dependencies
 
@@ -55,21 +54,17 @@ const network : Network = "mainnet";
 const feeRatePercentileHistory : FeeRatePercentile[]
 
 // Initialize classes for health analysis
-const privacyMetrics = new PrivacyMetrics(transactions);
-const wasteMetrics = new WasteMetrics(transactions);
+const privacyMetrics = new PrivacyMetrics(transactions,utxos);
+const wasteMetrics = new WasteMetrics(transactions,utxos);
 
 // For example use metric that calculates overall privacy score
 const privacyScore = privacyMetrics.getWalletPrivacyScore(
-  transactions,
-  utxos,
   walletAddressType,
   network,
 );
 
 // For example use metric that calculates overall waste score
 const wasteScore = wasteMetrics.weightedWasteScore(
-  transactions,
-  utxos,
   feeRatePercentileHistory,
 );
 ```
