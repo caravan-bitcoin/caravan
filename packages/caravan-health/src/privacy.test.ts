@@ -2,6 +2,7 @@ import { Transaction } from "@caravan/clients";
 import { PrivacyMetrics } from "./privacy";
 import { AddressUtxos, SpendType } from "./types";
 import { Network } from "@caravan/bitcoin";
+import { determineSpendType, getSpendTypeScore } from "./utility";
 
 const transactions: Transaction[] = [
   // transactions[0] is a perfect spend transaction
@@ -121,45 +122,45 @@ describe("Privacy metric scoring", () => {
 
   describe("Determine Spend Type", () => {
     it("Perfect Spend are transactions with 1 input and 1 output", () => {
-      const spendType: SpendType = privacyMetric.determineSpendType(1, 1);
+      const spendType: SpendType = determineSpendType(1, 1);
       expect(spendType).toBe(SpendType.PerfectSpend);
     });
 
     it("Simple Spend are transactions with 1 input and 2 outputs", () => {
-      const spendType: SpendType = privacyMetric.determineSpendType(1, 2);
+      const spendType: SpendType = determineSpendType(1, 2);
       expect(spendType).toBe(SpendType.SimpleSpend);
     });
 
     it("UTXO Fragmentation are transactions with 1 input and more than 2 outputs", () => {
-      const spendType: SpendType = privacyMetric.determineSpendType(1, 3);
+      const spendType: SpendType = determineSpendType(1, 3);
       expect(spendType).toBe(SpendType.UTXOFragmentation);
 
-      const spendType2: SpendType = privacyMetric.determineSpendType(1, 4);
+      const spendType2: SpendType = determineSpendType(1, 4);
       expect(spendType2).toBe(SpendType.UTXOFragmentation);
 
-      const spendType3: SpendType = privacyMetric.determineSpendType(1, 5);
+      const spendType3: SpendType = determineSpendType(1, 5);
       expect(spendType3).toBe(SpendType.UTXOFragmentation);
     });
 
     it("Consolidation transactions have more than 1 inputs and 1 output", () => {
-      const spendType: SpendType = privacyMetric.determineSpendType(2, 1);
+      const spendType: SpendType = determineSpendType(2, 1);
       expect(spendType).toBe(SpendType.Consolidation);
 
-      const spendType2: SpendType = privacyMetric.determineSpendType(3, 1);
+      const spendType2: SpendType = determineSpendType(3, 1);
       expect(spendType2).toBe(SpendType.Consolidation);
 
-      const spendType3: SpendType = privacyMetric.determineSpendType(4, 1);
+      const spendType3: SpendType = determineSpendType(4, 1);
       expect(spendType3).toBe(SpendType.Consolidation);
     });
 
     it("Mixing or CoinJoin transactions have more than 1 inputs and more than 1 outputs", () => {
-      const spendType: SpendType = privacyMetric.determineSpendType(2, 2);
+      const spendType: SpendType = determineSpendType(2, 2);
       expect(spendType).toBe(SpendType.MixingOrCoinJoin);
 
-      const spendType2: SpendType = privacyMetric.determineSpendType(2, 3);
+      const spendType2: SpendType = determineSpendType(2, 3);
       expect(spendType2).toBe(SpendType.MixingOrCoinJoin);
 
-      const spendType3: SpendType = privacyMetric.determineSpendType(3, 2);
+      const spendType3: SpendType = determineSpendType(3, 2);
       expect(spendType3).toBe(SpendType.MixingOrCoinJoin);
     });
   });
@@ -179,11 +180,7 @@ describe("Privacy metric scoring", () => {
         score = 0.5 * (1 - 0) = 0.5
     */
     it("Perfect Spend has a raw score of 0.5 for external wallet payments", () => {
-      const score: number = privacyMetric.getSpendTypeScore(
-        SpendType.PerfectSpend,
-        1,
-        1,
-      );
+      const score: number = getSpendTypeScore(SpendType.PerfectSpend, 1, 1);
       expect(score).toBe(0.5);
     });
     /*
@@ -205,11 +202,7 @@ describe("Privacy metric scoring", () => {
         score = 0.67 * (1-0.33) = 0.4489
     */
     it("Simple Spend has a raw score of 0.44 for external wallet payments", () => {
-      const score: number = privacyMetric.getSpendTypeScore(
-        SpendType.SimpleSpend,
-        1,
-        2,
-      );
+      const score: number = getSpendTypeScore(SpendType.SimpleSpend, 1, 2);
       expect(score).toBeCloseTo(0.44);
     });
 
@@ -238,7 +231,7 @@ describe("Privacy metric scoring", () => {
 
       */
     it("UTXO Fragmentation has a raw score of 0.33 for external wallet payments", () => {
-      const score: number = privacyMetric.getSpendTypeScore(
+      const score: number = getSpendTypeScore(
         SpendType.UTXOFragmentation,
         1,
         3,
@@ -259,18 +252,10 @@ describe("Privacy metric scoring", () => {
       score = 1 / Number of Inputs
     */
     it("Consolidation has raw score of ", () => {
-      const score: number = privacyMetric.getSpendTypeScore(
-        SpendType.Consolidation,
-        2,
-        1,
-      );
+      const score: number = getSpendTypeScore(SpendType.Consolidation, 2, 1);
       expect(score).toBeCloseTo(0.5);
 
-      const score2: number = privacyMetric.getSpendTypeScore(
-        SpendType.Consolidation,
-        3,
-        1,
-      );
+      const score2: number = getSpendTypeScore(SpendType.Consolidation, 3, 1);
       expect(score2).toBeCloseTo(0.33);
     });
 
@@ -290,21 +275,17 @@ describe("Privacy metric scoring", () => {
       score =   1/2 * (y2/x)/(1+y2/x)
     */
     it("MixingOrCoinJoin has raw score of ", () => {
-      const score: number = privacyMetric.getSpendTypeScore(
-        SpendType.MixingOrCoinJoin,
-        2,
-        2,
-      );
+      const score: number = getSpendTypeScore(SpendType.MixingOrCoinJoin, 2, 2);
       expect(score).toBeCloseTo(0.33);
 
-      const score2: number = privacyMetric.getSpendTypeScore(
+      const score2: number = getSpendTypeScore(
         SpendType.MixingOrCoinJoin,
         2,
         3,
       );
       expect(score2).toBeCloseTo(0.409);
 
-      const score3: number = privacyMetric.getSpendTypeScore(
+      const score3: number = getSpendTypeScore(
         SpendType.MixingOrCoinJoin,
         3,
         2,

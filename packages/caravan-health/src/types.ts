@@ -26,5 +26,5 @@ export enum SpendType {
 
 // Represents the usage of the address in past transactions
 export interface AddressUsageMap {
-  [address:string]: boolean;
+  [address: string]: boolean;
 }
