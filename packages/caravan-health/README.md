@@ -1,61 +1,80 @@
 # Caravan-Health
 
-The `caravan-health` package is designed to help users maintain the health of their bitcoin wallets. Wallet health is determined by various factors including financial privacy, transaction fees, and the avoidance of dust outputs. This README will guide you through understanding wallet health goals, scoring metrics, and how to use the caravan-health package to achieve optimal wallet health.
+The `@caravan/health` package is a toolkit for analyzing and scoring the privacy and fee spending efficiency of Bitcoin transactions and wallets. Wallet health is determined by various factors including financial privacy, transaction fees, and the avoidance of dust outputs. It provides metrics and algorithms to evaluate various aspects of transaction behavior, UTXO management, and fee strategies.
 
 # Defining Wallet Health Goals
 
-Different users have diverse needs and preferences which impact their wallet health goals. Some users prioritize financial privacy, others focus on minimizing transaction fees, and some want a healthy wallet without delving into the technical details of UTXOs and transactions. The caravan-health package aims to highlight metrics for wallet health and provide suggestions for improvement.
+Different users have diverse needs and preferences which impact their wallet health goals. Some users prioritize financial privacy, others focus on minimizing transaction fees, and some want a healthy wallet without delving into the technical details of UTXOs and transactions. The `@caravan/health ` package aims to highlight metrics for wallet health and provide suggestions for improvement.
 
-# Wallet Health Goals:
-
-- Protect financial privacy
-- Minimize long-term and short-term fee rates
-- Avoid creating dust outputs
-- Determine when to consolidate and when to conserve UTXOs
-- Manage spending frequency and allow simultaneous payments
-
----
-
-# Scoring Metrics for health analysis
+# Features
 
 ## Privacy Metrics
 
-1. Reuse Factor (R.F)
+The `PrivacyMetrics` class offers tools to assess the privacy of Bitcoin transactions and wallets:
 
-Measures the extent to which addresses are reused. Lower reuse factor improves privacy.
+- **Spend Type Determination :** Categorizes transactions based on input and output patterns.
+- **Topology Score :** Evaluates transaction privacy based on input/output structure.
+- **Mean Transaction Topology Score :** Calculates the average privacy score across all wallet transactions.
+- **Address Reuse Factor (ARF) :** Measures the extent of address reuse within the wallet.
+- **Address Type Factor (ATF) :** Evaluates the diversity of address types used in transactions.
+- **UTXO Spread Factor :** Assesses the dispersion of UTXO values to gauge traceability resistance.
+- **UTXO Value Dispersion Factor :** Combines UTXO spread and mass factors for a comprehensive view.
+- **Weighted Privacy Score :** Provides an overall privacy health score for the wallet.
 
-2. Address Type Factor (A.T.F)
+## Waste Metrics
 
-Assesses privacy based on the diversity of address types used in transactions.
+The `WasteMetrics` class focuses on transaction fee efficiency and UTXO management:
 
-3. UTXO Spread Factor (U.S.F)
+- **Relative Fees Score (RFS) :** Compares transaction fees to others in the same block.
+- **Fees To Amount Ratio (FAR) :** Evaluates the proportion of fees to transaction amounts.
+- **Spend Waste Score (SWS) :** Determines the economic efficiency of spending UTXOs.
+- **Weighted Waste Score (WWS) :** Combines various metrics for an overall efficiency score.
 
-Evaluates the spread of UTXO values to gauge privacy. Higher spread indicates better privacy.
+# Dependencies
 
-4. UTXO Mass Factor score which accounts for Number of UTXOs present in a wallet (U.M.F)
+This library depends on the `@caravan/clients` and `@caravan/bitcoin` package for type validations and preparing some of the required data for that type. Make sure to install and import it correctly in your project.
 
-Considers the number of UTXOs in the wallet.
+# Usage
 
-5. UTXO Value Dispersion Factor (U.V.D.F)
+To use the Caravan Health Library, you'll need to import the necessary classes and types
 
-Combines the scores of UTXO spread and UTXO mass.
+```javascript
+import {
+  PrivacyMetrics,
+  WasteMetrics,
+  AddressUtxos,
+  SpendType,
+} from "@caravan/health";
+import { Transaction, FeeRatePercentile } from "@caravan/clients";
+import { Network, MultisigAddressType } from "@caravan/bitcoin";
 
-# Waste Metrics
+const transactions : Transaction[] = [];
+const utxos: AddressUtxos = {};
+const walletAddressType : MultisigAddressType = "P2SH";
+const network : Network = "mainnet";
+const feeRatePercentileHistory : FeeRatePercentile[]
 
-1. Relative Fee Score (R.F.S)
+// Initialize classes for health analysis
+const privacyMetrics = new PrivacyMetrics(transactions);
+const wasteMetrics = new WasteMetrics(transactions);
 
-Measures the fee rate compared to historical data. It can be associated with all the transactions and we can give a measure
-if any transaction was done at expensive fees or nominal fees.
+// For example use metric that calculates overall privacy score
+const privacyScore = privacyMetrics.getWalletPrivacyScore(
+  transactions,
+  utxos,
+  walletAddressType,
+  network,
+);
 
-2. Fee-to-Amount Percent Score (F.A.P.S)
+// For example use metric that calculates overall waste score
+const wasteScore = wasteMetrics.weightedWasteScore(
+  transactions,
+  utxos,
+  feeRatePercentileHistory,
+);
+```
 
-Ratio of fees paid to the transaction amount. Lower percentage signifies better fee efficiency.
-
-3. UTXO Mass Factor on Number of UTXOs (UMF)
-
-Considers the number of UTXOs.
-
-## TODOs
+# TODOs
 
 - [] Expand the test cases for privacy and waste metrics to cover every possible case.
 - [] Add links to each algorithm and the corresponding explanation in final research document.
