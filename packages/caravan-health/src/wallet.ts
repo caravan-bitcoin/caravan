@@ -2,10 +2,13 @@ import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { AddressUtxos, AddressUsageMap } from "./types";
 
 export class WalletMetrics {
-  private addressUsageMap: AddressUsageMap;
-
-  constructor(transactions: Transaction[]) {
-    this.addressUsageMap = this.constructAddressUsageMap(transactions);
+  public addressUsageMap: AddressUsageMap;
+  public transactions: Transaction[];
+  public utxos: AddressUtxos;
+  constructor(transactions: Transaction[], utxos: AddressUtxos) {
+    this.transactions = transactions;
+    this.utxos = utxos;
+    this.addressUsageMap = this.constructAddressUsageMap();
   }
   /*
     Name : UTXO Mass Factor
@@ -20,8 +23,9 @@ export class WalletMetrics {
     - 0.75 for UTXO set length >= 5 and <= 14
     - 1 for UTXO set length < 5
   */
-  utxoMassFactor(utxos: AddressUtxos): number {
+  utxoMassFactor(): number {
     let utxoSetLength = 0;
+    const utxos = this.utxos;
     for (const address in utxos) {
       const addressUtxos = utxos[address];
       utxoSetLength += addressUtxos.length;
@@ -109,8 +113,9 @@ export class WalletMetrics {
     }
   }
 
-  constructAddressUsageMap(transactions: Transaction[]): AddressUsageMap {
+  constructAddressUsageMap(): AddressUsageMap {
     let addressUsageMap: AddressUsageMap = {};
+    const transactions = this.transactions;
     for (const tx of transactions) {
       for (const output of tx.vout) {
         let address = output.scriptPubkeyAddress;

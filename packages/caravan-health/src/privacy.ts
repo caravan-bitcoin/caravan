@@ -1,5 +1,5 @@
 import { Transaction } from "@caravan/clients";
-import { AddressUtxos, SpendType, AddressUsageMap } from "./types";
+import { SpendType } from "./types";
 import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
 import { WalletMetrics } from "./wallet";
 
@@ -136,8 +136,9 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : (0.45, 0.6]
     -> Very Good : (0.6, 0.75)
   */
-  getMeanTopologyScore(transactions: Transaction[]): number {
+  getMeanTopologyScore(): number {
     let privacyScore = 0;
+    const transactions = this.transactions;
     for (let tx of transactions) {
       let topologyScore = this.getTopologyScore(tx);
       privacyScore += topologyScore;
@@ -163,13 +164,10 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : [0.2, 0.4)
     -> Very Good : [0 ,0.2) 
   */
-  addressReuseFactor(
-    utxos: AddressUtxos,
-    addressUsageMap: AddressUsageMap,
-  ): number {
+  addressReuseFactor(): number {
     let reusedAmount: number = 0;
     let totalAmount: number = 0;
-
+    const utxos = this.utxos;
     for (const address in utxos) {
       const addressUtxos = utxos[address];
       for (const utxo of addressUtxos) {
@@ -206,7 +204,6 @@ export class PrivacyMetrics extends WalletMetrics {
 
   */
   addressTypeFactor(
-    transactions: Transaction[],
     walletAddressType: MultisigAddressType,
     network: Network,
   ): number {
@@ -218,7 +215,7 @@ export class PrivacyMetrics extends WalletMetrics {
       UNKNOWN: 0,
       "P2SH-P2WSH": 0,
     };
-
+    const transactions = this.transactions;
     transactions.forEach((tx) => {
       tx.vout.forEach((output) => {
         const addressType = getAddressType(output.scriptPubkeyAddress, network);
@@ -257,8 +254,9 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : [0.6, 0.8)
     -> Very Good : [0.8 ,1] 
   */
-  utxoSpreadFactor(utxos: AddressUtxos): number {
+  utxoSpreadFactor(): number {
     const amounts: number[] = [];
+    const utxos = this.utxos;
     for (const address in utxos) {
       const addressUtxos = utxos[address];
       addressUtxos.forEach((utxo) => {
@@ -294,9 +292,9 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : (0, 0.075]
     -> Very Good : (0.075, 0.15]
   */
-  utxoValueDispersionFactor(utxos: AddressUtxos): number {
-    let UMF: number = this.utxoMassFactor(utxos);
-    let USF: number = this.utxoSpreadFactor(utxos);
+  utxoValueDispersionFactor(): number {
+    let UMF: number = this.utxoMassFactor();
+    let USF: number = this.utxoSpreadFactor();
     return (USF + UMF) * 0.15 - 0.15;
   }
 
@@ -315,16 +313,14 @@ export class PrivacyMetrics extends WalletMetrics {
 
   */
   getWalletPrivacyScore(
-    transactions: Transaction[],
-    utxos: AddressUtxos,
     walletAddressType: MultisigAddressType,
     network: Network,
   ): number {
-    let addressUsageMap = this.constructAddressUsageMap(transactions);
-    let meanTopologyScore = this.getMeanTopologyScore(transactions);
-    let ARF = this.addressReuseFactor(utxos, addressUsageMap);
-    let ATF = this.addressTypeFactor(transactions, walletAddressType, network);
-    let UVDF = this.utxoValueDispersionFactor(utxos);
+    let addressUsageMap = this.constructAddressUsageMap();
+    let meanTopologyScore = this.getMeanTopologyScore();
+    let ARF = this.addressReuseFactor();
+    let ATF = this.addressTypeFactor(walletAddressType, network);
+    let UVDF = this.utxoValueDispersionFactor();
 
     let WPS: number =
       (meanTopologyScore * (1 - 0.5 * ARF) + 0.1 * (1 - ARF)) * (1 - ATF) +

@@ -116,8 +116,8 @@ const utxos: AddressUtxos = {
 };
 
 describe("Privacy metric scoring", () => {
-  const privacyMetric = new PrivacyMetrics(transactions);
-  const addressUsageMap = privacyMetric.constructAddressUsageMap(transactions);
+  const privacyMetric = new PrivacyMetrics(transactions, utxos);
+  const addressUsageMap = privacyMetric.constructAddressUsageMap();
 
   describe("Determine Spend Type", () => {
     it("Perfect Spend are transactions with 1 input and 1 output", () => {
@@ -315,33 +315,24 @@ describe("Privacy metric scoring", () => {
 
   describe("Transaction Topology Score", () => {
     it("Calculates the transaction topology score based on the spend type", () => {
-      const score: number = privacyMetric.getTopologyScore(
-        transactions[0]
-      );
+      const score: number = privacyMetric.getTopologyScore(transactions[0]);
       expect(score).toBe(0.75);
 
-      const score2: number = privacyMetric.getTopologyScore(
-        transactions[1]
-      );
+      const score2: number = privacyMetric.getTopologyScore(transactions[1]);
       expect(score2).toBeCloseTo(0.67);
     });
   });
 
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
-      const meanScore: number = privacyMetric.getMeanTopologyScore(
-        transactions
-      );
+      const meanScore: number = privacyMetric.getMeanTopologyScore();
       expect(meanScore).toBeCloseTo(0.71);
     });
   });
 
   describe("Address Reuse Factor", () => {
     it("Calculates the amount being held by reused addresses with respect to the total amount", () => {
-      const addressReuseFactor: number = privacyMetric.addressReuseFactor(
-        utxos,
-        addressUsageMap,
-      );
+      const addressReuseFactor: number = privacyMetric.addressReuseFactor();
       expect(addressReuseFactor).toBe(0);
     });
   });
@@ -349,7 +340,6 @@ describe("Privacy metric scoring", () => {
   describe("Address Type Factor", () => {
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
-        transactions,
         "P2SH",
         Network.MAINNET,
       );
@@ -359,7 +349,7 @@ describe("Privacy metric scoring", () => {
 
   describe("UTXO Spread Factor", () => {
     it("Calculates the standard deviation of UTXO values which helps in assessing the dispersion of UTXO values", () => {
-      const utxoSpreadFactor: number = privacyMetric.utxoSpreadFactor(utxos);
+      const utxoSpreadFactor: number = privacyMetric.utxoSpreadFactor();
       expect(utxoSpreadFactor).toBeCloseTo(0.1);
     });
   });
@@ -367,7 +357,7 @@ describe("Privacy metric scoring", () => {
   describe("UTXO Value Dispersion Factor", () => {
     it("Combines UTXO Spread Factor and UTXO Mass Factor", () => {
       const utxoValueDispersionFactor: number =
-        privacyMetric.utxoValueDispersionFactor(utxos);
+        privacyMetric.utxoValueDispersionFactor();
       expect(utxoValueDispersionFactor).toBeCloseTo(0.015);
     });
   });
@@ -375,8 +365,6 @@ describe("Privacy metric scoring", () => {
   describe("Overall Privacy Score", () => {
     it("Calculates the overall privacy score for a wallet", () => {
       const privacyScore: number = privacyMetric.getWalletPrivacyScore(
-        transactions,
-        utxos,
         "P2SH",
         Network.MAINNET,
       );

@@ -82,12 +82,11 @@ const utxos: AddressUtxos = {
 };
 
 describe("Waste metric scoring", () => {
-  const wasteMetric = new WasteMetrics(transactions);
+  const wasteMetric = new WasteMetrics(transactions, utxos);
 
   describe("Relative Fees Score (R.F.S)", () => {
     it("calculates fee score based on tx fee rate relative to percentile in the block where a set of send tx were mined", () => {
       const score: number = wasteMetric.relativeFeesScore(
-        transactions,
         feeRatePercentileHistory,
       );
       expect(score).toBe(0.5);
@@ -96,7 +95,7 @@ describe("Waste metric scoring", () => {
 
   describe("Fees to Amount Ratio (F.A.R)", () => {
     it("Fees paid over total amount spent as ratio for a 'send' type transaction", () => {
-      const ratio: number = wasteMetric.feesToAmountRatio(transactions);
+      const ratio: number = wasteMetric.feesToAmountRatio();
       expect(ratio).toBe(0.1);
     });
   });
@@ -131,11 +130,9 @@ describe("Waste metric scoring", () => {
   describe("Weighted Waste Score (W.W.S)", () => {
     it("calculates the overall waste of the wallet based on the relative fees score, fees to amount ratio and the UTXO mass factor", () => {
       const score: number = wasteMetric.weightedWasteScore(
-        transactions,
-        utxos,
         feeRatePercentileHistory,
       );
-      expect(score).toBe(0.21);
+      expect(score).toBe(0.51);
     });
   });
 });

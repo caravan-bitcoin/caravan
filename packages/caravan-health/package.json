@@ -38,7 +38,7 @@
     "@caravan/bitcoin": "*"
   },
   "devDependencies": {
-    "prettier": "^3.2.5"
+    "@caravan/eslint-config": "*",
+    "@caravan/typescript-config": "*"
   }
-
 }

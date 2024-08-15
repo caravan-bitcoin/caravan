@@ -115,10 +115,10 @@ const utxos: AddressUtxos = {
 };
 
 describe("Wallet Metrics", () => {
-  const walletMetrics = new WalletMetrics(transactions);
+  const walletMetrics = new WalletMetrics(transactions, utxos);
   describe("UTXO Mass Factor", () => {
     it("should return 1 for UTXO set length = 4", () => {
-      expect(walletMetrics.utxoMassFactor(utxos)).toBe(1);
+      expect(walletMetrics.utxoMassFactor()).toBe(1);
     });
   });
 
@@ -187,8 +187,7 @@ describe("Wallet Metrics", () => {
 
   describe("Address Reuse Map", () => {
     it("should return a map of all the used or unused addresses", () => {
-      const addressUsageMap =
-        walletMetrics.constructAddressUsageMap(transactions);
+      const addressUsageMap = walletMetrics.constructAddressUsageMap();
 
       const expectedMap = {
         scriptPubkeyAddress1: false,

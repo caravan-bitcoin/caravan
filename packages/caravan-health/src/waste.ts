@@ -1,6 +1,5 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { AddressUtxos } from "./types";
-import { WalletMetrics } from "../dist";
+import { WalletMetrics } from "./wallet";
 
 export class WasteMetrics extends WalletMetrics {
   /*
@@ -22,12 +21,10 @@ export class WasteMetrics extends WalletMetrics {
     -> Good : (0.6, 0.8]
     -> Very Good : (0.8, 1]
   */
-  relativeFeesScore(
-    transactions: Transaction[],
-    feeRatePercentileHistory: FeeRatePercentile[],
-  ): number {
+  relativeFeesScore(feeRatePercentileHistory: FeeRatePercentile[]): number {
     let sumRFS: number = 0;
     let numberOfSendTx: number = 0;
+    const transactions = this.transactions;
     for (const tx of transactions) {
       if (tx.isSend === true) {
         numberOfSendTx++;
@@ -63,9 +60,10 @@ export class WasteMetrics extends WalletMetrics {
     -> Good : (0.006, 0.001]
     -> Very Good : (0.001, 0)
   */
-  feesToAmountRatio(transactions: Transaction[]): number {
+  feesToAmountRatio(): number {
     let sumFeesToAmountRatio: number = 0;
     let numberOfSendTx: number = 0;
+    const transactions = this.transactions;
     transactions.forEach((tx: Transaction) => {
       if (tx.isSend === true) {
         sumFeesToAmountRatio += tx.fee / tx.amount;
@@ -145,14 +143,10 @@ export class WasteMetrics extends WalletMetrics {
     -> Good : (0.6, 0.8]
     -> Very Good : (0.8, 1]
   */
-  weightedWasteScore(
-    transactions: Transaction[],
-    utxos: AddressUtxos,
-    feeRatePercentileHistory: FeeRatePercentile[],
-  ): number {
-    let RFS = this.relativeFeesScore(transactions, feeRatePercentileHistory);
-    let FAR = this.feesToAmountRatio(transactions);
-    let UMF = 0;
+  weightedWasteScore(feeRatePercentileHistory: FeeRatePercentile[]): number {
+    let RFS = this.relativeFeesScore(feeRatePercentileHistory);
+    let FAR = this.feesToAmountRatio();
+    let UMF = this.utxoMassFactor();
     return 0.35 * RFS + 0.35 * FAR + 0.3 * UMF;
   }
 }
