@@ -412,10 +412,9 @@ export class BlockchainClient extends ClientBase {
           "Not supported for private clients and blockstream. Currently only supported for mempool",
         );
       }
-      const response = await fetch(
-        "https://mempool.space/api/v1/mining/blocks/fee-rates/all",
-      );
-      const data = await response.json();
+
+      const data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
+
       let feeRatePercentileBlocks: FeeRatePercentile[] = [];
       for (const block of data) {
         let feeRatePercentile: FeeRatePercentile = {

@@ -1066,25 +1066,63 @@ describe("BlockchainClient", () => {
 
   describe("getBlockFeeRatePercentileHistory", () => {
     it("should get the fee rate percentiles for a closest blocks' transactions (MEMPOOL client)", async () => {
-      // Create a new instance of BlockchainClient
+      // Mock the response from the API
+      const mockResponse = [
+        {
+          avgHeight: 45,
+          timestamp: 1231605377,
+          avgFee_0: 0,
+          avgFee_10: 0,
+          avgFee_25: 0,
+          avgFee_50: 0,
+          avgFee_75: 0,
+          avgFee_90: 0,
+          avgFee_100: 0,
+        },
+      ];
+      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
         network: Network.MAINNET,
       });
+      blockchainClient.Get = mockGet;
 
-      const result = await blockchainClient.getBlockFeeRatePercentileHistory();
-      const expectedResponse: FeeRatePercentile = {
-        avgHeight: 0,
-        timestamp: 1231006505,
-        avgFee_0: 0,
-        avgFee_10: 0,
-        avgFee_25: 0,
-        avgFee_50: 0,
-        avgFee_75: 0,
-        avgFee_90: 0,
-        avgFee_100: 0,
-      };
-      expect(result[0]).toEqual(expectedResponse);
+      // Call the getTransactionHex method
+      const feeRateHistory =
+        await blockchainClient.getBlockFeeRatePercentileHistory();
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/v1/mining/blocks/fee-rates/all`);
+
+      // Verify the returned transaction hex
+      expect(feeRateHistory).toEqual(mockResponse);
+    });
+
+    it("should throw an error when using BLOCKSTREAM or PRIVATE client", async () => {
+      const mockError = new Error(
+        "Not supported for private clients and blockstream. Currently only supported for mempool",
+      );
+
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      let error;
+      try {
+        await blockchainClient.getBlockFeeRatePercentileHistory();
+      } catch (err) {
+        error = err;
+      }
+
+      // Verify the error message
+      expect(error).toEqual(
+        new Error(
+          `Failed to get feerate percentile block: ${mockError.message}`,
+        ),
+      );
     });
   });
 });
