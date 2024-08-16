@@ -17,6 +17,15 @@ import {
   Transaction,
 } from "bitcoinjs-lib-v6";
 
+import {
+  BaseErrorType,
+  RbfErrorType,
+  CpfpErrorType,
+  ErrorType,
+  ErrorMessage,
+  TransactionState,
+} from "./types";
+
 /**
  * Estimate the virtual size of a transaction based on its address type and input/output count.
  * @param addressType The type of address (P2SH, P2SH_P2WSH, or P2WSH)
@@ -134,6 +143,7 @@ export function calculateTotalInputValue(psbt: PsbtV2): BigNumber {
     } else if (nonWitnessUtxo) {
       total = total.plus(parseNonWitnessUtxoValue(nonWitnessUtxo, i, psbt));
     } else {
+      console.log("check UTXO", witnessUtxo, nonWitnessUtxo);
       console.warn(`No UTXO data found for input at index ${i}`);
     }
   }
@@ -238,5 +248,67 @@ export function initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
         "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
       );
     }
+  }
+}
+
+// Base Error class
+export class TransactionError<
+  T extends ErrorType,
+  S extends TransactionState,
+> extends Error {
+  constructor(
+    public type: T,
+    public state: S,
+    message?: string,
+  ) {
+    super(message || getDefaultErrorMessage(type, state));
+    this.name = "TransactionError";
+  }
+}
+
+export function getDefaultErrorMessage<
+  T extends ErrorType,
+  S extends TransactionState,
+>(type: T, state: S): ErrorMessage<T, S> {
+  switch (type) {
+    // Base error types
+    case BaseErrorType.INVALID_STATE:
+      return `Invalid state: ${state}. Expected a different state.` as ErrorMessage<
+        T,
+        S
+      >;
+    case BaseErrorType.INSUFFICIENT_FUNDS:
+      return "Insufficient funds to cover the required amount" as ErrorMessage<
+        T,
+        S
+      >;
+    case BaseErrorType.DUST_OUTPUT:
+      return "Operation would result in a dust output" as ErrorMessage<T, S>;
+    case BaseErrorType.INVALID_FEE_RATE:
+      return "Invalid fee rate specified" as ErrorMessage<T, S>;
+    case BaseErrorType.PSBT_MODIFICATION_ERROR:
+      return "Error modifying the PSBT" as ErrorMessage<T, S>;
+    case BaseErrorType.INVALID_TRANSACTION:
+      return "The transaction is invalid or malformed" as ErrorMessage<T, S>;
+    case BaseErrorType.UNSUPPORTED_OPERATION:
+      return "This operation is not supported in the current context" as ErrorMessage<
+        T,
+        S
+      >;
+
+    // RBF error types
+    case RbfErrorType.ACCELERATION_FAILED:
+      return "Failed to accelerate the transaction" as ErrorMessage<T, S>;
+    case RbfErrorType.CANCELLATION_FAILED:
+      return "Failed to cancel the transaction" as ErrorMessage<T, S>;
+
+    // CPFP error types
+    case CpfpErrorType.PARENT_TX_INVALID:
+      return "The parent transaction is invalid" as ErrorMessage<T, S>;
+    case CpfpErrorType.CHILD_TX_CREATION_FAILED:
+      return "Failed to create the child transaction" as ErrorMessage<T, S>;
+
+    default:
+      return "An unknown error occurred" as ErrorMessage<T, S>;
   }
 }

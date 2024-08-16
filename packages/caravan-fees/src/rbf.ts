@@ -1,14 +1,45 @@
 import { PsbtV2 } from "@caravan/psbt";
-import { Network, sortInputs } from "@caravan/bitcoin";
+import { Network } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
   createOutputScript,
   initializePsbt,
   calculateTotalInputValue,
   calculateTotalOutputValue,
+  TransactionError,
+  getDefaultErrorMessage,
 } from "./utils";
-import { DEFAULT_DUST_THRESHOLD, RBF_SEQUENCE } from "./constants";
-import { RbfTransactionOptions, FeeRateSatsPerVByte, UTXO } from "./types";
+import {
+  DEFAULT_DUST_THRESHOLD,
+  RBF_SEQUENCE,
+  ESTIMATED_PUBKEY_VSIZE,
+  ESTIMATED_SIGNATURE_VSIZE,
+  ESTIMATED_MULTISIG_INPUT_VSIZE,
+  ESTIMATED_MULTISIG_CHANGE_OUTPUT_VSIZE,
+} from "./constants";
+import {
+  RbfTransactionOptions,
+  FeeRateSatsPerVByte,
+  UTXO,
+  BaseErrorType,
+  RbfErrorType,
+  TransactionState,
+  RbfTransactionInfo,
+} from "./types";
+
+class RbfError<
+  T extends BaseErrorType | RbfErrorType,
+  S extends TransactionState,
+> extends TransactionError<T, S> {
+  constructor(type: T, state: S, message?: string) {
+    super(
+      type,
+      state,
+      message || `RBF Error: ${getDefaultErrorMessage(type, state)}`,
+    );
+    this.name = "RbfError";
+  }
+}
 
 /**
  * RbfTransaction Class
@@ -45,11 +76,21 @@ export class RbfTransaction {
   private readonly requiredSigners: number;
   private readonly totalSigners: number;
   private readonly changeOutputIndices: number[];
+  private readonly changeAddress?: string;
+  private readonly useExistingChangeOutput: boolean;
   private readonly incrementalRelayFee: BigNumber;
+
+  // caching and state-management
+  private _currentInputValue: BigNumber;
+  private _currentOutputValue: BigNumber;
+  private _feeIncrease: BigNumber = new BigNumber(0);
+  private _canAccelerate: boolean | null = null;
+  private _canCancel: boolean | null = null;
   private _cachedFeeIncrease: BigNumber | null = null;
   private _cachedVsize: number | null = null;
-  private _isAccelerated: boolean = false;
-  private _isCanceled: boolean = false;
+  private _state: TransactionState = TransactionState.INITIALIZED;
+  private _selectedAdditionalUtxos: UTXO[] = [];
+  private _error: RbfError<RbfErrorType, TransactionState> | null = null;
 
   /**
    * Constructor for RbfTransaction
@@ -72,24 +113,51 @@ export class RbfTransaction {
     this.totalSigners = options.totalSigners;
     this.changeOutputIndices = options.changeOutputIndices;
     this.incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
+    this.changeAddress = options.changeAddress;
+    this.useExistingChangeOutput = options.useExistingChangeOutput || false;
+
+    this._currentInputValue = new BigNumber(this.totalInputValue);
+    this._currentOutputValue = new BigNumber(this.totalOutputValue);
+    this._cachedVsize = this.estimateVsize(this.originalPsbt);
+
     this.validatePsbt();
   }
 
   private validatePsbt(): void {
     if (!this.originalPsbt.isRBFSignaled) {
-      throw new Error("This transaction is not signaling RBF.");
+      this._state = TransactionState.ERROR;
+      this._error = new RbfError(
+        RbfErrorType.INVALID_PSBT,
+        TransactionState.INITIALIZED,
+        "This transaction is not signaling RBF.",
+      );
     }
   }
 
   // getters and setters
 
+  get state(): TransactionState {
+    return this._state;
+  }
+
+  get error(): RbfError<RbfErrorType, TransactionState> | null {
+    return this._error;
+  }
+
   /**
-   * Get the current modified PSBT
-   *
-   * @returns {PsbtV2} The current state of the modified PSBT
+   * Get the estimated vsize of the transaction of original tx
+   * @returns {number} The estimated vsize in virtual bytes
    */
-  get psbt(): PsbtV2 {
-    return this.modifiedPsbt;
+  get vSizeofOrignalTx(): number {
+    return this.estimateVsize(this.originalPsbt);
+  }
+
+  /**
+   * Get the estimated vsize of the transaction of current tx
+   * @returns {number} The estimated vsize in virtual bytes
+   */
+  get vsizeofCurrentTx(): number {
+    return this._cachedVsize || this.estimateVsize(this.modifiedPsbt);
   }
 
   /**
@@ -130,14 +198,49 @@ export class RbfTransaction {
   }
 
   /**
+   * Get the original fee of the transaction
+   * @returns {string} The original fee in satoshis
+   */
+  public get originalFee(): string {
+    return new BigNumber(calculateTotalInputValue(this.originalPsbt))
+      .minus(calculateTotalOutputValue(this.originalPsbt))
+      .toString();
+  }
+
+  /**
    * Get the current fee of the transaction
    *
    * @returns {string} The current fee in satoshis
    */
   get currentFee(): string {
-    return new BigNumber(this.totalInputValue)
-      .minus(this.totalOutputValue)
-      .toString();
+    const fee = new BigNumber(this.totalInputValue).minus(
+      this.totalOutputValue,
+    );
+    if (fee.isNegative()) {
+      throw new Error(
+        "Invalid transaction state: total output value exceeds total input value.",
+      );
+    }
+    return fee.toString();
+  }
+
+  /**
+   * Get the new fee after RBF
+   * @returns {string} The new fee in satoshis
+   */
+  public get newFee(): string {
+    if (this._state !== TransactionState.FINALIZED) {
+      return "0";
+    }
+    const fee = new BigNumber(this.totalInputValue).minus(
+      this.totalOutputValue,
+    );
+    if (fee.isNegative()) {
+      throw new Error(
+        "Invalid transaction state: total output value exceeds total input value.",
+      );
+    }
+    return fee.toString();
   }
 
   /**
@@ -151,7 +254,159 @@ export class RbfTransaction {
       .toString();
   }
 
+  /**
+   * Estimation Check if the transaction can be accelerated
+   * @returns {boolean} True if the transaction can be accelerated
+   */
+  get canAccelerate(): boolean {
+    if (this._canAccelerate === null) {
+      this._canAccelerate = this.checkCanAccelerate();
+    }
+    return this._canAccelerate;
+  }
+
+  /**
+   * Estimation Check if the transaction can be canceled
+   * @returns {boolean} True if the transaction can be canceled
+   */
+  get canCancel(): boolean {
+    if (this._canCancel === null) {
+      this._canCancel = this.checkCanCancel();
+    }
+    return this._canCancel;
+  }
+  /**
+   * Get the list of additional UTXOs selected for the RBF transaction
+   * @returns {UTXO[]} The list of selected additional UTXOs
+   */
+
+  get getSelectedAdditionalUtxos(): UTXO[] {
+    if (this._state !== TransactionState.FINALIZED) {
+      throw new RbfError(
+        BaseErrorType.INVALID_STATE,
+        this._state,
+        "Transaction has not been finalized",
+      );
+    }
+    return [...this._selectedAdditionalUtxos];
+  }
+
   // Methods
+
+  /**
+   * Analyzes the transaction to determine if it's eligible for RBF
+   * @returns {boolean} True if the transaction can be replaced, false otherwise
+   */
+  public analyze(): boolean {
+    if (this._state !== TransactionState.INITIALIZED) {
+      throw new RbfError(
+        BaseErrorType.INVALID_STATE,
+        this._state,
+        "Transaction has already been analyzed or modified.",
+      );
+    }
+    try {
+      this._state = TransactionState.ANALYZING;
+      this.updateSequenceNumbers();
+      this._state = TransactionState.ANALYZED;
+      return true;
+    } catch (error) {
+      this._state = TransactionState.ERROR;
+      this._error = new RbfError(
+        RbfErrorType.ANALYSIS_FAILED,
+        this._state,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Prepares an accelerated replacement transaction
+   *
+   * This method modifies and prepares the existing PSBT with increased fees to accelerate confirmation.
+   * It adheres to BIP125 rules and adjusts outputs or adds inputs as necessary.
+   *
+   * @returns {boolean} True if preparation was successful, false otherwise
+   * @throws {Error} If unable to create a valid replacement transaction
+   */
+  public prepareAccelerated(): boolean {
+    if (this._state !== TransactionState.ANALYZED) {
+      throw new RbfError(
+        BaseErrorType.INVALID_STATE,
+        this._state,
+        "Transaction must be analyzed before acceleration.",
+      );
+    }
+    try {
+      this._state = TransactionState.MODIFYING;
+      this.adjustOutputs();
+      this.addAdditionalInputsIfNeeded();
+
+      this._state = TransactionState.FINALIZING;
+      this.updateFeeRate();
+
+      this._state = TransactionState.FINALIZED;
+      return true;
+    } catch (error) {
+      this._state = TransactionState.ERROR;
+      this._error = new RbfError(
+        RbfErrorType.ACCELERATION_FAILED,
+        this._state,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Prepares a cancellation replacement transaction
+   *
+   * This method creates a new PSBT that attempts to cancel the original transaction
+   * by redirecting all funds (minus the new fee) to a specified address.
+   *
+   * @param {string} destinationAddress - The address to send funds to in the cancellation transaction
+   * @returns {boolean} True if preparation was successful, false otherwise
+   * @throws {Error} If unable to create a valid cancellation transaction
+   */
+  public prepareCanceled(destinationAddress: string): boolean {
+    if (this._state !== TransactionState.ANALYZED) {
+      throw new RbfError(
+        BaseErrorType.INVALID_STATE,
+        this._state,
+        "Transaction must be analyzed before cancellation.",
+      );
+    }
+    try {
+      this._state = TransactionState.MODIFYING;
+      this.createCancelOutput(destinationAddress);
+      this.addAdditionalInputsIfNeeded();
+
+      this._state = TransactionState.FINALIZING;
+      this.updateFeeRate();
+
+      this._state = TransactionState.FINALIZED;
+      return true;
+    } catch (error) {
+      this._state = TransactionState.ERROR;
+      this._error = new RbfError(
+        RbfErrorType.CANCELLATION_FAILED,
+        this._state,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Get the finalized PSBT after acceleration or cancellation
+   * @returns {PsbtV2 | null} The finalized PSBT or null if not finalized
+   */
+  public getFinalizedPsbt(): PsbtV2 | null {
+    return this._state === TransactionState.FINALIZED
+      ? this.modifiedPsbt
+      : null;
+  }
 
   /**
    * Calculate the fee increase required for RBF
@@ -164,8 +419,11 @@ export class RbfTransaction {
     targetFeeRate: FeeRateSatsPerVByte = this._targetFeeRate,
     incrementalRelayFee: FeeRateSatsPerVByte = this.incrementalRelayFee.toNumber(),
   ): BigNumber {
+    if (this._cachedFeeIncrease) {
+      return this._cachedFeeIncrease;
+    }
     const currentFee = new BigNumber(this.currentFee);
-    const vsize = this.estimateVsize();
+    const vsize = this.estimateVsize(this.modifiedPsbt);
     const currentFeeRate = currentFee.dividedBy(vsize);
     const incrementalRelayFeeBN = new BigNumber(incrementalRelayFee);
 
@@ -182,72 +440,76 @@ export class RbfTransaction {
     );
 
     // Ensure the new fee is at least 1 sat higher than the current fee
-    return BigNumber.max(minReplacementFee.minus(currentFee), new BigNumber(1));
+    this._cachedFeeIncrease = BigNumber.max(
+      minReplacementFee.minus(currentFee),
+      new BigNumber(1),
+    );
+
+    return this._cachedFeeIncrease;
   }
 
   /**
-   * Prepares an accelerated replacement transaction
-   *
-   * This method creates a new PSBT with increased fees to accelerate confirmation.
-   * It adheres to BIP125 rules and adjusts outputs or adds inputs as necessary.
-   *
-   * @returns {PsbtV2} A new modified PSBTV2 with the accelerated transaction
-   * @throws {Error} If unable to create a valid replacement transaction
+   * Get detailed information about the RBF transaction
+   * @returns {RbfTransactionInfo} Detailed transaction information
    */
-  public prepareAccelerated(): PsbtV2 {
-    if (!this._isAccelerated) {
-      this.resetState();
-      this.updateSequenceNumbers();
-      this.adjustOutputs();
-      this.addAdditionalInputsIfNeeded();
-      this.updateFeeRate();
-      this._isAccelerated = true;
-    }
-    return this.modifiedPsbt;
-  }
-
-  /**
-   * Prepares a cancellation replacement transaction
-   *
-   * This method creates a new PSBT that attempts to cancel the original transaction
-   * by redirecting all funds (minus the new fee) to a specified address.
-   *
-   * @param {string} destinationAddress - The address to send funds to in the cancellation transaction
-   * @returns {RbfTransaction} A new modified PSBTV2 with the cancellation transaction
-   * @throws {Error} If unable to create a valid cancellation transaction
-   */
-  public prepareCanceled(destinationAddress: string): PsbtV2 {
-    if (!this._isCanceled) {
-      this.resetState();
-      this.updateSequenceNumbers();
-      this.createCancelOutput(destinationAddress);
-      this.updateFeeRate();
-      this._isCanceled = true;
-    }
-    return this.modifiedPsbt;
+  public getTransactionInfo(): RbfTransactionInfo {
+    return {
+      state: this._state,
+      originalFee: this.originalFee,
+      newFee: this.newFee,
+      feeIncrease: this._feeIncrease.toString(),
+      vsize: this._cachedVsize || 0,
+      canAccelerate: this.canAccelerate,
+      canCancel: this.canCancel,
+      error: this._error ? this._error.message : null,
+    };
   }
 
   /**
    * Calculate the cost to accelerate the transaction
-   *
    * @returns {string} The cost to accelerate in satoshis
    */
   public costToAccelerate(): string {
-    this.prepareAccelerated();
-    if (!this._cachedFeeIncrease) return this.calculateFeeIncrease().toString();
-    return this._cachedFeeIncrease.toString();
+    if (!this.canAccelerate) {
+      throw new Error("Transaction cannot be accelerated");
+    }
+
+    const originalState = this._state;
+    const originalPsbt = this.modifiedPsbt;
+
+    try {
+      this.prepareAccelerated();
+      const feeIncrease = new BigNumber(this.newFee).minus(this.originalFee);
+      return feeIncrease.toString();
+    } finally {
+      // Restore original state
+      this._state = originalState;
+      this.modifiedPsbt = originalPsbt;
+    }
   }
 
   /**
    * Calculate the cost to cancel the transaction
-   *
    * @param {string} destinationAddress - The address to send funds to in the cancellation transaction
    * @returns {string} The cost to cancel in satoshis
    */
   public costToCancel(destinationAddress: string): string {
-    this.prepareCanceled(destinationAddress);
-    if (!this._cachedFeeIncrease) return this.calculateFeeIncrease().toString();
-    return this._cachedFeeIncrease.toString();
+    if (!this.canCancel) {
+      throw new Error("Transaction cannot be canceled");
+    }
+
+    const originalState = this._state;
+    const originalPsbt = this.modifiedPsbt;
+
+    try {
+      this.prepareCanceled(destinationAddress);
+      const feeIncrease = new BigNumber(this.newFee).minus(this.originalFee);
+      return feeIncrease.toString();
+    } finally {
+      // Restore original state
+      this._state = originalState;
+      this.modifiedPsbt = originalPsbt;
+    }
   }
 
   /**
@@ -258,27 +520,34 @@ export class RbfTransaction {
    */
   public getAbsFees(customFeeRate?: FeeRateSatsPerVByte): string {
     const feeRate = customFeeRate || this._targetFeeRate;
-    return new BigNumber(feeRate).multipliedBy(this.estimateVsize()).toString();
+    const vsize = this.vSizeofOrignalTx;
+    return new BigNumber(feeRate).multipliedBy(vsize).toString();
   }
 
+  // PRIVATE METHODS
+
   private resetState(): void {
+    this._state = TransactionState.INITIALIZED;
+    this._error = null;
     this._cachedVsize = null;
     this._cachedFeeIncrease = null;
-    this._isAccelerated = false;
-    this._isCanceled = false;
     this.modifiedPsbt = new PsbtV2();
     this.originalPsbt.copy(this.modifiedPsbt);
   }
 
   /**
-   * Updates sequence numbers for all inputs
+   * Updates sequence numbers for a single input
    *
-   * This method ensures that all inputs have a sequence number that signals RBF,
+   * This method ensures that a single input has a sequence number that signals RBF,
    * as required by BIP125.
    *
    * @private
    */
   private updateSequenceNumbers(): void {
+    if (this._state !== TransactionState.INITIALIZED) {
+      throw new RbfError(BaseErrorType.INVALID_STATE, this._state);
+    }
+
     let rbfSignaled = false;
 
     for (let i = 0; i < this.modifiedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
@@ -293,6 +562,10 @@ export class RbfTransaction {
           continue;
           // Continue to the next input if this one fails
         }
+      } else {
+        // RBF is already signaled, no need to update
+        rbfSignaled = true;
+        break;
       }
     }
 
@@ -340,7 +613,6 @@ export class RbfTransaction {
     const increasedFees = this._cachedFeeIncrease
       ? this._cachedFeeIncrease
       : this.calculateFeeIncrease();
-
     const newAmount = BigNumber.max(
       outputAmount.minus(increasedFees),
       new BigNumber(0),
@@ -386,6 +658,7 @@ export class RbfTransaction {
           const increasedFees = this._cachedFeeIncrease
             ? this._cachedFeeIncrease
             : this.calculateFeeIncrease();
+
           const feeShare = new BigNumber(increasedFees)
             .multipliedBy(outputAmount)
             .dividedBy(totalNonChangeAmount);
@@ -426,29 +699,32 @@ export class RbfTransaction {
    * @throws {Error} If insufficient funds are available to cover the new fee
    */
   private addAdditionalInputsIfNeeded(): void {
-    const totalInputValue = new BigNumber(this.totalInputValue);
-    const totalOutputValue = new BigNumber(this.totalOutputValue);
+    const currentInputValue = new BigNumber(this.totalInputValue);
+    const currentOutputValue = new BigNumber(this.totalOutputValue);
+    const requiredFee = new BigNumber(this.requiredAbsoluteFee);
+    const totalRequiredAmount = currentOutputValue.plus(requiredFee);
 
-    if (
-      totalInputValue.isLessThan(
-        totalOutputValue.plus(new BigNumber(this.requiredAbsoluteFee)),
-      )
-    ) {
-      this.addAdditionalInputs(
-        totalOutputValue
-          .plus(new BigNumber(this.requiredAbsoluteFee))
-          .minus(totalInputValue),
+    if (currentInputValue.isGreaterThanOrEqualTo(totalRequiredAmount)) {
+      // No need for additional inputs
+      return;
+    }
+
+    const additionalInputsNeeded = this.calculateAdditionalInputsNeeded(
+      currentInputValue,
+      totalRequiredAmount,
+      requiredFee,
+    );
+
+    if (additionalInputsNeeded.length === 0) {
+      throw new Error(
+        "Insufficient funds to cover the increased fee, even with additional UTXOs",
       );
     }
-  }
 
-  private addAdditionalInputs(requiredAmount: BigNumber): void {
-    let addedAmount = new BigNumber(0);
-    // Sort the additional UTXOs in descending order of value
-    const sortedUtxos = sortInputs(this.additionalUtxos);
+    this._selectedAdditionalUtxos = additionalInputsNeeded;
 
-    for (const utxo of sortedUtxos) {
-      if (addedAmount.isGreaterThanOrEqualTo(requiredAmount)) break;
+    // Add the selected inputs to the PSBT
+    for (const utxo of additionalInputsNeeded) {
       this.modifiedPsbt.addInput({
         hash: utxo.txid,
         index: utxo.vout,
@@ -458,13 +734,155 @@ export class RbfTransaction {
         },
         ...utxo.additionalData,
       });
-      addedAmount = addedAmount.plus(utxo.value);
     }
-    if (addedAmount.isLessThan(requiredAmount)) {
-      throw new Error(
-        "Insufficient funds in additional UTXOs to cover new fee rate.",
+
+    // Handle change output
+    this.handleChangeOutput(
+      currentInputValue,
+      totalRequiredAmount,
+      additionalInputsNeeded,
+    );
+  }
+
+  /**
+   * Calculates the additional inputs needed to cover the required amount and fees.
+   * This method accounts for the increased transaction size due to additional inputs
+   * and a potential change output.
+   *
+   * @param currentInputValue - The current total input value of the transaction.
+   * @param totalRequired - The total amount required (including outputs and initial fee estimate).
+   * @param initialRequiredFee - The initial fee estimate.
+   * @returns An array of selected UTXOs to be used as additional inputs.
+   */
+  private calculateAdditionalInputsNeeded(
+    currentInputValue: BigNumber,
+    totalRequired: BigNumber,
+    initialRequiredFee: BigNumber,
+  ): UTXO[] {
+    const selectedUtxos: UTXO[] = [];
+    let totalSelected = new BigNumber(0);
+    let requiredFee = initialRequiredFee;
+    let additionalVsize = ESTIMATED_MULTISIG_CHANGE_OUTPUT_VSIZE; // Assume we'll need a change output
+
+    // Calculate the vsize for a single multisig input based on M-of-N
+    const singleInputVsize =
+      ESTIMATED_MULTISIG_INPUT_VSIZE +
+      this.requiredSigners * ESTIMATED_SIGNATURE_VSIZE +
+      this.totalSigners * ESTIMATED_PUBKEY_VSIZE;
+
+    // vsize of current transaction
+    const currentVSize = this._cachedVsize
+      ? this._cachedVsize
+      : this.estimateVsize(this.originalPsbt);
+
+    // Sort UTXOs by value, descending
+    const sortedUtxos = [...this.additionalUtxos].sort(
+      (a, b) => b.value - a.value,
+    );
+
+    for (const utxo of sortedUtxos) {
+      selectedUtxos.push(utxo);
+      totalSelected = totalSelected.plus(utxo.value);
+
+      // Recalculate required fee with the additional input
+      additionalVsize += singleInputVsize;
+
+      requiredFee = new BigNumber(this._targetFeeRate).multipliedBy(
+        currentVSize + additionalVsize,
       );
+
+      if (
+        currentInputValue
+          .plus(totalSelected)
+          .isGreaterThanOrEqualTo(totalRequired.plus(requiredFee))
+      ) {
+        // We have enough funds
+        break;
+      }
     }
+
+    if (
+      currentInputValue
+        .plus(totalSelected)
+        .isLessThan(totalRequired.plus(requiredFee))
+    ) {
+      // Still not enough funds
+      return [];
+    }
+
+    return selectedUtxos;
+  }
+
+  /**
+   * Handles the creation or update of a change output based on the excess funds.
+   * This method decides whether to update an existing change output or create a new one.
+   *
+   * @param currentInputValue - The current total input value of the transaction.
+   * @param totalRequired - The total amount required (including outputs and fee).
+   * @param additionalInputs - An array of additional UTXOs selected as inputs.
+   */
+  private handleChangeOutput(
+    currentInputValue: BigNumber,
+    totalRequired: BigNumber,
+    additionalInputs: UTXO[],
+  ): void {
+    const totalInputValue = currentInputValue.plus(
+      additionalInputs.reduce(
+        (sum, utxo) => sum.plus(utxo.value),
+        new BigNumber(0),
+      ),
+    );
+    const excess = totalInputValue.minus(totalRequired);
+
+    if (excess.isGreaterThan(this.dustThreshold)) {
+      if (this.useExistingChangeOutput) {
+        this.updateExistingChangeOutput(excess);
+      } else {
+        this.addNewChangeOutput(excess);
+      }
+    }
+  }
+
+  /**
+   * Updates an existing change output with the new excess amount.
+   *
+   * @param excessAmount - The amount of excess funds to be added to the change output.
+   */
+  private updateExistingChangeOutput(excessAmount: BigNumber): void {
+    const changeOutputIndex = this.changeOutputIndices[0]; // Assume first change output , can make this again as per consumer code preference
+    if (changeOutputIndex === undefined) {
+      throw new Error("No existing change output found");
+    }
+
+    const currentChangeAmount = new BigNumber(
+      this.modifiedPsbt.PSBT_OUT_AMOUNT[changeOutputIndex].toString(),
+    );
+    const newChangeAmount = currentChangeAmount.plus(excessAmount);
+
+    this.modifiedPsbt.PSBT_OUT_AMOUNT[changeOutputIndex] = BigInt(
+      newChangeAmount.integerValue().toString(),
+    );
+  }
+
+  /**
+   * Adds a new change output to the transaction with the given excess amount.
+   *
+   * @param excessAmount - The amount of excess funds to be set as the new change output.
+   */
+  private addNewChangeOutput(amount: BigNumber): void {
+    if (!this.changeAddress) {
+      throw new Error("Change address not provided");
+    }
+
+    const changeOutput = {
+      amount: Number(amount.integerValue().toString()),
+      script: createOutputScript(this.changeAddress, this.network),
+    };
+
+    this.modifiedPsbt.addOutput(changeOutput);
+    this.changeOutputIndices.push(
+      this.modifiedPsbt.PSBT_GLOBAL_OUTPUT_COUNT - 1,
+    );
   }
 
   private createCancelOutput(destinationAddress: string): void {
@@ -487,9 +905,56 @@ export class RbfTransaction {
     const newFee = calculateTotalInputValue(this.modifiedPsbt).minus(
       calculateTotalOutputValue(this.modifiedPsbt),
     );
-    if (newFee.isLessThan(new BigNumber(this.requiredAbsoluteFee))) {
+    const requiredFee = this._cachedFeeIncrease!.plus(
+      new BigNumber(this.currentFee),
+    );
+    if (newFee.isLessThan(requiredFee)) {
       throw new Error("New fee must be higher than the required fee for RBF");
     }
+
+    // Update the fee rate based on the modified transaction
+    this._targetFeeRate = Number(
+      newFee.dividedBy(this.estimateVsize(this.modifiedPsbt)).toFixed(2),
+    );
+  }
+
+  private checkCanAccelerate(): boolean {
+    if (this._state !== TransactionState.ANALYZED || this._error) {
+      return false;
+    }
+
+    const feeIncrease = this.calculateFeeIncrease();
+    const availableFunds = this.calculateAvailableFunds();
+
+    return availableFunds.isGreaterThanOrEqualTo(feeIncrease);
+  }
+
+  private checkCanCancel(): boolean {
+    if (this._state !== TransactionState.ANALYZED || this._error) {
+      return false;
+    }
+
+    const feeIncrease = this.calculateFeeIncrease();
+    const totalInputValue = new BigNumber(this.totalInputValue);
+    const minCancelOutput = this.dustThreshold;
+
+    return totalInputValue
+      .minus(feeIncrease)
+      .isGreaterThanOrEqualTo(minCancelOutput);
+  }
+
+  private calculateAvailableFunds(): BigNumber {
+    const changeOutputs = this.changeOutputIndices.map(
+      (index) =>
+        new BigNumber(this.modifiedPsbt.PSBT_OUT_AMOUNT[index].toString()),
+    );
+    const additionalUtxos = this.additionalUtxos.reduce(
+      (sum, utxo) => sum.plus(utxo.value),
+      new BigNumber(0),
+    );
+    return changeOutputs
+      .reduce((sum, amount) => sum.plus(amount), new BigNumber(0))
+      .plus(additionalUtxos);
   }
 
   /**
@@ -502,51 +967,44 @@ export class RbfTransaction {
    * @private
    * @returns {number} Estimated vsize in virtual bytes
    */
-  private estimateVsize(): number {
-    if (this._cachedVsize === null) {
-      // If neither accelerated nor canceled, prepare the accelerated transaction
-      if (!this._isAccelerated && !this._isCanceled) {
-        this.prepareAccelerated();
-      }
-      let totalWeight = 0;
+  private estimateVsize(psbt: PsbtV2): number {
+    let totalWeight = 0;
 
-      // Base transaction overhead
-      totalWeight += 10 * 4; // version, locktime, input count, output count
+    // Base transaction overhead
+    totalWeight += 10 * 4; // version, locktime, input count, output count
 
-      // Calculate weight for inputs
-      for (let i = 0; i < this.modifiedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-        totalWeight += this.estimateInputWeight(i);
-      }
-
-      // Calculate weight for outputs
-      for (let i = 0; i < this.modifiedPsbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
-        totalWeight += this.estimateOutputWeight(i);
-      }
-      this._cachedVsize = Math.ceil(totalWeight / 4);
+    // Calculate weight for inputs
+    for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+      totalWeight += this.estimateInputWeight(i, psbt);
     }
-    return this._cachedVsize;
+
+    // Calculate weight for outputs
+    for (let i = 0; i < psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
+      totalWeight += this.estimateOutputWeight(i, psbt);
+    }
+
+    return Math.ceil(totalWeight / 4);
   }
 
-  private estimateInputWeight(inputIndex: number): number {
+  private estimateInputWeight(inputIndex: number, psbt: PsbtV2): number {
     let weight = 32 * 4; // prevout (32 bytes)
     weight += 4 * 4; // sequence (4 bytes)
 
-    const witnessUtxo = this.modifiedPsbt.PSBT_IN_WITNESS_UTXO[inputIndex];
-    const nonWitnessUtxo =
-      this.modifiedPsbt.PSBT_IN_NON_WITNESS_UTXO[inputIndex];
-    const redeemScript = this.modifiedPsbt.PSBT_IN_REDEEM_SCRIPT[inputIndex];
-    const witnessScript = this.modifiedPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
+    const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[inputIndex];
+    const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[inputIndex];
+    const redeemScript = psbt.PSBT_IN_REDEEM_SCRIPT[inputIndex];
+    const witnessScript = psbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
 
     if (witnessUtxo) {
       // Segwit input
       if (redeemScript) {
         // P2SH-P2WSH
         weight += 23 * 4; // scriptSig length (1) + scriptSig (22)
-        weight += this.estimateWitnessWeight(inputIndex);
+        weight += this.estimateWitnessWeight(inputIndex, psbt);
       } else if (witnessScript) {
         // Native P2WSH
         weight += 1 * 4; // scriptSig length (1), empty scriptSig
-        weight += this.estimateWitnessWeight(inputIndex);
+        weight += this.estimateWitnessWeight(inputIndex, psbt);
       } else {
         // Native P2WPKH
         weight += 1 * 4; // scriptSig length (1), empty scriptSig
@@ -572,8 +1030,8 @@ export class RbfTransaction {
     return weight;
   }
 
-  private estimateWitnessWeight(inputIndex: number): number {
-    const witnessScript = this.modifiedPsbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
+  private estimateWitnessWeight(inputIndex: number, psbt: PsbtV2): number {
+    const witnessScript = psbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
     if (!witnessScript) {
       console.warn(`No witness script found for input at index ${inputIndex}`);
       return 0;
@@ -588,13 +1046,10 @@ export class RbfTransaction {
     return weight;
   }
 
-  private estimateOutputWeight(outputIndex: number): number {
+  private estimateOutputWeight(outputIndex: number, psbt: PsbtV2): number {
     let weight = 8 * 4; // 8 bytes for value
 
-    const script = Buffer.from(
-      this.modifiedPsbt.PSBT_OUT_SCRIPT[outputIndex],
-      "hex",
-    );
+    const script = Buffer.from(psbt.PSBT_OUT_SCRIPT[outputIndex], "hex");
     if (!script) {
       console.warn(`No output script found for output at index ${outputIndex}`);
       return weight;
@@ -609,32 +1064,50 @@ export class RbfTransaction {
 
 /**
  * Prepare an RBF transaction for acceleration
- *
- * This function creates a new RbfTransaction instance and prepares an accelerated transaction.
- *
  * @param {RbfTransactionOptions} options - Configuration options for the RBF transaction
- * @returns {PsbtV2} A new PSBTV2 with the accelerated transaction
- * @throws {Error} If unable to create a valid replacement transaction
+ * @returns {PsbtV2 | null} A new PSBTV2 with the accelerated transaction or null if failed
  */
-export function prepareRbfTransaction(options: RbfTransactionOptions): PsbtV2 {
+export function prepareRbfTransaction(
+  options: RbfTransactionOptions,
+): PsbtV2 | null {
   const rbfTx = new RbfTransaction(options);
-  return rbfTx.prepareAccelerated();
+  const canRbf = rbfTx.analyze();
+  if (!canRbf) {
+    console.error("RBF analysis failed:", rbfTx.error?.message);
+    return null;
+  }
+
+  const prepared = rbfTx.prepareAccelerated();
+  if (!prepared) {
+    console.error("RBF acceleration failed:", rbfTx.error?.message);
+    return null;
+  }
+
+  return rbfTx.getFinalizedPsbt();
 }
 
 /**
  * Prepare an RBF transaction for cancellation
- *
- * This function creates a new RbfTransaction instance and prepares a cancellation transaction.
- *
  * @param {RbfTransactionOptions} options - Configuration options for the RBF transaction
  * @param {string} destinationAddress - The address to send funds to in the cancellation transaction
- * @returns {PsbtV2} A new PSBTV2 with the cancellation transaction
- * @throws {Error} If unable to create a valid cancellation transaction
+ * @returns {PsbtV2 | null} A new PSBTV2 with the cancellation transaction or null if failed
  */
 export function prepareCancelTransaction(
   options: RbfTransactionOptions,
   destinationAddress: string,
-): PsbtV2 {
+): PsbtV2 | null {
   const rbfTx = new RbfTransaction(options);
-  return rbfTx.prepareCanceled(destinationAddress);
+  const canRbf = rbfTx.analyze();
+  if (!canRbf) {
+    console.error("RBF analysis failed:", rbfTx.error?.message);
+    return null;
+  }
+
+  const prepared = rbfTx.prepareCanceled(destinationAddress);
+  if (!prepared) {
+    console.error("RBF cancellation failed:", rbfTx.error?.message);
+    return null;
+  }
+
+  return rbfTx.getFinalizedPsbt();
 }

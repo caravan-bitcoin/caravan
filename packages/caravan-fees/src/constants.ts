@@ -41,3 +41,28 @@ export const DEFAULT_MAX_CHILD_TX_SIZE = 1000;
  * or user preferences.
  */
 export const DEFAULT_MAX_ADDITIONAL_INPUTS = 3;
+
+/**
+ * Constant representing the estimated vsize increase when adding a single input.
+ * This is a conservative estimate for a P2WSH multisig input.
+ * The actual size may vary based on the number of signatures (M) and total keys (N).
+ */
+export const ESTIMATED_MULTISIG_INPUT_VSIZE = 140; // vbytes
+
+/**
+ * Constant representing the estimated vsize for a change output.
+ * This assumes a P2WSH multisig output.
+ */
+export const ESTIMATED_MULTISIG_CHANGE_OUTPUT_VSIZE = 43; // vbytes
+
+/**
+ * Constant representing the estimated vsize increase for each signature in a multisig input.
+ * This is used to account for the variable size based on the number of required signatures.
+ */
+export const ESTIMATED_SIGNATURE_VSIZE = 72; // vbytes
+
+/**
+ * Constant representing the estimated vsize increase for each public key in a multisig script.
+ * This is used to account for the variable size based on the total number of keys.
+ */
+export const ESTIMATED_PUBKEY_VSIZE = 34; // vbytes
