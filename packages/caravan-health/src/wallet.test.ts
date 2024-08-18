@@ -32,7 +32,7 @@ const transactions: Transaction[] = [
     txid: "txid2",
     vin: [
       {
-        prevTxId: "prevTxId2",
+        prevTxId: "txid1",
         vout: 0,
         sequence: 0,
       },
@@ -49,18 +49,8 @@ const transactions: Transaction[] = [
         value: 0.2,
       },
       {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
-        value: 0.2,
-      },
-      {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
-        value: 0.2,
-      },
-      {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
+        scriptPubkeyHex: "scriptPubkeyHex3",
+        scriptPubkeyAddress: "scriptPubkeyAddress1",
         value: 0.2,
       },
     ],
@@ -189,12 +179,21 @@ describe("Wallet Metrics", () => {
     it("should return a map of all the used or unused addresses", () => {
       const addressUsageMap = walletMetrics.constructAddressUsageMap();
 
-      const expectedMap = {
-        scriptPubkeyAddress1: false,
-        scriptPubkeyAddress2: false,
-      };
+      const expectedMap = new Map<string, number>();
+      expectedMap.set("scriptPubkeyAddress1", 2);
+      expectedMap.set("scriptPubkeyAddress2", 1);
 
       expect(addressUsageMap).toEqual(expectedMap);
+    });
+  });
+
+  describe("is Address Reused", () => {
+    it("should return true for reused address", () => {
+      expect(walletMetrics.isReusedAddress("scriptPubkeyAddress1")).toBe(true);
+    });
+
+    it("should return false for unused address", () => {
+      expect(walletMetrics.isReusedAddress("scriptPubkeyAddress2")).toBe(false);
     });
   });
 });

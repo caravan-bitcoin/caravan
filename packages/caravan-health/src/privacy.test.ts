@@ -300,14 +300,14 @@ describe("Privacy metric scoring", () => {
       expect(score).toBe(0.75);
 
       const score2: number = privacyMetric.getTopologyScore(transactions[1]);
-      expect(score2).toBeCloseTo(0.67);
+      expect(score2).toBeCloseTo(0.44);
     });
   });
 
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
       const meanScore: number = privacyMetric.getMeanTopologyScore();
-      expect(meanScore).toBeCloseTo(0.71);
+      expect(meanScore).toBeCloseTo(0.597);
     });
   });
 

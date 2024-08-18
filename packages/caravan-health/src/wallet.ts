@@ -2,7 +2,7 @@ import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { AddressUtxos, AddressUsageMap } from "./types";
 
 export class WalletMetrics {
-  public addressUsageMap: AddressUsageMap;
+  public addressUsageMap: Map<string, number>;
   public transactions: Transaction[];
   public utxos: AddressUtxos;
   constructor(transactions: Transaction[], utxos: AddressUtxos) {
@@ -113,16 +113,16 @@ export class WalletMetrics {
     }
   }
 
-  constructAddressUsageMap(): AddressUsageMap {
-    let addressUsageMap: AddressUsageMap = {};
+  constructAddressUsageMap(): Map<string, number> {
+    const addressUsageMap: Map<string, number> = new Map();
     const transactions = this.transactions;
     for (const tx of transactions) {
       for (const output of tx.vout) {
         let address = output.scriptPubkeyAddress;
-        if (addressUsageMap[address]) {
-          addressUsageMap[address] = true;
+        if (addressUsageMap.has(address)) {
+          addressUsageMap.set(address, addressUsageMap.get(address)! + 1);
         } else {
-          addressUsageMap[address] = false;
+          addressUsageMap.set(address, 1);
         }
       }
     }
@@ -133,9 +133,9 @@ export class WalletMetrics {
     Utility function to check if the given address was used already in past transactions
   */
   isReusedAddress(address: string): boolean {
-    if (this.addressUsageMap[address]) {
-      return true;
-    }
-    return false;
+    return (
+      this.addressUsageMap.has(address) &&
+      this.addressUsageMap.get(address)! > 1
+    );
   }
 }

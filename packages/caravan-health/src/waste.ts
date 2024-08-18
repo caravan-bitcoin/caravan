@@ -125,6 +125,37 @@ export class WasteMetrics extends WalletMetrics {
     return weight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
   }
 
+  /*
+    Name : calculateDustLimits
+    Definition : 
+      Dust outputs are uneconomical to spend because the fees to spend them are higher than 
+      the value of the output. So to avoid the situations for having dust outputs in the wallet,
+      we calculate the dust limits for the wallet.
+
+    Calculation :
+      lowerLimit - Below which the UTXO will actually behave as a dust output.
+      upperLimit - Above which the UTXO will be safe and economical to spend.
+      riskMultiplier - A factor that helps to determine the upper limit.
+
+      The average size of the transaction to move one UTXO value could be 250-400 vBytes.
+      So, for the lower limit we are taking 250 vBytes as the transaction weight by default.
+      If your wallet supports weight units, you can change the value accordingly.
+
+      lowerLimit = 250 * feeRate (sats/vByte)
+      upperLimit = lowerLimit * riskMultiplier
+  */
+  calculateDustLimits(
+    feeRate: number,
+    txWeight: number = 250,
+    riskMultiplier: number = 2,
+  ): { lowerLimit: number; upperLimit: number } {
+    // By default, we are taking 250 vBytes as the transaction weight
+    // and 2 as the risk multiplier since weight could go as high as 400-500 vBytes.
+    let lowerLimit: number = txWeight * feeRate;
+    let upperLimit: number = lowerLimit * riskMultiplier;
+    return { lowerLimit, upperLimit };
+  }
+
   /* 
     Name : 
       Weighted Waste Score (W.W.S)
