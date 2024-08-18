@@ -127,6 +127,16 @@ describe("Waste metric scoring", () => {
     });
   });
 
+  describe("Dust Limits", () => {
+    it("calculates the lower and upper limit of the dust amount based on the fee rate and transaction weight", () => {
+      const uninitializedWasteMetric = new WasteMetrics();
+      const { lowerLimit, upperLimit } =
+        uninitializedWasteMetric.calculateDustLimits(10, 300, 1.5);
+      expect(lowerLimit).toBe(3000);
+      expect(upperLimit).toBe(4500);
+    });
+  });
+
   describe("Weighted Waste Score (W.W.S)", () => {
     it("calculates the overall waste of the wallet based on the relative fees score, fees to amount ratio and the UTXO mass factor", () => {
       const score: number = wasteMetric.weightedWasteScore(

@@ -2,13 +2,18 @@ import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { AddressUtxos, AddressUsageMap } from "./types";
 
 export class WalletMetrics {
-  public addressUsageMap: Map<string, number>;
-  public transactions: Transaction[];
-  public utxos: AddressUtxos;
-  constructor(transactions: Transaction[], utxos: AddressUtxos) {
-    this.transactions = transactions;
-    this.utxos = utxos;
-    this.addressUsageMap = this.constructAddressUsageMap();
+  public addressUsageMap: Map<string, number> = new Map();
+  public transactions: Transaction[] = [];
+  public utxos: AddressUtxos = {};
+
+  constructor(transactions?: Transaction[], utxos?: AddressUtxos) {
+    if (transactions) {
+      this.transactions = transactions;
+      this.addressUsageMap = this.constructAddressUsageMap();
+    }
+    if (utxos) {
+      this.utxos = utxos;
+    }
   }
   /*
     Name : UTXO Mass Factor
