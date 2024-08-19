@@ -1,411 +1,539 @@
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
-import { Network } from "@caravan/bitcoin";
+import { Transaction, payments } from "bitcoinjs-lib-v6";
+import { networkData, Network } from "@caravan/bitcoin";
 import {
   UTXO,
-  FeeRateSatsPerVByte,
-  TransactionAnalyzerOptions,
+  AnalyzerOptions,
   FeeBumpStrategy,
+  TransactionInput,
+  TransactionOutput,
 } from "./types";
-import {
-  initializePsbt,
-  calculateTotalInputValue,
-  calculateTotalOutputValue,
-} from "./utils";
-import { DEFAULT_DUST_THRESHOLD } from "./constants";
+import { ESTIMATED_CHILD_TX_SIZE } from "./constants";
+import BigNumber from "bignumber.js";
 
 /**
  * TransactionAnalyzer Class
  *
- * This class provides comprehensive analysis of Bitcoin transactions,
- * including the possibility of fee bumping through RBF (Replace-By-Fee)
- * or CPFP (Child-Pays-For-Parent) methods.
+ * This class provides comprehensive analysis of Bitcoin transactions, including
+ * fee estimation, RBF (Replace-By-Fee) and CPFP (Child-Pays-For-Parent) capabilities.
+ * It's designed to help wallet developers make informed decisions about fee bumping
+ * strategies for unconfirmed transactions.
  *
- * Features:
- * - Analyzes transactions for RBF and CPFP possibilities
- * - Dynamically updates analysis when new UTXOs are added
- * - Calculates potential fee increases and their impacts
- * - Provides detailed insights into transaction structure and fee rates
- * - Recommends the best fee bumping strategy based on current conditions
+ * Key Features:
+ * - Analyzes transaction inputs, outputs, fees, and size
+ * - Determines RBF and CPFP eligibility
+ * - Recommends optimal fee bumping strategy
+ * - Estimates fees for RBF and CPFP operations
+ * - Provides detailed transaction information for wallet integration
  *
  * Usage:
- * const analyzer = new TransactionAnalyzer(options);
- * console.log(analyzer.canRBF);
- * analyzer.addUtxos([newUtxo1, newUtxo2]);
- * console.log(analyzer.canCPFP);
- * console.log(analyzer.getPotentialFeeIncrease());
- * console.log(analyzer.recommendFeeBumpStrategy());
+ * const analyzer = new TransactionAnalyzer(txHex, options);
+ * const analysis = analyzer.analyze();
+ *
+ * @class
  */
 export class TransactionAnalyzer {
-  private readonly _psbt: PsbtV2;
-  private readonly _network: Network;
-  private readonly _dustThreshold: BigNumber;
-  private readonly requiredSigners: number;
-  private readonly totalSigners: number;
-  private _targetFeeRate: FeeRateSatsPerVByte;
-  private _additionalUtxos: UTXO[];
-  private _spendableOutputs: { index: number; amount: BigNumber }[];
-  private _changeOutputs: { index: number; amount: BigNumber }[];
+  protected readonly originalTx: Transaction;
+  protected readonly network: Network;
+  protected _targetFeeRate: number;
+  protected currentFeeRate: number;
+  protected availableUTXOs: UTXO[];
+  protected readonly dustThreshold: BigNumber;
+  protected changeOutputIndex: number | undefined;
+  protected incrementalRelayFee: BigNumber;
+  protected readonly requiredSigners: number;
+  protected readonly totalSigners: number;
 
+  private _inputs: TransactionInput[] | null = null;
+  private _outputs: TransactionOutput[] | null = null;
+  private _fee: BigNumber | null = null;
+  private _feeRate: BigNumber | null = null;
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
-  private _potentialFeeIncrease: BigNumber | null = null;
+  private _rbfFeeRate: string | null = null;
+  private _cpfpFeeRate: string | null = null;
+  private _recommendedStrategy: FeeBumpStrategy | null = null;
 
-  constructor(options: TransactionAnalyzerOptions) {
-    this._psbt = initializePsbt(options.psbt);
-    this._network = options.network;
-    this._dustThreshold = new BigNumber(
-      options.dustThreshold || DEFAULT_DUST_THRESHOLD,
-    );
+  /**
+   * Creates an instance of TransactionAnalyzer.
+   *
+   * @param {string} txHex - The hexadecimal representation of the transaction to analyze
+   * @param {AnalyzerOptions} options - Configuration options for the analyzer
+   * @throws {Error} If the transaction is invalid or lacks inputs/outputs
+   */
+  constructor(txHex: string, options: AnalyzerOptions) {
+    try {
+      this.originalTx = Transaction.fromHex(txHex);
+    } catch (error: any) {
+      throw new Error(`Invalid transaction: ${error.message}`);
+    }
+    this.validateTransaction();
+    this.network = options.network;
     this._targetFeeRate = options.targetFeeRate;
-    this._additionalUtxos = options.additionalUtxos || [];
-    this._spendableOutputs = this.convertToBigNumberArray(
-      options.spendableOutputs,
-    );
-    this._changeOutputs = this.convertToBigNumberArray(options.changeOutputs);
+    this.currentFeeRate = options.currentFeeRate;
+    this.availableUTXOs = options.availableUTXOs;
+    this.dustThreshold = new BigNumber(options.dustThreshold);
+    this.changeOutputIndex = options.changeOutputIndex;
+    this.incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
     this.requiredSigners = options.requiredSigners;
     this.totalSigners = options.totalSigners;
-
-    this.analyze();
   }
 
-  // Getters
-
-  get psbt(): PsbtV2 {
-    return this._psbt;
+  /**
+   * Gets the transaction ID (txid) of the analyzed transaction.
+   * @returns {string} The transaction ID
+   */
+  get txid(): string {
+    return this.originalTx.getId();
   }
 
-  get network(): Network {
-    return this._network;
+  /**
+   * Gets the virtual size (vsize) of the transaction in virtual bytes.
+   * @returns {number} The virtual size of the transaction
+   */
+  get vsize(): number {
+    return this.originalTx.virtualSize();
   }
 
-  get dustThreshold(): string {
-    return this._dustThreshold.toString();
+  /**
+   * Gets the weight of the transaction in weight units.
+   * @returns {number} The weight of the transaction
+   */
+  get weight(): number {
+    return this.originalTx.weight();
   }
 
-  get targetFeeRate(): FeeRateSatsPerVByte {
+  /**
+   * Gets the analyzed inputs of the transaction.
+   * @returns {TransactionInput[]} An array of transaction inputs
+   */
+  get inputs(): TransactionInput[] {
+    if (!this._inputs) {
+      this._inputs = this.analyzeInputs();
+    }
+    return this._inputs;
+  }
+
+  /**
+   * Gets the analyzed outputs of the transaction.
+   * @returns {TransactionOutput[]} An array of transaction outputs
+   */
+  get outputs(): TransactionOutput[] {
+    if (!this._outputs) {
+      this._outputs = this.analyzeOutputs();
+    }
+    return this._outputs;
+  }
+
+  /**
+   * Calculates and returns the fee of the transaction in satoshis.
+   * @returns {string} The transaction fee in satoshis
+   */
+  get fee(): string {
+    if (!this._fee) {
+      this._fee = this.calculateFee();
+    }
+    return this._fee.toString();
+  }
+
+  /**
+   * Calculates and returns the fee rate of the transaction in satoshis per vbyte.
+   * @returns {string} The transaction fee rate in satoshis per vbyte
+   */
+  get feeRate(): string {
+    if (!this._feeRate) {
+      this._feeRate = new BigNumber(this.fee).dividedBy(this.vsize);
+    }
+    return this._feeRate.toString();
+  }
+
+  /**
+   * Determines if the transaction is eligible for RBF (Replace-By-Fee).
+   * @returns {boolean} True if the transaction can be replaced using RBF, false otherwise
+   */
+  get canRBF(): boolean {
+    if (this._canRBF === null) {
+      this._canRBF = this.canPerformRBF();
+    }
+    return this._canRBF;
+  }
+
+  /**
+   * Determines if the transaction is eligible for CPFP (Child-Pays-For-Parent).
+   * @returns {boolean} True if CPFP can be performed on this transaction, false otherwise
+   */
+  get canCPFP(): boolean {
+    if (this._canCPFP === null) {
+      this._canCPFP = this.canPerformCPFP();
+    }
+    return this._canCPFP;
+  }
+
+  /**
+   * Recommends the optimal fee bumping strategy based on the current transaction state.
+   * @returns {FeeBumpStrategy} The recommended fee bumping strategy
+   */
+  get recommendedStrategy(): FeeBumpStrategy {
+    if (!this._recommendedStrategy) {
+      this._recommendedStrategy = this.recommendStrategy();
+    }
+    return this._recommendedStrategy;
+  }
+
+  /**
+   * Gets the list of available UTXOs for potential use in fee bumping.
+   * @returns {UTXO[]} An array of available UTXOs
+   */
+  get getAvailableUTXOs(): UTXO[] {
+    return this.availableUTXOs;
+  }
+
+  /**
+   * Gets the current target fee rate in satoshis per vbyte.
+   * @returns {number} The target fee rate
+   */
+  get targetFeeRate(): number {
     return this._targetFeeRate;
   }
 
-  get additionalUtxos(): UTXO[] {
-    return [...this._additionalUtxos];
+  /**
+   * Calculates and returns the minimum fee rate required for a successful RBF.
+   * @returns {string} The minimum RBF fee rate in satoshis per vbyte
+   */
+  get rfbFeeRate(): string {
+    if (!this._rbfFeeRate) {
+      const currentFeeRate = this.feeRate;
+
+      const minReplacementFeeRate = BigNumber.max(
+        new BigNumber(currentFeeRate).plus(this.incrementalRelayFee),
+        new BigNumber(this.targetFeeRate),
+      );
+
+      this._rbfFeeRate = minReplacementFeeRate.toString();
+    }
+    return this._rbfFeeRate;
   }
 
-  get spendableOutputs(): { index: number; amount: string }[] {
-    return this.convertToStringArray(this._spendableOutputs);
+  /**
+   * Calculates and returns the fee rate required for a successful CPFP.
+   * @returns {string} The CPFP fee rate in satoshis per vbyte
+   */
+  get cpfpFeeRate(): string {
+    if (!this._cpfpFeeRate) {
+      const originalTxVBytes = this.vsize;
+      const packageSize = originalTxVBytes + ESTIMATED_CHILD_TX_SIZE;
+      const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
+        packageSize,
+      );
+      const expectedFeeRate = BigNumber.max(
+        desiredPackageFee.minus(this.fee),
+        new BigNumber(0),
+      ).dividedBy(ESTIMATED_CHILD_TX_SIZE);
+
+      this._cpfpFeeRate = expectedFeeRate.toString();
+    }
+    return this._cpfpFeeRate;
   }
 
-  get changeOutputs(): { index: number; amount: string }[] {
-    return this.convertToStringArray(this._changeOutputs);
+  /**
+   * Calculates and returns the recommended fee rate based on the current transaction state and target fee rate.
+   * @returns {number} The recommended fee rate in satoshis per vbyte
+   */
+  get getRecommendedFeeRate(): number {
+    const currentFeeRate = parseFloat(this.feeRate);
+    const targetFeeRate = this.targetFeeRate;
+
+    if (currentFeeRate >= targetFeeRate) {
+      return currentFeeRate; // Current fee rate is already sufficient
+    }
+
+    if (this.canRBF && (!this.canCPFP || this.rfbFeeRate <= this.cpfpFeeRate)) {
+      return Math.max(Number(this.rfbFeeRate), targetFeeRate);
+    } else if (this.canCPFP) {
+      return Math.max(Number(this.cpfpFeeRate), targetFeeRate);
+    } else {
+      return targetFeeRate; // If neither RBF nor CPFP is possible, return the target fee rate
+    }
   }
 
-  get canRBF(): boolean {
-    return this._canRBF !== null ? this._canRBF : this.analyzeRBFPossibility();
+  /**
+   * Gets the dust threshold used for analysis.
+   * @returns {string} The dust threshold in satoshis
+   */
+  get getDustThreshold(): string {
+    return this.dustThreshold.toString();
   }
 
-  get canCPFP(): boolean {
-    return this._canCPFP !== null
-      ? this._canCPFP
-      : this.analyzeCPFPPossibility();
-  }
-
-  get currentFeeRate(): FeeRateSatsPerVByte {
-    const txFee = this.calculateTxFee();
-    const vsize = this.estimateVsize();
-    return Number(txFee.dividedBy(vsize).toFixed(2));
-  }
-
-  get totalInputValue(): string {
-    return calculateTotalInputValue(this._psbt).toString();
-  }
-
-  get totalOutputValue(): string {
-    return calculateTotalOutputValue(this._psbt).toString();
-  }
-
-  // Setters
-
-  set targetFeeRate(rate: FeeRateSatsPerVByte) {
+  /**
+   * Sets a new target fee rate for the transaction analysis.
+   * @param {number} rate - The new target fee rate in satoshis per vbyte
+   */
+  set setTargetFeeRate(rate: number) {
     this._targetFeeRate = rate;
-    this.analyze();
+    this._recommendedStrategy = null; // Reset cached value
   }
 
-  // Public methods
+  /**
+   * Sets the index of the change output in the transaction.
+   * @param {number | undefined} index - The index of the change output, or undefined if no change output
+   */
+  set setChangeOutput(index: number | undefined) {
+    this.changeOutputIndex = index;
+    this._outputs = null; // Reset cached value
+    this._canCPFP = null; // Reset cached value
+    this._cpfpFeeRate = null; // Reset cached value
+  }
 
   /**
-   * Adds new UTXOs to the analysis and re-runs the analysis
-   * @param utxos - Array of new UTXOs to add
+   * Performs a comprehensive analysis of the transaction.
+   * @returns {Object} An object containing detailed transaction analysis
    */
-  public addUtxos(utxos: UTXO[]): void {
-    if (utxos.length > 0) {
-      this._additionalUtxos = [...this._additionalUtxos, ...utxos];
-      this.analyze();
+  public analyze(): {
+    txid: string;
+    vsize: number;
+    weight: number;
+    fee: string;
+    feeRate: string;
+    inputs: TransactionInput[];
+    outputs: TransactionOutput[];
+    isRBFSignaled: boolean;
+    canRBF: boolean;
+    canCPFP: boolean;
+    recommendedStrategy: FeeBumpStrategy;
+    estimatedRBFFee: string;
+    estimatedCPFPFee: string;
+  } {
+    return {
+      txid: this.txid,
+      vsize: this.vsize,
+      weight: this.weight,
+      fee: this.fee,
+      feeRate: this.feeRate,
+      inputs: this.inputs,
+      outputs: this.outputs,
+      isRBFSignaled: this.isRBFSignaled(),
+      canRBF: this.canRBF,
+      canCPFP: this.canCPFP,
+      recommendedStrategy: this.recommendedStrategy,
+      estimatedRBFFee: this.estimateRBFFee(),
+      estimatedCPFPFee: this.estimateCPFPFee(),
+    };
+  }
+
+  /**
+   * Retrieves the inputs of the transaction in a format suitable for creating a new transaction.
+   * @returns {Object[]} An array of input objects
+   */
+  public getInputsForNewTransaction(): {
+    hash: Buffer;
+    index: number;
+    sequence: number;
+  }[] {
+    return this.originalTx.ins.map((input) => ({
+      hash: input.hash,
+      index: input.index,
+      sequence: input.sequence,
+    }));
+  }
+
+  /**
+   * Retrieves the outputs of the transaction in a format suitable for creating a new transaction.
+   * @returns {Object[]} An array of output objects
+   */
+  public getOutputsForNewTransaction(): { script: Buffer; value: number }[] {
+    return this.originalTx.outs.map((output) => ({
+      script: output.script,
+      value: output.value,
+    }));
+  }
+
+  /**
+   * Estimates the fee required for a successful RBF (Replace-By-Fee) operation.
+   * @returns {string} The estimated RBF fee in satoshis
+   */
+  public estimateRBFFee(): string {
+    const currentFee = this.fee;
+    const vsize = this.vsize;
+
+    const minReplacementFee = BigNumber.max(
+      new BigNumber(currentFee).plus(
+        this.incrementalRelayFee.multipliedBy(vsize),
+      ),
+      new BigNumber(this.rfbFeeRate).multipliedBy(vsize),
+    );
+
+    return String(
+      BigNumber.max(minReplacementFee.minus(currentFee), new BigNumber(1)),
+    );
+  }
+
+  /**
+   * Estimates the fee required for a successful CPFP (Child-Pays-For-Parent) operation.
+   * @returns {string} The estimated CPFP fee in satoshis
+   */
+  public estimateCPFPFee(): string {
+    const originalTxVBytes = this.vsize;
+    const packageSize = originalTxVBytes + ESTIMATED_CHILD_TX_SIZE;
+
+    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toString();
+  }
+
+  /**
+   * Retrieves the change output of the transaction, if it exists.
+   * @returns {TransactionOutput | null} The change output or null if no change output exists
+   */
+  public getChangeOutput(): TransactionOutput | null {
+    if (this.changeOutputIndex !== undefined) {
+      return this.outputs[this.changeOutputIndex];
+    }
+    return null;
+  }
+
+  // Protected methods
+
+  /**
+   * Analyzes the inputs of the transaction.
+   * @returns {TransactionInput[]} An array of analyzed transaction inputs
+   * @protected
+   */
+  protected analyzeInputs(): TransactionInput[] {
+    return this.originalTx.ins.map((input) => ({
+      txid: input.hash.reverse().toString("hex"),
+      vout: input.index,
+      sequence: input.sequence,
+      scriptSig: input.script.toString("hex"),
+      witness: input.witness.map((w) => w.toString("hex")),
+    }));
+  }
+
+  /**
+   * Analyzes the outputs of the transaction.
+   * @returns {TransactionOutput[]} An array of analyzed transaction outputs
+   * @protected
+   */
+  protected analyzeOutputs(): TransactionOutput[] {
+    return this.originalTx.outs.map((output, index) => ({
+      value: output.value,
+      scriptPubKey: output.script.toString("hex"),
+      address: this.getOutputAddress(output.script),
+      isChange: index === this.changeOutputIndex,
+    }));
+  }
+
+  /**
+   * Attempts to derive the address from an output script.
+   * @param {Buffer} script - The output script
+   * @returns {string} The derived address or an error message if unable to derive
+   * @protected
+   */
+  protected getOutputAddress(script: Buffer): string {
+    try {
+      const p2pkhAddress = payments.p2pkh({
+        output: script,
+        network: networkData(this.network),
+      }).address;
+      const p2shAddress = payments.p2sh({
+        output: script,
+        network: networkData(this.network),
+      }).address;
+      const p2wpkhAddress = payments.p2wpkh({
+        output: script,
+        network: networkData(this.network),
+      }).address;
+      const p2wshAddress = payments.p2wsh({
+        output: script,
+        network: networkData(this.network),
+      }).address;
+
+      return (
+        p2pkhAddress ||
+        p2shAddress ||
+        p2wpkhAddress ||
+        p2wshAddress ||
+        "Unable to derive address"
+      );
+    } catch (e) {
+      return "Unable to derive address";
     }
   }
 
   /**
-   * Updates the spendable outputs and re-runs the analysis
-   * @param outputs - Array of spendable outputs
+   * Calculates the fee for the transaction.
+   * @returns {BigNumber} The calculated fee in satoshis
+   * @protected
    */
-  public updateSpendableOutputs(
-    outputs: { index: number; amount: number }[],
-  ): void {
-    this._spendableOutputs = this.convertToBigNumberArray(outputs);
-    this.analyze();
+  protected calculateFee(): BigNumber {
+    return new BigNumber(this.currentFeeRate).multipliedBy(this.vsize);
   }
 
   /**
-   * Updates the change outputs and re-runs the analysis
-   * @param outputs - Array of change outputs
+   * Checks if the transaction signals RBF (Replace-By-Fee).
+   * @returns {boolean} True if the transaction signals RBF, false otherwise
+   * @protected
    */
-  public updateChangeOutputs(
-    outputs: { index: number; amount: number }[],
-  ): void {
-    this._changeOutputs = this.convertToBigNumberArray(outputs);
-    this.analyze();
+  protected isRBFSignaled(): boolean {
+    return this.originalTx.ins.some((input) => input.sequence < 0xfffffffe);
   }
 
   /**
-   * Calculates the potential fee increase based on the target fee rate
-   * @returns The potential fee increase in satoshis
+   * Determines if RBF (Replace-By-Fee) can be performed on this transaction.
+   * @returns {boolean} True if RBF can be performed, false otherwise
+   * @protected
    */
-  public getPotentialFeeIncrease(): string {
-    if (this._potentialFeeIncrease === null) {
-      this._potentialFeeIncrease = this.calculatePotentialFeeIncrease();
-    }
-    return this._potentialFeeIncrease.toString();
+  protected canPerformRBF(): boolean {
+    return this.isRBFSignaled();
   }
 
   /**
-   * Estimates the cost of performing an RBF transaction
-   * @returns The estimated cost in satoshis, or null if RBF is not possible
+   * Determines if CPFP (Child-Pays-For-Parent) can be performed on this transaction.
+   * @returns {boolean} True if CPFP can be performed, false otherwise
+   * @protected
    */
-  public estimateRBFCost(): string | null {
-    if (!this.canRBF) return null;
-    return this.getPotentialFeeIncrease();
+  protected canPerformCPFP(): boolean {
+    return this.outputs.some(
+      (output) =>
+        !output.isChange &&
+        new BigNumber(output.value).isGreaterThan(this.dustThreshold),
+    );
   }
 
   /**
-   * Estimates the cost of performing a CPFP transaction
-   * @returns The estimated cost in satoshis, or null if CPFP is not possible
+   * Recommends the optimal fee bumping strategy based on the current transaction state.
+   * @returns {FeeBumpStrategy} The recommended fee bumping strategy
+   * @protected
    */
-  public estimateCPFPCost(): string | null {
-    if (!this.canCPFP) return null;
-    const childTxSize = this.estimateChildTxSize();
-    return new BigNumber(this._targetFeeRate)
-      .multipliedBy(childTxSize)
-      .toString();
-  }
-
-  /**
-   * Recommends the best fee bumping strategy based on current conditions
-   * @returns The recommended fee bumping strategy
-   */
-  public recommendFeeBumpStrategy(): FeeBumpStrategy {
-    if (!this.canRBF && !this.canCPFP) {
+  protected recommendStrategy(): FeeBumpStrategy {
+    if (
+      new BigNumber(this.feeRate).isGreaterThanOrEqualTo(this.targetFeeRate)
+    ) {
       return FeeBumpStrategy.NONE;
     }
 
-    if (this.canRBF && !this.canCPFP) {
-      return FeeBumpStrategy.RBF;
-    }
+    const rbfFee = this.estimateRBFFee();
+    const cpfpFee = this.estimateCPFPFee();
 
-    if (!this.canRBF && this.canCPFP) {
+    if (
+      this.canRBF &&
+      (!this.canCPFP || new BigNumber(rbfFee).isLessThan(cpfpFee))
+    ) {
+      return FeeBumpStrategy.RBF;
+    } else if (this.canCPFP) {
       return FeeBumpStrategy.CPFP;
     }
 
-    const rbfCost = new BigNumber(this.estimateRBFCost()!);
-    const cpfpCost = new BigNumber(this.estimateCPFPCost()!);
-
-    return rbfCost.isLessThan(cpfpCost)
-      ? FeeBumpStrategy.RBF
-      : FeeBumpStrategy.CPFP;
-  }
-
-  private analyze(): void {
-    this._canRBF = this.analyzeRBFPossibility();
-    this._canCPFP = this.analyzeCPFPPossibility();
-    this._potentialFeeIncrease = null; // Reset to be recalculated on next access
-  }
-
-  private analyzeRBFPossibility(): boolean {
-    console.log("this.psbt.isRBFSignaled", this.psbt.isRBFSignaled);
-    if (!this.psbt.isRBFSignaled) return false;
-    const availableFunds = this._changeOutputs.reduce(
-      (sum, output) => sum.plus(output.amount),
-      new BigNumber(0),
-    );
-    const additionalFunds = this._additionalUtxos.reduce(
-      (sum, utxo) => sum.plus(utxo.value),
-      new BigNumber(0),
-    );
-    const requiredIncrease = this.calculateRequiredFeeIncrease();
-    return availableFunds
-      .plus(additionalFunds)
-      .isGreaterThanOrEqualTo(requiredIncrease);
-  }
-
-  private analyzeCPFPPossibility(): boolean {
-    if (this._spendableOutputs.length === 0) return false;
-    const totalSpendableAmount = this._spendableOutputs.reduce(
-      (sum, output) => sum.plus(output.amount),
-      new BigNumber(0),
-    );
-    const childTxSize = this.estimateChildTxSize();
-    const requiredFee = new BigNumber(this._targetFeeRate).multipliedBy(
-      childTxSize,
-    );
-    return totalSpendableAmount.isGreaterThan(
-      requiredFee.plus(this._dustThreshold),
-    );
-  }
-
-  private calculateRequiredFeeIncrease(): BigNumber {
-    const currentFee = this.calculateTxFee();
-    const desiredFee = new BigNumber(this._targetFeeRate).multipliedBy(
-      this.estimateVsize(),
-    );
-    return BigNumber.maximum(desiredFee.minus(currentFee), new BigNumber(1));
-  }
-
-  private calculateTxFee(): BigNumber {
-    const inputValue = new BigNumber(this.totalInputValue);
-    const outputValue = new BigNumber(this.totalOutputValue);
-    return inputValue.minus(outputValue);
-  }
-
-  private calculatePotentialFeeIncrease(): BigNumber {
-    const currentFee = this.calculateTxFee();
-    const potentialFee = new BigNumber(this._targetFeeRate).multipliedBy(
-      this.estimateVsize(),
-    );
-    return BigNumber.maximum(potentialFee.minus(currentFee), new BigNumber(0));
-  }
-
-  // Utility methods for conversion
-  private convertToBigNumberArray(
-    outputs: { index: number; amount: number }[],
-  ): { index: number; amount: BigNumber }[] {
-    return outputs.map((output) => ({
-      index: output.index,
-      amount: new BigNumber(output.amount),
-    }));
-  }
-
-  private convertToStringArray(
-    outputs: { index: number; amount: BigNumber }[],
-  ): { index: number; amount: string }[] {
-    return outputs.map((output) => ({
-      index: output.index,
-      amount: output.amount.toString(),
-    }));
+    return FeeBumpStrategy.NONE;
   }
 
   /**
-   * Estimates the virtual size (vsize) of the transaction
-   *
-   * This method calculates an estimate of the transaction's vsize, which is
-   * used for fee calculations. It accounts for different input types (segwit, legacy)
-   * and the complexity of the multisig setup.
-   *
+   * Validates the transaction to ensure it has inputs and outputs.
+   * @throws {Error} If the transaction has no inputs or outputs
    * @private
-   * @returns {number} Estimated vsize in virtual bytes
    */
-  private estimateVsize(): number {
-    let totalWeight = 0;
-
-    // Base transaction overhead
-    totalWeight += 10 * 4; // version, locktime, input count, output count
-
-    // Calculate weight for inputs
-    for (let i = 0; i < this._psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-      totalWeight += this.estimateInputWeight(i);
+  private validateTransaction() {
+    if (this.originalTx.ins.length === 0) {
+      throw new Error("Transaction has no inputs");
     }
-
-    // Calculate weight for outputs
-    for (let i = 0; i < this._psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
-      totalWeight += this.estimateOutputWeight(i);
+    if (this.originalTx.outs.length === 0) {
+      throw new Error("Transaction has no outputs");
     }
-
-    // Convert weight to vsize (rounded up)
-    return Math.ceil(totalWeight / 4);
-  }
-
-  /**
-   * Estimates the weight of a single input
-   *
-   * This method calculates the weight of an input, taking into account
-   * whether it's a segwit or legacy input, and considering the complexity
-   * of multisig setups.
-   *
-   * @private
-   * @param {number} inputIndex - The index of the input in the PSBT
-   * @returns {number} Estimated weight of the input
-   */
-  private estimateInputWeight(inputIndex: number): number {
-    // Base input weight
-    let weight = 41 * 4; // outpoint (36) + sequence (4) + count (1)
-
-    const witnessUtxo = this._psbt.PSBT_IN_WITNESS_UTXO[inputIndex];
-    const redeemScript = this._psbt.PSBT_IN_REDEEM_SCRIPT[inputIndex];
-    const witnessScript = this._psbt.PSBT_IN_WITNESS_SCRIPT[inputIndex];
-
-    if (witnessUtxo) {
-      // Segwit input
-      const m = this.requiredSigners;
-      weight += (73 * m + 34) * 4; // signatures + pubkeys + OP_m + OP_n + OP_CHECKMULTISIG
-      if (redeemScript) {
-        // P2SH-P2WSH
-        weight += redeemScript.length * 4;
-      }
-      if (witnessScript) {
-        weight += witnessScript.length;
-      }
-    } else {
-      // Legacy P2SH input
-      const scriptSigSize =
-        1 + (73 * this.requiredSigners + 34 * this.totalSigners);
-      weight += scriptSigSize * 4;
-    }
-
-    return weight;
-  }
-
-  /**
-   * Estimates the weight of a single output
-   *
-   * This method calculates the weight of an output based on its script size.
-   *
-   * @private
-   * @param {number} outputIndex - The index of the output in the PSBT
-   * @returns {number} Estimated weight of the output
-   */
-  private estimateOutputWeight(outputIndex: number): number {
-    // 8 bytes for value, 1 byte for script length
-    let weight = 9 * 4;
-
-    const script = Buffer.from(this._psbt.PSBT_OUT_SCRIPT[outputIndex], "hex");
-    weight += script.length * 4;
-
-    return weight;
-  }
-
-  /**
-   * Estimates the size of a child transaction for CPFP
-   *
-   * This method calculates an estimate of the size of a potential child
-   * transaction that could be used for a CPFP (Child-Pays-for-Parent) operation.
-   * It assumes a simple transaction with one input (from the parent) and one output.
-   *
-   * @private
-   * @returns {number} Estimated size of the child transaction in virtual bytes
-   */
-  private estimateChildTxSize(): number {
-    const inputWeight = this.estimateInputWeight(0); // Assuming similar input structure as parent
-    const outputWeight = this.estimateOutputWeight(0); // Assuming similar output structure
-    const baseWeight = 10 * 4; // version, locktime, input count, output count
-
-    const totalWeight = baseWeight + inputWeight + outputWeight;
-    return Math.ceil(totalWeight / 4);
   }
 }

@@ -66,3 +66,5 @@ export const ESTIMATED_SIGNATURE_VSIZE = 72; // vbytes
  * This is used to account for the variable size based on the total number of keys.
  */
 export const ESTIMATED_PUBKEY_VSIZE = 34; // vbytes
+
+export const ESTIMATED_CHILD_TX_SIZE = 339; // vBytes

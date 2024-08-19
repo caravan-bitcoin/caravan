@@ -9,14 +9,14 @@ export interface UTXO {
   additionalData?: any; // For any additional data required for the input
 }
 
-export interface TransactionAnalyzerOptions {
-  psbt: PsbtV2 | string | Buffer;
+export interface AnalyzerOptions {
   network: Network;
-  dustThreshold?: number;
-  targetFeeRate: number; // FeeRateSatsPerVByte as a plain number
-  additionalUtxos?: UTXO[];
-  spendableOutputs: { index: number; amount: number }[]; // Amount in satoshis
-  changeOutputs: { index: number; amount: number }[]; // Amount in satoshis
+  targetFeeRate: number;
+  currentFeeRate: number;
+  availableUTXOs: UTXO[];
+  dustThreshold: number;
+  changeOutputIndex?: number;
+  incrementalRelayFee?: number;
   requiredSigners: number;
   totalSigners: number;
 }
@@ -25,6 +25,21 @@ export enum FeeBumpStrategy {
   RBF = "RBF",
   CPFP = "CPFP",
   NONE = "NONE",
+}
+
+export interface TransactionInput {
+  txid: string;
+  vout: number;
+  sequence: number;
+  scriptSig: string;
+  witness: string[];
+}
+
+export interface TransactionOutput {
+  value: number;
+  scriptPubKey: string;
+  address: string;
+  isChange: boolean;
 }
 
 export type FeeRateSatsPerVByte = number;
