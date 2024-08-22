@@ -1,197 +1,312 @@
-import { PsbtV2 } from "@caravan/psbt";
 import { Network } from "@caravan/bitcoin";
+import {
+  BtcTxInputTemplate,
+  BtcTxOutputTemplate,
+} from "./btcTransactionComponents";
 
+/**
+ * Represents an Unspent Transaction Output (UTXO).
+ * UTXOs are used as inputs for new transactions and are crucial for fee bumping operations.
+ */
 export interface UTXO {
+  /**
+   * The transaction ID of the UTXO.
+   * This is the unique identifier of the transaction that created this output.
+   */
   txid: string;
+
+  /**
+   * The output index of the UTXO in its parent transaction.
+   * This, combined with the txid, uniquely identifies the UTXO.
+   */
   vout: number;
+
+  /**
+   * The value of the UTXO in satoshis.
+   * This represents the amount of bitcoin contained in this output.
+   */
   value: number;
+
+  /**
+   * The locking script of the UTXO.
+   * This script defines the conditions that must be met to spend this output.
+   */
   script: Buffer;
-  additionalData?: any; // For any additional data required for the input
+
+  /**
+   * Optional field for any additional data required for the input.
+   * This can include things like redeem scripts for P2SH outputs or witness scripts for P2WSH.
+   */
+  additionalData?: any;
 }
 
+/**
+ * Configuration options for the TransactionAnalyzer.
+ */
 export interface AnalyzerOptions {
+  /**
+   * The Bitcoin network to use (mainnet, testnet, or regtest).
+   */
   network: Network;
+
+  /**
+   * The target fee rate in satoshis per vbyte that the user wants to achieve.
+   * This is used to determine if fee bumping is necessary and to calculate
+   * the new fee for RBF or CPFP.
+   */
   targetFeeRate: number;
-  currentFeeRate: number;
-  availableUTXOs: UTXO[];
-  dustThreshold: number;
+
+  /**
+   * The absolute fee of the original transaction in satoshis.
+   * This is used as the basis for fee calculations and comparisons.
+   */
+  absoluteFee: string | number;
+
+  /**
+   * An array of Unspent Transaction Outputs (UTXOs) that are available
+   * for fee bumping. These are potential inputs that can be added to
+   * a replacement transaction in RBF, or used to create a child transaction
+   * in CPFP.
+   */
+  availableUtxos: UTXO[];
+
+  /**
+   * The dust threshold in satoshis. Outputs below this value are considered
+   * "dust" and may not be economically viable to spend. This is used in
+   * CPFP calculations to ensure that child transactions don't create
+   * outputs below the dust threshold.
+   * Default Bitcoin Core value is 546 satoshis .
+   */
+  dustThreshold: string | number;
+
+  /**
+   * The index of the change output in the transaction, if known.
+   * This helps identify which output is the change and can be
+   * adjusted for fee bumping in RBF scenarios.
+   */
   changeOutputIndex?: number;
-  incrementalRelayFee?: number;
+
+  /**
+   * The incremental relay fee in satoshis per vbyte. This is the minimum
+   * fee rate increase required for nodes to accept a replacement transaction.
+   * It's used in RBF calculations to ensure the new transaction meets
+   * network requirements.
+   * Default value in Bitcoin Core is 1 sat/vbyte.
+   * @see https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.h
+   */
+  incrementalRelayFee?: string | number;
+
+  /**
+   * The number of signatures required in a multisig setup.
+   * This is used to estimate transaction size more accurately
+   * for multisig transactions.
+   */
   requiredSigners: number;
+
+  /**
+   * The total number of signers in a multisig setup.
+   * This is used along with requiredSigners to estimate
+   * transaction size more accurately for multisig transactions.
+   */
   totalSigners: number;
+
+  /**
+   * The type of Bitcoin address used (e.g., P2PKH, P2SH, P2WPKH, P2WSH).
+   * This is used to determine the input size for different address types
+   * when estimating transaction size.
+   */
+  addressType: string;
+
+  /**
+   * The hexadecimal representation of the raw transaction.
+   * This is used for parsing the transaction details directly
+   * from the hex .
+   */
+  txHex: string;
 }
 
+/**
+ * Enum representing different fee bumping strategies.
+ * These strategies are used to increase the fee of a transaction to improve its chances of confirmation.
+ */
 export enum FeeBumpStrategy {
+  /**
+   * Replace-By-Fee (RBF) strategy.
+   * This involves creating a new transaction that replaces the original one with a higher fee.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
   RBF = "RBF",
+
+  /**
+   * Child-Pays-for-Parent (CPFP) strategy.
+   * This involves creating a new transaction that spends an output of the original transaction,
+   * with a high enough fee to incentivize miners to confirm both transactions together.
+   * @see https://bitcoinops.org/en/topics/cpfp/
+   */
   CPFP = "CPFP",
+
+  /**
+   * No fee bumping strategy.
+   * This indicates that fee bumping is not necessary or possible for the transaction.
+   */
   NONE = "NONE",
 }
 
+/**
+ * Enum representing different types of transaction outputs.
+ * This helps distinguish between outputs intended for recipients and change outputs.
+ */
+export enum TxOutputType {
+  /**
+   * Represents an output intended for the recipient of the transaction.
+   */
+  DESTINATION,
+
+  /**
+   * Represents a change output, which returns excess funds to the sender.
+   */
+  CHANGE,
+}
+
+/**
+ * Represents an input in a Bitcoin transaction.
+ * Transaction inputs are references to outputs of previous transactions that are being spent.
+ */
 export interface TransactionInput {
+  /**
+   * The transaction ID of the previous transaction containing the output being spent.
+   */
   txid: string;
+
+  /**
+   * The index of the output in the previous transaction that is being spent.
+   */
   vout: number;
+
+  /**
+   * The sequence number of the input.
+   * This is used for relative time locks and signaling RBF.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
   sequence: number;
+
+  /**
+   * The scriptSig of the input in hexadecimal format.
+   * For non-segwit inputs, this contains the unlocking script.
+   */
   scriptSig: string;
+
+  /**
+   * The witness data for segwit inputs.
+   * This is an array of hex strings, each representing a witness element.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+   */
   witness: string[];
 }
 
+/**
+ * Represents an output in a Bitcoin transaction.
+ */
 export interface TransactionOutput {
+  /**
+   * The value of the output in satoshis.
+   * This is the amount of bitcoin contained in this output.
+   */
   value: number;
+
+  /**
+   * The scriptPubKey in hexadecimal format.
+   * This script defines the conditions that must be met to spend this output.
+   */
   scriptPubKey: string;
+
+  /**
+   * The Bitcoin address associated with this output.
+   * This is derived from the scriptPubKey and provides a human-readable format.
+   */
   address: string;
-  isChange: boolean;
+
+  /**
+   * Indicates whether this output is spendable by the user.
+   *
+   * This is crucial for CPFP (Child-Pays-for-Parent) operations:
+   * - If true, this output can be used as an input in a child transaction for CPFP.
+   * - This includes both change outputs and any other outputs sent to addresses
+   *   controlled by the user's wallet.
+   *
+   * Note: The term "isChange" is replaced with "isSpendable" to more accurately
+   * reflect its purpose in CPFP scenarios.
+   */
+  isSpendable: boolean;
 }
 
+/**
+ * Represents a fee rate in satoshis per virtual byte.
+ * This is used for fee estimation and fee bumping calculations.
+ * @see https://bitcoinops.org/en/topics/fee-estimation/
+ */
 export type FeeRateSatsPerVByte = number;
 
-export interface RbfTransactionOptions {
-  psbt: PsbtV2 | string | Buffer;
-  network: Network;
-  targetFeeRate: FeeRateSatsPerVByte;
+/**
+ * Represents an amount in satoshis.
+ * Satoshis are the smallest unit of bitcoin (1 BTC = 100,000,000 satoshis).
+ */
+export type Satoshis = number;
+
+/**
+ * Represents an amount in bitcoin.
+ */
+export type BTC = number;
+
+/**
+ * Configuration options for creating a transaction template.
+ * This is used to set up the initial state and parameters for a new transaction.
+ */
+export interface TransactionTemplateOptions {
   /**
-   * The index of the output from which to subtract the increased fee.
-   * If specified, the fee increase will be subtracted entirely from this output.
-   * If not specified, the fee increase will be subtracted proportionally from all non-change outputs.
-   * Note: This should typically be the index of a change output to avoid modifying recipient amounts.
+   * The target fee rate in satoshis per virtual byte.
+   * This is used to calculate the appropriate fee for the transaction.
    */
-  feeOutputIndex?: number;
-  dustThreshold?: string | number;
-  additionalUtxos?: UTXO[];
-  requiredSigners: number;
-  totalSigners: number;
-  changeOutputIndices: number[];
-  incrementalRelayFee: number;
-  changeAddress?: string;
-  useExistingChangeOutput: boolean;
-}
+  targetFeeRate: number;
 
-export interface RbfTransactionInfo {
-  state: TransactionState;
-  originalFee: string;
-  newFee: string;
-  feeIncrease: string;
-  vsize: number;
-  canAccelerate: boolean;
-  canCancel: boolean;
-  error: string | null;
-}
+  /**
+   * The dust threshold in satoshis.
+   * Outputs below this value are considered uneconomical to spend.
+   * @see https://github.com/bitcoin/bitcoin/blob/master/src/policy/policy.cpp
+   */
+  dustThreshold: Satoshis;
 
-export interface CPFPOptions {
-  parentPsbt: PsbtV2 | string | Buffer;
-  spendableOutputs: number[];
-  destinationAddress: string;
-  targetFeeRate: FeeRateSatsPerVByte;
+  /**
+   * The Bitcoin network to use (mainnet, testnet, or regtest).
+   */
   network: Network;
-  maxAdditionalInputs?: number;
-  maxChildTxSize?: number;
-  dustThreshold?: number;
-  additionalUtxos?: UTXO[];
-  requiredSigners: number;
-  totalSigners: number;
+
+  /**
+   * The type of script used for the transaction (e.g., "p2pkh", "p2sh", "p2wpkh", "p2wsh").
+   * This affects how the transaction is constructed and signed.
+   */
+  scriptType: string;
+
+  /**
+   * Optional array of input templates to use in the transaction.
+   */
+  inputs?: BtcTxInputTemplate[];
+
+  /**
+   * Optional array of output templates to use in the transaction.
+   */
+  outputs?: BtcTxOutputTemplate[];
+
+  /**
+   * The number of signatures required in a multisig setup.
+   * This is used for multisig transactions and affects the transaction size.
+   */
+  requiredSigners?: number;
+
+  /**
+   * The total number of signers in a multisig setup.
+   * This is used along with requiredSigners for multisig transactions.
+   */
+  totalSigners?: number;
 }
-
-export enum CPFPState {
-  INITIALIZED,
-  PARENT_ANALYZED,
-  CHILD_CREATED,
-  INPUTS_ADDED,
-  OUTPUTS_ADJUSTED,
-  FINALIZED,
-  ERROR,
-}
-
-export enum TransactionState {
-  INITIALIZED = "INITIALIZED",
-  ANALYZING = "ANALYZING",
-  ANALYZED = "ANALYZED",
-  MODIFYING = "MODIFYING",
-  FINALIZING = "FINALIZING",
-  FINALIZED = "FINALIZED",
-  ERROR = "ERROR",
-}
-
-// Base error types
-export enum BaseErrorType {
-  INVALID_STATE = "INVALID_STATE",
-  INSUFFICIENT_FUNDS = "INSUFFICIENT_FUNDS",
-  DUST_OUTPUT = "DUST_OUTPUT",
-  INVALID_FEE_RATE = "INVALID_FEE_RATE",
-  PSBT_MODIFICATION_ERROR = "PSBT_MODIFICATION_ERROR",
-  INVALID_TRANSACTION = "INVALID_TRANSACTION",
-  UNSUPPORTED_OPERATION = "UNSUPPORTED_OPERATION",
-}
-
-// RBF specific error types
-export enum RbfErrorType {
-  INVALID_PSBT = "INVALID_PSBT",
-  ACCELERATION_FAILED = "ACCELERATION_FAILED",
-  CANCELLATION_FAILED = "CANCELLATION_FAILED",
-  ANALYSIS_FAILED = "ANALYSIS_FAILED",
-}
-
-// CPFP specific error types
-export enum CpfpErrorType {
-  PARENT_TX_INVALID = "PARENT_TX_INVALID",
-  CHILD_TX_CREATION_FAILED = "CHILD_TX_CREATION_FAILED",
-  ANALYSIS_FAILED = "ANALYSIS_FAILED",
-  INPUT_ADDITION_FAILED = "INPUT_ADDITION_FAILED",
-}
-
-// Combine all error types
-export type ErrorType = BaseErrorType | RbfErrorType | CpfpErrorType;
-
-export type ErrorMessage<
-  T extends ErrorType,
-  S extends TransactionState,
-> = T extends BaseErrorType
-  ? BaseErrorMessage<T, S>
-  : T extends RbfErrorType
-    ? RbfErrorMessage<T, S>
-    : T extends CpfpErrorType
-      ? CpfpErrorMessage<T, S>
-      : never;
-
-type BaseErrorMessage<
-  T extends BaseErrorType,
-  S extends TransactionState,
-> = T extends BaseErrorType.INVALID_STATE
-  ? `Invalid state: ${S}. Expected a different state.`
-  : T extends BaseErrorType.INSUFFICIENT_FUNDS
-    ? "Insufficient funds to cover the required amount"
-    : T extends BaseErrorType.DUST_OUTPUT
-      ? "Operation would result in a dust output"
-      : T extends BaseErrorType.INVALID_FEE_RATE
-        ? "Invalid fee rate specified"
-        : T extends BaseErrorType.PSBT_MODIFICATION_ERROR
-          ? "Error modifying the PSBT"
-          : T extends BaseErrorType.INVALID_TRANSACTION
-            ? "The transaction is invalid or malformed"
-            : T extends BaseErrorType.UNSUPPORTED_OPERATION
-              ? "This operation is not supported in the current context"
-              : "An unknown error occurred";
-
-type RbfErrorMessage<
-  T extends RbfErrorType,
-  S extends TransactionState,
-> = T extends RbfErrorType.ACCELERATION_FAILED
-  ? "Failed to accelerate the transaction"
-  : T extends RbfErrorType.INVALID_PSBT
-    ? "This transaction is not signaling RBF."
-    : T extends RbfErrorType.ANALYSIS_FAILED
-      ? "Error in Analyzing the Transaction for RBF"
-      : T extends RbfErrorType.CANCELLATION_FAILED
-        ? "Failed to cancel the transaction"
-        : "An unknown RBF error occurred";
-
-type CpfpErrorMessage<
-  T extends CpfpErrorType,
-  S extends TransactionState,
-> = T extends CpfpErrorType.PARENT_TX_INVALID
-  ? "The parent transaction is invalid"
-  : T extends RbfErrorType.ANALYSIS_FAILED
-    ? "Error in Analyzing the Transaction for CPFP"
-    : T extends CpfpErrorType.INPUT_ADDITION_FAILED
-      ? "Unable to add additional Inputs"
-      : T extends CpfpErrorType.CHILD_TX_CREATION_FAILED
-        ? "Failed to create the child transaction"
-        : "An unknown CPFP error occurred";
