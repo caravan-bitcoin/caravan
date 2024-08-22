@@ -1,13 +1,20 @@
-import { Transaction, payments } from "bitcoinjs-lib-v6";
-import { networkData, Network } from "@caravan/bitcoin";
+import { Transaction } from "bitcoinjs-lib-v6";
+import { Network } from "@caravan/bitcoin";
 import {
   UTXO,
   AnalyzerOptions,
   FeeBumpStrategy,
   TransactionInput,
   TransactionOutput,
+  Satoshis,
+  TxOutputType,
 } from "./types";
-import { ESTIMATED_CHILD_TX_SIZE } from "./constants";
+import {
+  BtcTxInputTemplate,
+  BtcTxOutputTemplate,
+} from "./btcTransactionComponents";
+import { getOutputAddress, estimateTransactionVsize } from "./utils";
+
 import BigNumber from "bignumber.js";
 
 /**
@@ -32,50 +39,52 @@ import BigNumber from "bignumber.js";
  * @class
  */
 export class TransactionAnalyzer {
-  protected readonly originalTx: Transaction;
-  protected readonly network: Network;
-  protected _targetFeeRate: number;
-  protected currentFeeRate: number;
-  protected availableUTXOs: UTXO[];
-  protected readonly dustThreshold: BigNumber;
-  protected changeOutputIndex: number | undefined;
-  protected incrementalRelayFee: BigNumber;
-  protected readonly requiredSigners: number;
-  protected readonly totalSigners: number;
+  private readonly _originalTx: Transaction;
+  private readonly _network: Network;
+  private readonly _targetFeeRate: number;
+  private readonly _absoluteFee: BigNumber;
+  private readonly _availableUtxos: UTXO[];
+  private readonly _dustThreshold: BigNumber;
+  private readonly _changeOutputIndex: number | undefined;
+  private readonly _incrementalRelayFee: BigNumber;
+  private readonly _requiredSigners: number;
+  private readonly _totalSigners: number;
+  private readonly _addressType: string;
 
   private _inputs: TransactionInput[] | null = null;
   private _outputs: TransactionOutput[] | null = null;
-  private _fee: BigNumber | null = null;
   private _feeRate: BigNumber | null = null;
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
-  private _rbfFeeRate: string | null = null;
-  private _cpfpFeeRate: string | null = null;
+  private _rbfFeeRate: BigNumber | null = null;
+  private _cpfpFeeRate: BigNumber | null = null;
   private _recommendedStrategy: FeeBumpStrategy | null = null;
+  private _assumeRBF: boolean = false;
 
   /**
    * Creates an instance of TransactionAnalyzer.
-   *
-   * @param {string} txHex - The hexadecimal representation of the transaction to analyze
    * @param {AnalyzerOptions} options - Configuration options for the analyzer
    * @throws {Error} If the transaction is invalid or lacks inputs/outputs
    */
-  constructor(txHex: string, options: AnalyzerOptions) {
+  constructor(options: AnalyzerOptions) {
     try {
-      this.originalTx = Transaction.fromHex(txHex);
-    } catch (error: any) {
-      throw new Error(`Invalid transaction: ${error.message}`);
+      this._originalTx = Transaction.fromHex(options.txHex);
+    } catch (error) {
+      throw new Error(
+        `Invalid transaction: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
     this.validateTransaction();
-    this.network = options.network;
+    this._network = options.network;
     this._targetFeeRate = options.targetFeeRate;
-    this.currentFeeRate = options.currentFeeRate;
-    this.availableUTXOs = options.availableUTXOs;
-    this.dustThreshold = new BigNumber(options.dustThreshold);
-    this.changeOutputIndex = options.changeOutputIndex;
-    this.incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
-    this.requiredSigners = options.requiredSigners;
-    this.totalSigners = options.totalSigners;
+    this._absoluteFee = new BigNumber(options.absoluteFee);
+    this._availableUtxos = options.availableUtxos;
+    this._dustThreshold = new BigNumber(options.dustThreshold);
+    this._changeOutputIndex = options.changeOutputIndex;
+    this._incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
+    this._requiredSigners = options.requiredSigners;
+    this._totalSigners = options.totalSigners;
+    this._addressType = options.addressType;
   }
 
   /**
@@ -83,7 +92,7 @@ export class TransactionAnalyzer {
    * @returns {string} The transaction ID
    */
   get txid(): string {
-    return this.originalTx.getId();
+    return this._originalTx.getId();
   }
 
   /**
@@ -91,7 +100,7 @@ export class TransactionAnalyzer {
    * @returns {number} The virtual size of the transaction
    */
   get vsize(): number {
-    return this.originalTx.virtualSize();
+    return this._originalTx.virtualSize();
   }
 
   /**
@@ -99,7 +108,7 @@ export class TransactionAnalyzer {
    * @returns {number} The weight of the transaction
    */
   get weight(): number {
-    return this.originalTx.weight();
+    return this._originalTx.weight();
   }
 
   /**
@@ -108,7 +117,7 @@ export class TransactionAnalyzer {
    */
   get inputs(): TransactionInput[] {
     if (!this._inputs) {
-      this._inputs = this.analyzeInputs();
+      this._inputs = this.deserializeInputs();
     }
     return this._inputs;
   }
@@ -119,7 +128,7 @@ export class TransactionAnalyzer {
    */
   get outputs(): TransactionOutput[] {
     if (!this._outputs) {
-      this._outputs = this.analyzeOutputs();
+      this._outputs = this.deserializeOutputs();
     }
     return this._outputs;
   }
@@ -129,10 +138,7 @@ export class TransactionAnalyzer {
    * @returns {string} The transaction fee in satoshis
    */
   get fee(): string {
-    if (!this._fee) {
-      this._fee = this.calculateFee();
-    }
-    return this._fee.toString();
+    return this._absoluteFee.toString();
   }
 
   /**
@@ -141,28 +147,73 @@ export class TransactionAnalyzer {
    */
   get feeRate(): string {
     if (!this._feeRate) {
-      this._feeRate = new BigNumber(this.fee).dividedBy(this.vsize);
+      this._feeRate = this._absoluteFee.dividedBy(this.vsize);
     }
     return this._feeRate.toString();
   }
 
   /**
-   * Determines if the transaction is eligible for RBF (Replace-By-Fee).
-   * @returns {boolean} True if the transaction can be replaced using RBF, false otherwise
+   * Gets whether RBF is assumed to be always possible, regardless of signaling.
+   * @returns {boolean} True if RBF is assumed to be always possible, false otherwise
    */
-  get canRBF(): boolean {
-    if (this._canRBF === null) {
-      this._canRBF = this.canPerformRBF();
-    }
-    return this._canRBF;
+  get assumeRBF(): boolean {
+    return this._assumeRBF;
   }
 
   /**
-   * Determines if the transaction is eligible for CPFP (Child-Pays-For-Parent).
-   * @returns {boolean} True if CPFP can be performed on this transaction, false otherwise
+   * Sets whether to assume RBF is always possible, regardless of signaling.
+   * @param {boolean} value - Whether to assume RBF is always possible
+   */
+  set assumeRBF(value: boolean) {
+    this._assumeRBF = value;
+    if (value && !this.isRBFSignaled()) {
+      console.warn(
+        "Assuming full RBF is possible, but transaction does not signal RBF. " +
+          "This may cause issues with some nodes or services and could lead to " +
+          "delayed or failed transaction replacement.",
+      );
+    }
+  }
+
+  /**
+   * Checks if RBF (Replace-By-Fee) can be performed on this transaction.
+   *
+   * RBF allows unconfirmed transactions to be replaced with a new version
+   * that pays a higher fee. There are two types of RBF:
+   *
+   * 1. Signaled RBF (BIP125): At least one input has a sequence number < 0xfffffffe.
+   * 2. Full RBF: Replacing any unconfirmed transaction, regardless of signaling.
+   *
+   * While BIP125 defines the standard for signaled RBF, some nodes and miners
+   * may accept full RBF, allowing replacement of any unconfirmed transaction.
+   *
+   * CAUTION: Assuming full RBF when a transaction doesn't signal it may lead to:
+   * - Rejected replacements by nodes not accepting full RBF
+   * - Delayed or failed transaction replacement
+   * - Potential double-spend risks if recipients accept unconfirmed transactions
+   *
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   * @see https://bitcoinops.org/en/topics/replace-by-fee/
+   *
+   * @returns {boolean} True if RBF can be performed (signaled or assumed), false otherwise
+   *
+   */
+  get canRBF(): boolean {
+    const signaled = this.isRBFSignaled();
+    if (this._assumeRBF && !signaled) {
+      console.warn(
+        "Assuming RBF is possible, but transaction does not signal RBF. This may cause issues with some nodes or services.",
+      );
+    }
+    return signaled || this._assumeRBF;
+  }
+
+  /**
+   * Check if Child-Pays-for-Parent (CPFP) is possible for the transaction.
+   * @returns {boolean} True if CPFP is possible, false otherwise.
    */
   get canCPFP(): boolean {
-    if (this._canCPFP === null) {
+    if (!this._canCPFP) {
       this._canCPFP = this.canPerformCPFP();
     }
     return this._canCPFP;
@@ -183,34 +234,34 @@ export class TransactionAnalyzer {
    * Gets the list of available UTXOs for potential use in fee bumping.
    * @returns {UTXO[]} An array of available UTXOs
    */
-  get getAvailableUTXOs(): UTXO[] {
-    return this.availableUTXOs;
+  get availableUTXOs(): UTXO[] {
+    return this._availableUtxos;
   }
 
   /**
    * Gets the current target fee rate in satoshis per vbyte.
-   * @returns {number} The target fee rate
+   * @returns {number} The target fee rate in satoshis per vbyte.
    */
   get targetFeeRate(): number {
     return this._targetFeeRate;
   }
 
   /**
-   * Calculates and returns the minimum fee rate required for a successful RBF.
-   * @returns {string} The minimum RBF fee rate in satoshis per vbyte
+   * Get the estimated fee rate for Replace-by-Fee (RBF).
+   * @returns {string} The estimated RBF fee rate in satoshis per vbyte.
+   * @see https://bitcoinops.org/en/topics/replace-by-fee/
    */
-  get rfbFeeRate(): string {
+  get rbfFeeRate(): string {
     if (!this._rbfFeeRate) {
-      const currentFeeRate = this.feeRate;
-
+      const currentFeeRate = new BigNumber(this.feeRate);
       const minReplacementFeeRate = BigNumber.max(
-        new BigNumber(currentFeeRate).plus(this.incrementalRelayFee),
+        new BigNumber(currentFeeRate).plus(this._incrementalRelayFee),
         new BigNumber(this.targetFeeRate),
       );
 
-      this._rbfFeeRate = minReplacementFeeRate.toString();
+      this._rbfFeeRate = minReplacementFeeRate;
     }
-    return this._rbfFeeRate;
+    return this._rbfFeeRate.toString();
   }
 
   /**
@@ -219,40 +270,65 @@ export class TransactionAnalyzer {
    */
   get cpfpFeeRate(): string {
     if (!this._cpfpFeeRate) {
-      const originalTxVBytes = this.vsize;
-      const packageSize = originalTxVBytes + ESTIMATED_CHILD_TX_SIZE;
+      const config = {
+        addressType: this._addressType,
+        numInputs: 1, // Assuming 1 input for the child transaction
+        numOutputs: 1, // Assuming 1 output for the child transaction
+        m: this._requiredSigners,
+        n: this._totalSigners,
+      };
+
+      const childVsize = estimateTransactionVsize(config);
+      const packageSize = this.vsize + childVsize;
       const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
         packageSize,
       );
       const expectedFeeRate = BigNumber.max(
-        desiredPackageFee.minus(this.fee),
+        desiredPackageFee.minus(this.fee).dividedBy(childVsize),
         new BigNumber(0),
-      ).dividedBy(ESTIMATED_CHILD_TX_SIZE);
+      );
 
-      this._cpfpFeeRate = expectedFeeRate.toString();
+      this._cpfpFeeRate = expectedFeeRate;
     }
-    return this._cpfpFeeRate;
+    return this._cpfpFeeRate.toString();
   }
 
   /**
-   * Calculates and returns the recommended fee rate based on the current transaction state and target fee rate.
-   * @returns {number} The recommended fee rate in satoshis per vbyte
+   * Estimates the fee required for a successful RBF (Replace-By-Fee) operation.
+   * @returns {string} The estimated RBF fee in satoshis
    */
-  get getRecommendedFeeRate(): number {
-    const currentFeeRate = parseFloat(this.feeRate);
-    const targetFeeRate = this.targetFeeRate;
+  get estimateRBFFee(): Satoshis {
+    const currentFee = this.fee;
+    const vsize = this.vsize;
 
-    if (currentFeeRate >= targetFeeRate) {
-      return currentFeeRate; // Current fee rate is already sufficient
-    }
+    const minReplacementFee = BigNumber.max(
+      new BigNumber(currentFee).plus(
+        this._incrementalRelayFee.multipliedBy(vsize),
+      ),
+      new BigNumber(this.rbfFeeRate).multipliedBy(vsize),
+    );
 
-    if (this.canRBF && (!this.canCPFP || this.rfbFeeRate <= this.cpfpFeeRate)) {
-      return Math.max(Number(this.rfbFeeRate), targetFeeRate);
-    } else if (this.canCPFP) {
-      return Math.max(Number(this.cpfpFeeRate), targetFeeRate);
-    } else {
-      return targetFeeRate; // If neither RBF nor CPFP is possible, return the target fee rate
-    }
+    return BigNumber.max(
+      minReplacementFee.minus(currentFee),
+      new BigNumber(1),
+    ).toNumber();
+  }
+
+  /**
+   * Estimates the fee required for a successful CPFP (Child-Pays-For-Parent) operation.
+   * @returns {string} The estimated CPFP fee in satoshis
+   */
+  get estimateCPFPFee(): Satoshis {
+    const config = {
+      addressType: this._addressType,
+      numInputs: 1, // Assuming 1 input for the child transaction
+      numOutputs: 1, // Assuming 1 output for the child transaction
+      m: this._requiredSigners,
+      n: this._totalSigners,
+    };
+    const childVsize = estimateTransactionVsize(config);
+    const packageSize = this.vsize + childVsize;
+    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toNumber();
   }
 
   /**
@@ -260,27 +336,7 @@ export class TransactionAnalyzer {
    * @returns {string} The dust threshold in satoshis
    */
   get getDustThreshold(): string {
-    return this.dustThreshold.toString();
-  }
-
-  /**
-   * Sets a new target fee rate for the transaction analysis.
-   * @param {number} rate - The new target fee rate in satoshis per vbyte
-   */
-  set setTargetFeeRate(rate: number) {
-    this._targetFeeRate = rate;
-    this._recommendedStrategy = null; // Reset cached value
-  }
-
-  /**
-   * Sets the index of the change output in the transaction.
-   * @param {number | undefined} index - The index of the change output, or undefined if no change output
-   */
-  set setChangeOutput(index: number | undefined) {
-    this.changeOutputIndex = index;
-    this._outputs = null; // Reset cached value
-    this._canCPFP = null; // Reset cached value
-    this._cpfpFeeRate = null; // Reset cached value
+    return this._dustThreshold.toString();
   }
 
   /**
@@ -299,8 +355,8 @@ export class TransactionAnalyzer {
     canRBF: boolean;
     canCPFP: boolean;
     recommendedStrategy: FeeBumpStrategy;
-    estimatedRBFFee: string;
-    estimatedCPFPFee: string;
+    estimatedRBFFee: Satoshis;
+    estimatedCPFPFee: Satoshis;
   } {
     return {
       txid: this.txid,
@@ -314,76 +370,63 @@ export class TransactionAnalyzer {
       canRBF: this.canRBF,
       canCPFP: this.canCPFP,
       recommendedStrategy: this.recommendedStrategy,
-      estimatedRBFFee: this.estimateRBFFee(),
-      estimatedCPFPFee: this.estimateCPFPFee(),
+      estimatedRBFFee: this.estimateRBFFee,
+      estimatedCPFPFee: this.estimateCPFPFee,
     };
   }
 
   /**
-   * Retrieves the inputs of the transaction in a format suitable for creating a new transaction.
-   * @returns {Object[]} An array of input objects
+   * Creates input templates from the transaction's inputs.
+   *
+   * This method maps each input of the analyzed transaction to a BtcTxInputTemplate.
+   * It extracts the transaction ID (txid) and output index (vout) from each input
+   * to create the templates. Note that the amount in satoshis is not included, as
+   * this information is not available in the raw transaction data.
+   *
+   * @returns {BtcTxInputTemplate[]} An array of BtcTxInputTemplate objects representing
+   *          the inputs of the analyzed transaction. These templates will not have
+   *          amounts set and will need to be populated later with data from an external
+   *          source (e.g., bitcoind wallet, blockchain explorer, or local UTXO set).
    */
-  public getInputsForNewTransaction(): {
-    hash: Buffer;
-    index: number;
-    sequence: number;
-  }[] {
-    return this.originalTx.ins.map((input) => ({
-      hash: input.hash,
-      index: input.index,
-      sequence: input.sequence,
-    }));
+  public getInputTemplates(): BtcTxInputTemplate[] {
+    return this.inputs.map((input) => {
+      return new BtcTxInputTemplate({
+        txid: input.txid,
+        vout: input.vout,
+      });
+    });
   }
 
   /**
-   * Retrieves the outputs of the transaction in a format suitable for creating a new transaction.
-   * @returns {Object[]} An array of output objects
+   * Creates output templates from the transaction's outputs.
+   *
+   * This method maps each output of the analyzed transaction to a BtcTxOutputTemplate.
+   * It extracts the recipient address, determines whether it's a change output or not,
+   * and includes the amount in satoshis. The output type is set to "change" if the
+   * output is spendable (typically indicating a change output), and "destination" otherwise.
+   *
+   * @returns {BtcTxOutputTemplate[]} An array of BtcTxOutputTemplate objects representing
+   *          the outputs of the analyzed transaction.
    */
-  public getOutputsForNewTransaction(): { script: Buffer; value: number }[] {
-    return this.originalTx.outs.map((output) => ({
-      script: output.script,
-      value: output.value,
-    }));
+  public getOutputTemplates(): BtcTxOutputTemplate[] {
+    return this.outputs.map((output, index) => {
+      return new BtcTxOutputTemplate({
+        address: output.address,
+        type:
+          index === this._changeOutputIndex
+            ? TxOutputType.CHANGE
+            : TxOutputType.DESTINATION,
+        amountSats: output.value as Satoshis,
+      });
+    });
   }
-
-  /**
-   * Estimates the fee required for a successful RBF (Replace-By-Fee) operation.
-   * @returns {string} The estimated RBF fee in satoshis
-   */
-  public estimateRBFFee(): string {
-    const currentFee = this.fee;
-    const vsize = this.vsize;
-
-    const minReplacementFee = BigNumber.max(
-      new BigNumber(currentFee).plus(
-        this.incrementalRelayFee.multipliedBy(vsize),
-      ),
-      new BigNumber(this.rfbFeeRate).multipliedBy(vsize),
-    );
-
-    return String(
-      BigNumber.max(minReplacementFee.minus(currentFee), new BigNumber(1)),
-    );
-  }
-
-  /**
-   * Estimates the fee required for a successful CPFP (Child-Pays-For-Parent) operation.
-   * @returns {string} The estimated CPFP fee in satoshis
-   */
-  public estimateCPFPFee(): string {
-    const originalTxVBytes = this.vsize;
-    const packageSize = originalTxVBytes + ESTIMATED_CHILD_TX_SIZE;
-
-    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toString();
-  }
-
   /**
    * Retrieves the change output of the transaction, if it exists.
    * @returns {TransactionOutput | null} The change output or null if no change output exists
    */
   public getChangeOutput(): TransactionOutput | null {
-    if (this.changeOutputIndex !== undefined) {
-      return this.outputs[this.changeOutputIndex];
+    if (this._changeOutputIndex !== undefined) {
+      return this.outputs[this._changeOutputIndex];
     }
     return null;
   }
@@ -391,12 +434,12 @@ export class TransactionAnalyzer {
   // Protected methods
 
   /**
-   * Analyzes the inputs of the transaction.
-   * @returns {TransactionInput[]} An array of analyzed transaction inputs
+   * Deserializes and formats the transaction inputs.
+   * @returns {TransactionInput[]} An array of formatted transaction inputs
    * @protected
    */
-  protected analyzeInputs(): TransactionInput[] {
-    return this.originalTx.ins.map((input) => ({
+  protected deserializeInputs(): TransactionInput[] {
+    return this._originalTx.ins.map((input) => ({
       txid: input.hash.reverse().toString("hex"),
       vout: input.index,
       sequence: input.sequence,
@@ -406,63 +449,17 @@ export class TransactionAnalyzer {
   }
 
   /**
-   * Analyzes the outputs of the transaction.
-   * @returns {TransactionOutput[]} An array of analyzed transaction outputs
+   * Deserializes and formats the transaction outputs.
+   * @returns {TransactionOutput[]} An array of formatted transaction outputs
    * @protected
    */
-  protected analyzeOutputs(): TransactionOutput[] {
-    return this.originalTx.outs.map((output, index) => ({
+  protected deserializeOutputs(): TransactionOutput[] {
+    return this._originalTx.outs.map((output, index) => ({
       value: output.value,
       scriptPubKey: output.script.toString("hex"),
-      address: this.getOutputAddress(output.script),
-      isChange: index === this.changeOutputIndex,
+      address: getOutputAddress(output.script, this._network),
+      isSpendable: index === this._changeOutputIndex,
     }));
-  }
-
-  /**
-   * Attempts to derive the address from an output script.
-   * @param {Buffer} script - The output script
-   * @returns {string} The derived address or an error message if unable to derive
-   * @protected
-   */
-  protected getOutputAddress(script: Buffer): string {
-    try {
-      const p2pkhAddress = payments.p2pkh({
-        output: script,
-        network: networkData(this.network),
-      }).address;
-      const p2shAddress = payments.p2sh({
-        output: script,
-        network: networkData(this.network),
-      }).address;
-      const p2wpkhAddress = payments.p2wpkh({
-        output: script,
-        network: networkData(this.network),
-      }).address;
-      const p2wshAddress = payments.p2wsh({
-        output: script,
-        network: networkData(this.network),
-      }).address;
-
-      return (
-        p2pkhAddress ||
-        p2shAddress ||
-        p2wpkhAddress ||
-        p2wshAddress ||
-        "Unable to derive address"
-      );
-    } catch (e) {
-      return "Unable to derive address";
-    }
-  }
-
-  /**
-   * Calculates the fee for the transaction.
-   * @returns {BigNumber} The calculated fee in satoshis
-   * @protected
-   */
-  protected calculateFee(): BigNumber {
-    return new BigNumber(this.currentFeeRate).multipliedBy(this.vsize);
   }
 
   /**
@@ -471,16 +468,12 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected isRBFSignaled(): boolean {
-    return this.originalTx.ins.some((input) => input.sequence < 0xfffffffe);
-  }
-
-  /**
-   * Determines if RBF (Replace-By-Fee) can be performed on this transaction.
-   * @returns {boolean} True if RBF can be performed, false otherwise
-   * @protected
-   */
-  protected canPerformRBF(): boolean {
-    return this.isRBFSignaled();
+    if (!this._canRBF) {
+      this._canRBF = this._originalTx.ins.some(
+        (input) => input.sequence < 0xfffffffe,
+      );
+    }
+    return this._canRBF;
   }
 
   /**
@@ -491,8 +484,8 @@ export class TransactionAnalyzer {
   protected canPerformCPFP(): boolean {
     return this.outputs.some(
       (output) =>
-        !output.isChange &&
-        new BigNumber(output.value).isGreaterThan(this.dustThreshold),
+        !output.isSpendable &&
+        new BigNumber(output.value).isGreaterThan(this._dustThreshold),
     );
   }
 
@@ -508,8 +501,8 @@ export class TransactionAnalyzer {
       return FeeBumpStrategy.NONE;
     }
 
-    const rbfFee = this.estimateRBFFee();
-    const cpfpFee = this.estimateCPFPFee();
+    const rbfFee = this.estimateRBFFee;
+    const cpfpFee = this.estimateCPFPFee;
 
     if (
       this.canRBF &&
@@ -529,10 +522,10 @@ export class TransactionAnalyzer {
    * @private
    */
   private validateTransaction() {
-    if (this.originalTx.ins.length === 0) {
+    if (this._originalTx.ins.length === 0) {
       throw new Error("Transaction has no inputs");
     }
-    if (this.originalTx.outs.length === 0) {
+    if (this._originalTx.outs.length === 0) {
       throw new Error("Transaction has no outputs");
     }
   }

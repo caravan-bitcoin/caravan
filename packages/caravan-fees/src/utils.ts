@@ -1,65 +1,18 @@
 import {
-  P2SH,
-  P2SH_P2WSH,
-  P2WSH,
   estimateMultisigP2SHTransactionVSize,
   estimateMultisigP2SH_P2WSHTransactionVSize,
   estimateMultisigP2WSHTransactionVSize,
   Network,
+  networkData,
   validateAddress,
 } from "@caravan/bitcoin";
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
 import {
   payments,
   address as bitcoinAddress,
   networks,
-  Transaction,
 } from "bitcoinjs-lib-v6";
 
-import {
-  BaseErrorType,
-  RbfErrorType,
-  CpfpErrorType,
-  ErrorType,
-  ErrorMessage,
-  TransactionState,
-} from "./types";
-
-/**
- * Estimate the virtual size of a transaction based on its address type and input/output count.
- * @param addressType The type of address (P2SH, P2SH_P2WSH, or P2WSH)
- * @param inputCount Number of inputs
- * @param outputCount Number of outputs
- * @param m Number of required signers
- * @param n Total number of signers
- * @returns Estimated virtual size in vbytes
- */
-export function estimateVirtualSize(
-  addressType: string,
-  inputCount: number,
-  outputCount: number,
-  m: number,
-  n: number,
-): number {
-  const config = {
-    numInputs: inputCount,
-    numOutputs: outputCount,
-    m,
-    n,
-  };
-
-  switch (addressType) {
-    case P2SH:
-      return estimateMultisigP2SHTransactionVSize(config);
-    case P2SH_P2WSH:
-      return estimateMultisigP2SH_P2WSHTransactionVSize(config);
-    case P2WSH:
-      return estimateMultisigP2WSHTransactionVSize(config);
-    default:
-      throw new Error("Unsupported address type");
-  }
-}
+import { Satoshis, BTC } from "./types";
 
 /**
  * Creates an output script for a given Bitcoin address.
@@ -122,193 +75,111 @@ export function createOutputScript(
 }
 
 /**
- * Calculates the total input value from the given PSBT.
- *
- * This function aggregates the total value of all inputs, considering both
- * witness and non-witness UTXOs. It uses helper functions to parse and sum up
- * the values of each input.
- *
- * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
- * @returns The total input value as a BigNumber.
+ * Attempts to derive the address from an output script.
+ * @param {Buffer} script - The output script
+ * @param {Network} network - The Bitcoin network (e.g., mainnet, testnet) to use for address derivation.
+ * @returns {string} The derived address or an error message if unable to derive
+ * @protected
  */
-export function calculateTotalInputValue(psbt: PsbtV2): BigNumber {
-  let total = new BigNumber(0);
-
-  for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-    const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[i];
-    const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[i];
-
-    if (witnessUtxo) {
-      total = total.plus(parseWitnessUtxoValue(witnessUtxo, i));
-    } else if (nonWitnessUtxo) {
-      total = total.plus(parseNonWitnessUtxoValue(nonWitnessUtxo, i, psbt));
-    } else {
-      console.log("check UTXO", witnessUtxo, nonWitnessUtxo);
-      console.warn(`No UTXO data found for input at index ${i}`);
-    }
-  }
-
-  return total;
-}
-
-/**
- * Parses the value of a witness UTXO.
- *
- * Witness UTXOs are expected to have their value encoded in the first 8 bytes
- * of the hex string in little-endian byte order. This function extracts and
- * converts that value to a BigNumber.
- *
- * @param utxo - The hex string representing the witness UTXO.
- * @param index - The index of the UTXO in the PSBT input list.
- * @returns The parsed value as a BigNumber.
- */
-export function parseWitnessUtxoValue(utxo: string, index: number): BigNumber {
+export function getOutputAddress(script: Buffer, network: Network): string {
   try {
-    const valueHex = utxo.slice(0, 16);
-    const valueReversed = Buffer.from(valueHex, "hex").reverse();
-    const value = new BigNumber(valueReversed.toString("hex"), 16);
-    return value;
-  } catch (error) {
-    console.warn(`Failed to parse witness UTXO at index ${index}:`, error);
-    return new BigNumber(0);
+    const p2pkhAddress = payments.p2pkh({
+      output: script,
+      network: networkData(network),
+    }).address;
+    const p2shAddress = payments.p2sh({
+      output: script,
+      network: networkData(network),
+    }).address;
+    const p2wpkhAddress = payments.p2wpkh({
+      output: script,
+      network: networkData(network),
+    }).address;
+    const p2wshAddress = payments.p2wsh({
+      output: script,
+      network: networkData(network),
+    }).address;
+
+    return (
+      p2pkhAddress ||
+      p2shAddress ||
+      p2wpkhAddress ||
+      p2wshAddress ||
+      "Unable to derive address"
+    );
+  } catch (e) {
+    return "Unable to derive address";
   }
 }
 
 /**
- * Parses the value of a non-witness UTXO.
+ * Estimates the virtual size (vsize) of a Multisig transaction.
  *
- * Non-witness UTXOs require parsing the raw transaction hex to retrieve the
- * correct output value based on the output index specified in the PSBT. This
- * function handles that parsing and conversion.
+ * This function can be called with or without a configuration object. If no configuration
+ * is provided, it will use the following defaults:
+ *   - addressType: 'P2SH'
+ *   - numInputs: 1
+ *   - numOutputs: 1
+ *   - m: 1 (required signatures for multisig)
+ *   - n: 2 (total possible signers for multisig)
  *
- * @param rawTx - The raw transaction hex string.
- * @param index - The index of the non-witness UTXO in the PSBT input list.
- * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
- * @returns The parsed value as a BigNumber.
+ * @param config - An optional object containing the following properties:
+ *   - addressType: The type of address used in the transaction (e.g., 'P2SH', 'P2SH_P2WSH', 'P2WSH').
+ *   - numInputs: The number of inputs in the child transaction.
+ *   - numOutputs: The number of outputs in the child transaction.
+ *   - m: The number of required signatures in a multisig transaction.
+ *   - n: The total number of possible signers in a multisig transaction.
+ *
+ * @returns The estimated virtual size (vsize) of the CPFP transaction in bytes.
+ *
+ * @throws Will throw an error if the address type is unsupported.
  */
-export function parseNonWitnessUtxoValue(
-  rawTx: string,
-  index: number,
-  psbt: PsbtV2,
-): BigNumber {
-  try {
-    const psbtInstance = psbt;
-    const tx = Transaction.fromHex(rawTx);
-    const outputIndex = psbtInstance.PSBT_IN_OUTPUT_INDEX[index];
-    if (outputIndex === undefined) {
-      throw new Error(
-        `Output index for non-witness UTXO at index ${index} is undefined`,
-      );
-    }
-    const output = tx.outs[outputIndex];
-    return new BigNumber(output.value);
-  } catch (error) {
-    console.warn(`Failed to parse non-witness UTXO at index ${index}:`, error);
-    return new BigNumber(0);
-  }
-}
+export function estimateTransactionVsize(
+  config: {
+    addressType?: string;
+    numInputs?: number;
+    numOutputs?: number;
+    m?: number;
+    n?: number;
+  } = {},
+): number {
+  const {
+    addressType = "P2SH",
+    numInputs = 1,
+    numOutputs = 1,
+    m = 1,
+    n = 2,
+  } = config;
 
-/**
- * Calculates the total output value from the given PSBT.
- *
- * This function sums the values of all outputs in the PSBT.
- *
- * @param psbt - The PsbtV2 instance representing the partially signed Bitcoin transaction.
- * @returns The total output value as a BigNumber.
- */
-export function calculateTotalOutputValue(psbt: PsbtV2): BigNumber {
-  return psbt.PSBT_OUT_AMOUNT.reduce(
-    (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-    new BigNumber(0),
-  );
-}
-
-/**
- * Initializes a PSBT instance from various input formats.
- *
- * This function attempts to create a PsbtV2 instance from the input, whether it is
- * already a PsbtV2 instance, a hex string, or a Buffer. It also tries to handle
- * PSBT V0 format if the input is not recognized as a V2 format.
- *
- * @param psbt - The input PSBT which can be a PsbtV2 instance, a hex string, or a Buffer.
- * @returns The initialized PsbtV2 instance.
- * @throws Error if the input format is not recognized as either V2 or V0.
- */
-export function initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
-  if (psbt instanceof PsbtV2) {
-    return psbt;
-  }
-  try {
-    return new PsbtV2(psbt);
-  } catch (error) {
-    try {
-      return PsbtV2.FromV0(psbt);
-    } catch (conversionError) {
-      throw new Error(
-        "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
-      );
-    }
-  }
-}
-
-// Base Error class
-export class TransactionError<
-  T extends ErrorType,
-  S extends TransactionState,
-> extends Error {
-  constructor(
-    public type: T,
-    public state: S,
-    message?: string,
-  ) {
-    super(message || getDefaultErrorMessage(type, state));
-    this.name = "TransactionError";
-  }
-}
-
-export function getDefaultErrorMessage<
-  T extends ErrorType,
-  S extends TransactionState,
->(type: T, state: S): ErrorMessage<T, S> {
-  switch (type) {
-    // Base error types
-    case BaseErrorType.INVALID_STATE:
-      return `Invalid state: ${state}. Expected a different state.` as ErrorMessage<
-        T,
-        S
-      >;
-    case BaseErrorType.INSUFFICIENT_FUNDS:
-      return "Insufficient funds to cover the required amount" as ErrorMessage<
-        T,
-        S
-      >;
-    case BaseErrorType.DUST_OUTPUT:
-      return "Operation would result in a dust output" as ErrorMessage<T, S>;
-    case BaseErrorType.INVALID_FEE_RATE:
-      return "Invalid fee rate specified" as ErrorMessage<T, S>;
-    case BaseErrorType.PSBT_MODIFICATION_ERROR:
-      return "Error modifying the PSBT" as ErrorMessage<T, S>;
-    case BaseErrorType.INVALID_TRANSACTION:
-      return "The transaction is invalid or malformed" as ErrorMessage<T, S>;
-    case BaseErrorType.UNSUPPORTED_OPERATION:
-      return "This operation is not supported in the current context" as ErrorMessage<
-        T,
-        S
-      >;
-
-    // RBF error types
-    case RbfErrorType.ACCELERATION_FAILED:
-      return "Failed to accelerate the transaction" as ErrorMessage<T, S>;
-    case RbfErrorType.CANCELLATION_FAILED:
-      return "Failed to cancel the transaction" as ErrorMessage<T, S>;
-
-    // CPFP error types
-    case CpfpErrorType.PARENT_TX_INVALID:
-      return "The parent transaction is invalid" as ErrorMessage<T, S>;
-    case CpfpErrorType.CHILD_TX_CREATION_FAILED:
-      return "Failed to create the child transaction" as ErrorMessage<T, S>;
-
+  switch (addressType) {
+    case "P2SH":
+      return estimateMultisigP2SHTransactionVSize({
+        ...config,
+        numInputs,
+        numOutputs,
+        m,
+        n,
+      });
+    case "P2SH_P2WSH":
+      return estimateMultisigP2SH_P2WSHTransactionVSize({
+        ...config,
+        numInputs,
+        numOutputs,
+        m,
+        n,
+      });
+    case "P2WSH":
+      return estimateMultisigP2WSHTransactionVSize({
+        ...config,
+        numInputs,
+        numOutputs,
+        m,
+        n,
+      });
     default:
-      return "An unknown error occurred" as ErrorMessage<T, S>;
+      throw new Error("Unsupported address type for CPFP");
   }
 }
+
+export const satoshisToBTC = (sats: Satoshis): BTC => sats / 1e8;
+export const btcToSatoshis = (btc: BTC): Satoshis => Math.round(btc * 1e8);
