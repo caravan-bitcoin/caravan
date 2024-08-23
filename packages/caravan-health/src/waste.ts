@@ -1,5 +1,6 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { WalletMetrics } from "./wallet";
+import { MultisigAddressType } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*
@@ -75,10 +76,10 @@ export class WasteMetrics extends WalletMetrics {
 
   /*
     Name : 
-      Spend Waste Score (S.W.S)
+      Spend Waste Amount (S.W.A)
 
     Definition : 
-      A score that indicates whether it is economical to spend a particular output now 
+      A quantity that indicates whether it is economical to spend a particular output now 
       or wait to consolidate it later when fees could be low.
       
     Important Terms:
@@ -105,8 +106,8 @@ export class WasteMetrics extends WalletMetrics {
           Exact amount wanted to be spent in the transaction.
 
     Calculation :
-      spend waste score = consolidation factor + cost of transaction
-      spend waste score = weight (fee rate - estimatedLongTermFeeRate) + change + excess
+      spend waste amount = consolidation factor + cost of transaction
+      spend waste amount = weight (fee rate - estimatedLongTermFeeRate) + change + excess
 
     Observation :
       Depending on the fee rate in the long term, the consolidation factor can either be positive or negative.		
@@ -128,29 +129,43 @@ export class WasteMetrics extends WalletMetrics {
   /*
     Name : calculateDustLimits
     Definition : 
-      Dust outputs are uneconomical to spend because the fees to spend them are higher than 
-      the value of the output. So to avoid the situations for having dust outputs in the wallet,
-      we calculate the dust limits for the wallet.
+      "Dust" is defined in terms of dustRelayFee,
+      which has units satoshis-per-kilobyte.
+      If you'd pay more in fees than the value of the output
+      to spend something, then we consider it dust.
+      A typical spendable non-segwit txout is 34 bytes big, and will
+      need a CTxIn of at least 148 bytes to spend:
+      so dust is a spendable txout less than
+      182*dustRelayFee/1000 (in satoshis).
+      546 satoshis at the default rate of 3000 sat/kB.
+      A typical spendable segwit txout is 31 bytes big, and will
+      need a CTxIn of at least 67 bytes to spend:
+      so dust is a spendable txout less than
+      98*dustRelayFee/1000 (in satoshis).
+      294 satoshis at the default rate of 3000 sat/kB.
 
     Calculation :
       lowerLimit - Below which the UTXO will actually behave as a dust output.
       upperLimit - Above which the UTXO will be safe and economical to spend.
       riskMultiplier - A factor that helps to determine the upper limit.
 
-      The average size of the transaction to move one UTXO value could be 250-400 vBytes.
-      So, for the lower limit we are taking 250 vBytes as the transaction weight by default.
-      If your wallet supports weight units, you can change the value accordingly.
-
-      lowerLimit = 250 * feeRate (sats/vByte)
+      lowerLimit = txWeight(default=182(34+148)) * feeRate (sats/vByte)
       upperLimit = lowerLimit * riskMultiplier
+
   */
   calculateDustLimits(
     feeRate: number,
-    txWeight: number = 250,
+    // A typical spendable non-segwit txout is 34 bytes big
+    txWeight: number = 34,
     riskMultiplier: number = 2,
+    isWitness: boolean = false,
+    WITNESS_SCALE_FACTOR = 1,
   ): { lowerLimit: number; upperLimit: number } {
-    // By default, we are taking 250 vBytes as the transaction weight
-    // and 2 as the risk multiplier since weight could go as high as 400-500 vBytes.
+    if (isWitness === true) {
+      txWeight += 32 + 4 + 1 + 107 / WITNESS_SCALE_FACTOR + 4;
+    } else {
+      txWeight += 32 + 4 + 1 + 107 + 4;
+    }
     let lowerLimit: number = txWeight * feeRate;
     let upperLimit: number = lowerLimit * riskMultiplier;
     return { lowerLimit, upperLimit };
@@ -174,6 +189,7 @@ export class WasteMetrics extends WalletMetrics {
     -> Good : (0.6, 0.8]
     -> Very Good : (0.8, 1]
   */
+
   weightedWasteScore(feeRatePercentileHistory: FeeRatePercentile[]): number {
     let RFS = this.relativeFeesScore(feeRatePercentileHistory);
     let FAR = this.feesToAmountRatio();

@@ -101,7 +101,7 @@ describe("Waste metric scoring", () => {
   });
 
   describe("Spend Waste Amount (S.W.A)", () => {
-    it("determines the cost of keeping or spending the UTXO at given point of time", () => {
+    it("determines the cost of keeping or spending the UTXOs at given point of time", () => {
       // Input UTXO Set : [0.1 BTC, 0.2 BTC, 0.3 BTC, 0.4 BTC]
       // Weight : 30 vbytes
       // Current Fee Rate : 10 sat/vbyte
@@ -122,8 +122,9 @@ describe("Waste metric scoring", () => {
         estimatedLongTermFeeRate,
       );
       expect(wasteAmount).toBe(1850);
-      // This number is positive this means that in future if we wait for the fee rate to go down,
-      // we can save 1850 sats
+      // This number is positive this means that in future if we spend the UTXOs now,
+      // we will be saving 1850 sats in fees. This is because in future the fee rate
+      // is expected to increase from 10 sat/vbyte to 15 sat/vbyte.
     });
   });
 
@@ -132,8 +133,8 @@ describe("Waste metric scoring", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, 300, 1.5);
-      expect(lowerLimit).toBe(3000);
-      expect(upperLimit).toBe(4500);
+      expect(lowerLimit).toBe(4480);
+      expect(upperLimit).toBe(6720);
     });
   });
 
