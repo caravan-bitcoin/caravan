@@ -119,7 +119,7 @@ export class WasteMetrics extends WalletMetrics {
     weight: number, // Estimated weight of the transaction
     feeRate: number, // Current Fee rate for the transaction
     inputAmountSum: number, // Sum of amount for each coin in input of the transaction
-    spendAmount: number, // Exact Amount wanted to be spent in the transaction
+    spendAmount: number, // Exact amount wanted to be spent in the transaction
     estimatedLongTermFeeRate: number, // Long term estimated fee-rate
   ): number {
     let costOfTx: number = Math.abs(spendAmount - inputAmountSum);
