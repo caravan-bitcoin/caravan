@@ -117,7 +117,7 @@ export class WasteMetrics extends WalletMetrics {
   */
   spendWasteAmount(
     weight: number, // Estimated weight of the transaction
-    feeRate: number, // Current Fee rate for the transaction
+    feeRate: number, // Current fee rate for the transaction
     inputAmountSum: number, // Sum of amount for each coin in input of the transaction
     spendAmount: number, // Exact amount wanted to be spent in the transaction
     estimatedLongTermFeeRate: number, // Long term estimated fee-rate
