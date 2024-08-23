@@ -10,7 +10,6 @@ import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
 import { UTXO } from "./types";
 import axios from "axios";
-import { FeeRatePercentile } from "./types";
 jest.mock("axios");
 
 describe("ClientBase", () => {
