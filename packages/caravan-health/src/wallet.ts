@@ -1,5 +1,5 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { AddressUtxos, AddressUsageMap } from "./types";
+import { AddressUtxos } from "./types";
 
 export class WalletMetrics {
   public addressUsageMap: Map<string, number> = new Map();

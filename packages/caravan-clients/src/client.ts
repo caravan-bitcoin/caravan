@@ -415,9 +415,9 @@ export class BlockchainClient extends ClientBase {
 
       const data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
 
-      let feeRatePercentileBlocks: FeeRatePercentile[] = [];
+      const feeRatePercentileBlocks: FeeRatePercentile[] = [];
       for (const block of data) {
-        let feeRatePercentile: FeeRatePercentile = {
+        const feeRatePercentile: FeeRatePercentile = {
           avgHeight: block?.avgHeight,
           timestamp: block?.timestamp,
           avgFee_0: block?.avgFee_0,

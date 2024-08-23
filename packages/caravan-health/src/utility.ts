@@ -60,9 +60,10 @@ export function getSpendTypeScore(
       return 2 / 3 - 1 / numberOfOutputs;
     case SpendType.Consolidation:
       return 1 / numberOfInputs;
-    case SpendType.MixingOrCoinJoin:
-      let x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
+    case SpendType.MixingOrCoinJoin: {
+      const x = Math.pow(numberOfOutputs, 2) / numberOfInputs;
       return ((1 / 2) * x) / (1 + x);
+    }
     default:
       throw new Error("Invalid spend type");
   }

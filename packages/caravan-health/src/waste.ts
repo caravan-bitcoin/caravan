@@ -1,6 +1,5 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { WalletMetrics } from "./wallet";
-import { MultisigAddressType } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*

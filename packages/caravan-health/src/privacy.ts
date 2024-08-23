@@ -249,7 +249,6 @@ export class PrivacyMetrics extends WalletMetrics {
     walletAddressType: MultisigAddressType,
     network: Network,
   ): number {
-    let addressUsageMap = this.constructAddressUsageMap();
     let meanTopologyScore = this.getMeanTopologyScore();
     let ARF = this.addressReuseFactor();
     let ATF = this.addressTypeFactor(walletAddressType, network);

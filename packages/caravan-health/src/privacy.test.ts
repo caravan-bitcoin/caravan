@@ -118,7 +118,6 @@ const utxos: AddressUtxos = {
 
 describe("Privacy metric scoring", () => {
   const privacyMetric = new PrivacyMetrics(transactions, utxos);
-  const addressUsageMap = privacyMetric.constructAddressUsageMap();
 
   describe("Determine Spend Type", () => {
     it("Perfect Spend are transactions with 1 input and 1 output", () => {
