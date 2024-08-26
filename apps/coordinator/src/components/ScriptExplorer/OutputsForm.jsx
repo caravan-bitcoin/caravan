@@ -14,10 +14,7 @@ import {
   InputAdornment,
   Typography,
   FormHelperText,
-  Switch,
-  FormControlLabel,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
 import { Speed } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
 import {
@@ -27,7 +24,6 @@ import {
   setFee as setFeeAction,
   finalizeOutputs as finalizeOutputsAction,
   resetOutputs as resetOutputsAction,
-  setRBF as setRBFAction,
 } from "../../actions/transactionActions";
 import { updateBlockchainClient } from "../../actions/clientActions";
 import { MIN_SATS_PER_BYTE_FEE } from "../Wallet/constants";
@@ -235,11 +231,6 @@ class OutputsForm extends React.Component {
       setOutputAmount(1, outputAmount);
   }
 
-  handleRBFToggle = () => {
-    const { setRBF, rbfEnabled } = this.props;
-    setRBF(!rbfEnabled);
-  };
-
   render() {
     const {
       feeRate,
@@ -251,7 +242,6 @@ class OutputsForm extends React.Component {
       inputs,
       isWallet,
       autoSpend,
-      rbfEnabled,
     } = this.props;
     const { feeRateFetchError } = this.state;
     const feeDisplay = inputs && inputs.length > 0 ? fee : "0.0000";
@@ -287,11 +277,11 @@ class OutputsForm extends React.Component {
                 disabled={finalizedOutputs}
                 onClick={this.handleAddOutput}
               >
-                <AddIcon /> Add outputsss
+                <AddIcon /> Add output
               </Button>
             </Grid>
           </Grid>
-          <Grid item container spacing={gridSpacing} alignItems="flex-end">
+          <Grid item container spacing={gridSpacing}>
             <Grid item xs={3}>
               <Box mt={feeMt}>
                 <Typography
@@ -337,6 +327,9 @@ class OutputsForm extends React.Component {
               </Typography>
             </Grid>
 
+            <Grid item xs={4}>
+              <Box mt={feeMt}>&nbsp;</Box>
+            </Grid>
             {!isWallet || (isWallet && !autoSpend) ? (
               <Grid item xs={3}>
                 <Box mt={feeMt}>
@@ -364,38 +357,10 @@ class OutputsForm extends React.Component {
                 </Box>
               </Grid>
             ) : (
-              <Grid item xs={3} />
+              ""
             )}
 
-            {/* <Grid item xs={3} /> */}
-
-            <Grid item xs={3}>
-              <Box
-                mt={feeMt}
-                display="flex"
-                flexDirection="column"
-                alignItems="flex-end"
-              >
-                <Tooltip title="Replace-By-Fee allows you to increase the fee later if needed">
-                  <IconButton size="small">
-                    <InfoIcon />
-                  </IconButton>
-                </Tooltip>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={rbfEnabled}
-                      onChange={this.handleRBFToggle}
-                      name="rbfToggle"
-                      color="primary"
-                      disabled={finalizedOutputs}
-                    />
-                  }
-                  label="Enable RBF"
-                  labelPlacement="start"
-                />
-              </Box>
-            </Grid>
+            <Grid item xs={2} />
           </Grid>
 
           <Grid item container spacing={gridSpacing}>
@@ -523,8 +488,6 @@ OutputsForm.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updatesComplete: PropTypes.bool,
   getBlockchainClient: PropTypes.func.isRequired,
-  rbfEnabled: PropTypes.bool.isRequired,
-  setRBF: PropTypes.func.isRequired,
 };
 
 OutputsForm.defaultProps = {
@@ -541,7 +504,6 @@ function mapStateToProps(state) {
     ...state.client,
     signatureImporters: state.spend.signatureImporters,
     change: state.wallet.change,
-    rbfEnabled: state.spend.transaction.rbfEnabled,
   };
 }
 
@@ -553,7 +515,6 @@ const mapDispatchToProps = {
   finalizeOutputs: finalizeOutputsAction,
   resetOutputs: resetOutputsAction,
   getBlockchainClient: updateBlockchainClient,
-  setRBF: setRBFAction,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(OutputsForm);
