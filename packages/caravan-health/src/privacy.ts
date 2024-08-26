@@ -211,8 +211,8 @@ export class PrivacyMetrics extends WalletMetrics {
 
     Definition :
       The UTXO value dispersion factor is a combination of UTXO Spread Factor and UTXO Mass Factor.
-      It signifies the combined effect of how much variance is there in the UTXO Set values is and 
-      how many number of UTXOs are there.
+      It signifies the combined effect of how much variance there is in the UTXO Set values and 
+      the total number of UTXOs there are.
 
     Calculation :
       The U.V.D.F is calculated as a combination of UTXO Spread Factor and UTXO Set Length Weight.
