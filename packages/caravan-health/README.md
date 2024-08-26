@@ -32,7 +32,7 @@ The `WasteMetrics` class focuses on transaction fee efficiency and UTXO manageme
 
 # Dependencies
 
-This library depends on the `@caravan/clients` and `@caravan/bitcoin` package for type validations and preparing some of the required data for that type. Make sure to install and import it correctly in your project.
+This library depends on the `@caravan/clients` and `@caravan/bitcoin` package for type validations and preparing some of the required data for that type.
 
 # Usage
 
