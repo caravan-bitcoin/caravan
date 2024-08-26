@@ -78,7 +78,7 @@ export class WasteMetrics extends WalletMetrics {
       Spend Waste Amount (S.W.A)
 
     Definition : 
-      A quantity that indicates whether it is economical to spend a particular output now 
+      A quantity that indicates whether it is economical to spend a particular output now in a given transaction
       or wait to consolidate it later when fees could be low.
       
     Important Terms:
