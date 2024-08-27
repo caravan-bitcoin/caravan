@@ -28,11 +28,11 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
-    "test": "NODE_OPTIONS=--experimental-vm-modules npx vitest src",
     "lint": "eslint src",
     "ci": "npm run lint && npm run test",
-    "test:watch": "npm run test -- --watch",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest --runInBand"
+    "test": "vitest src",
+    "test:watch": "vitest src --watch",
+    "test:debug": "node --inspect-brk vitest --runInBand"
   },
   "keywords": [
     "bitcoin",
