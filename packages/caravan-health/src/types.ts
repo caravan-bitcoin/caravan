@@ -1,4 +1,7 @@
 import { UTXO } from "@caravan/clients";
+export type { MultisigAddressType } from "@caravan/bitcoin";
+export type { Transaction, UTXO, FeeRatePercentile } from "@caravan/clients";
+export { Network } from "@caravan/bitcoin";
 
 // Represents the Unspent Outputs of the address
 export interface AddressUtxos {

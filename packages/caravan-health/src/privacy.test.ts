@@ -1,7 +1,5 @@
-import { Transaction } from "@caravan/clients";
 import { PrivacyMetrics } from "./privacy";
-import { AddressUtxos, SpendType } from "./types";
-import { Network } from "@caravan/bitcoin";
+import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 import { determineSpendType, getSpendTypeScore } from "./utility";
 
 const transactions: Transaction[] = [

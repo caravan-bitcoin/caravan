@@ -1,6 +1,5 @@
-import { Transaction } from "@caravan/clients";
-import { SpendType } from "./types";
-import { MultisigAddressType, Network, getAddressType } from "@caravan/bitcoin";
+import { SpendType, MultisigAddressType, Network, Transaction } from "./types";
+import { getAddressType } from "@caravan/bitcoin";
 import { WalletMetrics } from "./wallet";
 import { determineSpendType, getSpendTypeScore } from "./utility";
 
@@ -41,9 +40,9 @@ export class PrivacyMetrics extends WalletMetrics {
     if (spendType === SpendType.Consolidation) {
       return score;
     }
-    for (let output of transaction.vout) {
-      let address = output.scriptPubkeyAddress;
-      let isResued = this.isReusedAddress(address);
+    for (const output of transaction.vout) {
+      const address = output.scriptPubkeyAddress;
+      const isResued = this.isReusedAddress(address);
       if (isResued === true) {
         return score;
       }
@@ -72,8 +71,8 @@ export class PrivacyMetrics extends WalletMetrics {
   getMeanTopologyScore(): number {
     let privacyScore = 0;
     const transactions = this.transactions;
-    for (let tx of transactions) {
-      let topologyScore = this.getTopologyScore(tx);
+    for (const tx of transactions) {
+      const topologyScore = this.getTopologyScore(tx);
       privacyScore += topologyScore;
     }
     return privacyScore / transactions.length;
@@ -105,7 +104,7 @@ export class PrivacyMetrics extends WalletMetrics {
       const addressUtxos = utxos[address];
       for (const utxo of addressUtxos) {
         totalAmount += utxo.value;
-        let isReused = this.isReusedAddress(address);
+        const isReused = this.isReusedAddress(address);
         if (isReused) {
           reusedAmount += utxo.value;
         }
@@ -226,8 +225,8 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Very Good : (0.075, 0.15]
   */
   utxoValueDispersionFactor(): number {
-    let UMF: number = this.utxoMassFactor();
-    let USF: number = this.utxoSpreadFactor();
+    const UMF: number = this.utxoMassFactor();
+    const USF: number = this.utxoSpreadFactor();
     return (USF + UMF) * 0.15 - 0.15;
   }
 
@@ -249,12 +248,12 @@ export class PrivacyMetrics extends WalletMetrics {
     walletAddressType: MultisigAddressType,
     network: Network,
   ): number {
-    let meanTopologyScore = this.getMeanTopologyScore();
-    let ARF = this.addressReuseFactor();
-    let ATF = this.addressTypeFactor(walletAddressType, network);
-    let UVDF = this.utxoValueDispersionFactor();
+    const meanTopologyScore = this.getMeanTopologyScore();
+    const ARF = this.addressReuseFactor();
+    const ATF = this.addressTypeFactor(walletAddressType, network);
+    const UVDF = this.utxoValueDispersionFactor();
 
-    let WPS: number =
+    const WPS: number =
       (meanTopologyScore * (1 - 0.5 * ARF) + 0.1 * (1 - ARF)) * (1 - ATF) +
       0.1 * UVDF;
 

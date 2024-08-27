@@ -1,5 +1,4 @@
-import { FeeRatePercentile, Transaction } from "@caravan/clients";
-import { AddressUtxos } from "./types";
+import { AddressUtxos, Transaction, FeeRatePercentile } from "./types";
 
 export class WalletMetrics {
   public addressUsageMap: Map<string, number> = new Map();
@@ -54,8 +53,8 @@ export class WalletMetrics {
     Utility function that helps to obtain the fee rate of the transaction
   */
   getFeeRateForTransaction(transaction: Transaction): number {
-    let fees: number = transaction.fee;
-    let weight: number = transaction.weight;
+    const fees: number = transaction.fee;
+    const weight: number = transaction.weight;
     return fees / weight;
   }
 
@@ -67,7 +66,7 @@ export class WalletMetrics {
     feeRate: number,
     feeRatePercentileHistory: FeeRatePercentile[],
   ): number {
-    let percentile: number = this.getClosestPercentile(
+    const percentile: number = this.getClosestPercentile(
       timestamp,
       feeRate,
       feeRatePercentileHistory,
@@ -123,7 +122,7 @@ export class WalletMetrics {
     const transactions = this.transactions;
     for (const tx of transactions) {
       for (const output of tx.vout) {
-        let address = output.scriptPubkeyAddress;
+        const address = output.scriptPubkeyAddress;
         if (addressUsageMap.has(address)) {
           addressUsageMap.set(address, addressUsageMap.get(address)! + 1);
         } else {

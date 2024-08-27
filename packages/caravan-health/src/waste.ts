@@ -1,6 +1,5 @@
-import { FeeRatePercentile, Transaction } from "@caravan/clients";
+import { FeeRatePercentile, Transaction, MultisigAddressType } from "./types";
 import { WalletMetrics } from "./wallet";
-import { MultisigAddressType } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*
@@ -29,8 +28,8 @@ export class WasteMetrics extends WalletMetrics {
     for (const tx of transactions) {
       if (tx.isSend === true) {
         numberOfSendTx++;
-        let feeRate: number = this.getFeeRateForTransaction(tx);
-        let RFS: number = this.getFeeRatePercentileScore(
+        const feeRate: number = this.getFeeRateForTransaction(tx);
+        const RFS: number = this.getFeeRatePercentileScore(
           tx.block_time,
           feeRate,
           feeRatePercentileHistory,
@@ -122,7 +121,7 @@ export class WasteMetrics extends WalletMetrics {
     spendAmount: number, // Exact amount wanted to be spent in the transaction
     estimatedLongTermFeeRate: number, // Long term estimated fee-rate
   ): number {
-    let costOfTx: number = Math.abs(spendAmount - inputAmountSum);
+    const costOfTx: number = Math.abs(spendAmount - inputAmountSum);
     return weight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
   }
 
@@ -137,7 +136,13 @@ export class WasteMetrics extends WalletMetrics {
     Calculation :
       lowerLimit - Below which the UTXO will actually behave as a dust output.
       upperLimit - Above which the UTXO will be safe and economical to spend.
-      riskMultiplier - A factor that helps to determine the upper limit.
+      riskMultiplier - 
+        The riskMultiplier is a factor that scales the lower limit of a UTXO to determine its 
+        upper limit. Based on their risk tolerance and expected fee volatility, A higher 
+        multiplier provides a greater buffer but may unnecessarily categorize some UTXOs as 
+        safe that could otherwise be considered risky.  The default value is set to 2 as a 
+        balanced approach. It doubles the lower limit, providing a reasonable buffer for most 
+        common fee scenarios without being overly conservative.
 
       Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
 
@@ -168,8 +173,8 @@ export class WasteMetrics extends WalletMetrics {
     } else {
       vsize = 276; // Worst Case
     }
-    let lowerLimit: number = vsize * feeRate;
-    let upperLimit: number = lowerLimit * riskMultiplier;
+    const lowerLimit: number = vsize * feeRate;
+    const upperLimit: number = lowerLimit * riskMultiplier;
     return { lowerLimit, upperLimit };
   }
 
@@ -193,9 +198,9 @@ export class WasteMetrics extends WalletMetrics {
   */
 
   weightedWasteScore(feeRatePercentileHistory: FeeRatePercentile[]): number {
-    let RFS = this.relativeFeesScore(feeRatePercentileHistory);
-    let FAR = this.feesToAmountRatio();
-    let UMF = this.utxoMassFactor();
+    const RFS = this.relativeFeesScore(feeRatePercentileHistory);
+    const FAR = this.feesToAmountRatio();
+    const UMF = this.utxoMassFactor();
     return 0.35 * RFS + 0.35 * FAR + 0.3 * UMF;
   }
 }

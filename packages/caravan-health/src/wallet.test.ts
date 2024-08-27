@@ -1,6 +1,5 @@
 import { WalletMetrics } from "./wallet";
-import { AddressUtxos } from "./types";
-import { FeeRatePercentile, Transaction } from "@caravan/clients";
+import { AddressUtxos, FeeRatePercentile, Transaction } from "./types";
 
 const transactions: Transaction[] = [
   // transactions[0] is a perfect spend transaction
