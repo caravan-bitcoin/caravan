@@ -10,16 +10,27 @@ import * as bitcoind from "./bitcoind";
 import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
 
+import {
+  vi,
+  beforeEach,
+  afterEach,
+  Mocked,
+  MockInstance,
+  describe,
+  it,
+  expect,
+} from "vitest";
+
 import axios from "axios";
-jest.mock("axios");
+vi.mock("axios");
 
 describe("ClientBase", () => {
   const mockHost = "https://example.com";
   const mockData = { foo: "bar" };
-  let mockedAxios: jest.Mocked<typeof axios>;
+  let mockedAxios: Mocked<typeof axios>;
   beforeEach(() => {
-    jest.resetAllMocks();
-    mockedAxios = axios as jest.Mocked<typeof axios>;
+    vi.resetAllMocks();
+    mockedAxios = axios as Mocked<typeof axios>;
   });
 
   it("should make a GET request", async () => {
@@ -147,7 +158,7 @@ describe("BlockchainClient", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API
       const mockResponse = { success: true };
-      const mockBitcoindSendRawTransaction = jest.spyOn(
+      const mockBitcoindSendRawTransaction = vi.spyOn(
         bitcoind,
         "bitcoindSendRawTransaction",
       );
@@ -175,7 +186,7 @@ describe("BlockchainClient", () => {
     it("should broadcast a transaction (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockResponse = "txid";
-      const mockPost = jest.fn().mockResolvedValue(mockResponse);
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -196,7 +207,7 @@ describe("BlockchainClient", () => {
     it("should broadcast a transaction (BLOCKSTREAM client)", async () => {
       // Mock the response from the API
       const mockResponse = "txid";
-      const mockPost = jest.fn().mockResolvedValue(mockResponse);
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.BLOCKSTREAM,
@@ -217,14 +228,14 @@ describe("BlockchainClient", () => {
   });
 
   describe("getTransactionHex", () => {
-    let mockCallBitcoind: jest.SpyInstance;
+    let mockCallBitcoind: MockInstance;
 
     beforeEach(() => {
-      mockCallBitcoind = jest.spyOn(bitcoind, "callBitcoind");
+      mockCallBitcoind = vi.spyOn(bitcoind, "callBitcoind");
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it("should get the transaction hex for a given txid (PRIVATE client)", async () => {
@@ -284,7 +295,7 @@ describe("BlockchainClient", () => {
     it("should get the transaction hex for a given txid (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockResponse = "transactionHex";
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -306,7 +317,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the transaction hex (MEMPOOL client)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch transaction hex");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -337,7 +348,7 @@ describe("BlockchainClient", () => {
     it("should get UTXO details for a given UTXO (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockTransactionResult = "transactionHex";
-      const mockGetTransactionHex = jest
+      const mockGetTransactionHex = vi
         .fn()
         .mockResolvedValue(mockTransactionResult);
 
@@ -399,9 +410,9 @@ describe("BlockchainClient", () => {
           time: "string",
         },
       ];
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
-        .mockResolvedValue(Promise.resolve(mockUnspent));
+        .mockResolvedValue(mockUnspent);
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
       const blockchainClient = new BlockchainClient({
@@ -430,11 +441,11 @@ describe("BlockchainClient", () => {
     it("should handle the case when the address is not found (PRIVATE client)", async () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Address not found");
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
-      const mockIsWalletAddressNotFoundError = jest
+      const mockIsWalletAddressNotFoundError = vi
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(true);
 
@@ -465,10 +476,10 @@ describe("BlockchainClient", () => {
     it("should handle other errors when fetching UTXOs (PRIVATE client)", async () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Failed to fetch UTXOs");
-      const mockIsWalletAddressNotFoundError = jest
+      const mockIsWalletAddressNotFoundError = vi
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(false);
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
@@ -499,7 +510,7 @@ describe("BlockchainClient", () => {
 
     it("should fetch UTXOs using the Get method (MEMPOOL client)", async () => {
       const mockTransactionResult = "transactionHex";
-      const mockGetTransactionHex = jest
+      const mockGetTransactionHex = vi
         .fn()
         .mockResolvedValue(mockTransactionResult);
 
@@ -518,7 +529,7 @@ describe("BlockchainClient", () => {
           status: { confirmed: true, block_time: 42 },
         },
       ];
-      const mockGet = jest.fn().mockResolvedValue(mockUtxos);
+      const mockGet = vi.fn().mockResolvedValue(mockUtxos);
 
       // Create a new instance of BlockchainClient with ClientType.MEMPOOL
       const blockchainClient = new BlockchainClient({
@@ -549,7 +560,7 @@ describe("BlockchainClient", () => {
     it("should handle errors when fetching UTXOs (MEMPOOL client)", async () => {
       // Mock the error from the Get method
       const mockError = new Error("Failed to fetch UTXOs");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
 
       // Create a new instance of BlockchainClient with ClientType.MEMPOOL
       const blockchainClient = new BlockchainClient({
@@ -581,7 +592,7 @@ describe("BlockchainClient", () => {
         confirmed: true,
         balance: 500,
       };
-      const mockBitcoindGetAddressStatus = jest.spyOn(
+      const mockBitcoindGetAddressStatus = vi.spyOn(
         wallet,
         "bitcoindGetAddressStatus",
       );
@@ -609,7 +620,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the status for a given address (PRIVATE CLIENT)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
-      const mockBitcoindGetAddressStatus = jest.spyOn(
+      const mockBitcoindGetAddressStatus = vi.spyOn(
         wallet,
         "bitcoindGetAddressStatus",
       );
@@ -660,7 +671,7 @@ describe("BlockchainClient", () => {
           tx_count: 0,
         },
       };
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -691,7 +702,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the status for a given address (MEMPOOL client)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -726,7 +737,7 @@ describe("BlockchainClient", () => {
     it("should get the fee estimate for a given number of blocks (PRIVATE client)", async () => {
       // Mock the response from the API
       const mockResponse = 10;
-      const mockEstimateSmartFee = jest.spyOn(
+      const mockEstimateSmartFee = vi.spyOn(
         bitcoind,
         "bitcoindEstimateSmartFee",
       );
@@ -754,7 +765,7 @@ describe("BlockchainClient", () => {
     it("should get the fee estimate for a given number of blocks (BLOCKSTREAM client)", async () => {
       // Mock the response from the API
       const mockResponse = [5, 10, 15];
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.BLOCKSTREAM,
@@ -781,7 +792,7 @@ describe("BlockchainClient", () => {
         hourFee: 5,
         economyFee: 2,
       } as Record<string, number>;
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -827,7 +838,7 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import and rescan", async () => {
-      const mockImportDescriptors = jest.spyOn(
+      const mockImportDescriptors = vi.spyOn(
         wallet,
         "bitcoindImportDescriptors",
       );
@@ -839,7 +850,11 @@ describe("BlockchainClient", () => {
 
       const receive = "receive";
       const change = "change";
-      await blockchainClient.importDescriptors({ receive, change, rescan: true});
+      await blockchainClient.importDescriptors({
+        receive,
+        change,
+        rescan: true,
+      });
       expect(mockImportDescriptors).toHaveBeenCalledWith({
         receive,
         change,
@@ -849,7 +864,7 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import without rescan", async () => {
-      const mockImportDescriptors = jest.spyOn(
+      const mockImportDescriptors = vi.spyOn(
         wallet,
         "bitcoindImportDescriptors",
       );
@@ -861,7 +876,11 @@ describe("BlockchainClient", () => {
 
       const receive = "receive";
       const change = "change";
-      await blockchainClient.importDescriptors({ receive, change, rescan: false});
+      await blockchainClient.importDescriptors({
+        receive,
+        change,
+        rescan: false,
+      });
       expect(mockImportDescriptors).toHaveBeenCalledWith({
         receive,
         change,
@@ -883,7 +902,7 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import", async () => {
-      const mockImportDescriptors = jest.spyOn(wallet, "bitcoindWalletInfo");
+      const mockImportDescriptors = vi.spyOn(wallet, "bitcoindWalletInfo");
       mockImportDescriptors.mockResolvedValue({});
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,

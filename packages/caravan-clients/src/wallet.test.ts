@@ -6,6 +6,8 @@ import {
   bitcoindListUnspent,
 } from "./wallet";
 
+import { beforeEach, afterEach, vi, describe, it, expect } from "vitest";
+
 import * as bitcoind from "./bitcoind";
 import BigNumber from "bignumber.js";
 
@@ -20,12 +22,12 @@ describe("Wallet Functions", () => {
   const expectedWalletPath = `${baseUrl}/wallet/${walletName}`;
 
   beforeEach(() => {
-    mockCallBitcoind = jest.fn();
-    jest.spyOn(bitcoind, "callBitcoind").mockImplementation(mockCallBitcoind);
+    mockCallBitcoind = vi.fn();
+    vi.spyOn(bitcoind, "callBitcoind").mockImplementation(mockCallBitcoind);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("callBitcoindWallet", () => {
@@ -151,7 +153,7 @@ describe("Wallet Functions", () => {
     });
 
     it("should throw an error if no result", async () => {
-      const consoleErrorMock = jest.spyOn(console, "error");
+      const consoleErrorMock = vi.spyOn(console, "error");
       consoleErrorMock.mockImplementation(() => {});
       mockCallBitcoind.mockResolvedValue({ result: undefined });
       const address = "address";
