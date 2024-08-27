@@ -1,7 +1,3 @@
-/**
- * @jest-environment  jsdom
- */
-
 import {
   generateMultisigFromHex,
   P2WSH,
@@ -15,6 +11,8 @@ import {
 } from "./psbt";
 import _ from "lodash";
 import { psbtArgsFromFixture } from "./utils";
+
+import { describe, expect, it, test } from "vitest";
 
 describe("getUnsignedMultisigPsbtV0", () => {
   TEST_FIXTURES.transactions
