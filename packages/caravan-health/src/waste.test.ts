@@ -129,12 +129,44 @@ describe("Waste metric scoring", () => {
   });
 
   describe("Dust Limits", () => {
-    it("calculates the lower and upper limit of the dust amount based on the fee rate and transaction weight", () => {
+    it("calculates the lower and upper limit of the dust amount for P2SH script type and 1.5 risk multiplier", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
-        uninitializedWasteMetric.calculateDustLimits(10, 300, 1.5);
-      expect(lowerLimit).toBe(4480);
-      expect(upperLimit).toBe(6720);
+        uninitializedWasteMetric.calculateDustLimits(10, "P2SH", 1.5);
+      expect(lowerLimit).toBe(2760);
+      expect(upperLimit).toBe(4140);
+    });
+
+    it("calculates the lower and upper limit of the dust amount for P2WSH script type and 1.5 risk multiplier", () => {
+      const uninitializedWasteMetric = new WasteMetrics();
+      const { lowerLimit, upperLimit } =
+        uninitializedWasteMetric.calculateDustLimits(10, "P2WSH", 1.5);
+      expect(lowerLimit).toBe(1057.5);
+      expect(upperLimit).toBe(1586.25);
+    });
+
+    it("calculates the lower and upper limit of the dust amount for P2PKH script type and 1.5 risk multiplier", () => {
+      const uninitializedWasteMetric = new WasteMetrics();
+      const { lowerLimit, upperLimit } =
+        uninitializedWasteMetric.calculateDustLimits(10, "P2PKH", 1.5);
+      expect(lowerLimit).toBe(1315);
+      expect(upperLimit).toBe(1972.5);
+    });
+
+    it("calculates the lower and upper limit of the dust amount for P2TR script type and 1.5 risk multiplier", () => {
+      const uninitializedWasteMetric = new WasteMetrics();
+      const { lowerLimit, upperLimit } =
+        uninitializedWasteMetric.calculateDustLimits(10, "P2TR", 1.5);
+      expect(lowerLimit).toBe(575);
+      expect(upperLimit).toBe(862.5);
+    });
+
+    it("calculates the lower and upper limit of the dust amount for P2SH-P2WSH script type and 1.5 risk multiplier", () => {
+      const uninitializedWasteMetric = new WasteMetrics();
+      const { lowerLimit, upperLimit } =
+        uninitializedWasteMetric.calculateDustLimits(10, "P2SH-P2WSH", 1.5);
+      expect(lowerLimit).toBe(1212.5);
+      expect(upperLimit).toBe(1818.75);
     });
   });
 

@@ -1,5 +1,6 @@
 import { FeeRatePercentile, Transaction } from "@caravan/clients";
 import { WalletMetrics } from "./wallet";
+import { MultisigAddressType } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*
@@ -128,44 +129,46 @@ export class WasteMetrics extends WalletMetrics {
   /*
     Name : calculateDustLimits
     Definition : 
-      "Dust" is defined in terms of dustRelayFee,
-      which has units satoshis-per-kilobyte.
-      If you'd pay more in fees than the value of the output
-      to spend something, then we consider it dust.
-      A typical spendable non-segwit txout is 34 bytes big, and will
-      need a CTxIn of at least 148 bytes to spend:
-      so dust is a spendable txout less than
-      182*dustRelayFee/1000 (in satoshis).
-      546 satoshis at the default rate of 3000 sat/kB.
-      A typical spendable segwit txout is 31 bytes big, and will
-      need a CTxIn of at least 67 bytes to spend:
-      so dust is a spendable txout less than
-      98*dustRelayFee/1000 (in satoshis).
-      294 satoshis at the default rate of 3000 sat/kB.
+      Dust limits are the limits that help to determine the lower and upper limit of the UTXO 
+      that can be spent economically.
+      The lower limit is below which the UTXO will actually behave as a dust output and the 
+      upper limit is above which the UTXO will be safe and economical to spend.
 
     Calculation :
       lowerLimit - Below which the UTXO will actually behave as a dust output.
       upperLimit - Above which the UTXO will be safe and economical to spend.
       riskMultiplier - A factor that helps to determine the upper limit.
 
-      lowerLimit = txWeight(default=182(34+148)) * feeRate (sats/vByte)
+      Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
+
+      lowerLimit = input_size (vB) * feeRate (sats/vByte)
       upperLimit = lowerLimit * riskMultiplier
 
   */
   calculateDustLimits(
     feeRate: number,
-    // A typical spendable non-segwit txout is 34 bytes big
-    txWeight: number = 34,
+    scriptType: MultisigAddressType,
     riskMultiplier: number = 2,
-    isWitness: boolean = false,
-    WITNESS_SCALE_FACTOR = 1,
   ): { lowerLimit: number; upperLimit: number } {
-    if (isWitness === true) {
-      txWeight += 32 + 4 + 1 + 107 / WITNESS_SCALE_FACTOR + 4;
-    } else {
-      txWeight += 32 + 4 + 1 + 107 + 4;
+    if (riskMultiplier <= 1) {
+      throw new Error("Risk Multiplier should be greater than 1");
     }
-    let lowerLimit: number = txWeight * feeRate;
+
+    let vsize: number;
+    if (scriptType === "P2SH") {
+      vsize = 276;
+    } else if (scriptType === "P2WSH") {
+      vsize = 105.75;
+    } else if (scriptType === "P2SH-P2WSH") {
+      vsize = 121.25;
+    } else if (scriptType === "P2TR") {
+      vsize = 57.5;
+    } else if (scriptType === "P2PKH") {
+      vsize = 131.5;
+    } else {
+      vsize = 276; // Worst Case
+    }
+    let lowerLimit: number = vsize * feeRate;
     let upperLimit: number = lowerLimit * riskMultiplier;
     return { lowerLimit, upperLimit };
   }
