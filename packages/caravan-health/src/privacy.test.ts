@@ -18,7 +18,7 @@ const transactions: Transaction[] = [
     vout: [
       {
         scriptPubkeyHex: "scriptPubkeyHex1",
-        scriptPubkeyAddress: "scriptPubkeyAddress1",
+        scriptPubkeyAddress: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
         value: 0.1,
       },
     ],
@@ -52,12 +52,14 @@ const transactions: Transaction[] = [
       },
       {
         scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
+        scriptPubkeyAddress:
+          "bc1qng72v5ceptk07htel0wcv6k27fkg6tmmd8887jr2l2yz5a5lnawqqeceya",
         value: 0.2,
       },
       {
         scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
+        scriptPubkeyAddress:
+          "bc1qng72v5ceptk07htel0wcv6k27fkg6tmmd8887jr2l2yz5a5lnawqqeceya",
         value: 0.2,
       },
       {
@@ -311,6 +313,9 @@ describe("Privacy metric scoring", () => {
   });
 
   describe("Address Reuse Factor", () => {
+    it.todo(
+      "Make multiple transactions and UTXO objects to test the address reuse factor for half used and half reused addresses.",
+    );
     it("Calculates the amount being held by reused addresses with respect to the total amount", () => {
       const addressReuseFactor: number = privacyMetric.addressReuseFactor();
       expect(addressReuseFactor).toBe(0);
@@ -318,12 +323,20 @@ describe("Privacy metric scoring", () => {
   });
 
   describe("Address Type Factor", () => {
+    it.todo("Test with different combination of address types and networks");
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
         "P2SH",
         Network.MAINNET,
       );
       expect(addressTypeFactor).toBe(1);
+    });
+    it("Calculates the the address type distribution of the wallet transactions", () => {
+      const addressTypeFactor: number = privacyMetric.addressTypeFactor(
+        "P2WSH",
+        Network.MAINNET,
+      );
+      expect(addressTypeFactor).toBe(0.25);
     });
   });
 
