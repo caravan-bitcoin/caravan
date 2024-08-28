@@ -130,8 +130,8 @@ describe("Waste metric scoring", () => {
 
   describe("Dust Limits", () => {
     const config = {
-      m: 2, // Provide the required property m
-      n: 3, // Provide the required property n
+      requiredSignerCount: 2, // Provide the required property m
+      totalSignerCount: 3, // Provide the required property n
     };
     it("calculates the lower and upper limit of the dust amount for P2SH script type and 1.5 risk multiplier", () => {
       const uninitializedWasteMetric = new WasteMetrics();

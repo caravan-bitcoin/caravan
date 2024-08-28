@@ -137,6 +137,9 @@ export class WasteMetrics extends WalletMetrics {
     Calculation :
       lowerLimit - Below which the UTXO will actually behave as a dust output.
       upperLimit - Above which the UTXO will be safe and economical to spend.
+      config - It takes two parameters, requiredSignerCount and totalSignerCount
+        Eg : For a 2-of-3 Multisig wallet the config will be 
+        config : {requiredSignerCount: 2, totalSignerCount: 3}
       riskMultiplier - 
         The riskMultiplier is a factor that scales the lower limit of a UTXO to determine its 
         upper limit. Based on their risk tolerance and expected fee volatility, a higher 
@@ -154,8 +157,8 @@ export class WasteMetrics extends WalletMetrics {
     feeRate: number,
     scriptType: MultisigAddressType,
     config: {
-      m: number;
-      n: number;
+      requiredSignerCount: number;
+      totalSignerCount: number;
     },
     riskMultiplier: number = 2,
   ): { lowerLimit: number; upperLimit: number } {
@@ -167,17 +170,24 @@ export class WasteMetrics extends WalletMetrics {
     if (scriptType === "P2SH") {
       const signatureLength = 72 + 1; // approx including push byte
       const keylength = 33 + 1; // push byte
-      vsize = signatureLength * config.m + keylength * config.n;
+      vsize =
+        signatureLength * config.requiredSignerCount +
+        keylength * config.totalSignerCount;
     } else if (scriptType === "P2WSH") {
       let total = 0;
       total += 1; // segwit marker
       total += 1; // segwit flag
-      total += getWitnessSize(config.m, config.n); // add witness for each input
+      total += getWitnessSize(
+        config.requiredSignerCount,
+        config.totalSignerCount,
+      ); // add witness for each input
       vsize = total;
     } else if (scriptType === "P2SH-P2WSH") {
       const signatureLength = 72;
       const keylength = 33;
-      const witnessSize = signatureLength * config.m + keylength * config.n;
+      const witnessSize =
+        signatureLength * config.requiredSignerCount +
+        keylength * config.totalSignerCount;
       vsize = Math.ceil(0.25 * witnessSize);
     } else if (scriptType === "P2TR") {
       // Reference : https://bitcoin.stackexchange.com/questions/111395/what-is-the-weight-of-a-p2tr-input
