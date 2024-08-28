@@ -214,7 +214,7 @@ describe("Privacy metric scoring", () => {
         score = 0.67 - ( 1 / Number of Outputs )
     
         Justification behind the number 0.67 : 
-        We want that the privacy score should increase with more numbers of outputs, 
+        We want that the privacy score should increase with higher numbers of outputs, 
         because in the case it is a self spend transaction then producing more outputs means 
         producing more UTXOs which has privacy benefits for the wallet.
 
