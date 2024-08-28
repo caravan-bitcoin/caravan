@@ -138,7 +138,7 @@ export class WasteMetrics extends WalletMetrics {
       upperLimit - Above which the UTXO will be safe and economical to spend.
       riskMultiplier - 
         The riskMultiplier is a factor that scales the lower limit of a UTXO to determine its 
-        upper limit. Based on their risk tolerance and expected fee volatility, A higher 
+        upper limit. Based on their risk tolerance and expected fee volatility, a higher 
         multiplier provides a greater buffer but may unnecessarily categorize some UTXOs as 
         safe that could otherwise be considered risky.  The default value is set to 2 as a 
         balanced approach. It doubles the lower limit, providing a reasonable buffer for most 
