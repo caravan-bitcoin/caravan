@@ -107,6 +107,7 @@ describe("Wallet Metrics", () => {
   const walletMetrics = new WalletMetrics(transactions, utxos);
   describe("UTXO Mass Factor", () => {
     it("should return 1 for UTXO set length = 4", () => {
+      expect(Object.values(walletMetrics.utxos)[0].length).toBe(4)
       expect(walletMetrics.utxoMassFactor()).toBe(1);
     });
   });
