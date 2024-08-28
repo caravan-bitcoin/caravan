@@ -1,8 +1,8 @@
-import { PsbtV2, getPsbtVersionNumber } from "./";
+import { PsbtV2, getPsbtVersionNumber } from "../../psbtv2";
 import { vi, describe, it, expect, beforeEach, test } from "vitest";
 import { silenceDescribe } from "react-silence";
 
-import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
+import { KeyType, PsbtGlobalTxModifiableBits } from "../../psbtv2/types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.

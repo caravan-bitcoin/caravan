@@ -8,9 +8,9 @@ import {
   getUnsignedMultisigPsbtV0,
   validateMultisigPsbtSignature,
   translatePSBT,
-} from "./psbt";
+} from "../../psbtv0/psbt";
 import _ from "lodash";
-import { psbtArgsFromFixture } from "./utils";
+import { psbtArgsFromFixture } from "../../psbtv0/utils";
 
 import { describe, expect, it, test } from "vitest";
 

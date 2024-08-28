@@ -1,4 +1,4 @@
-import { bufferize } from "./functions";
+import { bufferize } from "../functions";
 import { describe, it, expect } from "vitest";
 
 describe("bufferize", () => {
