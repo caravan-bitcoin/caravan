@@ -40,12 +40,10 @@
     "@babel/preset-env": "^7.23.8",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
-    "@vitejs/plugin-react": "^4.3.1",
     "eslint": "^8.56.0",
     "tsconfig": "*",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.3",
-    "vitest": "^2.0.5"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
