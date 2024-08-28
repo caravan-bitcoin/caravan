@@ -216,7 +216,7 @@ describe("Privacy metric scoring", () => {
         Justification behind the number 0.67 : 
         We want that the privacy score should increase with more numbers of outputs, 
         because if in case it was a self spent transaction then producing more outputs means 
-        producing more UTXOs which have privacy benefits for the wallet.
+        producing more UTXOs which has privacy benefits for the wallet.
 
         Now, We are using a multiplication factor of 1.5 for deniability in case of all the self spend transactions. 
         So the quantity [ X - ( 1 / No. of outputs) ] should be less than 1
