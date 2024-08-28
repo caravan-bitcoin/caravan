@@ -244,9 +244,9 @@ describe("Privacy metric scoring", () => {
       No. of Input = 2 or more (MANY)
       No. of Output = 1
 
-      When the number of inputs are more against the single output then the privacy score should decrease because 
-      it increases the fingerprint or certainty for on-chain analysers that the following transaction was made as 
-      a consolidation and with more number of inputs we tend to expose more UTXOs for a transaction.
+      When the number of inputs is higher than the single output then the privacy score should decrease because 
+      it increases the fingerprint or certainty for on-chain analysers to determine that the transaction was made as 
+      a consolidation and with more inputs we tend to expose more UTXOs for a transaction.
 
       score = 1 / Number of Inputs
     */
