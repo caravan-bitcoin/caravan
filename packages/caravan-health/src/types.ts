@@ -26,8 +26,3 @@ export enum SpendType {
   Consolidation = "Consolidation",
   MixingOrCoinJoin = "MixingOrCoinJoin",
 }
-
-// Represents the usage of the address in past transactions
-export interface AddressUsageMap {
-  [address: string]: boolean;
-}
