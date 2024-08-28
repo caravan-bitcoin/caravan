@@ -180,7 +180,7 @@ export class WasteMetrics extends WalletMetrics {
       total += getWitnessSize(
         config.requiredSignerCount,
         config.totalSignerCount,
-      ); // add witness for each input
+      );
       vsize = total;
     } else if (scriptType === "P2SH-P2WSH") {
       const signatureLength = 72;
