@@ -1,5 +1,6 @@
 import { FeeRatePercentile, Transaction, MultisigAddressType } from "./types";
 import { WalletMetrics } from "./wallet";
+import { getWitnessSize } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*
@@ -144,7 +145,6 @@ export class WasteMetrics extends WalletMetrics {
         balanced approach. It doubles the lower limit, providing a reasonable buffer for most 
         common fee scenarios without being overly conservative.
 
-      Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
 
       lowerLimit = input_size (vB) * feeRate (sats/vByte)
       upperLimit = lowerLimit * riskMultiplier
@@ -153,6 +153,10 @@ export class WasteMetrics extends WalletMetrics {
   calculateDustLimits(
     feeRate: number,
     scriptType: MultisigAddressType,
+    config: {
+      m: number;
+      n: number;
+    },
     riskMultiplier: number = 2,
   ): { lowerLimit: number; upperLimit: number } {
     if (riskMultiplier <= 1) {
@@ -161,17 +165,29 @@ export class WasteMetrics extends WalletMetrics {
 
     let vsize: number;
     if (scriptType === "P2SH") {
-      vsize = 276;
+      const signatureLength = 72 + 1; // approx including push byte
+      const keylength = 33 + 1; // push byte
+      vsize = signatureLength * config.m + keylength * config.n;
     } else if (scriptType === "P2WSH") {
-      vsize = 105.75;
+      let total = 0;
+      total += 1; // segwit marker
+      total += 1; // segwit flag
+      total += getWitnessSize(config.m, config.n); // add witness for each input
+      vsize = total;
     } else if (scriptType === "P2SH-P2WSH") {
-      vsize = 121.25;
+      const signatureLength = 72;
+      const keylength = 33;
+      const witnessSize = signatureLength * config.m + keylength * config.n;
+      vsize = Math.ceil(0.25 * witnessSize);
     } else if (scriptType === "P2TR") {
+      // Reference : https://bitcoin.stackexchange.com/questions/111395/what-is-the-weight-of-a-p2tr-input
+      // Optimistic key-path-spend input size
       vsize = 57.5;
     } else if (scriptType === "P2PKH") {
+      // Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
       vsize = 131.5;
     } else {
-      vsize = 276; // Worst Case
+      vsize = 546; // Worst Case
     }
     const lowerLimit: number = vsize * feeRate;
     const upperLimit: number = lowerLimit * riskMultiplier;
