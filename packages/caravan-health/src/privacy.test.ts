@@ -265,7 +265,7 @@ describe("Privacy metric scoring", () => {
       No. of Output = 2 or more (MANY)
 
       Justification : 
-        Privacy score is directly proportional to More Number of outputs AND less number of inputs in case of coin join. 
+        Privacy score is directly proportional to higher number of outputs AND less number of inputs in case of coin join. 
         The explanation for this to happen is that if you try to consolidate 
         i.e lower number of output and high number of input, the privacy should be decreased and 
         in case of coin join where there are so many outputs against few inputs it should have increased 
