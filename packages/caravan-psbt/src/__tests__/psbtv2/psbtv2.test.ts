@@ -1,6 +1,14 @@
 import { PsbtV2, getPsbtVersionNumber } from "../../psbtv2";
-import { vi, describe, it, expect, beforeEach, test } from "vitest";
-import { silenceDescribe } from "react-silence";
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  test,
+  beforeAll,
+  afterAll,
+} from "vitest";
 
 import { KeyType, PsbtGlobalTxModifiableBits } from "../../psbtv2/types";
 
@@ -723,7 +731,14 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
@@ -1066,7 +1081,15 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
@@ -1161,8 +1184,15 @@ describe("getPsbtVersionNumber", () => {
 });
 
 describe("PsbtV2.addPartialSig", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
 
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
   let psbt;
 
   beforeEach(() => {
