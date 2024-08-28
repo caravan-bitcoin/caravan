@@ -5,9 +5,9 @@ import {
   ClientBase,
   UTXO,
   BlockchainClientError,
-} from "./client";
-import * as bitcoind from "./bitcoind";
-import * as wallet from "./wallet";
+} from "../client";
+import * as bitcoind from "../bitcoind";
+import * as wallet from "../wallet";
 import BigNumber from "bignumber.js";
 
 import {

@@ -4,11 +4,11 @@ import {
   bitcoindImportDescriptors,
   bitcoindGetAddressStatus,
   bitcoindListUnspent,
-} from "./wallet";
+} from "../wallet";
 
 import { beforeEach, afterEach, vi, describe, it, expect } from "vitest";
 
-import * as bitcoind from "./bitcoind";
+import * as bitcoind from "../bitcoind";
 import BigNumber from "bignumber.js";
 
 describe("Wallet Functions", () => {
