@@ -47,10 +47,10 @@ export function determineSpendType(inputs: number, outputs: number): SpendType {
     -> Very Good : (0.6, 0.85]
   */
 export function getSpendTypeScore(
-  spendType: SpendType,
   numberOfInputs: number,
   numberOfOutputs: number,
 ): number {
+  const spendType = determineSpendType(numberOfInputs, numberOfOutputs);
   switch (spendType) {
     case SpendType.PerfectSpend:
       return 1 / 2;

@@ -32,7 +32,6 @@ export class PrivacyMetrics extends WalletMetrics {
       numberOfOutputs,
     );
     const score: number = getSpendTypeScore(
-      spendType,
       numberOfInputs,
       numberOfOutputs,
     );

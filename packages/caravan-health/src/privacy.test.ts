@@ -179,7 +179,7 @@ describe("Privacy metric scoring", () => {
         score = 0.5 * (1 - 0) = 0.5
     */
     it("Perfect Spend has a raw score of 0.5 for external wallet payments", () => {
-      const score: number = getSpendTypeScore(SpendType.PerfectSpend, 1, 1);
+      const score: number = getSpendTypeScore(1, 1);
       expect(score).toBe(0.5);
     });
     /*
@@ -201,7 +201,7 @@ describe("Privacy metric scoring", () => {
         score = 0.67 * (1-0.33) = 0.4489
     */
     it("Simple Spend has a raw score of 0.44 for external wallet payments", () => {
-      const score: number = getSpendTypeScore(SpendType.SimpleSpend, 1, 2);
+      const score: number = getSpendTypeScore(1, 2);
       expect(score).toBeCloseTo(0.44);
     });
 
@@ -230,11 +230,7 @@ describe("Privacy metric scoring", () => {
 
       */
     it("UTXO Fragmentation has a raw score of 0.33 for external wallet payments", () => {
-      const score: number = getSpendTypeScore(
-        SpendType.UTXOFragmentation,
-        1,
-        3,
-      );
+      const score: number = getSpendTypeScore(1, 3);
       expect(score).toBeCloseTo(0.33);
     });
 
@@ -251,10 +247,10 @@ describe("Privacy metric scoring", () => {
       score = 1 / Number of Inputs
     */
     it("Consolidation has raw score of ", () => {
-      const score: number = getSpendTypeScore(SpendType.Consolidation, 2, 1);
+      const score: number = getSpendTypeScore(2, 1);
       expect(score).toBeCloseTo(0.5);
 
-      const score2: number = getSpendTypeScore(SpendType.Consolidation, 3, 1);
+      const score2: number = getSpendTypeScore(3, 1);
       expect(score2).toBeCloseTo(0.33);
     });
 
@@ -274,21 +270,13 @@ describe("Privacy metric scoring", () => {
       score =   1/2 * (y2/x)/(1+y2/x)
     */
     it("MixingOrCoinJoin has raw score of ", () => {
-      const score: number = getSpendTypeScore(SpendType.MixingOrCoinJoin, 2, 2);
+      const score: number = getSpendTypeScore(2, 2);
       expect(score).toBeCloseTo(0.33);
 
-      const score2: number = getSpendTypeScore(
-        SpendType.MixingOrCoinJoin,
-        2,
-        3,
-      );
+      const score2: number = getSpendTypeScore(2, 3);
       expect(score2).toBeCloseTo(0.409);
 
-      const score3: number = getSpendTypeScore(
-        SpendType.MixingOrCoinJoin,
-        3,
-        2,
-      );
+      const score3: number = getSpendTypeScore(3, 2);
       expect(score3).toBeCloseTo(0.285);
     });
   });
