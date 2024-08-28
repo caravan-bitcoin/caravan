@@ -1,16 +1,14 @@
-/**
- * @jest-environment jsdom
- */
-
 import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
   ColdcardMultisigWalletConfig,
-} from "./coldcard";
+} from "../coldcard";
 import { Network, TEST_FIXTURES, ROOT_FINGERPRINT } from "@caravan/bitcoin";
-import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
-import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
+import { INFO, PENDING, ACTIVE, ERROR } from "../interaction";
+import { coldcardFixtures } from "../fixtures/coldcard.fixtures";
+
+import { describe, it, expect, beforeEach } from "vitest";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 
