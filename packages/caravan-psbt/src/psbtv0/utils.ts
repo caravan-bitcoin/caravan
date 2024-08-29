@@ -93,6 +93,12 @@ export interface LegacyMultisig {
     path: string;
     pubkey: Buffer;
   }[];
+  redeem?: {
+    output: Buffer;
+  };
+  witness?: {
+    output: Buffer;
+  };
 }
 
 // This may be incomplete as the fixture objects are extremely opaque.
@@ -137,8 +143,8 @@ export const convertLegacyOutput = (output: LegacyOutput): PsbtOutput => {
     value: new BigNumber(output.amountSats).toNumber(),
     bip32Derivation:
       output.bip32Derivation || getBip32Derivation(output.multisig),
-    witnessScript: output.witnessScript,
-    redeemScript: output.redeemScript,
+    witnessScript: output.witnessScript || output.multisig?.witness?.output,
+    redeemScript: output.redeemScript || output.multisig?.redeem?.output,
   };
 };
 
