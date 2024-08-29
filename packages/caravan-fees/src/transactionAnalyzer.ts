@@ -14,7 +14,6 @@ import {
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
 import { getOutputAddress, estimateTransactionVsize } from "./utils";
-
 import BigNumber from "bignumber.js";
 
 /**
@@ -44,7 +43,6 @@ export class TransactionAnalyzer {
   private readonly _targetFeeRate: number;
   private readonly _absoluteFee: BigNumber;
   private readonly _availableUtxos: UTXO[];
-  private readonly _dustThreshold: BigNumber;
   private readonly _changeOutputIndex: number | undefined;
   private readonly _incrementalRelayFee: BigNumber;
   private readonly _requiredSigners: number;
@@ -79,7 +77,10 @@ export class TransactionAnalyzer {
     this._targetFeeRate = options.targetFeeRate;
     this._absoluteFee = new BigNumber(options.absoluteFee);
     this._availableUtxos = options.availableUtxos;
-    this._dustThreshold = new BigNumber(options.dustThreshold);
+
+    // TO DO (MRIGESH)
+    // Make this and accelerate RBF fn work with an array of change indices
+
     this._changeOutputIndex = options.changeOutputIndex;
     this._incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
     this._requiredSigners = options.requiredSigners;
@@ -97,6 +98,9 @@ export class TransactionAnalyzer {
 
   /**
    * Gets the virtual size (vsize) of the transaction in virtual bytes.
+   * Note: This uses bitcoinjs-lib's implementation which applies Math.ceil()
+   * for segwit transactions, potentially slightly overestimating the vsize.
+   * This is generally acceptable, especially for fee bumping scenarios.
    * @returns {number} The virtual size of the transaction
    */
   get vsize(): number {
@@ -112,7 +116,7 @@ export class TransactionAnalyzer {
   }
 
   /**
-   * Gets the analyzed inputs of the transaction.
+   * Gets the deserialized inputs of the transaction.
    * @returns {TransactionInput[]} An array of transaction inputs
    */
   get inputs(): TransactionInput[] {
@@ -123,7 +127,7 @@ export class TransactionAnalyzer {
   }
 
   /**
-   * Gets the analyzed outputs of the transaction.
+   * Gets the deserialized outputs of the transaction.
    * @returns {TransactionOutput[]} An array of transaction outputs
    */
   get outputs(): TransactionOutput[] {
@@ -295,8 +299,27 @@ export class TransactionAnalyzer {
 
   /**
    * Estimates the fee required for a successful RBF (Replace-By-Fee) operation.
-   * @returns {string} The estimated RBF fee in satoshis
+   *
+   * This method calculates the minimum additional fee needed to replace the current transaction
+   * using the RBF protocol, as defined in BIP 125. It considers:
+   * 1. The current transaction fee
+   * 2. The incremental relay fee (to ensure the new transaction is attractive to miners)
+   * 3. The target fee rate for the replacement transaction
+   *
+   * The calculation ensures that the new transaction meets both the minimum relay fee
+   * requirement for replacement and the desired target fee rate.
+   *
+   * References:
+   * - BIP 125 (RBF): https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   * - Bitcoin Core RBF implementation:
+   *   https://github.com/bitcoin/bitcoin/blob/master/src/policy/rbf.cpp
+   *
+   * @returns {Satoshis} The estimated additional RBF fee in satoshis.
+   *                     A positive value indicates the amount of additional fee required.
+   *                     A zero or negative value suggests that no fee increase is necessary,
+   *                     which could occur if the current fee already meets or exceeds requirements.
    */
+
   get estimateRBFFee(): Satoshis {
     const currentFee = this.fee;
     const vsize = this.vsize;
@@ -308,15 +331,38 @@ export class TransactionAnalyzer {
       new BigNumber(this.rbfFeeRate).multipliedBy(vsize),
     );
 
-    return BigNumber.max(
-      minReplacementFee.minus(currentFee),
-      new BigNumber(1),
-    ).toNumber();
+    return minReplacementFee.minus(currentFee).toString();
   }
 
   /**
    * Estimates the fee required for a successful CPFP (Child-Pays-For-Parent) operation.
-   * @returns {string} The estimated CPFP fee in satoshis
+   *
+   * This method calculates the  fee needed for a child transaction to boost the
+   * fee rate of the current (parent) transaction using the CPFP technique. It considers:
+   * 1. The current transaction's size and fee
+   * 2. An estimated size for a simple child transaction (1 input, 1 output)
+   * 3. The target fee rate for the combined package (parent + child)
+   *
+   * The calculation aims to determine how much additional fee the child transaction
+   * needs to contribute to bring the overall package fee rate up to the target.
+   *
+   * Assumptions:
+   * - The child transaction will have 1 input (spending an output from this transaction)
+   * - The child transaction will have 1 output (change back to the user's wallet)
+   * - The multisig configuration (m-of-n) is the same as the parent transaction
+   *
+   * References:
+   * - Bitcoin Core CPFP implementation:
+   *   https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.cpp
+   * - CPFP overview: https://bitcoinops.org/en/topics/cpfp/
+   * - Package relay for CPFP: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki#implementation-notes
+   *
+   * @returns {Satoshis} The estimated additional CPFP fee in satoshis.
+   *                     This value represents how much extra fee the child transaction
+   *                     should include above its own minimum required fee.
+   *                     A positive value indicates the amount of additional fee required.
+   *                     A zero or negative value (rare) could indicate that the current
+   *                     transaction's fee is already sufficient for the desired rate.
    */
   get estimateCPFPFee(): Satoshis {
     const config = {
@@ -328,15 +374,7 @@ export class TransactionAnalyzer {
     };
     const childVsize = estimateTransactionVsize(config);
     const packageSize = this.vsize + childVsize;
-    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toNumber();
-  }
-
-  /**
-   * Gets the dust threshold used for analysis.
-   * @returns {string} The dust threshold in satoshis
-   */
-  get getDustThreshold(): string {
-    return this._dustThreshold.toString();
+    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toString();
   }
 
   /**
@@ -415,8 +453,8 @@ export class TransactionAnalyzer {
         type:
           index === this._changeOutputIndex
             ? TxOutputType.CHANGE
-            : TxOutputType.DESTINATION,
-        amountSats: output.value as Satoshis,
+            : TxOutputType.EXTERNAL,
+        amountSats: output.value.toString(),
       });
     });
   }
@@ -482,11 +520,7 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected canPerformCPFP(): boolean {
-    return this.outputs.some(
-      (output) =>
-        !output.isSpendable &&
-        new BigNumber(output.value).isGreaterThan(this._dustThreshold),
-    );
+    return this.outputs.some((output) => output.isSpendable);
   }
 
   /**
@@ -495,6 +529,9 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected recommendStrategy(): FeeBumpStrategy {
+    // TO DO (MRIGESH):
+    // Assuming a tx is non-RBF , but depends on Full-RBF and has lower fees than CPFP then we need to think of mechanism to distinguish a better strategy between the two or maybe warn the user
+
     if (
       new BigNumber(this.feeRate).isGreaterThanOrEqualTo(this.targetFeeRate)
     ) {
