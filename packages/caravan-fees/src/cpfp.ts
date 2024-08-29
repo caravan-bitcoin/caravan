@@ -5,7 +5,8 @@ import {
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
 import { Network } from "@caravan/bitcoin";
-import { TxOutputType, UTXO, FeeBumpStrategy } from "./types";
+import { TxOutputType, UTXO, FeeBumpStrategy, Satoshis } from "./types";
+import BigNumber from "bignumber.js";
 
 /**
  * Creates a Child-Pays-for-Parent (CPFP) transaction to accelerate the confirmation
@@ -20,11 +21,12 @@ import { TxOutputType, UTXO, FeeBumpStrategy } from "./types";
  * @param {number} spendableOutputIndex - The index of the output in the parent transaction that will be spent in the child transaction.
  * @param {string} changeAddress - The address where any excess funds (change) will be sent in the child transaction.
  * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {number} dustThreshold -  The dust threshold in satoshis. Outputs below this value are considered
- "dust" and may not be economically viable to spend. This is used in Default Bitcoin Core value is 546 satoshis .
+ * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust".
  * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
+ * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
  * @param {number} requiredSigners - The number of required signers for the multisig setup.
  * @param {number} totalSigners - The total number of signers in the multisig setup.
+ * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
  * @returns {string} The base64-encoded PSBT of the CPFP (child) transaction.
  * @throws {Error} If CPFP is not possible or if the transaction creation fails.
  *
@@ -35,9 +37,12 @@ import { TxOutputType, UTXO, FeeBumpStrategy } from "./types";
  *   1, // spendable output index
  *   'bc1q...', // change address
  *   Network.MAINNET,
+ *   '546', // dust threshold
  *   'P2WSH',
+ *   '1000', // absolute fee
  *   2, // required signers
- *   3  // total signers
+ *   3,  // total signers
+ *   true // strict mode
  * );
  *
  * @see https://bitcoinops.org/en/topics/cpfp/ Bitcoin Optech on Child Pays for Parent
@@ -49,18 +54,19 @@ export const createCPFPTransaction = (
   spendableOutputIndex: number,
   changeAddress: string,
   network: Network,
-  dustThreshold: number,
+  dustThreshold: Satoshis,
   scriptType: string,
+  absoluteFee: Satoshis,
   requiredSigners: number,
   totalSigners: number,
+  strict: boolean = false,
 ): string => {
   // Step 1: Analyze the original transaction
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    dustThreshold,
     targetFeeRate: 0, // We'll use the analyzer's recommendation
-    absoluteFee: 0, // This will be calculated by the analyzer
+    absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
     totalSigners,
@@ -88,7 +94,7 @@ export const createCPFPTransaction = (
     inputs: [],
     outputs: [],
     targetFeeRate: Number(txAnalyzer.cpfpFeeRate), // Use CPFP-specific fee rate from analyzer
-    dustThreshold: Number(txAnalyzer.getDustThreshold),
+    dustThreshold,
     network,
     scriptType,
     requiredSigners,
@@ -117,49 +123,63 @@ export const createCPFPTransaction = (
     new BtcTxInputTemplate({
       txid: analysis.txid,
       vout: spendableOutputIndex,
-      amountSats: parentOutputUTXO.value,
+      amountSats: parentOutputUTXO.value.toString(),
     }),
   );
 
-  // Step 5: Add a change output (required for a valid transaction)
+  // Step 5: Add a change output (at least 1 output required for a valid transaction)
   childTxTemplate.addOutput(
     new BtcTxOutputTemplate({
       address: changeAddress,
-      amountSats: 0, // Initial amount, will be adjusted later
+      amountSats: "0", // Initial amount, will be adjusted later
       type: TxOutputType.CHANGE,
     }),
   );
 
   // Step 6: Add additional inputs if necessary to cover the fee
   for (const utxo of availableInputs) {
-    if (childTxTemplate.feeRateSatisfied && childTxTemplate.areFeesPayPaid()) {
+    if (childTxTemplate.feeRateSatisfied && childTxTemplate.areFeesPaid()) {
       break; // Stop adding inputs once fee requirements are met
     }
-    // Skip if this UTXO is already added (parent output) or is the parent transaction
-    if (utxo.txid === analysis.txid) {
+    // Skip if this UTXO is already added
+    if (
+      childTxTemplate.inputs.some(
+        (input) => input.txid === utxo.txid && input.vout === utxo.vout,
+      )
+    ) {
       continue;
     }
     childTxTemplate.addInput(
       new BtcTxInputTemplate({
         txid: utxo.txid,
         vout: utxo.vout,
-        amountSats: utxo.value,
+        amountSats: utxo.value.toString(),
       }),
     );
   }
 
   // Step 7: Calculate and set the change output amount
-  const totalInputAmount = childTxTemplate.getTotalInputAmount();
-  const fee = childTxTemplate.targetFeesToPay;
-  const changeAmount = totalInputAmount - fee;
+  const totalInputAmount = new BigNumber(childTxTemplate.getTotalInputAmount());
+  const fee = new BigNumber(childTxTemplate.targetFeesToPay);
+  const changeAmount = totalInputAmount.minus(fee);
 
-  if (changeAmount <= Number(txAnalyzer.getDustThreshold)) {
-    throw new Error(
-      "Change amount is below the dust threshold. Increase inputs or reduce fee rate.",
-    );
+  if (changeAmount.lte(dustThreshold)) {
+    if (strict) {
+      throw new Error(
+        "Change amount is below the dust threshold. Increase inputs or reduce fee rate.",
+      );
+    } else {
+      console.warn(
+        "Change amount is below dust threshold. Adjusting transaction.",
+      );
+
+      childTxTemplate.adjustChangeOutput();
+    }
+  } else {
+    childTxTemplate.outputs[0].setAmount(changeAmount.toString());
   }
 
-  childTxTemplate.outputs[0].setAmount(changeAmount);
+  childTxTemplate.outputs[0].setAmount(changeAmount.toString());
 
   // Step 8: Validate the child transaction
   if (!childTxTemplate.validate()) {
@@ -169,20 +189,28 @@ export const createCPFPTransaction = (
   }
 
   // Step 9: Ensure the combined (parent + child) fee rate meets the target
-  const parentSize = analysis.vsize;
-  const childSize = childTxTemplate.estimatedVsize;
-  const parentFee = parseInt(analysis.fee);
-  const childFee = childTxTemplate.currentFee;
-  const combinedFeeRate =
-    Number(parentFee + childFee) / (parentSize + childSize);
+  const parentSize = new BigNumber(analysis.vsize);
+  const childSize = new BigNumber(childTxTemplate.estimatedVsize);
+  const parentFee = new BigNumber(analysis.fee);
+  const childFee = new BigNumber(childTxTemplate.currentFee);
+  const combinedFeeRate = parentFee
+    .plus(childFee)
+    .dividedBy(parentSize.plus(childSize));
 
-  if (combinedFeeRate < Number(txAnalyzer.cpfpFeeRate)) {
-    throw new Error(
-      `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.cpfpFeeRate} sat/vB). Increase inputs or reduce fee rate.`,
-    );
+  const cpfpFeeRate = new BigNumber(txAnalyzer.cpfpFeeRate);
+
+  if (combinedFeeRate.isLessThan(cpfpFeeRate)) {
+    if (strict) {
+      throw new Error(
+        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.cpfpFeeRate} sat/vB). Increase inputs or reduce fee rate.`,
+      );
+    } else {
+      console.warn(
+        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.cpfpFeeRate} sat/vB). Transaction may confirm slower than expected.`,
+      );
+    }
   }
 
   // Step 10: Convert to PSBT and return as base64
-  const psbt = childTxTemplate.toPsbt();
-  return psbt.serialize("base64");
+  return childTxTemplate.toPsbt();
 };

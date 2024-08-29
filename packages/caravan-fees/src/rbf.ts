@@ -6,6 +6,7 @@ import {
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
 import { Satoshis, TxOutputType, UTXO, FeeBumpStrategy } from "./types";
+import BigNumber from "bignumber.js";
 
 /**
  * Creates a cancel Replace-By-Fee (RBF) transaction.
@@ -18,11 +19,13 @@ import { Satoshis, TxOutputType, UTXO, FeeBumpStrategy } from "./types";
  * @param {UTXO[]} availableInputs - Array of available UTXOs, including the original transaction's inputs.
  * @param {string} cancelAddress - The address where all funds will be sent in the cancellation transaction.
  * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {number} dustThreshold -  The dust threshold in satoshis. Outputs below this value are considered
- "dust" and may not be economically viable to spend. This is used in Default Bitcoin Core value is 546 satoshis .
+ * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust" and may not be economically viable to spend.
  * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
  * @param {number} requiredSigners - The number of required signers for the multisig setup.
  * @param {number} totalSigners - The total number of signers in the multisig setup.
+ * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
+ * @param {boolean} [fullRBF=false] - Whether to attempt full RBF even if the transaction doesn't signal it.
+ * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
  * @returns {string} The base64-encoded PSBT of the cancel RBF transaction.
  * @throws {Error} If RBF is not possible or if the transaction creation fails.
  *
@@ -32,9 +35,12 @@ import { Satoshis, TxOutputType, UTXO, FeeBumpStrategy } from "./types";
  *   availableUTXOs,
  *   'bc1q...', // cancel address
  *   Network.MAINNET,
+ *   '546', // dust threshold
  *   'P2WSH',
  *   2, // required signers
- *   3  // total signers
+ *   3,  // total signers
+ *   '1000', // absolute fee
+ *   false // fullRBF
  * );
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki BIP 125: Opt-in Full Replace-by-Fee Signaling
@@ -45,31 +51,41 @@ export const createCancelRbfTransaction = (
   availableInputs: UTXO[],
   cancelAddress: string,
   network: Network,
-  dustThreshold: number,
+  dustThreshold: Satoshis,
   scriptType: string,
   requiredSigners: number,
   totalSigners: number,
+  absoluteFee: Satoshis,
+  fullRBF: boolean = false,
+  strict: boolean = false,
 ): string => {
   // Step 1: Analyze the original transaction
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
     targetFeeRate: 0, // We'll use the analyzer's recommendation
-    absoluteFee: 0, // This will be calculated by the analyzer
+    absoluteFee,
     availableUtxos: availableInputs,
-    dustThreshold,
     requiredSigners,
     totalSigners,
     addressType: scriptType,
   });
 
+  txAnalyzer.assumeRBF = fullRBF;
+
   const analysis = txAnalyzer.analyze();
 
   // Step 2: Verify RBF possibility and suitability
   if (!analysis.canRBF) {
-    throw new Error(
-      "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
-    );
+    if (fullRBF) {
+      console.warn(
+        "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
+      );
+    } else {
+      throw new Error(
+        "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
+      );
+    }
   }
 
   if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
@@ -84,7 +100,7 @@ export const createCancelRbfTransaction = (
     inputs: [],
     outputs: [],
     targetFeeRate: Number(txAnalyzer.rbfFeeRate), // Use RBF-specific fee rate from analyzer
-    dustThreshold: Number(txAnalyzer.getDustThreshold),
+    dustThreshold,
     network,
     scriptType,
     requiredSigners,
@@ -95,10 +111,13 @@ export const createCancelRbfTransaction = (
   newTxTemplate.addOutput(
     new BtcTxOutputTemplate({
       address: cancelAddress,
-      amountSats: 0, // Temporary amount, will be adjusted later
-      type: TxOutputType.DESTINATION,
+      amountSats: "0", // Temporary amount, will be adjusted later
+      type: TxOutputType.CHANGE,
     }),
   );
+
+  // TO DO (MRIGESH)
+  // Add coin selection algorithm to add best suited input to start with
 
   // Step 5: Add one input from the original transaction
   const originalInputTemplate = txAnalyzer.getInputTemplates()[0];
@@ -118,13 +137,13 @@ export const createCancelRbfTransaction = (
     new BtcTxInputTemplate({
       txid: originalInput.txid,
       vout: originalInput.vout,
-      amountSats: originalInput.value,
+      amountSats: originalInput.value.toString(),
     }),
   );
 
   // Step 6: Add more inputs if necessary to meet fee requirements
   for (const utxo of availableInputs) {
-    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPayPaid()) {
+    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
       break; // Stop adding inputs once fee requirements are met
     }
     // Skip if this UTXO is already added
@@ -135,27 +154,47 @@ export const createCancelRbfTransaction = (
       new BtcTxInputTemplate({
         txid: utxo.txid,
         vout: utxo.vout,
-        amountSats: utxo.value,
+        amountSats: utxo.value.toString(),
       }),
     );
   }
 
   // Step 7: Calculate and set the cancellation output amount
-  const totalInputAmount = newTxTemplate.getTotalInputAmount();
-  const fee = newTxTemplate.targetFeesToPay;
-  const cancelOutputAmount = totalInputAmount - fee;
-  newTxTemplate.outputs[0].setAmount(cancelOutputAmount);
+  const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
+  const fee = new BigNumber(newTxTemplate.targetFeesToPay);
+  const cancelOutputAmount = totalInputAmount.minus(fee);
+
+  if (cancelOutputAmount.isLessThan(dustThreshold)) {
+    if (strict) {
+      throw new Error(
+        "Cancel output would be dust. Increase inputs or fee rate.",
+      );
+    } else {
+      console.warn(
+        "Cancel output amount is below dust threshold. Adjusting transaction.",
+      );
+      newTxTemplate.outputs[0].setAmount("0");
+    }
+  } else {
+    newTxTemplate.outputs[0].setAmount(cancelOutputAmount.toString());
+  }
 
   // Step 8: Ensure the new transaction meets RBF requirements
-  const currentFee = newTxTemplate.currentFee;
-  const originalFee = BigInt(analysis.fee);
-  if (currentFee <= originalFee) {
-    throw new Error(
-      "New transaction fee must be higher than the original fee for RBF. Current fee: " +
-        currentFee +
-        ", Original fee: " +
-        originalFee,
-    );
+  const currentFee = new BigNumber(newTxTemplate.currentFee);
+  const minRequiredFee = new BigNumber(analysis.fee).plus(
+    txAnalyzer.estimateRBFFee,
+  );
+
+  if (currentFee.isLessThan(minRequiredFee)) {
+    if (strict) {
+      throw new Error(
+        `New transaction fee (${currentFee.toString()} sats) must be higher than the minimum required fee for RBF (${minRequiredFee.toString()} sats).`,
+      );
+    } else {
+      console.warn(
+        `New transaction fee (${currentFee.toString()} sats) is lower than the recommended minimum fee for RBF (${minRequiredFee.toString()} sats). Transaction may not be accepted by all nodes.`,
+      );
+    }
   }
 
   // Step 9: Validate the transaction
@@ -166,8 +205,7 @@ export const createCancelRbfTransaction = (
   }
 
   // Step 10: Convert to PSBT and return as base64
-  const psbt = newTxTemplate.toPsbt();
-  return psbt.serialize("base64");
+  return newTxTemplate.toPsbt();
 };
 
 /**
@@ -180,14 +218,16 @@ export const createCancelRbfTransaction = (
  *
  * @param {string} originalTx - The hex-encoded original transaction to be replaced.
  * @param {UTXO[]} availableInputs - Array of available UTXOs, including the original transaction's inputs.
- * @param {number} [changeIndex] - The index of the change output in the original transaction.
- * @param {string} [changeAddress] - The address to use for the new change output, if different from the original.
  * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {number} dustThreshold -  The dust threshold in satoshis. Outputs below this value are considered
- "dust" and may not be economically viable to spend. This is used in Default Bitcoin Core value is 546 satoshis .
+ * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust" and may not be economically viable to spend.
  * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
  * @param {number} requiredSigners - The number of required signers for the multisig setup.
  * @param {number} totalSigners - The total number of signers in the multisig setup.
+ * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
+ * @param {number} [changeIndex] - The index of the change output in the original transaction.
+ * @param {string} [changeAddress] - The address to use for the new change output, if different from the original.
+ * @param {boolean} [fullRBF=false] - Whether to attempt full RBF even if the transaction doesn't signal it.
+ * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
  * @returns {string} The base64-encoded PSBT of the accelerated RBF transaction.
  * @throws {Error} If RBF is not possible or if the transaction creation fails.
  *
@@ -195,12 +235,15 @@ export const createCancelRbfTransaction = (
  * const acceleratedTx = createAcceleratedRbfTransaction(
  *   originalTxHex,
  *   availableUTXOs,
- *   1, // change output index
- *   'bc1q...', // new change address (optional)
  *   Network.MAINNET,
+ *   '546', // dust threshold
  *   'P2WSH',
  *   2, // required signers
- *   3  // total signers
+ *   3,  // total signers
+ *   '1000', // absolute fee
+ *   1, // change output index (optional)
+ *   'bc1q...', // new change address (optional)
+ *   false // fullRBF
  * );
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki BIP 125: Opt-in Full Replace-by-Fee Signaling
@@ -210,12 +253,15 @@ export const createAcceleratedRbfTransaction = (
   originalTx: string,
   availableInputs: UTXO[],
   network: Network,
-  dustThreshold: number,
+  dustThreshold: Satoshis,
   scriptType: string,
   requiredSigners: number,
   totalSigners: number,
+  absoluteFee: Satoshis,
   changeIndex?: number,
   changeAddress?: string,
+  fullRBF: boolean = false,
+  strict: boolean = false,
 ): string => {
   if (changeIndex === undefined && !changeAddress) {
     throw new Error(
@@ -227,9 +273,8 @@ export const createAcceleratedRbfTransaction = (
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    dustThreshold,
     targetFeeRate: 0, // We'll use the analyzer's recommendation
-    absoluteFee: 0, // This will be calculated by the analyzer
+    absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
     totalSigners,
@@ -237,13 +282,20 @@ export const createAcceleratedRbfTransaction = (
     changeOutputIndex: changeIndex,
   });
 
+  txAnalyzer.assumeRBF = fullRBF;
   const analysis = txAnalyzer.analyze();
 
   // Step 2: Verify RBF possibility and suitability
   if (!analysis.canRBF) {
-    throw new Error(
-      "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
-    );
+    if (fullRBF) {
+      console.warn(
+        "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
+      );
+    } else {
+      throw new Error(
+        "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
+      );
+    }
   }
 
   if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
@@ -258,7 +310,7 @@ export const createAcceleratedRbfTransaction = (
     inputs: [],
     outputs: [],
     targetFeeRate: Number(txAnalyzer.rbfFeeRate), // Use RBF-specific fee rate from analyzer
-    dustThreshold: Number(txAnalyzer.getDustThreshold),
+    dustThreshold,
     network,
     scriptType,
     requiredSigners,
@@ -266,41 +318,47 @@ export const createAcceleratedRbfTransaction = (
   });
 
   // Step 4: Add all non-change outputs from the original transaction
-  txAnalyzer.outputs.forEach((output, index) => {
-    if (index !== changeIndex) {
+  txAnalyzer.getOutputTemplates().forEach((outputTemplate) => {
+    if (outputTemplate.type === TxOutputType.EXTERNAL) {
       newTxTemplate.addOutput(
         new BtcTxOutputTemplate({
-          address: output.address,
-          amountSats: output.value as Satoshis,
-          type: TxOutputType.DESTINATION,
+          address: outputTemplate.address,
+          amountSats: outputTemplate.amountSats,
+          type: TxOutputType.EXTERNAL,
         }),
       );
     }
   });
 
-  // Step 5: Add all inputs from the original transaction
+  // Step 5: Add at least one input from the original transaction
+  let singleInputAdded = false;
   txAnalyzer.getInputTemplates().forEach((inputTemplate) => {
     const input = availableInputs.find(
       (utxo) =>
         utxo.txid === inputTemplate.txid && utxo.vout === inputTemplate.vout,
     );
-    if (!input) {
-      throw new Error(
-        `Input ${inputTemplate.txid}:${inputTemplate.vout} not found in available UTXOs. Ensure availableInputs includes the original transaction's inputs.`,
+    if (input) {
+      newTxTemplate.addInput(
+        new BtcTxInputTemplate({
+          txid: input.txid,
+          vout: input.vout,
+          amountSats: input.value.toString(),
+        }),
       );
+      singleInputAdded = true;
     }
-    newTxTemplate.addInput(
-      new BtcTxInputTemplate({
-        txid: input.txid,
-        vout: input.vout,
-        amountSats: input.value,
-      }),
-    );
   });
+
+  // Check if at least one original input was added
+  if (!singleInputAdded) {
+    throw new Error(
+      "None of the original transaction's inputs were found in available UTXOs. At least one original input is required for RBF.",
+    );
+  }
 
   // Step 6: Add more inputs if necessary to meet fee requirements
   for (const utxo of availableInputs) {
-    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPayPaid()) {
+    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
       break; // Stop adding inputs once fee requirements are met
     }
     // Skip if this UTXO is already added
@@ -315,36 +373,56 @@ export const createAcceleratedRbfTransaction = (
       new BtcTxInputTemplate({
         txid: utxo.txid,
         vout: utxo.vout,
-        amountSats: utxo.value,
+        amountSats: utxo.value.toString(),
       }),
     );
   }
 
   // Step 7: Add or adjust change output
-  const totalInputAmount = newTxTemplate.getTotalInputAmount();
-  const totalOutputAmount = newTxTemplate.getTotalOutputAmount();
-  const fee = newTxTemplate.targetFeesToPay;
-  const changeAmount = totalInputAmount - totalOutputAmount - fee;
+  if (newTxTemplate.needsChangeOutput) {
+    const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
+    const totalOutputAmount = new BigNumber(
+      newTxTemplate.getTotalOutputAmount(),
+    );
+    const fee = new BigNumber(newTxTemplate.targetFeesToPay);
+    const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
 
-  if (changeAmount > Number(txAnalyzer.getDustThreshold)) {
-    const changeOutput = new BtcTxOutputTemplate({
-      address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
-      amountSats: changeAmount,
-      type: TxOutputType.CHANGE,
-    });
-    newTxTemplate.addOutput(changeOutput);
+    if (changeAmount.gt(dustThreshold)) {
+      const changeOutput = new BtcTxOutputTemplate({
+        address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
+        amountSats: changeAmount.toString(),
+        type: TxOutputType.CHANGE,
+      });
+      newTxTemplate.addOutput(changeOutput);
+    } else if (strict) {
+      throw new Error(
+        "Change amount is below dust threshold. Increase inputs or reduce fee rate.",
+      );
+    } else {
+      console.warn(
+        "Change amount is below dust threshold. Omitting change output.",
+      );
+    }
+
+    newTxTemplate.adjustChangeOutput();
   }
 
   // Step 8: Ensure the new transaction meets RBF requirements
-  const currentFee = newTxTemplate.currentFee;
-  const originalFee = BigInt(analysis.fee);
-  if (currentFee <= originalFee) {
-    throw new Error(
-      "New transaction fee must be higher than the original fee for RBF. Current fee: " +
-        currentFee +
-        ", Original fee: " +
-        originalFee,
-    );
+  const currentFee = new BigNumber(newTxTemplate.currentFee);
+  const minRequiredFee = new BigNumber(analysis.fee).plus(
+    txAnalyzer.estimateRBFFee,
+  );
+
+  if (currentFee.isLessThan(minRequiredFee)) {
+    if (strict) {
+      throw new Error(
+        `New transaction fee (${currentFee.toString()} sats) must be higher than the minimum required fee for RBF (${minRequiredFee.toString()} sats).`,
+      );
+    } else {
+      console.warn(
+        `New transaction fee (${currentFee.toString()} sats) is lower than the recommended minimum fee for RBF (${minRequiredFee.toString()} sats). Transaction may not be accepted by all nodes.`,
+      );
+    }
   }
 
   // Step 9: Validate the transaction
@@ -355,6 +433,5 @@ export const createAcceleratedRbfTransaction = (
   }
 
   // Step 10: Convert to PSBT and return as base64
-  const psbt = newTxTemplate.toPsbt();
-  return psbt.serialize("base64");
+  return newTxTemplate.toPsbt();
 };
