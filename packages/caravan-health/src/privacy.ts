@@ -81,7 +81,7 @@ export class PrivacyMetrics extends WalletMetrics {
     Name : Address Reuse Factor (ARF)
 
     Definition :
-      The address reuse factor is evaluates the amount being held by reused addresses with respect 
+      The address reuse factor evaluates the amount being held by reused addresses with respect 
       to the total amount. It signifies the privacy health of the wallet based on address reuse.
 
     Calculation : 
