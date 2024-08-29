@@ -1,7 +1,7 @@
 import { SpendType, MultisigAddressType, Network, Transaction } from "./types";
 import { getAddressType } from "@caravan/bitcoin";
 import { WalletMetrics } from "./wallet";
-import { determineSpendType, getSpendTypeScore } from "./utility";
+import { determineSpendType, getSpendTypeScore } from "./spendType";
 
 // Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
 // More about deniability : https://www.truthcoin.info/blog/deniability/
