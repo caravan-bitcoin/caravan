@@ -43,7 +43,7 @@ export class WasteMetrics extends WalletMetrics {
 
   /*
     Name : 
-      Fees To Amount Ration (F.A.R)
+      Fees To Amount Ratio (F.A.R)
 
     Definition : 
       Ratio of the fees paid by the wallet transactions to the amount spent in the transaction.
