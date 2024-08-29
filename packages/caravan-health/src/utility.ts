@@ -11,19 +11,26 @@ import { SpendType } from "./types";
     Calculation :
       We have 5 categories of transaction type each with their own impact on privacy score
       - Perfect Spend (1 input, 1 output)
-      - Simple Spend (1 input, 2 outputs)
+      - Simple Spend (output=2 irrespective of input it is Simple Spend)
       - UTXO Fragmentation (1 input, more than 2 standard outputs)
       - Consolidation (more than 1 input, 1 output)
-      - CoinJoin or Mixing (more than 1 input, more than 1 output)
+      - CoinJoin or Mixing (inputs more than equal to outputs, more than 2 output)
   */
 export function determineSpendType(inputs: number, outputs: number): SpendType {
-  if (inputs === 1) {
-    if (outputs === 1) return SpendType.PerfectSpend;
-    if (outputs === 2) return SpendType.SimpleSpend;
-    return SpendType.UTXOFragmentation;
+  if (outputs == 1) {
+    if (inputs == 1) {
+      return SpendType.PerfectSpend;
+    } else {
+      return SpendType.Consolidation;
+    }
+  } else if (outputs == 2) {
+    return SpendType.SimpleSpend;
   } else {
-    if (outputs === 1) return SpendType.Consolidation;
-    return SpendType.MixingOrCoinJoin;
+    if (inputs < outputs) {
+      return SpendType.UTXOFragmentation;
+    } else {
+      return SpendType.MixingOrCoinJoin;
+    }
   }
 }
 

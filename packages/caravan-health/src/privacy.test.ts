@@ -153,13 +153,13 @@ describe("Privacy metric scoring", () => {
     });
 
     it("Mixing or CoinJoin transactions have more than 1 inputs and more than 1 outputs", () => {
-      const spendType: SpendType = determineSpendType(2, 2);
+      const spendType: SpendType = determineSpendType(3, 3);
       expect(spendType).toBe(SpendType.MixingOrCoinJoin);
 
-      const spendType2: SpendType = determineSpendType(2, 3);
+      const spendType2: SpendType = determineSpendType(4, 3);
       expect(spendType2).toBe(SpendType.MixingOrCoinJoin);
 
-      const spendType3: SpendType = determineSpendType(3, 2);
+      const spendType3: SpendType = determineSpendType(4, 4);
       expect(spendType3).toBe(SpendType.MixingOrCoinJoin);
     });
   });
@@ -186,7 +186,6 @@ describe("Privacy metric scoring", () => {
         score = P(“An output cannot be a self-payment) * (1 - P(“involvement of any change output”))
         
         Simple Spend Transaction
-          - No. of Input = 1
           - No. of Output = 2
 
         P("An output can be a self-payment") = 0.33
@@ -257,8 +256,8 @@ describe("Privacy metric scoring", () => {
     /*
       Mixing or CoinJoin Transaction
       MANY to MANY transaction
-      No. of Input = 2 or more (MANY)
-      No. of Output = 2 or more (MANY)
+      No. of Input >= No. of Outputs (MANY)
+      No. of Output > 2 or more (MANY)
 
       Justification : 
         Privacy score is directly proportional to higher number of outputs AND less number of inputs in case of coin join. 
@@ -271,13 +270,13 @@ describe("Privacy metric scoring", () => {
     */
     it("MixingOrCoinJoin has raw score of ", () => {
       const score: number = getSpendTypeScore(2, 2);
-      expect(score).toBeCloseTo(0.33);
+      expect(score).toBeCloseTo(0.44);
 
       const score2: number = getSpendTypeScore(2, 3);
-      expect(score2).toBeCloseTo(0.409);
+      expect(score2).toBeCloseTo(0.333);
 
       const score3: number = getSpendTypeScore(3, 2);
-      expect(score3).toBeCloseTo(0.285);
+      expect(score3).toBeCloseTo(0.44);
     });
   });
 
@@ -287,14 +286,14 @@ describe("Privacy metric scoring", () => {
       expect(score).toBe(0.75);
 
       const score2: number = privacyMetric.getTopologyScore(transactions[1]);
-      expect(score2).toBeCloseTo(0.44);
+      expect(score2).toBeCloseTo(0.416);
     });
   });
 
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
       const meanScore: number = privacyMetric.getMeanTopologyScore();
-      expect(meanScore).toBeCloseTo(0.597);
+      expect(meanScore).toBeCloseTo(0.583);
     });
   });
 
