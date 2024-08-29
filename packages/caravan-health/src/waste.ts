@@ -47,6 +47,8 @@ export class WasteMetrics extends WalletMetrics {
 
     Definition : 
       Ratio of the fees paid by the wallet transactions to the amount spent in the transaction.
+      
+      In the future, we can make this more accurate by comparing fees to the fee market at the time the transaction was sent. This will indicate if transactions typically pay within or out of the range of the rest of the market. 
 
     Calculation : 
       We can compare this ratio against the fiat charges for cross-border transactions.
