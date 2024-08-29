@@ -2,11 +2,22 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { Network, networkData } from "@caravan/bitcoin";
-import { Transaction, TransactionBuilder } from "bitcoinjs-lib";
+import { Network } from "@caravan/bitcoin";
+import { Transaction } from "bitcoinjs-lib-v6";
 import { PsbtV2 } from "@caravan/psbt";
-import { Satoshis, TransactionTemplateOptions } from "./types";
-import { createOutputScript, estimateTransactionVsize } from "./utils";
+import { Satoshis, TransactionTemplateOptions, TxOutputType } from "./types";
+import BigNumber from "bignumber.js";
+import {
+  DEFAULT_DUST_THRESHOLD_IN_SATS,
+  ABSURDLY_HIGH_ABS_FEE,
+  ABSURDLY_HIGH_FEE_RATE,
+} from "./constants";
+import {
+  createOutputScript,
+  estimateTransactionVsize,
+  initializePsbt,
+  getOutputAddress,
+} from "./utils";
 
 /**
  * Represents a Bitcoin transaction template.
@@ -16,7 +27,7 @@ export class BtcTransactionTemplate {
   private readonly _inputs: BtcTxInputTemplate[];
   private readonly _outputs: BtcTxOutputTemplate[];
   private readonly _targetFeeRate: number;
-  private readonly _dustThreshold: Satoshis;
+  private readonly _dustThreshold: BigNumber;
   private readonly _network: Network;
   private readonly _scriptType: string;
   private readonly _requiredSigners: number;
@@ -30,12 +41,90 @@ export class BtcTransactionTemplate {
     this._inputs = options.inputs || [];
     this._outputs = options.outputs || [];
     this._targetFeeRate = options.targetFeeRate;
-    this._dustThreshold = options.dustThreshold;
+    this._dustThreshold = new BigNumber(
+      options.dustThreshold || DEFAULT_DUST_THRESHOLD_IN_SATS,
+    );
     this._network = options.network;
     this._scriptType = options.scriptType;
     this._requiredSigners = options.requiredSigners || 1;
     this._totalSigners = options.totalSigners || 1;
   }
+
+  /**
+   * Creates a BtcTransactionTemplate from a raw PSBT hex string.
+   * This method parses the PSBT, extracts input and output information,
+   * and creates a new BtcTransactionTemplate instance.
+   *
+   * @param psbtHex - The raw PSBT hex string
+   * @param options - Additional options for creating the template
+   * @returns A new BtcTransactionTemplate instance
+   * @throws Error if PSBT parsing fails or required information is missing
+   */
+  static fromRawPsbt(
+    psbtHex: string,
+    options: Omit<TransactionTemplateOptions, "inputs" | "outputs">,
+  ): BtcTransactionTemplate {
+    const psbt = initializePsbt(psbtHex);
+
+    const inputs: BtcTxInputTemplate[] = [];
+    for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+      const txid = psbt.PSBT_IN_PREVIOUS_TXID[i];
+      const vout = psbt.PSBT_IN_OUTPUT_INDEX[i];
+      const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[i];
+      const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[i];
+
+      if (!txid || vout === undefined) {
+        throw new Error(`Missing txid or vout for input ${i}`);
+      }
+
+      let amountSats = "0";
+      if (witnessUtxo) {
+        const witnessUtxoBuffer = Buffer.from(witnessUtxo, "hex");
+        const value = witnessUtxoBuffer.readUInt32LE(8); // Read 4 bytes starting at offset 8 for the value
+        amountSats = value.toString();
+      } else if (nonWitnessUtxo) {
+        const tx = Transaction.fromBuffer(Buffer.from(nonWitnessUtxo, "hex"));
+        amountSats = tx.outs[vout].value.toString();
+      } else {
+        throw new Error(`Missing UTXO information for input ${i}`);
+      }
+
+      inputs.push(
+        new BtcTxInputTemplate({
+          txid: Buffer.from(txid, "hex").reverse().toString("hex"),
+          vout,
+          amountSats,
+        }),
+      );
+    }
+
+    const outputs: BtcTxOutputTemplate[] = [];
+    for (let i = 0; i < psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
+      const script = Buffer.from(psbt.PSBT_OUT_SCRIPT[i], "hex");
+      const amount = psbt.PSBT_OUT_AMOUNT[i];
+
+      if (!script || amount === undefined) {
+        throw new Error(`Missing script or amount for output ${i}`);
+      }
+
+      const address = getOutputAddress(script, options.network);
+
+      outputs.push(
+        new BtcTxOutputTemplate({
+          address: address || "",
+          amountSats: amount.toString(),
+          type: TxOutputType.EXTERNAL, // Assume external by default
+        }),
+      );
+    }
+
+    return new BtcTransactionTemplate({
+      ...options,
+      inputs,
+      outputs,
+    });
+  }
+
   /**
    * Gets the inputs of the transaction.
    * @returns A read-only array of inputs
@@ -62,26 +151,31 @@ export class BtcTransactionTemplate {
 
   /**
    * Calculates the target fees to pay based on the estimated size and target fee rate.
-   * @returns The target fees in satoshis
+   * @returns {Satoshis} The target fees in satoshis (as a string)
    */
   get targetFeesToPay(): Satoshis {
-    return Math.ceil(this.estimatedVsize * this._targetFeeRate);
+    return new BigNumber(this._targetFeeRate)
+      .times(this.estimatedVsize)
+      .integerValue(BigNumber.ROUND_CEIL)
+      .toString();
   }
 
   /**
    * Calculates the current fee of the transaction.
-   * @returns The current fee in satoshis
+   * @returns {Satoshis} The current fee in satoshis (as a string)
    */
   get currentFee(): Satoshis {
-    return this.getTotalInputAmount() - this.getTotalOutputAmount();
+    return new BigNumber(this.getTotalInputAmount())
+      .minus(new BigNumber(this.getTotalOutputAmount()))
+      .toString();
   }
 
   /**
    * Checks if the current fees are sufficient to meet the target fee rate.
    * @returns True if the fees are paid, false otherwise
    */
-  areFeesPayPaid(): boolean {
-    return this.currentFee >= this.targetFeesToPay;
+  areFeesPaid(): boolean {
+    return new BigNumber(this.currentFee).gte(this.targetFeesToPay);
   }
 
   /**
@@ -89,7 +183,7 @@ export class BtcTransactionTemplate {
    * @returns True if the fee rate is satisfied, false otherwise
    */
   get feeRateSatisfied(): boolean {
-    return this.estimatedFeeRate >= this._targetFeeRate;
+    return new BigNumber(this.estimatedFeeRate).gte(this._targetFeeRate);
   }
 
   /**
@@ -97,27 +191,44 @@ export class BtcTransactionTemplate {
    * @returns True if a change output is needed, false otherwise
    */
   get needsChangeOutput(): boolean {
-    const targetFeesWithDustBuffer = this.targetFeesToPay + this._dustThreshold;
+    const targetFeesWithDustBuffer = new BigNumber(this.targetFeesToPay).plus(
+      this._dustThreshold,
+    );
+
     return (
       !this.malleableOutputs.length &&
-      this.currentFee > targetFeesWithDustBuffer
+      new BigNumber(this.currentFee).gt(targetFeesWithDustBuffer)
     );
   }
 
   /**
    * Calculates the total input amount.
-   * @returns The total input amount in satoshis
+   * @returns {Satoshis} The total input amount in satoshis (as a string)
    */
   getTotalInputAmount(): Satoshis {
-    return this._inputs.reduce((sum, input) => sum + input.amountSats, 0);
+    return this._inputs
+      .reduce((sum, input) => {
+        if (!input.isValid()) {
+          throw new Error(`Invalid input: ${JSON.stringify(input)}`);
+        }
+        return sum.plus(new BigNumber(input.amountSats));
+      }, new BigNumber(0))
+      .toString();
   }
 
   /**
    * Calculates the total output amount.
-   * @returns The total output amount in satoshis
+   * @returns {Satoshis} The total output amount in satoshis (as a string)
    */
   getTotalOutputAmount(): Satoshis {
-    return this._outputs.reduce((sum, output) => sum + output.amountSats, 0);
+    return this._outputs
+      .reduce((sum, output) => {
+        if (!output.isValid()) {
+          throw new Error(`Invalid output: ${JSON.stringify(output)}`);
+        }
+        return sum.plus(new BigNumber(output.amountSats));
+      }, new BigNumber(0))
+      .toString();
   }
 
   /**
@@ -136,10 +247,12 @@ export class BtcTransactionTemplate {
 
   /**
    * Calculates the estimated fee rate of the transaction.
-   * @returns The estimated fee rate in satoshis per vbyte
+   * @returns {string} The estimated fee rate in satoshis per vbyte
    */
-  get estimatedFeeRate(): number {
-    return this.currentFee / this.estimatedVsize;
+  get estimatedFeeRate(): string {
+    return new BigNumber(this.currentFee)
+      .dividedBy(this.estimatedVsize)
+      .toString();
   }
 
   /**
@@ -168,23 +281,50 @@ export class BtcTransactionTemplate {
 
   /**
    * Adjusts the change output of the transaction.
-   * If the new change amount is less than the dust threshold, the change output is removed.
+   * This method calculates a new change amount based on the current inputs,
+   * non-change outputs, and the target fee. It then updates the change output
+   * or removes it if the new amount is below the dust threshold.
+   *
+   * The method also handles cases where the change output already has an amount:
+   * 1. It calculates the difference between the new and current change amount.
+   * 2. If removing change, it ensures the fee doesn't unexpectedly increase.
    */
   adjustChangeOutput(): void {
-    const changeOutput = this.malleableOutputs[0];
-    if (!changeOutput) return;
+    const changeOutputs = this._outputs.filter(
+      (output) => output.type === TxOutputType.CHANGE,
+    );
+    if (changeOutputs.length === 0) return;
+    // TO DO (MRIGESH):
+    // To handle for multiple change outputs
+    //
+    const changeOutput = changeOutputs[0];
 
-    const totalIn = this.getTotalInputAmount();
+    const totalIn = new BigNumber(this.getTotalInputAmount());
     const totalOutWithoutChange = this._outputs
       .filter((output) => !output.isMalleable)
-      .reduce((sum, output) => sum + output.amountSats, 0);
+      .reduce(
+        (sum, output) => sum.plus(new BigNumber(output.amountSats)),
+        new BigNumber(0),
+      );
+    const currentChangeAmount = new BigNumber(changeOutput.amountSats);
+    const newChangeAmount = totalIn
+      .minus(totalOutWithoutChange)
+      .minus(new BigNumber(this.targetFeesToPay));
 
-    const newChangeAmount =
-      totalIn - totalOutWithoutChange - this.targetFeesToPay;
+    if (newChangeAmount.gte(this._dustThreshold)) {
+      const changeAmountDiff = newChangeAmount.minus(currentChangeAmount);
 
-    if (newChangeAmount >= this._dustThreshold) {
-      changeOutput.setAmount(newChangeAmount);
+      if (!changeAmountDiff.isZero()) {
+        changeOutput.addAmount(changeAmountDiff.toString());
+      }
     } else {
+      // If we're removing change, ensure we're not increasing fees unexpectedly
+      if (currentChangeAmount.gt(0)) {
+        const potentialNewFee = totalIn.minus(totalOutWithoutChange);
+        if (potentialNewFee.gt(this.targetFeesToPay)) {
+          throw new Error("Removing change would increase fees beyond target");
+        }
+      }
       this.removeOutput(this._outputs.indexOf(changeOutput));
     }
   }
@@ -195,53 +335,50 @@ export class BtcTransactionTemplate {
    * @throws Error if the fee rate or absolute fee is absurdly high
    */
   validate(): boolean {
-    if (this.currentFee < this.targetFeesToPay) {
+    if (
+      new BigNumber(this.currentFee).lt(new BigNumber(this.targetFeesToPay))
+    ) {
       return false;
     }
 
     for (const output of this._outputs) {
-      if (output.amountSats <= this._dustThreshold) {
+      if (new BigNumber(output.amountSats).lte(this._dustThreshold)) {
         return false;
       }
     }
 
-    if (this.estimatedFeeRate >= 1000 || this.currentFee >= 1000000) {
+    if (
+      new BigNumber(this.estimatedFeeRate).gte(
+        new BigNumber(ABSURDLY_HIGH_FEE_RATE),
+      ) ||
+      new BigNumber(this.currentFee).gte(new BigNumber(ABSURDLY_HIGH_ABS_FEE))
+    ) {
       throw new Error(
         "Absurdly high fee detected. Transaction rejected for safety.",
       );
     }
+
     return this.feeRateSatisfied;
   }
 
   /**
-   * Converts the transaction template to a raw transaction.
-   * Only includes valid inputs and outputs.
-   * @returns An unsigned Transaction object
+   * Converts the transaction template to a base64-encoded PSBT (Partially Signed Bitcoin Transaction) string.
+   * This method creates a new PSBT, adds all valid inputs and outputs from the template,
+   * and then serializes the PSBT to a base64 string.
+   *
+   * @returns A base64-encoded string representation of the PSBT.
+   *
+   * @throws {Error} If an invalid address is encountered when creating an output script.
+   * @throws {Error} If there's an issue with input or output data that prevents PSBT creation.
+   * @throws {Error} If serialization of the PSBT fails.
+   *
+   * @remarks
+   * - Only inputs and outputs that pass the `isInputValid` and `isOutputValid` checks are included.
+   * - Input amounts are not included in the PSBT. If needed, they should be added separately.
+   * - Output amounts are converted from string to integer (satoshis) when added to the PSBT.
+   * - The resulting PSBT is not signed and may require further processing (e.g., signing) before it can be broadcast.
    */
-  toRawTransaction(): Transaction {
-    const txb = new TransactionBuilder(networkData(this._network));
-    this._inputs.forEach((input) => {
-      if (this.isInputValid(input)) {
-        txb.addInput(input.txid, input.vout);
-      }
-    });
-
-    this._outputs.forEach((output) => {
-      if (this.isOutputValid(output)) {
-        txb.addOutput(output.address, output.amountSats);
-      }
-    });
-
-    return txb.buildIncomplete();
-  }
-
-  /**
-   * Converts the transaction template to a PSBT (Partially Signed Bitcoin Transaction).
-   * Only includes valid inputs and outputs.
-   * @returns A PsbtV2 object
-   * @throws Error if an invalid address is encountered
-   */
-  toPsbt(): PsbtV2 {
+  toPsbt(): string {
     const psbt = new PsbtV2();
 
     this._inputs.forEach((input) => {
@@ -264,12 +401,12 @@ export class BtcTransactionTemplate {
         }
         psbt.addOutput({
           script,
-          amount: amountSats,
+          amount: parseInt(amountSats),
         });
       }
     });
 
-    return psbt;
+    return psbt.serialize("base64");
   }
 
   /**
@@ -287,6 +424,9 @@ export class BtcTransactionTemplate {
    * @returns True if the output is valid, false otherwise
    */
   private isOutputValid(output: BtcTxOutputTemplate): boolean {
-    return output.isValid() && output.amountSats > this._dustThreshold;
+    return (
+      output.isValid() &&
+      new BigNumber(output.amountSats).gt(this._dustThreshold)
+    );
   }
 }

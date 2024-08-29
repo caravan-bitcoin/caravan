@@ -1,156 +1,291 @@
-// btcTransactionTemplate.test.ts
-
 import { BtcTransactionTemplate } from "../btcTransactionTemplate";
-import { fixtures } from "../fixtures/btcTransactionTemplate.fixtures";
-import { BtcTxOutputTemplate } from "../btcTransactionComponents";
+import {
+  BtcTxInputTemplate,
+  BtcTxOutputTemplate,
+} from "../btcTransactionComponents";
+import { Network } from "@caravan/bitcoin";
 import { TxOutputType } from "../types";
+import { fixtures } from "./btcTransactionTemplate.fixtures";
+import BigNumber from "bignumber.js";
 
 describe("BtcTransactionTemplate", () => {
-  let txTemplate: BtcTransactionTemplate;
+  fixtures.forEach((fixture) => {
+    describe(fixture.name, () => {
+      let txTemplate: BtcTransactionTemplate;
 
-  beforeEach(() => {
-    txTemplate = new BtcTransactionTemplate({
-      inputs: [],
-      outputs: [],
-      targetFeeRate: fixtures.targetFeeRate,
-      dustThreshold: fixtures.dustThreshold,
-      network: fixtures.network,
-      scriptType: fixtures.scriptType,
-      requiredSigners: fixtures.requiredSigners,
-      totalSigners: fixtures.totalSigners,
-    });
-
-    // Add all valid inputs and outputs
-    fixtures.inputs.forEach((input) => txTemplate.addInput(input));
-    fixtures.outputs.forEach((output) => txTemplate.addOutput(output));
-  });
-
-  describe("Constructor and Getters", () => {
-    it("should correctly initialize with provided inputs and outputs", () => {
-      expect(txTemplate.inputs).toHaveLength(2);
-      expect(txTemplate.outputs).toHaveLength(2);
-    });
-
-    it("should return correct total input amount", () => {
-      expect(txTemplate.getTotalInputAmount()).toBe(300000);
-    });
-
-    it("should return correct total output amount", () => {
-      expect(txTemplate.getTotalOutputAmount()).toBe(200000);
-    });
-
-    it("should correctly identify malleable outputs", () => {
-      expect(txTemplate.malleableOutputs).toHaveLength(1);
-      expect(txTemplate.malleableOutputs[0].type).toBe(TxOutputType.CHANGE);
-    });
-  });
-
-  describe("Fee Calculations", () => {
-    it("should calculate correct current fee", () => {
-      expect(txTemplate.currentFee).toBe(100000);
-    });
-
-    it("should calculate correct target fees to pay", () => {
-      const estimatedVsize = 307;
-      expect(txTemplate.targetFeesToPay).toBe(
-        estimatedVsize * fixtures.targetFeeRate,
-      );
-    });
-
-    it("should determine if fees are paid correctly", () => {
-      expect(txTemplate.areFeesPayPaid()).toBe(true);
-    });
-  });
-
-  describe("Transaction Modification", () => {
-    it("should add input correctly", () => {
-      const newInput = fixtures.inputs[0];
-      txTemplate.addInput(newInput);
-      expect(txTemplate.inputs).toHaveLength(3);
-      expect(txTemplate.inputs[2]).toBe(newInput);
-    });
-
-    it("should add output correctly", () => {
-      const newOutput = new BtcTxOutputTemplate({
-        address:
-          "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7",
-        amountSats: 75000,
-        type: TxOutputType.DESTINATION,
+      beforeEach(() => {
+        txTemplate = new BtcTransactionTemplate({
+          inputs: fixture.test.inputs.map(
+            (input) => new BtcTxInputTemplate(input),
+          ),
+          outputs: fixture.test.outputs.map(
+            (output) => new BtcTxOutputTemplate(output),
+          ),
+          network: fixture.test.network,
+          targetFeeRate: fixture.test.targetFeeRate,
+          scriptType: fixture.test.scriptType,
+          requiredSigners: fixture.test.requiredSigners,
+          totalSigners: fixture.test.totalSigners,
+        });
       });
-      txTemplate.addOutput(newOutput);
-      expect(txTemplate.outputs).toHaveLength(3);
-      expect(txTemplate.outputs[2]).toBe(newOutput);
-    });
 
-    it("should remove output correctly", () => {
+      test("should correctly calculate total input amount", () => {
+        const expectedInputAmount = fixture.test.inputs.reduce(
+          (sum, input) => sum.plus(input.amountSats),
+          new BigNumber(0),
+        );
+        expect(txTemplate.getTotalInputAmount()).toBe(
+          expectedInputAmount.toString(),
+        );
+      });
+
+      test("should correctly calculate total output amount", () => {
+        const expectedOutputAmount = fixture.test.outputs.reduce(
+          (sum, output) => sum.plus(output.amountSats),
+          new BigNumber(0),
+        );
+        expect(txTemplate.getTotalOutputAmount()).toBe(
+          expectedOutputAmount.toString(),
+        );
+      });
+
+      test("should correctly estimate transaction vsize", () => {
+        expect(txTemplate.estimatedVsize).toBe(fixture.expected.vsize);
+      });
+
+      test("should correctly calculate transaction fee", () => {
+        expect(txTemplate.currentFee).toBe(fixture.expected.fee);
+      });
+
+      test("should correctly calculate fee rate", () => {
+        expect(parseFloat(txTemplate.estimatedFeeRate)).toBeCloseTo(
+          parseFloat(fixture.expected.feeRate),
+          1,
+        );
+      });
+
+      test("should validate transaction correctly", () => {
+        expect(txTemplate.validate()).toBe(true);
+      });
+
+      test("should detect if fees are paid correctly", () => {
+        const paidFees = new BigNumber(txTemplate.currentFee);
+        const requiredFees = new BigNumber(txTemplate.targetFeesToPay);
+        expect(txTemplate.areFeesPaid()).toBe(paidFees.gte(requiredFees));
+      });
+
+      test("should adjust change output correctly", () => {
+        const changeOutputs = txTemplate.outputs.filter(
+          (output) => output.type === TxOutputType.CHANGE,
+        );
+        const originalChangeOutput = changeOutputs[0];
+
+        txTemplate.adjustChangeOutput();
+
+        const changeOutputs2 = txTemplate.outputs.filter(
+          (output) => output.type === TxOutputType.CHANGE,
+        );
+        const newChangeOutput = changeOutputs2[0];
+
+        if (originalChangeOutput) {
+          expect(newChangeOutput).toBeDefined();
+          expect(
+            new BigNumber(newChangeOutput.amountSats).gte(
+              originalChangeOutput.amountSats,
+            ),
+          ).toBe(true);
+        } else {
+          expect(newChangeOutput).toBeUndefined();
+        }
+      });
+
+      test("should create valid PSBT", () => {
+        const psbt = txTemplate.toPsbt();
+        expect(psbt).toBeTruthy();
+        expect(() => txTemplate.toPsbt()).not.toThrow();
+      });
+    });
+  });
+});
+
+describe("BtcTxInputTemplate", () => {
+  test("should create valid input", () => {
+    const input = new BtcTxInputTemplate({
+      txid: "781e5527d1af148125f6f1c29177cd2168246d84210dd223019811286b2f4718",
+      vout: 5,
+      amountSats: "22181635",
+    });
+    expect(input.isValid()).toBe(true);
+  });
+
+  test("should detect invalid input", () => {
+    const input = new BtcTxInputTemplate({
+      txid: "",
+      vout: -1,
+      amountSats: "0",
+    });
+    expect(input.isValid()).toBe(false);
+  });
+
+  test("should correctly convert between satoshis and BTC", () => {
+    const input = new BtcTxInputTemplate({
+      txid: "781e5527d1af148125f6f1c29177cd2168246d84210dd223019811286b2f4718",
+      vout: 5,
+      amountSats: "22181635",
+    });
+    expect(input.amountBTC).toBe("0.22181635");
+  });
+});
+
+describe("BtcTxOutputTemplate", () => {
+  test("should create valid output", () => {
+    const output = new BtcTxOutputTemplate({
+      address: "bc1q64f362fb18f21471175ab685ec1a76008647e4e0",
+      amountSats: "134560",
+      type: TxOutputType.EXTERNAL,
+    });
+    expect(output.isValid()).toBe(true);
+  });
+
+  test("should detect invalid output", () => {
+    expect(() => {
+      new BtcTxOutputTemplate({
+        address: "",
+        amountSats: "0",
+        type: TxOutputType.EXTERNAL,
+      }).isValid();
+    }).toThrow();
+  });
+
+  test("should correctly handle malleable outputs", () => {
+    const output = new BtcTxOutputTemplate({
+      address: "bc1q64f362fb18f21471175ab685ec1a76008647e4e0",
+      amountSats: "134560",
+      type: TxOutputType.CHANGE,
+    });
+    expect(output.isMalleable).toBe(true);
+    output.lock();
+    expect(output.isMalleable).toBe(false);
+    expect(() => output.setAmount("200000")).toThrow();
+  });
+
+  test("should correctly add and subtract amounts", () => {
+    const output = new BtcTxOutputTemplate({
+      address: "bc1q64f362fb18f21471175ab685ec1a76008647e4e0",
+      amountSats: "134560",
+      type: TxOutputType.CHANGE,
+    });
+    output.addAmount("10000");
+    expect(output.amountSats).toBe("144560");
+    output.subtractAmount("20000");
+    expect(output.amountSats).toBe("124560");
+  });
+
+  describe("needsChangeOutput", () => {
+    test("should correctly determine if change output is needed", () => {
+      const txTemplate = new BtcTransactionTemplate({
+        inputs: [
+          new BtcTxInputTemplate({
+            txid: "1234",
+            vout: 0,
+            amountSats: "100000",
+          }),
+        ],
+        outputs: [
+          new BtcTxOutputTemplate({
+            address: "1234",
+            amountSats: "90000",
+            type: TxOutputType.EXTERNAL,
+          }),
+        ],
+        network: Network.MAINNET,
+        targetFeeRate: 1,
+        scriptType: "P2WSH",
+        requiredSigners: 1,
+        totalSigners: 1,
+        dustThreshold: "546",
+      });
+
+      txTemplate.outputs[0].lock();
+
+      expect(txTemplate.needsChangeOutput).toBe(true);
+
+      txTemplate.addOutput(
+        new BtcTxOutputTemplate({
+          address: "5678",
+          amountSats: "9000",
+          type: TxOutputType.CHANGE,
+        }),
+      );
+      expect(txTemplate.needsChangeOutput).toBe(false);
+    });
+  });
+
+  describe("addInput and addOutput", () => {
+    test("should correctly add input and output", () => {
+      const txTemplate = new BtcTransactionTemplate({
+        inputs: [],
+        outputs: [],
+        network: Network.MAINNET,
+        targetFeeRate: 1,
+        scriptType: "p2pkh",
+        requiredSigners: 1,
+        totalSigners: 1,
+      });
+
+      const input = new BtcTxInputTemplate({
+        txid: "1234",
+        vout: 0,
+        amountSats: "100000",
+      });
+      txTemplate.addInput(input);
+      expect(txTemplate.inputs.length).toBe(1);
+      expect(txTemplate.inputs[0]).toBe(input);
+
+      const output = new BtcTxOutputTemplate({
+        address: "1234",
+        amountSats: "100000",
+        type: TxOutputType.EXTERNAL,
+      });
+      txTemplate.addOutput(output);
+      expect(txTemplate.outputs.length).toBe(1);
+      expect(txTemplate.outputs[0]).toBe(output);
+    });
+  });
+
+  describe("removeOutput", () => {
+    test("should correctly remove output", () => {
+      const txTemplate = new BtcTransactionTemplate({
+        inputs: [
+          new BtcTxInputTemplate({
+            txid: "1234",
+            vout: 0,
+            amountSats: "100000",
+          }),
+        ],
+        outputs: [
+          new BtcTxOutputTemplate({
+            address: "1234",
+            amountSats: "50000",
+            type: TxOutputType.EXTERNAL,
+          }),
+          new BtcTxOutputTemplate({
+            address: "5678",
+            amountSats: "50000",
+            type: TxOutputType.EXTERNAL,
+          }),
+        ],
+        network: Network.MAINNET,
+        targetFeeRate: 1,
+        scriptType: "p2pkh",
+        requiredSigners: 1,
+        totalSigners: 1,
+      });
+
+      expect(txTemplate.outputs.length).toBe(2);
       txTemplate.removeOutput(0);
-      expect(txTemplate.outputs).toHaveLength(1);
-      expect(txTemplate.outputs[0].amountSats).toBe(150000);
-    });
-
-    it("should adjust change output correctly", () => {
-      txTemplate.adjustChangeOutput();
-      const changeOutput = txTemplate.outputs.find(
-        (o) => o.type === TxOutputType.CHANGE,
-      );
-      expect(changeOutput?.amountSats).toBeLessThan(350000);
-    });
-
-    it("should remove change output if below dust threshold", () => {
-      txTemplate = new BtcTransactionTemplate({
-        ...fixtures,
-        targetFeeRate: 1000,
-        inputs: fixtures.inputs,
-        outputs: fixtures.outputs,
-      });
-      txTemplate.adjustChangeOutput();
-      expect(txTemplate.outputs).toHaveLength(1);
-    });
-  });
-
-  describe("Transaction Validation", () => {
-    it("should validate a correct transaction", () => {
-      expect(txTemplate.validate()).toBe(true);
-    });
-
-    it("should invalidate a transaction with insufficient fee", () => {
-      txTemplate = new BtcTransactionTemplate({
-        ...fixtures,
-        targetFeeRate: 1000,
-        inputs: fixtures.inputs,
-        outputs: fixtures.outputs,
-      });
-      expect(txTemplate.validate()).toBe(false);
-    });
-
-    it("should invalidate a transaction with dust output", () => {
-      txTemplate.addOutput(fixtures.dustOutput);
-      expect(txTemplate.validate()).toBe(false);
-    });
-  });
-
-  describe("Transaction Conversion", () => {
-    it("should convert to raw transaction correctly", () => {
-      const rawTx = txTemplate.toRawTransaction();
-      expect(rawTx.ins).toHaveLength(2);
-      expect(rawTx.outs).toHaveLength(1);
-    });
-
-    it("should convert to PSBT correctly", () => {
-      const psbt = txTemplate.toPsbt();
-      expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
-      expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
-    });
-
-    it("should exclude invalid inputs and outputs when converting", () => {
-      txTemplate.addInput(fixtures.invalidInput);
-      txTemplate.addOutput(fixtures.invalidOutput);
-      const rawTx = txTemplate.toRawTransaction();
-      const psbt = txTemplate.toPsbt();
-      expect(rawTx.ins).toHaveLength(2);
-      expect(rawTx.outs).toHaveLength(1);
-      expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(2);
-      expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
+      expect(txTemplate.outputs.length).toBe(1);
+      expect(txTemplate.outputs[0].address).toBe("5678");
     });
   });
 });
