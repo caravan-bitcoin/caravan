@@ -11,8 +11,8 @@ import {
   address as bitcoinAddress,
   networks,
 } from "bitcoinjs-lib-v6";
-
-import { Satoshis, BTC } from "./types";
+import { PsbtV2 } from "@caravan/psbt";
+import BigNumber from "bignumber.js";
 
 /**
  * Creates an output script for a given Bitcoin address.
@@ -181,5 +181,42 @@ export function estimateTransactionVsize(
   }
 }
 
-export const satoshisToBTC = (sats: Satoshis): BTC => sats / 1e8;
-export const btcToSatoshis = (btc: BTC): Satoshis => Math.round(btc * 1e8);
+export const satoshisToBTC = (sats: string): string => {
+  return new BigNumber(sats).dividedBy(1e8).toString();
+};
+
+export const btcToSatoshis = (btc: string): string => {
+  return new BigNumber(btc)
+    .multipliedBy(1e8)
+    .integerValue(BigNumber.ROUND_DOWN)
+    .toString();
+};
+
+/**
+ * Initializes the parent PSBT from various input formats.
+ *
+ * This method supports initializing from a PsbtV2 object, a serialized PSBT string,
+ * or a Buffer. It attempts to parse the input as a PsbtV2 and falls back to PsbtV0
+ * if necessary, providing backwards compatibility.
+ *
+ * @private
+ * @param {PsbtV2 | string | Buffer} psbt - The parent PSBT in various formats
+ * @returns {PsbtV2} An initialized PsbtV2 object
+ * @throws {Error} If the PSBT cannot be parsed or converted
+ */
+export function initializePsbt(psbt: PsbtV2 | string | Buffer): PsbtV2 {
+  if (psbt instanceof PsbtV2) {
+    return psbt;
+  }
+  try {
+    return new PsbtV2(psbt);
+  } catch (error) {
+    try {
+      return PsbtV2.FromV0(psbt);
+    } catch (conversionError) {
+      throw new Error(
+        "Unable to initialize PSBT. Neither V2 nor V0 format recognized.",
+      );
+    }
+  }
+}

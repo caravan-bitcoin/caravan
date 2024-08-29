@@ -32,12 +32,6 @@ export interface UTXO {
    * This script defines the conditions that must be met to spend this output.
    */
   script: Buffer;
-
-  /**
-   * Optional field for any additional data required for the input.
-   * This can include things like redeem scripts for P2SH outputs or witness scripts for P2WSH.
-   */
-  additionalData?: any;
 }
 
 /**
@@ -69,15 +63,6 @@ export interface AnalyzerOptions {
    * in CPFP.
    */
   availableUtxos: UTXO[];
-
-  /**
-   * The dust threshold in satoshis. Outputs below this value are considered
-   * "dust" and may not be economically viable to spend. This is used in
-   * CPFP calculations to ensure that child transactions don't create
-   * outputs below the dust threshold.
-   * Default Bitcoin Core value is 546 satoshis .
-   */
-  dustThreshold: string | number;
 
   /**
    * The index of the change output in the transaction, if known.
@@ -152,6 +137,8 @@ export enum FeeBumpStrategy {
   NONE = "NONE",
 }
 
+//TO DO (MRIGESH):
+// Make it more exhaustive to handle other types like OP_RETURN or Ephemeral Anchors and change the BtcTxOutputTemplate accordingly
 /**
  * Enum representing different types of transaction outputs.
  * This helps distinguish between outputs intended for recipients and change outputs.
@@ -160,7 +147,7 @@ export enum TxOutputType {
   /**
    * Represents an output intended for the recipient of the transaction.
    */
-  DESTINATION,
+  EXTERNAL,
 
   /**
    * Represents a change output, which returns excess funds to the sender.
@@ -252,12 +239,12 @@ export type FeeRateSatsPerVByte = number;
  * Represents an amount in satoshis.
  * Satoshis are the smallest unit of bitcoin (1 BTC = 100,000,000 satoshis).
  */
-export type Satoshis = number;
+export type Satoshis = string;
 
 /**
  * Represents an amount in bitcoin.
  */
-export type BTC = number;
+export type BTC = string;
 
 /**
  * Configuration options for creating a transaction template.
@@ -275,7 +262,7 @@ export interface TransactionTemplateOptions {
    * Outputs below this value are considered uneconomical to spend.
    * @see https://github.com/bitcoin/bitcoin/blob/master/src/policy/policy.cpp
    */
-  dustThreshold: Satoshis;
+  dustThreshold?: Satoshis;
 
   /**
    * The Bitcoin network to use (mainnet, testnet, or regtest).

@@ -8,7 +8,7 @@
  *
  * @see https://github.com/bitcoin/bitcoin/blob/master/src/policy/policy.cpp
  */
-export const DEFAULT_DUST_THRESHOLD = 546; // in satoshis
+export const DEFAULT_DUST_THRESHOLD_IN_SATS = "546"; // in satoshis
 
 /**
  * The sequence number used to signal Replace-by-Fee (RBF) for a transaction input.
@@ -21,3 +21,7 @@ export const DEFAULT_DUST_THRESHOLD = 546; // in satoshis
  * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
  */
 export const RBF_SEQUENCE = 0xffffffff - 2;
+
+// Constants (in satoshis)
+export const ABSURDLY_HIGH_FEE_RATE = "1000"; // 1000 sats/vbyte
+export const ABSURDLY_HIGH_ABS_FEE = "1000000"; // 0.01 BTC
