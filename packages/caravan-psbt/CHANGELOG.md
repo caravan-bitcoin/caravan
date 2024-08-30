@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.4.2
+
+### Patch Changes
+
+- [#120](https://github.com/caravan-bitcoin/caravan/pull/120) [`d8078d8`](https://github.com/caravan-bitcoin/caravan/commit/d8078d80cdbf7d2ebd131e6f9253572a6a133d34) Thanks [@chadchapnick](https://github.com/chadchapnick)! - Restore multisig support for indirect keystore interactions
+
 ## 1.4.1
 
 ### Patch Changes
