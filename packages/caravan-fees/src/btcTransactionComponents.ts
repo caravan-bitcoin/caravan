@@ -1,9 +1,9 @@
-import { Satoshis, BTC, TxOutputType } from "./types";
+import { Satoshis, BTC } from "./types";
 import { satoshisToBTC } from "./utils";
 import BigNumber from "bignumber.js";
 
 /**
- * Abstract base class for Bitcoin transaction components.
+ * Abstract base class for Bitcoin transaction components (inputs and outputs).
  * Provides common functionality for inputs and outputs.
  */
 export abstract class BtcTxComponent {
@@ -41,7 +41,7 @@ export abstract class BtcTxComponent {
   }
 
   hasAmount(): boolean {
-    return this._amountSats.isGreaterThan(0);
+    return this._amountSats.isGreaterThanOrEqualTo(0);
   }
 
   /**
@@ -57,17 +57,29 @@ export abstract class BtcTxComponent {
 export class BtcTxInputTemplate extends BtcTxComponent {
   private readonly _txid: string;
   private readonly _vout: number;
+  private _prevTxHex?: string;
+  private _sequence?: number;
 
   /**
    * @param params - Input parameters
    * @param params.txid - Transaction ID of the UTXO
    * @param params.vout - Output index of the UTXO
    * @param params.amountSats - Amount in satoshis (as a string)
+   * @param params.prevTxHex - Previous tx hex
+   * @param params.sequence - Sequence number for the input
    */
-  constructor(params: { txid: string; vout: number; amountSats?: Satoshis }) {
+  constructor(params: {
+    txid: string;
+    vout: number;
+    amountSats?: Satoshis;
+    prevTxHex?: string;
+    sequence?: number;
+  }) {
     super(params.amountSats || "0");
     this._txid = params.txid;
     this._vout = params.vout;
+    this._prevTxHex = params.prevTxHex;
+    this._sequence = params.sequence;
   }
 
   /** Get the transaction ID */
@@ -81,11 +93,58 @@ export class BtcTxInputTemplate extends BtcTxComponent {
   }
 
   /**
+   * Get the previous transaction hex.
+   * Throws an error if prevTxHex is undefined.
+   * @returns The previous transaction hex string
+   * @throws Error if prevTxHex is not set
+   */
+  get prevTxHex(): string {
+    if (!this._prevTxHex) {
+      throw new Error("Previous transaction hex is not set");
+    }
+    return this._prevTxHex;
+  }
+
+  /** Set the previous transaction hex */
+  setPrevTxHex(hex: string): void {
+    this._prevTxHex = hex;
+  }
+
+  /** Get the sequence number */
+  get sequence(): number {
+    if (!this._sequence) {
+      throw new Error("Input Sequence is not set");
+    }
+    return this._sequence;
+  }
+
+  /** Set the sequence number */
+  setSequence(sequence: number): void {
+    this._sequence = sequence;
+  }
+
+  /**
    * Check if the input is valid
    * @returns True if the amount is positive and exists, and txid and vout are valid
    */
   isValid(): boolean {
     return this.hasAmount() && this._txid !== "" && this._vout >= 0;
+  }
+
+  /**
+   * Check if previous transaction data is available
+   * @returns True if prevTxHex is defined
+   */
+  hasPrevTxData(): boolean {
+    return !!this._prevTxHex;
+  }
+
+  /**
+   * Check if the sequence is valid
+   * @returns True if sequence is defined
+   */
+  hasSequence(): boolean {
+    return !!this._sequence;
   }
 }
 /**
@@ -93,33 +152,32 @@ export class BtcTxInputTemplate extends BtcTxComponent {
  */
 export class BtcTxOutputTemplate extends BtcTxComponent {
   private readonly _address: string;
-  private readonly _type: TxOutputType;
   private _malleable: boolean = true;
 
   /**
    * @param params - Output parameters
    * @param params.address - Recipient address
    * @param params.amountSats - Amount in satoshis  (as a string)
-   * @param params.type - Type of output (external or change)
+   * @param params.locked - Whether the output is locked (immutable), defaults to false
+   * @throws Error if trying to create a locked output with zero amount
    */
   constructor(params: {
     address: string;
     amountSats?: Satoshis | undefined;
-    type: TxOutputType;
+    locked?: boolean;
   }) {
     super(params.amountSats || "0");
     this._address = params.address;
-    this._type = params.type;
+    this._malleable = !params.locked;
+
+    if (!this._malleable && this._amountSats.isEqualTo(0)) {
+      throw new Error("Locked outputs must have an amount specified.");
+    }
   }
 
   /** Get the recipient address */
   get address(): string {
     return this._address;
-  }
-
-  /** Get the output type */
-  get type(): TxOutputType {
-    return this._type;
   }
 
   /** Check if the output is malleable (can be modified) */
@@ -185,14 +243,8 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
    * @throws {Error} If trying to lock an EXTERNAL output with an undefined amount
    */
   lock(): void {
-    if (!this._malleable) {
+    if (!this.isMalleable) {
       throw new Error("Output is already locked and cannot be modified.");
-    }
-
-    if (this.type === TxOutputType.EXTERNAL && this._amountSats.isEqualTo(0)) {
-      throw new Error(
-        "To lock External outputs, please specify its amount first.",
-      );
     }
 
     this._malleable = false;
@@ -223,7 +275,7 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
    * @throws {Error} If an EXTERNAL output has an undefined amount.
    */
   isValid(): boolean {
-    if (this.type === TxOutputType.EXTERNAL && this._amountSats.isEqualTo(0)) {
+    if (!this.isMalleable && this._amountSats.isEqualTo(0)) {
       throw new Error("External outputs must have an amount specified");
     }
     return this.hasAmount() && this._address !== "";
