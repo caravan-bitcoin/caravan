@@ -25,13 +25,28 @@ export interface UTXO {
    * The value of the UTXO in satoshis.
    * This represents the amount of bitcoin contained in this output.
    */
-  value: number;
+  value: Satoshis;
 
   /**
    * The locking script of the UTXO.
    * This script defines the conditions that must be met to spend this output.
    */
   script: Buffer;
+  /**
+   * The hexadecimal representation of the previous transaction.
+   * This is used to reconstruct the complete input data for spending the UTXO.
+   * This field is optional and may be provided to facilitate operations that require
+   * knowledge of the previous transaction's structure.
+   */
+  prevTxHex?: string;
+
+  /**
+   * The sequence number of the UTXO input.
+   * This is used to control the conditions under which the UTXO can be spent.
+   * For example, it may be used for replace-by-fee (RBF) functionality.
+   * This field is optional and may be included if sequence number management is needed.
+   */
+  sequence?: number;
 }
 
 /**
@@ -135,24 +150,6 @@ export enum FeeBumpStrategy {
    * This indicates that fee bumping is not necessary or possible for the transaction.
    */
   NONE = "NONE",
-}
-
-//TO DO (MRIGESH):
-// Make it more exhaustive to handle other types like OP_RETURN or Ephemeral Anchors and change the BtcTxOutputTemplate accordingly
-/**
- * Enum representing different types of transaction outputs.
- * This helps distinguish between outputs intended for recipients and change outputs.
- */
-export enum TxOutputType {
-  /**
-   * Represents an output intended for the recipient of the transaction.
-   */
-  EXTERNAL,
-
-  /**
-   * Represents a change output, which returns excess funds to the sender.
-   */
-  CHANGE,
 }
 
 /**
@@ -296,4 +293,14 @@ export interface TransactionTemplateOptions {
    * This is used along with requiredSigners for multisig transactions.
    */
   totalSigners?: number;
+}
+
+export enum ScriptType {
+  P2PKH = "p2pkh",
+  P2SH = "p2sh",
+  P2WPKH = "p2wpkh",
+  P2WSH = "p2wsh",
+  P2SH_P2WPKH = "p2sh-p2wpkh",
+  P2SH_P2WSH = "p2sh-p2wsh",
+  UNKNOWN = "unknown",
 }
