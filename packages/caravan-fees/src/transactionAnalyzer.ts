@@ -1,15 +1,8 @@
 import { Transaction } from "bitcoinjs-lib-v6";
 import { Network } from "@caravan/bitcoin";
+import { UTXO, AnalyzerOptions, FeeBumpStrategy, Satoshis } from "./types";
 import {
-  UTXO,
-  AnalyzerOptions,
-  FeeBumpStrategy,
-  TransactionInput,
-  TransactionOutput,
-  Satoshis,
-  TxOutputType,
-} from "./types";
-import {
+  BtcTxComponent,
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
@@ -49,8 +42,8 @@ export class TransactionAnalyzer {
   private readonly _totalSigners: number;
   private readonly _addressType: string;
 
-  private _inputs: TransactionInput[] | null = null;
-  private _outputs: TransactionOutput[] | null = null;
+  private _inputs: BtcTxInputTemplate[] | null = null;
+  private _outputs: BtcTxOutputTemplate[] | null = null;
   private _feeRate: BigNumber | null = null;
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
@@ -117,10 +110,11 @@ export class TransactionAnalyzer {
 
   /**
    * Gets the deserialized inputs of the transaction.
-   * @returns {TransactionInput[]} An array of transaction inputs
+   * @returns {BtcTxInputTemplate[]} An array of transaction inputs
    */
-  get inputs(): TransactionInput[] {
+  get inputs(): BtcTxInputTemplate[] {
     if (!this._inputs) {
+      console.log("input", this.deserializeInputs());
       this._inputs = this.deserializeInputs();
     }
     return this._inputs;
@@ -128,9 +122,9 @@ export class TransactionAnalyzer {
 
   /**
    * Gets the deserialized outputs of the transaction.
-   * @returns {TransactionOutput[]} An array of transaction outputs
+   * @returns {BtcTxOutputTemplate[]} An array of transaction outputs
    */
-  get outputs(): TransactionOutput[] {
+  get outputs(): BtcTxOutputTemplate[] {
     if (!this._outputs) {
       this._outputs = this.deserializeOutputs();
     }
@@ -387,8 +381,8 @@ export class TransactionAnalyzer {
     weight: number;
     fee: string;
     feeRate: string;
-    inputs: TransactionInput[];
-    outputs: TransactionOutput[];
+    inputs: BtcTxInputTemplate[];
+    outputs: BtcTxOutputTemplate[];
     isRBFSignaled: boolean;
     canRBF: boolean;
     canCPFP: boolean;
@@ -450,19 +444,16 @@ export class TransactionAnalyzer {
     return this.outputs.map((output, index) => {
       return new BtcTxOutputTemplate({
         address: output.address,
-        type:
-          index === this._changeOutputIndex
-            ? TxOutputType.CHANGE
-            : TxOutputType.EXTERNAL,
-        amountSats: output.value.toString(),
+        locked: index !== this._changeOutputIndex,
+        amountSats: output.amountSats,
       });
     });
   }
   /**
    * Retrieves the change output of the transaction, if it exists.
-   * @returns {TransactionOutput | null} The change output or null if no change output exists
+   * @returns {BtcTxComponent | null} The change output or null if no change output exists
    */
-  public getChangeOutput(): TransactionOutput | null {
+  public getChangeOutput(): BtcTxComponent | null {
     if (this._changeOutputIndex !== undefined) {
       return this.outputs[this._changeOutputIndex];
     }
@@ -473,31 +464,53 @@ export class TransactionAnalyzer {
 
   /**
    * Deserializes and formats the transaction inputs.
-   * @returns {TransactionInput[]} An array of formatted transaction inputs
+   *
+   * This method processes the raw input data from the original transaction
+   * and converts it into a more easily manageable format. It performs the
+   * following operations for each input:
+   *
+   * 1. Reverses the transaction ID (txid) from little-endian to big-endian format.
+   * 2. Extracts the output index (vout) being spent.
+   * 3. Captures the sequence number, which is used for RBF signaling.
+   *
+   * @returns {BtcTxInputTemplate[]}
+   *
    * @protected
    */
-  protected deserializeInputs(): TransactionInput[] {
-    return this._originalTx.ins.map((input) => ({
-      txid: input.hash.reverse().toString("hex"),
-      vout: input.index,
-      sequence: input.sequence,
-      scriptSig: input.script.toString("hex"),
-      witness: input.witness.map((w) => w.toString("hex")),
-    }));
+  protected deserializeInputs(): BtcTxInputTemplate[] {
+    return this._originalTx.ins.map((input) => {
+      console.log("checking", input, input.sequence);
+      return new BtcTxInputTemplate({
+        txid: input.hash.reverse().toString("hex"),
+        vout: input.index,
+        sequence: input.sequence,
+      });
+    });
   }
 
   /**
    * Deserializes and formats the transaction outputs.
-   * @returns {TransactionOutput[]} An array of formatted transaction outputs
+   *
+   * This method processes the raw output data from the original transaction
+   * and converts it into a more easily manageable format. It performs the
+   * following operations for each output:
+   *
+   * 1. Extracts the output value in satoshis.
+   * 2. Derives the recipient address from the scriptPubKey.
+   * 3. Determines if the output is spendable (i.e., if it's a change output).
+   *
+   * @returns {BtcTxOutputTemplate[]}
+   *
    * @protected
    */
-  protected deserializeOutputs(): TransactionOutput[] {
-    return this._originalTx.outs.map((output, index) => ({
-      value: output.value,
-      scriptPubKey: output.script.toString("hex"),
-      address: getOutputAddress(output.script, this._network),
-      isSpendable: index === this._changeOutputIndex,
-    }));
+  protected deserializeOutputs(): BtcTxOutputTemplate[] {
+    return this._originalTx.outs.map((output, index) => {
+      return new BtcTxOutputTemplate({
+        amountSats: output.value.toString(),
+        address: getOutputAddress(output.script, this._network),
+        locked: index !== this._changeOutputIndex,
+      });
+    });
   }
 
   /**
@@ -520,7 +533,7 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected canPerformCPFP(): boolean {
-    return this.outputs.some((output) => output.isSpendable);
+    return this.outputs.some((output) => output.isMalleable);
   }
 
   /**

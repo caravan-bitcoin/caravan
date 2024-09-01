@@ -94,8 +94,8 @@ describe("TransactionAnalyzer", () => {
       });
 
       test("should correctly identify output values", () => {
-        expect(analyzer.outputs.map((output) => output.value)).toEqual(
-          fixture.expected.outputValues,
+        expect(analyzer.outputs.map((output) => output.amountSats)).toEqual(
+          fixture.expected.outputValues.map((seq) => String(seq)),
         );
       });
 
