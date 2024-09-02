@@ -68,7 +68,9 @@ export class BtcTransactionTemplate {
   ): BtcTransactionTemplate {
     const psbt = initializePsbt(psbtHex);
     const inputs: BtcTxInputTemplate[] = [];
+    const outputs: BtcTxOutputTemplate[] = [];
 
+    // Process inputs
     for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
       const txid = psbt.PSBT_IN_PREVIOUS_TXID[i];
       const vout = psbt.PSBT_IN_OUTPUT_INDEX[i];
@@ -77,33 +79,43 @@ export class BtcTransactionTemplate {
         throw new Error(`Missing txid or vout for input ${i}`);
       }
 
+      const input = new BtcTxInputTemplate({
+        txid: Buffer.from(txid, "hex").reverse().toString("hex"),
+        vout,
+      });
+
       let amountSats: string;
       const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[i];
       const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[i];
 
       if (witnessUtxo) {
+        // add amount
         amountSats = parseWitnessUtxoValue(witnessUtxo, i).toString();
+
+        // Parse the witness UTXO
+        const witnessUtxoBuffer = Buffer.from(witnessUtxo, "hex");
+        const value = witnessUtxoBuffer.readUInt32LE(0); // Read the first 4 bytes as the value
+        const script = witnessUtxoBuffer.slice(4); // The rest is the script
+        input.setWitnessUtxo({ script, value });
       } else if (nonWitnessUtxo) {
+        // add amount
         amountSats = parseNonWitnessUtxoValue(
           nonWitnessUtxo,
           i,
           psbt,
         ).toString();
+
+        input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
       } else {
         throw new Error(`Missing UTXO information for input ${i}`);
       }
+      //set Amount
+      input.amountSats = amountSats;
 
-      inputs.push(
-        new BtcTxInputTemplate({
-          txid: Buffer.from(txid, "hex").reverse().toString("hex"),
-          vout,
-          amountSats,
-        }),
-      );
+      inputs.push(input);
     }
 
-    const outputs: BtcTxOutputTemplate[] = [];
-
+    // Process outputs (unchanged)
     for (let i = 0; i < psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
       const script = Buffer.from(psbt.PSBT_OUT_SCRIPT[i], "hex");
       const amount = psbt.PSBT_OUT_AMOUNT[i];
@@ -113,7 +125,10 @@ export class BtcTransactionTemplate {
       }
 
       const address = getOutputAddress(script, options.network);
-      console.log("got address", address);
+      if (!address) {
+        throw new Error(`Unable to derive address for output ${i}`);
+      }
+
       outputs.push(
         new BtcTxOutputTemplate({
           address: address || "",
@@ -293,7 +308,6 @@ export class BtcTransactionTemplate {
     // To handle for multiple change outputs
     //
     const changeOutput = this.malleableOutputs[0];
-    console.log("change", changeOutput, changeOutput.amountSats);
     const totalOutWithoutChange = this.calculateTotalOutputAmount().minus(
       this.calculateChangeAmount(),
     );
@@ -391,7 +405,6 @@ export class BtcTransactionTemplate {
         addOutputToPsbt(psbt, output, this._network);
       }
     });
-
     return psbt.serialize("base64");
   }
 
@@ -399,7 +412,7 @@ export class BtcTransactionTemplate {
    * Validates all inputs in the transaction.
    *
    * This method checks each input to ensure it has the necessary previous
-   * transaction data (`prevTxData`). The previous transaction data is
+   * transaction data (`witness utxo, non-witness utxo`). The previous transaction data is
    * crucial for validating the input, as it allows verification of the
    * UTXO being spent, ensuring the input references a legitimate and
    * unspent output.
@@ -411,7 +424,7 @@ export class BtcTransactionTemplate {
    */
   private isInputValid(): boolean {
     return this._inputs.every(
-      (input) => input.hasPrevTxData() && input.isValid(),
+      (input) => input.hasRequiredFieldsforPSBT() && input.isValid(),
     );
   }
 
@@ -421,11 +434,14 @@ export class BtcTransactionTemplate {
    * @returns True if the output is valid, false otherwise
    */
   private isOutputValid(output: BtcTxOutputTemplate): boolean {
-    return (
-      output.isValid() &&
-      new BigNumber(output.amountSats).gt(this._dustThreshold)
-    );
+    return output.isValid() && new BigNumber(output.amountSats).gt(0);
   }
+
+  /**
+   * Calculates the total input amount.
+   * @returns {BigNumber} The total input amount in satoshis
+   * @private
+   */
   private calculateTotalInputAmount(): BigNumber {
     return this.inputs.reduce((sum, input) => {
       if (!input.isValid()) {
@@ -435,6 +451,11 @@ export class BtcTransactionTemplate {
     }, new BigNumber(0));
   }
 
+  /**
+   * Calculates the total output amount.
+   * @returns {BigNumber} The total output amount in satoshis
+   * @private
+   */
   private calculateTotalOutputAmount(): BigNumber {
     return this.outputs.reduce((sum, output) => {
       if (!output.isValid()) {
@@ -444,6 +465,11 @@ export class BtcTransactionTemplate {
     }, new BigNumber(0));
   }
 
+  /**
+   * Calculates the total change amount.
+   * @returns {BigNumber} The total change amount in satoshis
+   * @private
+   */
   private calculateChangeAmount(): BigNumber {
     return this.outputs.reduce(
       (acc, output) =>
@@ -452,6 +478,11 @@ export class BtcTransactionTemplate {
     );
   }
 
+  /**
+   * Calculates the estimated virtual size of the transaction.
+   * @returns {number} The estimated virtual size in vbytes
+   * @private
+   */
   private calculateEstimatedVsize(): number {
     return estimateTransactionVsize({
       addressType: this._scriptType,
@@ -462,6 +493,11 @@ export class BtcTransactionTemplate {
     });
   }
 
+  /**
+   * Calculates the current fee of the transaction.
+   * @returns {BigNumber} The current fee in satoshis
+   * @private
+   */
   private calculateFee(): BigNumber {
     return this.calculateTotalInputAmount().minus(
       this.calculateTotalOutputAmount(),

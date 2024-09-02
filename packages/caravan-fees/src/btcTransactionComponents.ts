@@ -1,4 +1,4 @@
-import { Satoshis, BTC } from "./types";
+import { Satoshis, BTC, UTXO } from "./types";
 import { satoshisToBTC } from "./utils";
 import BigNumber from "bignumber.js";
 
@@ -52,75 +52,115 @@ export abstract class BtcTxComponent {
 }
 
 /**
- * Represents a Bitcoin transaction input
+ * Represents a Bitcoin transaction input template for PSBT creation.
+ * This class contains the minimal required fields and optional fields
+ * necessary for creating a valid PSBT input.
+ *
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export class BtcTxInputTemplate extends BtcTxComponent {
   private readonly _txid: string;
   private readonly _vout: number;
-  private _prevTxHex?: string;
+  private _nonWitnessUtxo?: Buffer;
+  private _witnessUtxo?: {
+    script: Buffer;
+    value: number;
+  };
   private _sequence?: number;
 
   /**
-   * @param params - Input parameters
-   * @param params.txid - Transaction ID of the UTXO
-   * @param params.vout - Output index of the UTXO
-   * @param params.amountSats - Amount in satoshis (as a string)
-   * @param params.prevTxHex - Previous tx hex
-   * @param params.sequence - Sequence number for the input
+   * @param {Object} params - The parameters for creating a BtcTxInputTemplate
+   * @param {string} params.txid - The transaction ID of the UTXO (reversed, big-endian)
+   * @param {number} params.vout - The output index in the transaction
+   * @param {Satoshis} params.amountSats - The amount in satoshis
    */
-  constructor(params: {
-    txid: string;
-    vout: number;
-    amountSats?: Satoshis;
-    prevTxHex?: string;
-    sequence?: number;
-  }) {
+  constructor(params: { txid: string; vout: number; amountSats?: Satoshis }) {
     super(params.amountSats || "0");
     this._txid = params.txid;
     this._vout = params.vout;
-    this._prevTxHex = params.prevTxHex;
-    this._sequence = params.sequence;
   }
+  /**
+   * Creates a BtcTxInputTemplate from a UTXO object.
+   */
+  static fromUTXO(utxo: UTXO): BtcTxInputTemplate {
+    const template = new BtcTxInputTemplate({
+      txid: utxo.txid,
+      vout: utxo.vout,
+      amountSats: utxo.value,
+    });
 
-  /** Get the transaction ID */
+    if (utxo.prevTxHex) {
+      template.setNonWitnessUtxo(Buffer.from(utxo.prevTxHex, "hex"));
+    }
+
+    if (utxo.witnessUtxo) {
+      template.setWitnessUtxo(utxo.witnessUtxo);
+    }
+
+    return template;
+  }
+  /**
+   * The transaction ID of the UTXO (reversed, big-endian).
+   * Required for all PSBT inputs.
+   */
   get txid(): string {
     return this._txid;
   }
 
-  /** Get the output index */
+  /**
+   * The output index in the transaction.
+   * Required for all PSBT inputs.
+   */
   get vout(): number {
     return this._vout;
   }
 
-  /**
-   * Get the previous transaction hex.
-   * Throws an error if prevTxHex is undefined.
-   * @returns The previous transaction hex string
-   * @throws Error if prevTxHex is not set
-   */
-  get prevTxHex(): string {
-    if (!this._prevTxHex) {
-      throw new Error("Previous transaction hex is not set");
-    }
-    return this._prevTxHex;
-  }
-
-  /** Set the previous transaction hex */
-  setPrevTxHex(hex: string): void {
-    this._prevTxHex = hex;
-  }
-
   /** Get the sequence number */
-  get sequence(): number {
-    if (!this._sequence) {
-      throw new Error("Input Sequence is not set");
-    }
+  get sequence(): number | undefined {
     return this._sequence;
   }
 
-  /** Set the sequence number */
+  /**
+   * Sets the sequence number for the input.
+   * Optional, but useful for RBF signaling.
+   * @param {number} sequence - The sequence number
+   */
   setSequence(sequence: number): void {
     this._sequence = sequence;
+  }
+
+  /**
+   * Gets the non-witness UTXO.
+   */
+  get nonWitnessUtxo(): Buffer | undefined {
+    return this._nonWitnessUtxo;
+  }
+
+  /**
+   * Sets the non-witness UTXO.
+   * Required for non-segwit inputs in PSBTs.
+   * @param {Buffer} value - The full transaction containing the UTXO being spent
+   */
+  setNonWitnessUtxo(value: Buffer): void {
+    this._nonWitnessUtxo = value;
+  }
+
+  /**
+   * Gets the witness UTXO.
+   */
+  get witnessUtxo(): { script: Buffer; value: number } | undefined {
+    return this._witnessUtxo;
+  }
+
+  /**
+   * Sets the witness UTXO.
+   * Required for segwit inputs in PSBTs.
+   * @param {Object} value - The witness UTXO
+   * @param {Buffer} value.script - The scriptPubKey of the output
+   * @param {number} value.value - The value of the output in satoshis
+   */
+  setWitnessUtxo(value: { script: Buffer; value: number }): void {
+    this._witnessUtxo = value;
   }
 
   /**
@@ -132,19 +172,27 @@ export class BtcTxInputTemplate extends BtcTxComponent {
   }
 
   /**
-   * Check if previous transaction data is available
-   * @returns True if prevTxHex is defined
+   * Checks if the input has the required fields for PSBT creation.
    */
-  hasPrevTxData(): boolean {
-    return !!this._prevTxHex;
+  hasRequiredFieldsforPSBT(): boolean {
+    return Boolean(
+      this._txid &&
+        this._vout >= 0 &&
+        (this._nonWitnessUtxo || this._witnessUtxo),
+    );
   }
 
   /**
-   * Check if the sequence is valid
-   * @returns True if sequence is defined
+   * Converts the input template to a UTXO object.
    */
-  hasSequence(): boolean {
-    return !!this._sequence;
+  toUTXO(): UTXO {
+    return {
+      txid: this._txid,
+      vout: this._vout,
+      value: this._amountSats.toString(),
+      prevTxHex: this._nonWitnessUtxo?.toString("hex"),
+      witnessUtxo: this._witnessUtxo,
+    };
   }
 }
 /**

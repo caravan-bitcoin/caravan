@@ -114,7 +114,6 @@ export class TransactionAnalyzer {
    */
   get inputs(): BtcTxInputTemplate[] {
     if (!this._inputs) {
-      console.log("input", this.deserializeInputs());
       this._inputs = this.deserializeInputs();
     }
     return this._inputs;
@@ -479,12 +478,15 @@ export class TransactionAnalyzer {
    */
   protected deserializeInputs(): BtcTxInputTemplate[] {
     return this._originalTx.ins.map((input) => {
-      console.log("checking", input, input.sequence);
-      return new BtcTxInputTemplate({
-        txid: input.hash.reverse().toString("hex"),
+      const template = new BtcTxInputTemplate({
+        txid: input.hash.reverse().toString("hex"), // reversed (big-endian) format
         vout: input.index,
-        sequence: input.sequence,
+        amountSats: "0", // We don't have this information from the raw transaction
       });
+
+      // Set sequence
+      template.setSequence(input.sequence);
+      return template;
     });
   }
 

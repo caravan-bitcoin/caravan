@@ -5,48 +5,34 @@ import {
 } from "./btcTransactionComponents";
 
 /**
- * Represents an Unspent Transaction Output (UTXO).
- * UTXOs are used as inputs for new transactions and are crucial for fee bumping operations.
+ * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
+ *
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export interface UTXO {
-  /**
-   * The transaction ID of the UTXO.
-   * This is the unique identifier of the transaction that created this output.
-   */
+  /** The transaction ID of the UTXO in reversed hex format (big-endian). */
   txid: string;
 
-  /**
-   * The output index of the UTXO in its parent transaction.
-   * This, combined with the txid, uniquely identifies the UTXO.
-   */
+  /** The output index of the UTXO in its parent transaction. */
   vout: number;
 
-  /**
-   * The value of the UTXO in satoshis.
-   * This represents the amount of bitcoin contained in this output.
-   */
+  /** The value of the UTXO in satoshis. */
   value: Satoshis;
 
   /**
-   * The locking script of the UTXO.
-   * This script defines the conditions that must be met to spend this output.
-   */
-  script: Buffer;
-  /**
-   * The hexadecimal representation of the previous transaction.
-   * This is used to reconstruct the complete input data for spending the UTXO.
-   * This field is optional and may be provided to facilitate operations that require
-   * knowledge of the previous transaction's structure.
+   * The full previous transaction in hexadecimal format.
+   * Required for non-segwit inputs in PSBTs.
    */
   prevTxHex?: string;
 
   /**
-   * The sequence number of the UTXO input.
-   * This is used to control the conditions under which the UTXO can be spent.
-   * For example, it may be used for replace-by-fee (RBF) functionality.
-   * This field is optional and may be included if sequence number management is needed.
+   * The witness UTXO information for segwit transactions.
+   * Required for segwit inputs in PSBTs.
    */
-  sequence?: number;
+  witnessUtxo?: {
+    script: Buffer;
+    value: number;
+  };
 }
 
 /**
@@ -303,4 +289,156 @@ export enum ScriptType {
   P2SH_P2WPKH = "p2sh-p2wpkh",
   P2SH_P2WSH = "p2sh-p2wsh",
   UNKNOWN = "unknown",
+}
+
+/**
+ * Options for creating a cancel RBF transaction.
+ */
+export interface CancelRbfOptions {
+  /**
+   * The hex-encoded original transaction to be replaced.
+   */
+  originalTx: string;
+
+  /**
+   * Array of available UTXOs, including the original transaction's inputs.
+   */
+  availableInputs: UTXO[];
+
+  /**
+   * The address where all funds will be sent in the cancellation transaction.
+   */
+  cancelAddress: string;
+
+  /**
+   * The Bitcoin network being used (e.g., mainnet, testnet).
+   */
+  network: Network;
+
+  /**
+   * The dust threshold in satoshis. Outputs below this value are considered "dust"
+   * and may not be economically viable to spend.
+   */
+  dustThreshold: Satoshis;
+
+  /**
+   * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
+   */
+  scriptType: string;
+
+  /**
+   * The number of required signers for the multisig setup.
+   */
+  requiredSigners: number;
+
+  /**
+   * The total number of signers in the multisig setup.
+   */
+  totalSigners: number;
+
+  /**
+   * The target fee rate in satoshis per virtual byte. This is used to calculate
+   * the appropriate fee for the transaction.
+   */
+  targetFeeRate: FeeRateSatsPerVByte;
+
+  /**
+   * The absolute fee of the original transaction in satoshis.
+   */
+  absoluteFee: Satoshis;
+
+  /**
+   * Whether to attempt full RBF even if the transaction doesn't signal it.
+   * @default false
+   */
+  fullRBF?: boolean;
+
+  /**
+   * If true, enforces stricter validation rules.
+   * @default false
+   */
+  strict?: boolean;
+}
+
+/**
+ * Options for creating an accelerated RBF transaction.
+ */
+export interface AcceleratedRbfOptions
+  extends Omit<CancelRbfOptions, "cancelAddress"> {
+  /**
+   * The index of the change output in the original transaction.
+   */
+  changeIndex?: number;
+
+  /**
+   * The address to use for the new change output, if different from the original.
+   */
+  changeAddress?: string;
+}
+
+/**
+ * Options for creating a CPFP transaction.
+ */
+export interface CPFPOptions {
+  /**
+   * The hex-encoded original (parent) transaction to be accelerated.
+   */
+  originalTx: string;
+
+  /**
+   * Array of available UTXOs, including the spendable output from the parent transaction.
+   */
+  availableInputs: UTXO[];
+
+  /**
+   * The index of the output in the parent transaction that will be spent in the child transaction.
+   */
+  spendableOutputIndex: number;
+
+  /**
+   * The address where any excess funds (change) will be sent in the child transaction.
+   */
+  changeAddress: string;
+
+  /**
+   * The Bitcoin network being used (e.g., mainnet, testnet).
+   */
+  network: Network;
+
+  /**
+   * The dust threshold in satoshis. Outputs below this value are considered "dust".
+   */
+  dustThreshold: Satoshis;
+
+  /**
+   * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
+   */
+  scriptType: string;
+
+  /**
+   * The target fee rate in satoshis per virtual byte. This is used to calculate
+   * the appropriate fee for the transaction.
+   */
+  targetFeeRate: FeeRateSatsPerVByte;
+
+  /**
+   * The absolute fee of the original transaction in satoshis.
+   */
+  absoluteFee: Satoshis;
+
+  /**
+   * The number of required signers for the multisig setup.
+   */
+  requiredSigners: number;
+
+  /**
+   * The total number of signers in the multisig setup.
+   */
+  totalSigners: number;
+
+  /**
+   * If true, enforces stricter validation rules.
+   * @default false
+   */
+  strict?: boolean;
 }
