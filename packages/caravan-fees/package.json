@@ -1,6 +1,6 @@
 {
   "name": "@caravan/fees",
-  "version": "0.0.0-beta",
+  "version": "1.0.0-beta",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,7 @@
     "feebumping",
     "blockchain"
   ],
-  "author": "",
+  "author": "Mrigesh Thakur",
   "license": "MIT",
   "engines": {
     "node": ">=20"
