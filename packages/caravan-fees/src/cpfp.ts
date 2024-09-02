@@ -4,68 +4,78 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { Network } from "@caravan/bitcoin";
-import { TxOutputType, UTXO, FeeBumpStrategy, Satoshis } from "./types";
+import { FeeBumpStrategy, CPFPOptions } from "./types";
 import BigNumber from "bignumber.js";
+import { isCPFPFeeSatisfied } from "./utils";
 
 /**
  * Creates a Child-Pays-for-Parent (CPFP) transaction to accelerate the confirmation
  * of an unconfirmed parent transaction.
  *
- * This function creates a new transaction (child) that spends an output from the
- * original unconfirmed transaction (parent). The child transaction includes a higher
- * fee to incentivize miners to confirm both the parent and child transactions together.
+ * This function implements a simplified version of the CPFP strategy used in Bitcoin Core.
+ * It creates a new transaction (child) that spends an output from the original unconfirmed
+ * transaction (parent), including a higher fee to incentivize miners to confirm both
+ * transactions together.
  *
- * @param {string} originalTx - The hex-encoded original (parent) transaction to be accelerated.
- * @param {UTXO[]} availableInputs - Array of available UTXOs, including the spendable output from the parent transaction.
- * @param {number} spendableOutputIndex - The index of the output in the parent transaction that will be spent in the child transaction.
- * @param {string} changeAddress - The address where any excess funds (change) will be sent in the child transaction.
- * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust".
- * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
- * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
- * @param {number} requiredSigners - The number of required signers for the multisig setup.
- * @param {number} totalSigners - The total number of signers in the multisig setup.
- * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
+ * The CPFP calculation process:
+ * 1. Analyze the parent transaction to determine its fee, size, and available outputs.
+ * 2. Create a child transaction template with the target fee rate for the combined package.
+ * 3. Add the spendable output from the parent as an input to the child transaction.
+ * 4. Iteratively add additional inputs to the child transaction until the combined
+ *    fee rate of the parent and child meets or exceeds the target fee rate.
+ * 5. Calculate and set the change output amount for the child transaction.
+ * 6. Validate the child transaction and ensure the combined fee rate is sufficient.
+ *
+ * The combined fee rate is calculated as:
+ * (parentFee + childFee) / (parentVsize + childVsize)
+ *
+ * @param {CPFPOptions} options - Configuration options for creating the CPFP transaction.
  * @returns {string} The base64-encoded PSBT of the CPFP (child) transaction.
- * @throws {Error} If CPFP is not possible or if the transaction creation fails.
+ * @throws {Error} If CPFP is not possible, if the transaction creation fails, or if
+ *                 the combined fee rate doesn't meet the target (in strict mode).
  *
  * @example
- * const cpfpTx = createCPFPTransaction(
- *   originalTxHex,
- *   availableUTXOs,
- *   1, // spendable output index
- *   'bc1q...', // change address
- *   Network.MAINNET,
- *   '546', // dust threshold
- *   'P2WSH',
- *   '1000', // absolute fee
- *   2, // required signers
- *   3,  // total signers
- *   true // strict mode
- * );
+ * const cpfpTx = createCPFPTransaction({
+ *   originalTx: originalTxHex,
+ *   availableInputs: availableUTXOs,
+ *   spendableOutputIndex: 1,
+ *   changeAddress: 'bc1q...',
+ *   network: Network.MAINNET,
+ *   dustThreshold: '546',
+ *   scriptType: 'P2WSH',
+ *   targetFeeRate: '15',
+ *   absoluteFee: '1000',
+ *   requiredSigners: 2,
+ *   totalSigners: 3,
+ *   strict: true
+ * });
  *
  * @see https://bitcoinops.org/en/topics/cpfp/ Bitcoin Optech on Child Pays for Parent
- * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki#implementation-details-1 BIP 125: Implementation details related to CPFP
+ * @see https://github.com/bitcoin/bitcoin/pull/7600 Bitcoin Core CPFP implementation
  */
-export const createCPFPTransaction = (
-  originalTx: string,
-  availableInputs: UTXO[],
-  spendableOutputIndex: number,
-  changeAddress: string,
-  network: Network,
-  dustThreshold: Satoshis,
-  scriptType: string,
-  absoluteFee: Satoshis,
-  requiredSigners: number,
-  totalSigners: number,
-  strict: boolean = false,
-): string => {
+export const createCPFPTransaction = (options: CPFPOptions): string => {
+  const {
+    strict = false,
+    originalTx,
+    network,
+    targetFeeRate,
+    absoluteFee,
+    availableInputs,
+    requiredSigners,
+    totalSigners,
+    scriptType,
+    dustThreshold,
+    spendableOutputIndex,
+    changeAddress,
+  } = options;
+
+  // CPFP Calculation Process:
   // Step 1: Analyze the original transaction
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate: 0, // We'll use the analyzer's recommendation
+    changeOutputIndex: spendableOutputIndex,
+    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -74,7 +84,6 @@ export const createCPFPTransaction = (
   });
 
   const analysis = txAnalyzer.analyze();
-
   // Step 2: Verify CPFP suitability
   if (!analysis.canCPFP) {
     throw new Error(
@@ -119,27 +128,59 @@ export const createCPFPTransaction = (
     );
   }
 
-  childTxTemplate.addInput(
-    new BtcTxInputTemplate({
-      txid: analysis.txid,
-      vout: spendableOutputIndex,
-      amountSats: parentOutputUTXO.value.toString(),
-    }),
-  );
+  childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(parentOutputUTXO));
 
   // Step 5: Add a change output (at least 1 output required for a valid transaction)
   childTxTemplate.addOutput(
     new BtcTxOutputTemplate({
       address: changeAddress,
       amountSats: "0", // Initial amount, will be adjusted later
-      type: TxOutputType.CHANGE,
     }),
   );
 
-  // Step 6: Add additional inputs if necessary to cover the fee
+  /**
+   * Step 6: Add additional inputs to cover the CPFP fee requirements
+   *
+   * This step implements a simplified version of the "Child-pays-for-parent" (CPFP)
+   * transaction selection logic, inspired by Bitcoin Core's implementation
+   * (https://github.com/bitcoin/bitcoin/pull/7600).
+   *
+   * In Bitcoin Core, transactions are sorted in the mempool using a modified
+   * feerate that considers ancestors. During block creation, transactions are
+   * considered in this order. As transactions are selected, a separate map tracks
+   * the new feerate-with-ancestors for in-mempool descendants.
+   *
+   * Our simplified approach:
+   * 1. We start with the parent transaction's fee and vsize.
+   * 2. We iteratively add inputs to the child transaction.
+   * 3. After each input addition, we recalculate the combined fee rate of the
+   *    parent and child transactions.
+   * 4. We continue adding inputs until the combined fee rate meets or exceeds
+   *    the target fee rate.
+   *
+   * This method ensures that the child transaction provides enough fee to incentivize
+   * miners to include both the parent and child transactions in a block, effectively
+   * "bumping" the fee of the parent transaction.
+   *
+   * Note: While this approach is simpler than Bitcoin Core's full implementation,
+   * it achieves the core goal of CPFP: ensuring the combined package (parent + child)
+   * is attractive for miners to include in a block.
+   */
+
+  const parentFee = new BigNumber(analysis.fee);
+  const parentVsize = analysis.vsize;
+
   for (const utxo of availableInputs) {
-    if (childTxTemplate.feeRateSatisfied && childTxTemplate.areFeesPaid()) {
-      break; // Stop adding inputs once fee requirements are met
+    if (
+      isCPFPFeeSatisfied(
+        parentFee,
+        parentVsize,
+        new BigNumber(childTxTemplate.currentFee),
+        childTxTemplate.estimatedVsize,
+        parseFloat(txAnalyzer.cpfpFeeRate),
+      )
+    ) {
+      break; // Stop adding inputs once CPFP fee requirements are met
     }
     // Skip if this UTXO is already added
     if (
@@ -149,13 +190,7 @@ export const createCPFPTransaction = (
     ) {
       continue;
     }
-    childTxTemplate.addInput(
-      new BtcTxInputTemplate({
-        txid: utxo.txid,
-        vout: utxo.vout,
-        amountSats: utxo.value.toString(),
-      }),
-    );
+    childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
   }
 
   // Step 7: Calculate and set the change output amount
@@ -191,22 +226,19 @@ export const createCPFPTransaction = (
   // Step 9: Ensure the combined (parent + child) fee rate meets the target
   const parentSize = new BigNumber(analysis.vsize);
   const childSize = new BigNumber(childTxTemplate.estimatedVsize);
-  const parentFee = new BigNumber(analysis.fee);
   const childFee = new BigNumber(childTxTemplate.currentFee);
   const combinedFeeRate = parentFee
     .plus(childFee)
     .dividedBy(parentSize.plus(childSize));
 
-  const cpfpFeeRate = new BigNumber(txAnalyzer.cpfpFeeRate);
-
-  if (combinedFeeRate.isLessThan(cpfpFeeRate)) {
+  if (combinedFeeRate.isLessThan(targetFeeRate)) {
     if (strict) {
       throw new Error(
-        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.cpfpFeeRate} sat/vB). Increase inputs or reduce fee rate.`,
+        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate} sat/vB). Increase inputs or reduce fee rate.`,
       );
     } else {
       console.warn(
-        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.cpfpFeeRate} sat/vB). Transaction may confirm slower than expected.`,
+        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate} sat/vB). Transaction may confirm slower than expected.`,
       );
     }
   }

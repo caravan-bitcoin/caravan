@@ -1,11 +1,14 @@
 import { TransactionAnalyzer } from "./transactionAnalyzer";
 import { BtcTransactionTemplate } from "./btcTransactionTemplate";
-import { Network } from "@caravan/bitcoin";
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { Satoshis, TxOutputType, UTXO, FeeBumpStrategy } from "./types";
+import {
+  FeeBumpStrategy,
+  CancelRbfOptions,
+  AcceleratedRbfOptions,
+} from "./types";
 import BigNumber from "bignumber.js";
 
 /**
@@ -15,55 +18,51 @@ import BigNumber from "bignumber.js";
  * from the original transaction, effectively cancelling it by sending all funds
  * to a new address minus the required fees.
  *
- * @param {string} originalTx - The hex-encoded original transaction to be replaced.
- * @param {UTXO[]} availableInputs - Array of available UTXOs, including the original transaction's inputs.
- * @param {string} cancelAddress - The address where all funds will be sent in the cancellation transaction.
- * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust" and may not be economically viable to spend.
- * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
- * @param {number} requiredSigners - The number of required signers for the multisig setup.
- * @param {number} totalSigners - The total number of signers in the multisig setup.
- * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
- * @param {boolean} [fullRBF=false] - Whether to attempt full RBF even if the transaction doesn't signal it.
- * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
+ * @param {CancelRbfOptions} options - Configuration options for creating the cancel RBF transaction.
  * @returns {string} The base64-encoded PSBT of the cancel RBF transaction.
  * @throws {Error} If RBF is not possible or if the transaction creation fails.
  *
  * @example
- * const cancelTx = createCancelRbfTransaction(
- *   originalTxHex,
- *   availableUTXOs,
- *   'bc1q...', // cancel address
- *   Network.MAINNET,
- *   '546', // dust threshold
- *   'P2WSH',
- *   2, // required signers
- *   3,  // total signers
- *   '1000', // absolute fee
- *   false // fullRBF
- * );
+ * const cancelTx = createCancelRbfTransaction({
+ *   originalTx: originalTxHex,
+ *   availableInputs: availableUTXOs,
+ *   cancelAddress: 'bc1q...', // cancel address
+ *   network: Network.MAINNET,
+ *   dustThreshold: '546',
+ *   scriptType: 'P2WSH',
+ *   requiredSigners: 2,
+ *   totalSigners: 3,
+ *   targetFeeRate: '10',
+ *   absoluteFee: '1000',
+ *   fullRBF: false,
+ *   strict: true
+ * });
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki BIP 125: Opt-in Full Replace-by-Fee Signaling
  * @see https://developer.bitcoin.org/devguide/transactions.html#locktime-and-sequence-number Bitcoin Core's guide on locktime and sequence numbers
  */
 export const createCancelRbfTransaction = (
-  originalTx: string,
-  availableInputs: UTXO[],
-  cancelAddress: string,
-  network: Network,
-  dustThreshold: Satoshis,
-  scriptType: string,
-  requiredSigners: number,
-  totalSigners: number,
-  absoluteFee: Satoshis,
-  fullRBF: boolean = false,
-  strict: boolean = false,
+  options: CancelRbfOptions,
 ): string => {
+  const {
+    fullRBF = false,
+    strict = false,
+    originalTx,
+    network,
+    targetFeeRate,
+    absoluteFee,
+    availableInputs,
+    requiredSigners,
+    totalSigners,
+    scriptType,
+    dustThreshold,
+    cancelAddress,
+  } = options;
   // Step 1: Analyze the original transaction
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate: 0, // We'll use the analyzer's recommendation
+    targetFeeRate,
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -107,12 +106,13 @@ export const createCancelRbfTransaction = (
     totalSigners,
   });
 
-  // Step 4: Add the cancellation output
+  // Step 4: Add the cancellation output and delete all previous outputs
+
   newTxTemplate.addOutput(
     new BtcTxOutputTemplate({
       address: cancelAddress,
       amountSats: "0", // Temporary amount, will be adjusted later
-      type: TxOutputType.CHANGE,
+      locked: false,
     }),
   );
 
@@ -120,28 +120,23 @@ export const createCancelRbfTransaction = (
   // Add coin selection algorithm to add best suited input to start with
 
   // Step 5: Add one input from the original transaction
-  const originalInputTemplate = txAnalyzer.getInputTemplates()[0];
-  const originalInput = availableInputs.find(
-    (utxo) =>
-      utxo.txid === originalInputTemplate.txid &&
-      utxo.vout === originalInputTemplate.vout,
+  const originalInputTemplates = txAnalyzer.getInputTemplates();
+  const originalInput = availableInputs.find((utxo) =>
+    originalInputTemplates.some(
+      (template) => template.txid === utxo.txid && template.vout === utxo.vout,
+    ),
   );
 
   if (!originalInput) {
     throw new Error(
-      "Original input not found in available UTXOs. Ensure availableInputs includes the original transaction's inputs.",
+      "None of the original transaction inputs found in available UTXOs.",
     );
   }
 
-  newTxTemplate.addInput(
-    new BtcTxInputTemplate({
-      txid: originalInput.txid,
-      vout: originalInput.vout,
-      amountSats: originalInput.value.toString(),
-    }),
-  );
+  newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(originalInput));
 
   // Step 6: Add more inputs if necessary to meet fee requirements
+
   for (const utxo of availableInputs) {
     if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
       break; // Stop adding inputs once fee requirements are met
@@ -150,13 +145,7 @@ export const createCancelRbfTransaction = (
     if (utxo.txid === originalInput.txid && utxo.vout === originalInput.vout) {
       continue;
     }
-    newTxTemplate.addInput(
-      new BtcTxInputTemplate({
-        txid: utxo.txid,
-        vout: utxo.vout,
-        amountSats: utxo.value.toString(),
-      }),
-    );
+    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
   }
 
   // Step 7: Calculate and set the cancellation output amount
@@ -216,53 +205,49 @@ export const createCancelRbfTransaction = (
  * the original outputs except for the change output, which is adjusted to
  * accommodate the higher fee.
  *
- * @param {string} originalTx - The hex-encoded original transaction to be replaced.
- * @param {UTXO[]} availableInputs - Array of available UTXOs, including the original transaction's inputs.
- * @param {Network} network - The Bitcoin network being used (e.g., mainnet, testnet).
- * @param {Satoshis} dustThreshold - The dust threshold in satoshis. Outputs below this value are considered "dust" and may not be economically viable to spend.
- * @param {string} scriptType - The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
- * @param {number} requiredSigners - The number of required signers for the multisig setup.
- * @param {number} totalSigners - The total number of signers in the multisig setup.
- * @param {Satoshis} absoluteFee - The absolute fee of the original transaction in satoshis.
- * @param {number} [changeIndex] - The index of the change output in the original transaction.
- * @param {string} [changeAddress] - The address to use for the new change output, if different from the original.
- * @param {boolean} [fullRBF=false] - Whether to attempt full RBF even if the transaction doesn't signal it.
- * @param {boolean} [strict=false] - If true, enforces stricter validation rules.
+ * @param {AcceleratedRbfOptions} options - Configuration options for creating the accelerated RBF transaction.
  * @returns {string} The base64-encoded PSBT of the accelerated RBF transaction.
  * @throws {Error} If RBF is not possible or if the transaction creation fails.
  *
  * @example
- * const acceleratedTx = createAcceleratedRbfTransaction(
- *   originalTxHex,
- *   availableUTXOs,
- *   Network.MAINNET,
- *   '546', // dust threshold
- *   'P2WSH',
- *   2, // required signers
- *   3,  // total signers
- *   '1000', // absolute fee
- *   1, // change output index (optional)
- *   'bc1q...', // new change address (optional)
- *   false // fullRBF
- * );
+ * const acceleratedTx = createAcceleratedRbfTransaction({
+ *   originalTx: originalTxHex,
+ *   availableInputs: availableUTXOs,
+ *   network: Network.MAINNET,
+ *   dustThreshold: '546',
+ *   scriptType: 'P2WSH',
+ *   requiredSigners: 2,
+ *   totalSigners: 3,
+ *   targetFeeRate: '20',
+ *   absoluteFee: '1000',
+ *   changeIndex: 1,
+ *   changeAddress: 'bc1q...',
+ *   fullRBF: false,
+ *   strict: true
+ * });
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki BIP 125: Opt-in Full Replace-by-Fee Signaling
  * @see https://developer.bitcoin.org/devguide/transactions.html#locktime-and-sequence-number Bitcoin Core's guide on locktime and sequence numbers
  */
 export const createAcceleratedRbfTransaction = (
-  originalTx: string,
-  availableInputs: UTXO[],
-  network: Network,
-  dustThreshold: Satoshis,
-  scriptType: string,
-  requiredSigners: number,
-  totalSigners: number,
-  absoluteFee: Satoshis,
-  changeIndex?: number,
-  changeAddress?: string,
-  fullRBF: boolean = false,
-  strict: boolean = false,
+  options: AcceleratedRbfOptions,
 ): string => {
+  const {
+    fullRBF = false,
+    strict = false,
+    originalTx,
+    network,
+    targetFeeRate,
+    absoluteFee,
+    availableInputs,
+    requiredSigners,
+    totalSigners,
+    scriptType,
+    dustThreshold,
+    changeIndex,
+    changeAddress,
+  } = options;
+
   if (changeIndex === undefined && !changeAddress) {
     throw new Error(
       "Either changeIndex or changeAddress must be provided for handling the change output.",
@@ -273,7 +258,7 @@ export const createAcceleratedRbfTransaction = (
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate: 0, // We'll use the analyzer's recommendation
+    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -319,12 +304,12 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 4: Add all non-change outputs from the original transaction
   txAnalyzer.getOutputTemplates().forEach((outputTemplate) => {
-    if (outputTemplate.type === TxOutputType.EXTERNAL) {
+    if (!outputTemplate.isMalleable) {
       newTxTemplate.addOutput(
         new BtcTxOutputTemplate({
           address: outputTemplate.address,
           amountSats: outputTemplate.amountSats,
-          type: TxOutputType.EXTERNAL,
+          locked: true,
         }),
       );
     }
@@ -335,16 +320,10 @@ export const createAcceleratedRbfTransaction = (
   txAnalyzer.getInputTemplates().forEach((inputTemplate) => {
     const input = availableInputs.find(
       (utxo) =>
-        utxo.txid === inputTemplate.txid && utxo.vout === inputTemplate.vout,
+        inputTemplate.txid === utxo.txid && inputTemplate.vout === utxo.vout,
     );
     if (input) {
-      newTxTemplate.addInput(
-        new BtcTxInputTemplate({
-          txid: input.txid,
-          vout: input.vout,
-          amountSats: input.value.toString(),
-        }),
-      );
+      newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(input));
       singleInputAdded = true;
     }
   });
@@ -369,13 +348,7 @@ export const createAcceleratedRbfTransaction = (
     ) {
       continue;
     }
-    newTxTemplate.addInput(
-      new BtcTxInputTemplate({
-        txid: utxo.txid,
-        vout: utxo.vout,
-        amountSats: utxo.value.toString(),
-      }),
-    );
+    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
   }
 
   // Step 7: Add or adjust change output
@@ -391,7 +364,7 @@ export const createAcceleratedRbfTransaction = (
       const changeOutput = new BtcTxOutputTemplate({
         address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
         amountSats: changeAmount.toString(),
-        type: TxOutputType.CHANGE,
+        locked: false,
       });
       newTxTemplate.addOutput(changeOutput);
     } else if (strict) {
