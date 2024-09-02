@@ -11,9 +11,8 @@ import {
   networks,
   Transaction,
   Network as BitcoinJSNetwork,
-  script,
 } from "bitcoinjs-lib-v6";
-import { UTXO, ScriptType } from "./types";
+import { ScriptType } from "./types";
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
@@ -362,11 +361,20 @@ export function calculateTotalInputValue(psbt: PsbtV2): BigNumber {
  * @param index - The index of the UTXO in the PSBT input list.
  * @returns The parsed value as a BigNumber.
  */
-export function parseWitnessUtxoValue(utxo: string, index: number): BigNumber {
+export function parseWitnessUtxoValue(
+  utxo: string | null,
+  index: number,
+): BigNumber {
+  if (!utxo) {
+    console.warn(`Witness UTXO at index ${index} is null`);
+    return new BigNumber(0);
+  }
   try {
     const buffer = Buffer.from(utxo, "hex");
-    const value = buffer.readUInt32LE(0) + buffer.readUInt32LE(4) * 0x100000000;
-    return new BigNumber(value);
+    // The witness UTXO format is: [value][scriptPubKey]
+    // The value is an 8-byte little-endian integer
+    const value = buffer.readBigUInt64LE(0);
+    return new BigNumber(value.toString());
   } catch (error) {
     console.warn(`Failed to parse witness UTXO at index ${index}:`, error);
     return new BigNumber(0);
@@ -386,10 +394,14 @@ export function parseWitnessUtxoValue(utxo: string, index: number): BigNumber {
  * @returns The parsed value as a BigNumber.
  */
 export function parseNonWitnessUtxoValue(
-  rawTx: string,
+  rawTx: string | null,
   index: number,
   psbt: PsbtV2,
 ): BigNumber {
+  if (!rawTx) {
+    console.warn(`Non-witness UTXO at index ${index} is null`);
+    return new BigNumber(0);
+  }
   try {
     const tx = Transaction.fromHex(rawTx);
     const outputIndex = psbt.PSBT_IN_OUTPUT_INDEX[index];
@@ -415,10 +427,8 @@ export function parseNonWitnessUtxoValue(
  * @returns The total output value as a BigNumber.
  */
 export function calculateTotalOutputValue(psbt: PsbtV2): BigNumber {
-  return psbt.PSBT_OUT_AMOUNT.reduce(
-    (sum, amount) => sum.plus(new BigNumber(amount.toString())),
-    new BigNumber(0),
-  );
+  const sum = psbt.PSBT_OUT_AMOUNT.reduce((acc, amount) => acc + amount, 0n);
+  return new BigNumber(sum.toString());
 }
 
 /**
@@ -649,103 +659,6 @@ export function reverseTxid(txid: string): string {
 }
 
 /**
- * Creates a Partially Signed Bitcoin Transaction (PSBT) from a transaction template and available UTXOs.
- *
- * This function constructs a PSBT by adding inputs and outputs based on the provided transaction template.
- * It handles both witness and non-witness UTXOs, supporting different script types including P2WSH and P2SH-P2WSH.
- *
- * @param {Object} newTxTemplate - The transaction template containing inputs and outputs.
- * @param {ReadonlyArray<BtcTxInputTemplate>} newTxTemplate.inputs - Array of input objects.
- * @param {ReadonlyArray<BtcTxOutputTemplate>} newTxTemplate.outputs - Array of output objects.
- * @param {ReadonlyArray<UTXO>} availableInputs - Array of available UTXOs to be used as inputs.
- * @param {string} scriptType - The type of script being used (e.g., "P2WSH", "P2SH-P2WSH").
- * @param {Network} network - The Bitcoin network object (mainnet, testnet, etc.).
- *
- * @returns {string} The serialized PSBT as a base64 string.
- *
- * @throws {Error} If a UTXO is not found for any input.
- *
- * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki - BIP 174 (PSBT)
- */
-export function createPsbtFromTemplate(
-  newTxTemplate: {
-    inputs: ReadonlyArray<BtcTxInputTemplate>;
-    outputs: ReadonlyArray<BtcTxOutputTemplate>;
-  },
-  availableInputs: ReadonlyArray<UTXO>,
-  scriptType: string,
-  network: Network,
-): string {
-  const psbt = new PsbtV2();
-
-  newTxTemplate.inputs.forEach((input) => {
-    const utxo = availableInputs.find(
-      (u) => u.txid === input.txid && u.vout === input.vout,
-    );
-    if (!utxo) {
-      throw new Error(`UTXO not found for input: ${input.txid}:${input.vout}`);
-    }
-
-    const inputData: any = {
-      previousTxId: input.txid,
-      outputIndex: input.vout,
-      nonWitnessUtxo: utxo.script, // this is wrong :(
-    };
-
-    console.log("check utxo", inputData, utxo, utxo.script);
-
-    const lowerScriptType = scriptType.toLowerCase();
-    if (lowerScriptType === "p2wsh" || lowerScriptType === "p2sh-p2wsh") {
-      inputData.witnessUtxo = {
-        script: utxo.script,
-        value: new BigNumber(utxo.value),
-      };
-    }
-
-    psbt.addInput(inputData);
-  });
-
-  newTxTemplate.outputs.forEach((output) => {
-    psbt.addOutput({
-      script: script.fromASM(
-        script.toASM(createOutputScript(output.address, network)),
-      ),
-      amount: parseInt(output.amountSats),
-    });
-  });
-
-  return psbt.serialize("base64");
-}
-
-/**
- * Retrieves the scriptPubKey for a given Bitcoin transaction input.
- *
- * @param input - The BtcTxInputTemplate instance containing txid, vout, and prevTxHex.
- * @returns {Buffer | undefined} - The scriptPubKey as a Buffer, or undefined if it cannot be found.
- * @throws {Error} - Throws an error if prevTxHex is missing or the output cannot be found.
- */
-export function getScriptFromUtxo(
-  input: BtcTxInputTemplate,
-): Buffer | undefined {
-  if (!input.hasPrevTxData()) {
-    throw new Error(
-      `Previous transaction hex is required for input: ${input.txid}:${input.vout}`,
-    );
-  }
-
-  const transaction = Transaction.fromHex(input.prevTxHex!);
-  const output = transaction.outs[input.vout];
-
-  if (!output) {
-    throw new Error(
-      `Output not found at vout ${input.vout} in transaction ${input.txid}`,
-    );
-  }
-
-  return output.script;
-}
-
-/**
  * Determines the type of Bitcoin script (e.g., P2PKH, P2SH, P2WPKH, P2WSH, P2SH-P2WPKH, P2SH-P2WSH).
  *
  * @param scriptPubKey - The scriptPubKey to analyze.
@@ -804,7 +717,50 @@ export function getScriptType(scriptPubKey: Buffer): ScriptType {
 }
 
 /**
- * Adds an output to the PSBT.
+ * Adds a single input to the provided PSBT based on the given input template (used in BtcTransactionTemplate)
+ * @param {PsbtV2} psbt - The PsbtV2 object.
+ * @param input - The input template to be processed and added.
+ * @throws {Error} - Throws an error if script extraction or PSBT input addition fails.
+ */
+export function addInputToPsbt(psbt: PsbtV2, input: BtcTxInputTemplate): void {
+  if (!input.hasRequiredFieldsforPSBT()) {
+    throw new Error(
+      `Input ${input.txid}:${input.vout} lacks required UTXO information`,
+    );
+  }
+
+  const inputData: any = {
+    previousTxId: input.txid,
+    outputIndex: input.vout,
+  };
+  // Add non-witness UTXO if available
+  if (input.nonWitnessUtxo) {
+    inputData.nonWitnessUtxo = input.nonWitnessUtxo;
+  }
+
+  // Add witness UTXO if available
+  if (input.witnessUtxo) {
+    inputData.witnessUtxo = {
+      amount: input.witnessUtxo.value,
+      script: input.witnessUtxo.script,
+    };
+  }
+
+  // Add sequence if set
+  if (input.sequence !== undefined) {
+    inputData.sequence = input.sequence;
+  }
+  try {
+    psbt.addInput(inputData);
+  } catch (error) {
+    throw new Error(
+      `Failed to add input to PSBT: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Adds an output to the PSBT(used in BtcTransactionTemplate)
  *
  * @param {PsbtV2} psbt - The PsbtV2 object.
  * @param {BtcTxOutputTemplate} output - The output template to be processed and added.
@@ -829,33 +785,55 @@ export function addOutputToPsbt(
 }
 
 /**
- * Adds a single input to the provided PSBT based on the given input template.
- * @param {PsbtV2} psbt - The PsbtV2 object.
- * @param input - The input template to be processed and added.
- * @throws {Error} - Throws an error if script extraction or PSBT input addition fails.
+ * Determines if the combined fee rate of a parent and child transaction meets or exceeds
+ * the target fee rate for a Child-Pays-for-Parent (CPFP) transaction.
+ *
+ * This function calculates the combined fee rate of a parent transaction and its child
+ * (CPFP) transaction, then compares it to the target fee rate. It's used to ensure that
+ * the CPFP transaction provides sufficient fee incentive for miners to include both
+ * transactions in a block.
+ *
+ * The combined fee rate is calculated as:
+ * (parentFee + childFee) / (parentVsize + childVsize)
+ *
+ * @param {BigNumber} parentFee - The fee of the parent transaction in satoshis.
+ * @param {number} parentVsize - The virtual size of the parent transaction in vbytes.
+ * @param {BigNumber} childFee - The fee of the child transaction in satoshis.
+ * @param {number} childVsize - The virtual size of the child transaction in vbytes.
+ * @param {number} targetFeeRate - The target fee rate in satoshis per vbyte.
+ * @returns {boolean} True if the combined fee rate meets or exceeds the target fee rate, false otherwise.
+ *
+ * @example
+ * const parentFee = new BigNumber(1000);
+ * const parentVsize = 200;
+ * const childFee = new BigNumber(2000);
+ * const childVsize = 150;
+ * const targetFeeRate = 5;
+ * const isSatisfied = isCPFPFeeSatisfied(parentFee, parentVsize, childFee, childVsize, targetFeeRate);
+ * console.log(isSatisfied); // true or false
+ *
+ * @throws {Error} If any of the input parameters are negative.
  */
-export function addInputToPsbt(psbt: PsbtV2, input: BtcTxInputTemplate): void {
-  const scriptPubKey = getScriptFromUtxo(input);
-  if (!scriptPubKey) {
-    throw new Error(
-      `Unable to extract script from input: ${input.txid}:${input.vout}`,
-    );
+export function isCPFPFeeSatisfied(
+  parentFee: BigNumber,
+  parentVsize: number,
+  childFee: BigNumber,
+  childVsize: number,
+  targetFeeRate: number,
+): boolean {
+  // Input validation
+  if (
+    parentFee.isNegative() ||
+    parentVsize < 0 ||
+    childFee.isNegative() ||
+    childVsize < 0 ||
+    targetFeeRate < 0
+  ) {
+    throw new Error("All input parameters must be non-negative.");
   }
 
-  const inputData: any = {
-    previousTxId: input.txid,
-    outputIndex: input.vout,
-    nonWitnessUtxo: Buffer.from(input.prevTxHex!, "hex"), // Use prevTxHex directly from input
-  };
-
-  const scriptType = getScriptType(scriptPubKey);
-
-  if (scriptType === "p2wsh" || scriptType === "p2sh-p2wsh") {
-    inputData.witnessUtxo = {
-      script: scriptPubKey,
-      value: new BigNumber(input.amountSats),
-    };
-  }
-
-  psbt.addInput(inputData);
+  const combinedFee = parentFee.plus(childFee);
+  const combinedVsize = parentVsize + childVsize;
+  const combinedFeeRate = combinedFee.dividedBy(combinedVsize);
+  return combinedFeeRate.gte(targetFeeRate);
 }
