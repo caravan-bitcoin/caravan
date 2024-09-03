@@ -1,15 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import React, { useState } from "react";
 import { Box, Paper } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { useGetClient } from "../../hooks";
-// import { TransactionAnalyzer } from "@caravan/bitcoin";
-import { AnalyzedTransaction, RootState, UTXO } from "./fee-bumping/types";
-import { calculateTimeElapsed } from "./fee-bumping/utils";
+import { useGetPendingTransactions } from "../../hooks";
 import TransactionTable from "./fee-bumping/PendingTransactionTable";
 import RBFOptionsDialog from "./fee-bumping/rbf/RBFOptionsDialog";
 import AccelerateFeeDialog from "./fee-bumping/rbf/AccelerateFeeDialog";
 import CancelTransactionDialog from "./fee-bumping/rbf/CancelTransactionDialog";
+import { AnalyzerWithTimeElapsed } from "components/types/fees";
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -17,93 +14,24 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 }));
 
 const WalletPendingTransactions: React.FC = () => {
-  const [pendingTransactions, setPendingTransactions] = useState<
-    AnalyzedTransaction[]
-  >([]);
-  const [selectedTx, setSelectedTx] = useState<AnalyzedTransaction | null>(
-    null,
-  );
+  const { pendingTransactions, currentNetworkFeeRate, isLoading, error } =
+    useGetPendingTransactions();
+  const [, setSelectedTx] = useState<AnalyzerWithTimeElapsed | null>(null);
   const [showRBFOptions, setShowRBFOptions] = useState(false);
   const [showIncreaseFees, setShowIncreaseFees] = useState(false);
   const [showCancelTx, setShowCancelTx] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const network = useSelector((state: RootState) => state.settings.network);
-  const walletSlices = useSelector((state: RootState) => [
-    ...Object.values(state.wallet.deposits.nodes),
-    ...Object.values(state.wallet.change.nodes),
-  ]);
-  const blockchainClient = useGetClient();
-
-  useEffect(() => {
-    fetchPendingTransactions();
-  }, [network, walletSlices, blockchainClient]);
-
-  const fetchPendingTransactions = async () => {
-    try {
-      const pendingTxs = walletSlices
-        .flatMap((slice) => slice.utxos)
-        .filter((utxo) => !utxo.confirmed);
-
-      const currentNetworkFeeRate = await getCurrentNetworkFeeRate();
-
-      const analyzedTransactions = await Promise.all(
-        pendingTxs.map(async (utxo) =>
-          analyzeTransaction(utxo, currentNetworkFeeRate),
-        ),
-      );
-
-      setPendingTransactions(analyzedTransactions);
-    } catch (error) {
-      console.error("Error fetching pending transactions:", error);
-      setError("Failed to fetch pending transactions. Please try again later.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getCurrentNetworkFeeRate = async (): Promise<number> => {
-    try {
-      return await blockchainClient.getFeeEstimate();
-    } catch (error) {
-      console.error("Error fetching network fee rate:", error);
-      return 1; // Default to 1 sat/vB if unable to fetch
-    }
-  };
-
-  const analyzeTransaction = async (
-    utxo: UTXO,
-    currentNetworkFeeRate: number,
-  ): Promise<AnalyzedTransaction> => {
-    // const analyzer = new TransactionAnalyzer({
-    //   txHex: utxo.transactionHex,
-    //   network,
-    //   targetFeeRate: currentNetworkFeeRate,
-    //   // Add other required options for TransactionAnalyzer
-    // });
-    // const analysis = analyzer.analyze();
-
-    return {
-      ...utxo,
-      timeElapsed: calculateTimeElapsed(utxo.time),
-      currentFeeRate: currentNetworkFeeRate,
-      canRBF: true,
-      canCPFP: false,
-    };
-  };
 
   // const estimateBlocksToMine = (feeRate: number): number => {
   // TO DO (MRIGESH) : Implement new methods in client package's BlockchainClient class
   // to enable use of this method ...
   // };
 
-  const handleRBF = (tx: AnalyzedTransaction) => {
+  const handleRBF = (tx: AnalyzerWithTimeElapsed) => {
     setSelectedTx(tx);
     setShowRBFOptions(true);
   };
 
-  const handleCPFP = (tx: AnalyzedTransaction) => {
+  const handleCPFP = (tx: AnalyzerWithTimeElapsed) => {
     console.log("CPFP initiated for transaction:", tx.txid);
     //To Implement CPFP logic here
   };
@@ -133,6 +61,7 @@ const WalletPendingTransactions: React.FC = () => {
           onRBF={handleRBF}
           onCPFP={handleCPFP}
           isLoading={isLoading}
+          currentFeeRate={currentNetworkFeeRate!}
           error={error}
         />
       </StyledPaper>
