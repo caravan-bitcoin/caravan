@@ -22,8 +22,8 @@ import {
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { styled } from "@mui/material/styles";
-import { OpenInNew, Search, Edit } from "@mui/icons-material";
-import { AnalyzedTransaction } from "./types";
+import { Search, Edit, TrendingUp, TrendingDown } from "@mui/icons-material";
+import { RootState, AnalyzerWithTimeElapsed } from "components/types/fees";
 import { formatTxid } from "./utils";
 import Copyable from "./../../Copyable";
 
@@ -51,17 +51,35 @@ const AmountHeaderCell = styled(StyledTableCell)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-const StyledSelect = styled(Select)(({ theme }) => ({
+const StyledSelect = styled(Select)(() => ({
   minWidth: "70px",
   height: "30px",
   fontSize: "0.875rem",
 }));
 
+const FeeRateComparison = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: theme.spacing(0.5),
+}));
+
+const FeeRateRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+}));
+
+const ActionCell = styled(TableCell)(() => ({
+  whiteSpace: "nowrap",
+}));
+
 interface TransactionTableProps {
-  transactions: AnalyzedTransaction[];
-  onRBF: (tx: AnalyzedTransaction) => void;
-  onCPFP: (tx: AnalyzedTransaction) => void;
+  transactions: AnalyzerWithTimeElapsed[];
+  onRBF: (tx: AnalyzerWithTimeElapsed) => void;
+  onCPFP: (tx: AnalyzerWithTimeElapsed) => void;
   isLoading: boolean;
+  currentFeeRate: number;
   error: string | null;
 }
 
@@ -70,9 +88,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   onRBF,
   onCPFP,
   isLoading,
+  currentFeeRate,
   error,
 }) => {
-  const network = useSelector((state) => state.settings.network);
+  const network = useSelector((state: RootState) => state.settings.network);
   const [amountUnit, setAmountUnit] = useState<"BTC" | "satoshis">("BTC");
 
   const formatAmount = (amountSats: number) => {
@@ -81,6 +100,31 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     } else {
       return `${amountSats} sats`;
     }
+  };
+
+  const renderFeeRateComparison = (tx: AnalyzerWithTimeElapsed) => {
+    const txFeeRate = parseFloat(tx.feeRate);
+    const feeRateDiff = currentFeeRate - txFeeRate;
+    const icon =
+      feeRateDiff > 0 ? (
+        <TrendingUp color="error" fontSize="small" />
+      ) : (
+        <TrendingDown color="success" fontSize="small" />
+      );
+
+    return (
+      <FeeRateComparison>
+        <FeeRateRow>
+          <Typography variant="body2">Paid:</Typography>
+          <Chip label={`${txFeeRate.toFixed(2)} sat/vB`} size="small" />
+        </FeeRateRow>
+        <FeeRateRow>
+          <Typography variant="body2">Current:</Typography>
+          <Chip label={`${currentFeeRate.toFixed(2)} sat/vB`} size="small" />
+          {icon}
+        </FeeRateRow>
+      </FeeRateComparison>
+    );
   };
 
   if (isLoading) {
@@ -123,7 +167,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   }
 
   return (
-    <Table>
+    <Table size="small">
       <TableHead>
         <TableRow>
           <StyledTableCell>Transaction ID</StyledTableCell>
@@ -143,7 +187,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               </StyledSelect>
             </FormControl>
           </AmountHeaderCell>
-          <StyledTableCell>Current Fee Rate</StyledTableCell>
+          <StyledTableCell>Fee Rate</StyledTableCell>
+          <StyledTableCell>Recommended Strategy</StyledTableCell>
           <StyledTableCell>Actions</StyledTableCell>
         </TableRow>
       </TableHead>
@@ -168,44 +213,57 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </TxidCell>
             <TableCell>{tx.timeElapsed}</TableCell>
             <TableCell>
-              <Typography>{formatAmount(tx.amountSats)}</Typography>
+              <Typography variant="body2">
+                {formatAmount(parseInt(tx.fee))}
+              </Typography>
             </TableCell>
+            <TableCell>{renderFeeRateComparison(tx)}</TableCell>
             <TableCell>
-              <Chip
-                label={`${tx.currentFeeRate.toFixed(2)} sat/vB`}
-                color={tx.currentFeeRate > 4 ? "success" : "warning"}
-                size="small"
-              />
+              <Typography variant="body2">
+                {tx.recommendedStrategy === "NONE"
+                  ? "No action needed"
+                  : tx.recommendedStrategy}
+              </Typography>
             </TableCell>
-            <TableCell>
+            <ActionCell>
               {tx.canRBF && (
-                <ActionButton
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  onClick={() => onRBF(tx)}
-                  startIcon={<Edit />}
+                <Tooltip
+                  title={`RBF (${parseFloat(tx.rbfFeeRate).toFixed(2)} sat/vB)`}
+                  arrow
                 >
-                  RBF
-                </ActionButton>
+                  <ActionButton
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    onClick={() => onRBF(tx)}
+                    startIcon={<Edit />}
+                  >
+                    RBF
+                  </ActionButton>
+                </Tooltip>
               )}
               {tx.canCPFP && (
-                <ActionButton
-                  variant="outlined"
-                  color="secondary"
-                  size="small"
-                  onClick={() => onCPFP(tx)}
-                  startIcon={<Edit />}
+                <Tooltip
+                  title={`CPFP (${parseFloat(tx.cpfpFeeRate).toFixed(2)} sat/vB)`}
+                  arrow
                 >
-                  CPFP
-                </ActionButton>
+                  <ActionButton
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    onClick={() => onCPFP(tx)}
+                    startIcon={<Edit />}
+                  >
+                    CPFP
+                  </ActionButton>
+                </Tooltip>
               )}
               {!tx.canRBF && !tx.canCPFP && (
                 <Typography variant="body2" color="textSecondary">
                   No actions available
                 </Typography>
               )}
-            </TableCell>
+            </ActionCell>
           </TableRow>
         ))}
       </TableBody>
