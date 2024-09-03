@@ -15,6 +15,7 @@ export const SET_REQUIRED_SIGNERS = "SET_REQUIRED_SIGNERS";
 export const SET_TOTAL_SIGNERS = "SET_TOTAL_SIGNERS";
 
 export const SET_INPUTS = "SET_INPUTS";
+export const SET_RBF = "SET_RBF";
 
 export const ADD_OUTPUT = "ADD_OUTPUT";
 export const SET_OUTPUT_ADDRESS = "SET_OUTPUT_ADDRESS";
@@ -113,6 +114,11 @@ export function setChangeAddressAction(value) {
     value,
   };
 }
+
+export const setRBF = (enabled) => ({
+  type: SET_RBF,
+  value: enabled,
+});
 
 export function setChangeOutput({ value, address }) {
   return (dispatch, getState) => {

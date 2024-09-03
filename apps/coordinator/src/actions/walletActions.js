@@ -33,6 +33,7 @@ export const WALLET_MODES = {
   VIEW: 0,
   DEPOSIT: 1,
   SPEND: 2,
+  PENDING: 3,
 };
 
 export function updateDepositSliceAction(value) {

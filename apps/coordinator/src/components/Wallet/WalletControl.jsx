@@ -16,6 +16,7 @@ import { setRequiredSigners as setRequiredSignersAction } from "../../actions/tr
 import { MAX_FETCH_UTXOS_ERRORS, MAX_TRAILING_EMPTY_NODES } from "./constants";
 import WalletDeposit from "./WalletDeposit";
 import WalletSpend from "./WalletSpend";
+import WalletPendingTransactions from "./WalletPendingTransactions";
 import { SlicesTableContainer } from "../Slices";
 
 class WalletControl extends React.Component {
@@ -41,6 +42,7 @@ class WalletControl extends React.Component {
             <Tab label="Addresses" value={WALLET_MODES.VIEW} key={0} />,
             <Tab label="Receive" value={WALLET_MODES.DEPOSIT} key={1} />,
             <Tab label="Send" value={WALLET_MODES.SPEND} key={2} />,
+            <Tab label="Pending" value={WALLET_MODES.PENDING} key={3} />,
           ]}
         </Tabs>
         <Box mt={2}>{this.renderModeComponent()}</Box>
@@ -55,6 +57,8 @@ class WalletControl extends React.Component {
       if (walletMode === WALLET_MODES.SPEND)
         return <WalletSpend addNode={addNode} updateNode={updateNode} />;
       if (walletMode === WALLET_MODES.VIEW) return <SlicesTableContainer />;
+      if (walletMode === WALLET_MODES.PENDING)
+        return <WalletPendingTransactions />;
     }
     const progress = this.progress();
     return [

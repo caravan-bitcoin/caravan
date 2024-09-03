@@ -46,6 +46,7 @@ import {
   SET_BALANCE_ERROR,
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
+  SET_RBF,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -98,6 +99,7 @@ export const initialState = () => ({
   unsignedTransaction: {},
   isWallet: false,
   autoSpend: true,
+  rbfEnabled: true, // Set RBF enabled by default
   changeAddress: "",
   updatesComplete: true,
   signingKeys: [0, 0], // default 2 required signers
@@ -262,7 +264,6 @@ function updateOutputAmount(state, action) {
   let amount = action.value;
   const amountSats = bitcoinsToSatoshis(BigNumber(amount));
   let error = validateOutputAmount(amountSats, state.inputsTotalSats);
-
   if (state.isWallet && error === "Total input amount must be positive.")
     error = "";
   if (state.isWallet && error === "Output amount is too large.") error = "";
@@ -281,12 +282,16 @@ function updateOutputAmount(state, action) {
 
 function finalizeOutputs(state, action) {
   let unsignedTransaction;
+  const rbfSequence = state.rbfEnabled ? 0xfffffffd : 0xffffffff;
   // First try to build the transaction via PSBT, if that fails (e.g. an input doesn't know about its braid),
   // then try to build it using the old TransactionBuilder plumbing.
   try {
     const args = {
       network: state.network,
-      inputs: state.inputs.map(convertLegacyInput),
+      inputs: state.inputs.map((input) => ({
+        ...convertLegacyInput(input),
+        sequence: rbfSequence,
+      })),
       outputs: state.outputs.map(convertLegacyOutput),
     };
     const psbt = getUnsignedMultisigPsbtV0(args);
@@ -452,6 +457,8 @@ export default (state = initialState(), action) => {
       return updateState(state, { balanceError: action.value });
     case SET_SPEND_STEP:
       return updateState(state, { spendingStep: action.value });
+    case SET_RBF:
+      return updateState(state, { rbfEnabled: action.value });
     default:
       return state;
   }
