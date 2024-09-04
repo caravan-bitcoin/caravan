@@ -631,10 +631,15 @@ const MULTISIGS_BASE = [
               ),
             },
           ],
-          redeemScript: Buffer.from(
-            "5221021a049747120345fa9017fb42d8ff3d4fb1d2ef4c80546872c5da513babd515852103a00095df48367ed21e5c6edd50af4352311bf060eb100425cb7af4331aa1aad052ae",
-            "hex",
-          ),
+          multisig: {
+            address: CHANGE_ADDRESSES[Network.TESTNET][P2SH],
+            redeem: {
+              output: Buffer.from(
+                "5221021a049747120345fa9017fb42d8ff3d4fb1d2ef4c80546872c5da513babd515852103a00095df48367ed21e5c6edd50af4352311bf060eb100425cb7af4331aa1aad052ae",
+                "hex",
+              ),
+            },
+          },
         },
       ],
       hex: "0100000003845266686d5d2473fb09982c72da0d6d66b057c3e13a6eb4bfda304076efe7650100000000ffffffff2a023ec5a05681f4bcb56b9e45884f625a96658e1da16f802e102e31a81a9eae0100000000ffffffff44ae6108a1c6e0eee65edfc7e91b72026263769cb87714a99dd45db8fbc143f20000000000ffffffff02067304000000000017a914e3ba1151b75effbf7adc4673c83c8feec3ddc367876f1d00000000000017a914c34d63a6720866070490a8cb244c6bdc7ce2fa138700000000",
@@ -1015,10 +1020,15 @@ const MULTISIGS_BASE = [
               ),
             },
           ],
-          redeemScript: Buffer.from(
-            "52210360fc2c3410b3700822c31d4901640cf763714f30ff45f887e86bee8733509ebe21039c064999a7c238c31ee018b1b7983fb657edfdf23f4d46bde919817a39cbcbb352ae",
-            "hex",
-          ),
+          multisig: {
+            address: CHANGE_ADDRESSES[Network.MAINNET][P2SH],
+            redeem: {
+              output: Buffer.from(
+                "52210360fc2c3410b3700822c31d4901640cf763714f30ff45f887e86bee8733509ebe21039c064999a7c238c31ee018b1b7983fb657edfdf23f4d46bde919817a39cbcbb352ae",
+                "hex",
+              ),
+            },
+          },
         },
       ],
       hex: "0100000003b0e7bdea1e52e6bc471172c6b78b26a7382911b5910b5c947ed18983be1368450000000000ffffffffd5bbbd495e5bfd00df32d9e29a3b4566655f41f070c7ad3df96be436e064bf5b0100000000ffffffffa5cd511488fdbf56626c46215741b30956b47f8dd74164a0daa5f1a3e11dc1740000000000ffffffff02565400000000000017a91480b2477411a78b2a939d7da08bfa1939a871a4b9876f1d00000000000017a914335131487569e42724cb7fe4818a348aa6bc7afa8700000000",
