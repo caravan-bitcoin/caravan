@@ -1,9 +1,10 @@
 {
   "name": "@caravan/bip32",
-  "version": "1.0.0",
+  "version": "1.0.0-beta",
   "author": "unchained capital",
   "description": "Package for working with bip32 and derivative objects like extended public keys",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=20"
   },
@@ -12,13 +13,13 @@
   "module": "./dist/index.mjs",
   "files": [
     "./dist/index.js",
-    "./dist/index.mjs",
+    "./dist/index.cjs",
     "./dist/index.d.ts"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     }
   },
