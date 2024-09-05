@@ -1,13 +1,7 @@
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
-import {
-  combineBip32Paths,
-  getMaskedKeyOrigin,
-  getUnmaskedPath,
-  isValidChildPubKey,
-  KeyOrigin,
-} from "..";
-import { Network } from "@caravan/bitcoin";
+import { combineBip32Paths, getUnmaskedPath, secureSecretPath } from "../paths";
+import { KeyOrigin } from "../types";
 
 const globalOrigin: KeyOrigin = {
   xpub: "tpubDEtyXJKvCT2V3ccXBBrNPEGb8RNZjNMcGbx68CzE74zq7aKWwRz8up95PYCm7HrYRT7Sz42uFVpW1MgRzqRU7KTHsY6LgPcYMc53pqHC7uc",
@@ -22,54 +16,6 @@ const testChildDerivation = {
     "hex",
   ),
 } as unknown as Bip32Derivation;
-
-describe("getMaskedKeyOrigin", () => {
-  it("should return the masked origin", () => {
-    const masked = getMaskedKeyOrigin(globalOrigin.xpub);
-    expect(masked).toEqual({
-      xpub: globalOrigin.xpub,
-      bip32Path: "m/0/0/0/0",
-      rootFingerprint: "86bd941f",
-    });
-  });
-});
-
-describe("isValidChildPubKey", () => {
-  it("should return true for a valid child pubkey", () => {
-    expect(isValidChildPubKey(testChildDerivation, globalOrigin, Network.REGTEST)).toBe(
-      true,
-    );
-  });
-
-  it("should return true for valid masked key", () => {
-    const derivation = {
-      ...testChildDerivation,
-      path: "m/45/0/0/0/0/0",
-    };
-    expect(isValidChildPubKey(derivation, globalOrigin, Network.REGTEST)).toBe(true);
-  });
-
-  it("should throw if child key is longer than parent", () => {
-    const derivation = {
-      ...testChildDerivation,
-      path: "m/45'/0'/0'/",
-    };
-    expect(() =>
-      isValidChildPubKey(derivation, globalOrigin, Network.REGTEST),
-    ).toThrow();
-  });
-
-  it("should return false for an invalid child pubkey", () => {
-    const otherGlobal: KeyOrigin = {
-      xpub: "tpubDEtyXJKvDdEvUzbiBsHXXAqjnNvDJdQWLjyjCxSRzzHq77fKjbxFJ2uXuciR28CRk6dQzGwNw2Dby615BbykdWHDQZHCacY21JW3FCFKcme",
-      bip32Path: "m/45'/0'/0'/5222010",
-      rootFingerprint: "9a6a2580",
-    };
-    expect(isValidChildPubKey(testChildDerivation, otherGlobal, Network.REGTEST)).toBe(
-      false,
-    );
-  });
-});
 
 describe("getUnmaskedPath", () => {
   it("should return the unmasked path", () => {
@@ -113,5 +59,32 @@ describe("combineBip32Paths", () => {
     const firstPath = "m/45'/0'/0'/42";
     const secondPath = "invalid/path";
     expect(() => combineBip32Paths(firstPath, secondPath)).toThrow();
+  });
+});
+
+jest.mock("crypto", () => {
+  return {
+    ...jest.requireActual("crypto"),
+    randomInt: jest.fn(() => 42),
+  };
+});
+
+describe("secureSecretPath", () => {
+  afterAll(jest.resetAllMocks);
+  it("should return a path of the desired depth", () => {
+    const depth = 4;
+    const securePath = secureSecretPath(depth);
+    expect(securePath.split("/").length).toBe(depth + 1);
+  });
+
+  it("should return a secure path", () => {
+    const expectedPath = "m/42/42/42/42";
+    const securePath = secureSecretPath();
+    expect(securePath).toBe(expectedPath);
+  });
+
+  it("should throw an error for invalid depth", () => {
+    expect(() => secureSecretPath(32)).toThrow();
+    expect(() => secureSecretPath(0)).toThrow();
   });
 });
