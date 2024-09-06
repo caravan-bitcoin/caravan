@@ -45,3 +45,8 @@ and confirm that the pubkey can be derived from that source
 ### `setXpubNetwork`
 
 Sets and updates serialization of xpub for a network accordingly.
+
+### `getBlindedXpub`
+
+Given a source xpub, derive a blinded xpub at a random path.
+Will target 128 bits of entropy for the path with a depth of 4.

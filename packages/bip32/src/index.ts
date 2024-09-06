@@ -7,4 +7,5 @@ export {
   getRandomChildXpub,
   getMaskedKeyOrigin,
   setXpubNetwork,
+  getBlindedXpub,
 } from "./keys";

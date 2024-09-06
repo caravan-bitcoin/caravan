@@ -5,6 +5,7 @@ import {
   bip32SequenceToPath,
   deriveChildExtendedPublicKey,
   deriveChildPublicKey,
+  getNetworkFromPrefix,
 } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
@@ -98,7 +99,6 @@ export const getRandomChildXpub = (
   network: Network = Network.MAINNET,
 ): KeyOrigin => {
   const randomPath = secureSecretPath(depth);
-
   const childXpub = deriveChildExtendedPublicKey(
     setXpubNetwork(sourceOrigin.xpub, network),
     randomPath,
@@ -110,5 +110,26 @@ export const getRandomChildXpub = (
     xpub: childXpub,
     bip32Path: childPath,
     rootFingerprint: sourceOrigin.rootFingerprint,
+  };
+};
+
+/**
+ * @description Given a source xpub, derive a blinded xpub at a random path.
+ * Will target 128 bits of entropy for the path with a depth of 4.
+ * @param rawXpub {string} - xpub to blind
+ * @returns
+ */
+export const getBlindedXpub = (rawXpub: string): KeyOrigin => {
+  const xpub = ExtendedPublicKey.fromBase58(rawXpub);
+  if (!xpub.depth) throw new Error("Depth not found from xpub");
+  const secretPath = secureSecretPath(4);
+
+  const network = getNetworkFromPrefix(rawXpub.slice(0, 4));
+  const newKey = deriveChildExtendedPublicKey(rawXpub, secretPath, network);
+
+  return {
+    xpub: newKey,
+    bip32Path: `*/${secretPath.split("/").slice(1).join("/")}`,
+    rootFingerprint: xpub?.parentFingerprint?.toString(16) || "",
   };
 };

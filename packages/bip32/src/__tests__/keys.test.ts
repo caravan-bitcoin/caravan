@@ -2,6 +2,7 @@ import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
 import {
+  getBlindedXpub,
   getMaskedKeyOrigin,
   getRandomChildXpub,
   isValidChildPubKey,
@@ -112,23 +113,42 @@ describe("getRandomChildXpub", () => {
     // depth below the parent path
     childPath = "m/45'/0'/0'/0/0";
     child = nodes["m/45'/0'/0'/0/0"];
-    console.log(mockPaths);
     (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
   });
 
   afterAll(jest.restoreAllMocks);
-  it("should return a random child xpub", () => {
+  it("should return a random child xpub", async () => {
     const keyOrigin = {
       xpub: parent.xpub,
       bip32Path: parentPath,
       rootFingerprint: parent.fingerprint,
     };
-    const actual = getRandomChildXpub(keyOrigin, depth);
+    const actual = await getRandomChildXpub(keyOrigin, depth);
     expect(actual).toEqual({
       xpub: child.xpub,
       bip32Path: childPath,
       rootFingerprint: child.fingerprint,
     });
     expect(mockPaths.secureSecretPath).toHaveBeenCalledWith(depth);
+  });
+});
+
+// Very similar to the above test, but only works on an xpub
+describe("getBlindedXpub", () => {
+  let parentPath, parent, child;
+  beforeEach(() => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    parentPath = "m/45'/0'/0'";
+    parent = nodes[parentPath];
+    // depth below the parent path
+    child = nodes["m/45'/0'/0'/0/0"];
+    (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
+  });
+
+  afterAll(jest.restoreAllMocks);
+  it("should return a random child key origin", async () => {
+    const actual = await getBlindedXpub(parent.xpub);
+    expect(actual.xpub).toEqual(child.xpub);
+    expect(actual.bip32Path).toEqual("*/0/0");
   });
 });
