@@ -33,8 +33,8 @@ interface HermitSignatureImporterProps {
   defaultBIP32Path: string;
   validateAndSetBIP32Path: (val: string, fn: () => void, rest: any) => void;
   validateAndSetSignature: (
-    val: string[] | null,
-    fn: () => void,
+    val: string[][] | string[] | null,
+    fn: (signatureError: any) => void,
     rest: any,
   ) => void;
   enableChangeMethod: () => void;
