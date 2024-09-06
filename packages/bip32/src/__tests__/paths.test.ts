@@ -62,29 +62,38 @@ describe("combineBip32Paths", () => {
   });
 });
 
-jest.mock("crypto", () => {
+jest.mock("../utils", () => {
   return {
-    ...jest.requireActual("crypto"),
-    randomInt: jest.fn(() => 42),
+    __esModule: true,
+    secureRandomInt: jest.fn(() => 42),
   };
 });
 
 describe("secureSecretPath", () => {
-  afterAll(jest.resetAllMocks);
-  it("should return a path of the desired depth", () => {
+  it("should return a path of the desired depth", async () => {
     const depth = 4;
     const securePath = secureSecretPath(depth);
     expect(securePath.split("/").length).toBe(depth + 1);
   });
 
-  it("should return a secure path", () => {
+  it("should return a secure path", async () => {
     const expectedPath = "m/42/42/42/42";
     const securePath = secureSecretPath();
     expect(securePath).toBe(expectedPath);
   });
 
-  it("should throw an error for invalid depth", () => {
-    expect(() => secureSecretPath(32)).toThrow();
-    expect(() => secureSecretPath(0)).toThrow();
+  it("should throw an error for invalid depth", async () => {
+    let failures = 0;
+    try {
+      await secureSecretPath(32);
+    } catch (e: any) {
+      failures += 1;
+    }
+    try {
+      await secureSecretPath(0);
+    } catch (e: any) {
+      failures += 1;
+    }
+    expect(failures).toBe(2);
   });
 });

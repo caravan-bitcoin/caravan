@@ -1,6 +1,3 @@
-// import { randomInt } from "crypto";
-import crypto from "crypto";
-
 import {
   bip32PathToSequence,
   bip32SequenceToPath,
@@ -9,6 +6,7 @@ import {
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
 import { KeyOrigin } from "./types";
+import { secureRandomInt } from "./utils";
 
 /**
  * @description Returns a random BIP32 path of a given depth. The
@@ -42,12 +40,12 @@ export const secureSecretPath = (depth: number = 4): string => {
   if (depth < 1) {
     throw new Error(`Depth must be > 0: ${depth}`);
   }
-  const to_return: string[] = ["m"];
+  const toReturn: string[] = ["m"];
   for (let i = 0; i < depth; i++) {
-    const rand_int = crypto.randomInt(0, 2 ** 31 - 1);
-    to_return.push(rand_int.toString());
+    const randInt = secureRandomInt();
+    toReturn.push(randInt.toString());
   }
-  return to_return.join("/");
+  return toReturn.join("/");
 };
 
 /**
