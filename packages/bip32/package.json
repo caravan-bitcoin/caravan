@@ -4,13 +4,12 @@
   "author": "unchained capital",
   "description": "Package for working with bip32 and derivative objects like extended public keys",
   "private": true,
-  "type": "module",
   "engines": {
     "node": ">=20"
   },
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "module": "./dist/index.mjs",
   "files": [
     "./dist/index.js",
     "./dist/index.cjs",
@@ -35,7 +34,8 @@
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
-    "bip174": "^2.1.1"
+    "bip174": "^2.1.1",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "@caravan/eslint-config": "*",
