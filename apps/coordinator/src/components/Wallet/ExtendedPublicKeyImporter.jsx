@@ -89,7 +89,9 @@ class ExtendedPublicKeyImporter extends React.Component {
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
-        <FormControl>{this.renderImportByMethod()}</FormControl>
+        <FormControl style={{ width: "100%" }}>
+          {this.renderImportByMethod()}
+        </FormControl>
       </div>
     );
   };
