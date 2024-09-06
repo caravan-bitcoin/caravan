@@ -5,13 +5,11 @@ import {
   Network,
   networkData,
   parseSignatureArrayFromPSBT,
-  unsignedMultisigPSBT,
 } from "@caravan/bitcoin";
 import {
-  HERMIT,
   PENDING,
   UNSUPPORTED,
-  SignMultisigTransaction,
+  HermitSignMultisigTransaction,
 } from "@caravan/wallets";
 import { Grid, Box, TextField, Button, FormHelperText } from "@mui/material";
 import { Psbt } from "bitcoinjs-lib";
@@ -20,6 +18,11 @@ import HermitDisplayer from "./HermitDisplayer";
 import InteractionMessages from "../InteractionMessages";
 import { setUnsignedPSBT as setUnsignedPSBTAction } from "../../actions/transactionActions";
 import { LegacyInput, LegacyOutput } from "@caravan/multisig";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 
 interface HermitSignatureImporterProps {
   signatureImporter: {
@@ -29,14 +32,18 @@ interface HermitSignatureImporterProps {
   setUnsignedPSBT: (psbt: string) => void;
   defaultBIP32Path: string;
   validateAndSetBIP32Path: (val: string, fn: () => void, rest: any) => void;
-  validateAndSetSignature: (val: string, fn: () => void, rest: any) => void;
+  validateAndSetSignature: (
+    val: string[] | null,
+    fn: () => void,
+    rest: any,
+  ) => void;
   enableChangeMethod: () => void;
   disableChangeMethod: () => void;
   unsignedPsbt?: string;
   unsignedPsbtFromState: string;
   network: Network;
-  inputs: LegacyInput[] | unknown[];
-  outputs: LegacyOutput[] | unknown[];
+  inputs: LegacyInput[];
+  outputs: LegacyOutput[];
 }
 
 interface HermitSignatureImporterState {
@@ -106,23 +113,22 @@ class HermitSignatureImporter extends React.Component<
     // be a scaffolded PSBT without any inputs.
 
     if (unsignedPsbtFromState === "" && inputs.length > 0) {
-      psbtToSign = unsignedMultisigPSBT(
+      psbtToSign = getUnsignedMultisigPsbtV0({
         network,
-        inputs,
-        outputs,
-        true,
-      ).toBase64();
+        inputs: inputs.map(convertLegacyInput),
+        outputs: outputs.map(convertLegacyOutput),
+        includeGlobalXpubs: true,
+      }).toBase64();
 
       setUnsignedPSBT(psbtToSign);
 
-      return SignMultisigTransaction({
-        keystore: HERMIT,
+      return new HermitSignMultisigTransaction({
         psbt: psbtToSign,
       });
     }
 
     const psbt = Psbt.fromBase64(
-      unsignedPsbt === "" ? unsignedPsbtFromState : unsignedPsbt,
+      unsignedPsbt ? unsignedPsbt : unsignedPsbtFromState,
       {
         network: networkData(network),
       },
@@ -148,21 +154,23 @@ class HermitSignatureImporter extends React.Component<
           this.parseBinaryPath(Buffer.from(p.slice(8), "hex")),
         ]);
 
+      // TODO: these need to be fixed with our new types for PSBT inputs and outputs
       psbt.addInputs(
         Object.values(inputs).map((i) => ({
           hash: i.txid,
           index: i.index,
           nonWitnessUtxo: Buffer.from(i.transactionHex, "hex"),
-          redeemScript: i.multisig?.redeem?.output,
-          bip32Derivation: i.multisig?.redeem?.pubkeys.map(
-            (pk: any, idx: number) => {
-              return {
-                masterFingerprint: derivation[idx][0],
-                path: derivation[idx][1],
-                pubkey: pk,
-              };
-            },
-          ),
+          redeemScript: (i as { multisig?: { output?: any } })?.multisig
+            ?.output,
+          bip32Derivation: (
+            i as { multisig?: { pubkeys?: any } }
+          ).multisig?.pubkeys.map((pk: any, idx: number) => {
+            return {
+              masterFingerprint: derivation[idx][0],
+              path: derivation[idx][1],
+              pubkey: pk,
+            };
+          }),
         })),
       );
       psbt.addOutputs(
@@ -178,8 +186,7 @@ class HermitSignatureImporter extends React.Component<
       psbtToSign = unsignedPsbt === "" ? unsignedPsbtFromState : unsignedPsbt;
     }
 
-    return SignMultisigTransaction({
-      keystore: HERMIT,
+    return new HermitSignMultisigTransaction({
       psbt: psbtToSign,
     });
   };
