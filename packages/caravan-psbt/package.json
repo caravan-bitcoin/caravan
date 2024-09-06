@@ -2,19 +2,18 @@
   "name": "@caravan/psbt",
   "version": "1.4.2",
   "description": "typescript library for working with PSBTs",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
   "files": [
     "./dist/index.js",
-    "./dist/index.cjs",
+    "./dist/index.mjs",
     "./dist/index.d.ts"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
