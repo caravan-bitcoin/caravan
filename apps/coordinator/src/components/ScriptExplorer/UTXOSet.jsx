@@ -14,11 +14,14 @@ import {
   TableCell,
   Typography,
   Checkbox,
+  Chip,
 } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
+import { WasteMetrics } from "@caravan/health";
+import { getWalletConfig } from "../../selectors/wallet";
 
 // Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -170,13 +173,49 @@ class UTXOSet extends React.Component {
     }
   };
 
+  getChipProperties(amountSats, feeRate, walletConfig) {
+    const wasteMetrics = new WasteMetrics();
+    const scriptType = walletConfig.addressType;
+    const config = {
+      requiredSignerCount: walletConfig.quorum.requiredSigners,
+      totalSignerCount: walletConfig.quorum.totalSigners,
+    };
+    const { lowerLimit, upperLimit } = wasteMetrics.calculateDustLimits(
+      feeRate,
+      scriptType,
+      config,
+    );
+    if (amountSats <= lowerLimit) {
+      return {
+        color: "error",
+        label: "dust",
+      };
+    } else if (amountSats > lowerLimit && amountSats <= upperLimit) {
+      return {
+        color: "warning",
+        label: "warning",
+      };
+    } else {
+      return {
+        color: "success",
+        label: "economical",
+      };
+    }
+  }
+
   renderInputs = () => {
-    const { network, showSelection, finalizedOutputs } = this.props;
+    const { network, showSelection, finalizedOutputs, walletConfig, feeRate } =
+      this.props;
     const { localInputs } = this.state;
     return localInputs.map((input, inputIndex) => {
       const confirmedStyle = `${styles.utxoTxid}${
         input.confirmed ? "" : ` ${styles.unconfirmed}`
       }`;
+      const { color, label } = this.getChipProperties(
+        input.amountSats,
+        feeRate,
+        walletConfig,
+      );
       const confirmedTitle = input.confirmed ? "confirmed" : "unconfirmed";
       return (
         <TableRow hover key={input.txid}>
@@ -202,6 +241,9 @@ class UTXOSet extends React.Component {
           </TableCell>
           <TableCell>
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
+          </TableCell>
+          <TableCell>
+            <Chip color={color} label={label}></Chip>
           </TableCell>
           <TableCell>
             {externalLink(
@@ -247,6 +289,7 @@ class UTXOSet extends React.Component {
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
+              <TableCell>Dust Status</TableCell>
               <TableCell>View</TableCell>
             </TableRow>
           </TableHead>
@@ -303,6 +346,7 @@ function mapStateToProps(state) {
     autoSpend: state.spend.transaction.autoSpend,
     finalizedOutputs: state.spend.transaction.finalizedOutputs,
     existingTransactionInputs: state.spend.transaction.inputs,
+    walletConfig: getWalletConfig(state),
   };
 }
 

@@ -181,7 +181,7 @@ class OutputsForm extends React.Component {
   };
 
   getFeeEstimate = async () => {
-    const { getBlockchainClient, setFeeRate } = this.props;
+    const { getBlockchainClient, setFeeRate, onFeeEstimate } = this.props;
     const client = await getBlockchainClient();
     let feeEstimate;
     let feeRateFetchError = "";
@@ -196,6 +196,10 @@ class OutputsForm extends React.Component {
           ? feeEstimate.toString()
           : MIN_SATS_PER_BYTE_FEE.toString(),
       );
+      // Call the parent's callback function with the feeEstimate
+      if (onFeeEstimate) {
+        onFeeEstimate(feeEstimate.toString());
+      }
       this.setState({ feeRateFetchError });
     }
   };
@@ -473,6 +477,7 @@ OutputsForm.propTypes = {
   }).isRequired,
   isWallet: PropTypes.bool.isRequired,
   network: PropTypes.string.isRequired,
+  onFeeEstimate: PropTypes.func,
   outputs: PropTypes.arrayOf(
     PropTypes.shape({
       address: PropTypes.string,
