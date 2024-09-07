@@ -160,24 +160,10 @@ export const psbtArgsFromFixture = (
   inputs: PsbtInput[];
   outputs: PsbtOutput[];
 } => {
-  const convertLegacyOutputWithMultisig = (output) => {
-    return convertLegacyOutput({
-      ...output,
-      multisig: (output.redeemScript || output.witnessScript) && {
-        address: output.address,
-        bip32Derivation: output.bip32Derivation,
-        redeem: {
-          output: output.redeemScript,
-          redeem: { output: output.witnessScript },
-        },
-      },
-    });
-  };
-
   return {
     network: fixture.network as Network,
     inputs: fixture.inputs.map(convertLegacyInput),
-    outputs: fixture.outputs.map(convertLegacyOutputWithMultisig),
+    outputs: fixture.outputs.map(convertLegacyOutput),
   };
 };
 

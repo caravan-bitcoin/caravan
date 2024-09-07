@@ -1312,6 +1312,20 @@ const MULTISIGS = MULTISIGS_BASE.map((test) => {
           outputs: test.transaction.outputs.map((output) => ({
             ...output,
             ...{ amountSats: new BigNumber(output.amountSats).toString() },
+            ...{
+              multisig: (output.redeemScript || output.witnessScript) && {
+                address: output.address,
+                bip32Derivation: output.bip32Derivation,
+                redeem: {
+                  output: [P2SH, P2SH_P2WSH].includes(test.type)
+                    ? output.redeemScript
+                    : output.witnessScript,
+                  redeem: [P2SH_P2WSH].includes(test.type) && {
+                    output: output.witnessScript,
+                  },
+                },
+              },
+            },
           })),
         },
       },
