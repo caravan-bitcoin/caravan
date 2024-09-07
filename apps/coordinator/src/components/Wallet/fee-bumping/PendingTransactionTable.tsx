@@ -23,7 +23,8 @@ import {
 } from "@caravan/bitcoin";
 import { styled } from "@mui/material/styles";
 import { Search, Edit, TrendingUp, TrendingDown } from "@mui/icons-material";
-import { RootState, AnalyzerWithTimeElapsed } from "components/types/fees";
+import { RootState, ExtendedAnalyzer } from "components/types/fees";
+import TransactionActions from "./TransactionActions";
 import { formatTxid } from "./utils";
 import Copyable from "./../../Copyable";
 
@@ -32,11 +33,6 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     backgroundColor: theme.palette.grey[200],
     fontWeight: "bold",
   },
-}));
-
-const ActionButton = styled(Button)(({ theme }) => ({
-  margin: theme.spacing(0.5),
-  textTransform: "none",
 }));
 
 const TxidCell = styled(TableCell)(({ theme }) => ({
@@ -70,14 +66,10 @@ const FeeRateRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-const ActionCell = styled(TableCell)(() => ({
-  whiteSpace: "nowrap",
-}));
-
 interface TransactionTableProps {
-  transactions: AnalyzerWithTimeElapsed[];
-  onRBF: (tx: AnalyzerWithTimeElapsed) => void;
-  onCPFP: (tx: AnalyzerWithTimeElapsed) => void;
+  transactions: ExtendedAnalyzer[];
+  onRBF: (tx: ExtendedAnalyzer) => void;
+  onCPFP: (tx: ExtendedAnalyzer) => void;
   isLoading: boolean;
   currentFeeRate: number;
   error: string | null;
@@ -102,8 +94,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     }
   };
 
-  const renderFeeRateComparison = (tx: AnalyzerWithTimeElapsed) => {
-    const txFeeRate = parseFloat(tx.feeRate);
+  const renderFeeRateComparison = (tx: ExtendedAnalyzer) => {
+    const txFeeRate = parseFloat(tx.analyzer.feeRate);
     const feeRateDiff = currentFeeRate - txFeeRate;
     const icon =
       feeRateDiff > 0 ? (
@@ -194,16 +186,20 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
       </TableHead>
       <TableBody>
         {transactions.map((tx) => (
-          <TableRow key={tx.txid} hover>
+          <TableRow key={tx.analyzer.txid} hover>
             <TxidCell>
-              <Tooltip title={tx.txid} arrow>
-                <span>{formatTxid(tx.txid)}</span>
+              <Tooltip title={tx.analyzer.txid} arrow>
+                <span>{formatTxid(tx.analyzer.txid)}</span>
               </Tooltip>
-              <Copyable text={tx.txid} showIcon showText={false}></Copyable>
+              <Copyable
+                text={tx.analyzer.txid}
+                showIcon
+                showText={false}
+              ></Copyable>
               <Tooltip title="View on block explorer" arrow>
                 <IconButton
                   size="small"
-                  href={blockExplorerTransactionURL(tx.txid, network)}
+                  href={blockExplorerTransactionURL(tx.analyzer.txid, network)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -214,56 +210,20 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             <TableCell>{tx.timeElapsed}</TableCell>
             <TableCell>
               <Typography variant="body2">
-                {formatAmount(parseInt(tx.fee))}
+                {formatAmount(parseInt(tx.analyzer.fee))}
               </Typography>
             </TableCell>
             <TableCell>{renderFeeRateComparison(tx)}</TableCell>
             <TableCell>
               <Typography variant="body2">
-                {tx.recommendedStrategy === "NONE"
+                {tx.analyzer.recommendedStrategy === "NONE"
                   ? "No action needed"
-                  : tx.recommendedStrategy}
+                  : tx.canRBF
+                    ? tx.analyzer.recommendedStrategy
+                    : "CPFP"}
               </Typography>
             </TableCell>
-            <ActionCell>
-              {tx.canRBF && (
-                <Tooltip
-                  title={`RBF (${parseFloat(tx.rbfFeeRate).toFixed(2)} sat/vB)`}
-                  arrow
-                >
-                  <ActionButton
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    onClick={() => onRBF(tx)}
-                    startIcon={<Edit />}
-                  >
-                    RBF
-                  </ActionButton>
-                </Tooltip>
-              )}
-              {tx.canCPFP && (
-                <Tooltip
-                  title={`CPFP (${parseFloat(tx.cpfpFeeRate).toFixed(2)} sat/vB)`}
-                  arrow
-                >
-                  <ActionButton
-                    variant="outlined"
-                    color="secondary"
-                    size="small"
-                    onClick={() => onCPFP(tx)}
-                    startIcon={<Edit />}
-                  >
-                    CPFP
-                  </ActionButton>
-                </Tooltip>
-              )}
-              {!tx.canRBF && !tx.canCPFP && (
-                <Typography variant="body2" color="textSecondary">
-                  No actions available
-                </Typography>
-              )}
-            </ActionCell>
+            <TransactionActions tx={tx} onRBF={onRBF} onCPFP={onCPFP} />
           </TableRow>
         ))}
       </TableBody>

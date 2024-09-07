@@ -1,22 +1,28 @@
 import { TransactionAnalyzer } from "@caravan/fees";
+import BigNumber from "bignumber.js";
 
-export interface UTXO {
-  txid: string;
-  vout: number;
-  amount: number;
-  amountSats: number;
-  address: string;
+export interface WalletSliceUTXO {
+  amount: string;
+  amountSats: BigNumber;
+  checked: boolean;
   confirmed: boolean;
-  transactionHex: string;
+  index: number;
   time: number;
+  transactionHex: string;
+  txid: string;
 }
 
-export type AnalyzerWithTimeElapsed = TransactionAnalyzer & {
+export interface ExtendedAnalyzer {
+  analyzer: TransactionAnalyzer;
   timeElapsed: string;
-};
+  txHex: string;
+  txId: string;
+  canRBF: boolean; // Indicates if Replace-By-Fee is possible for this transaction
+  canCPFP: boolean; // Indicates if Child-Pays-For-Parent is possible for this transaction
+}
 
 export interface WalletSlice {
-  utxos: UTXO[];
+  utxos: WalletSliceUTXO[];
 }
 
 export interface RootState {
@@ -30,3 +36,10 @@ export interface RootState {
     };
   };
 }
+
+export type PendingTransactionsResult = {
+  pendingTransactions: ExtendedAnalyzer[];
+  currentNetworkFeeRate: number | null;
+  isLoading: boolean;
+  error: string | null;
+};
