@@ -8,7 +8,6 @@ import {
   ROOT_FINGERPRINT,
   TEST_FIXTURES,
 } from "@caravan/bitcoin";
-import { Psbt } from "bitcoinjs-lib-v6";
 import {
   getUnsignedMultisigPsbtV0,
   validateMultisigPsbtSignature,
@@ -18,29 +17,13 @@ import _ from "lodash";
 import { psbtArgsFromFixture } from "./utils";
 
 describe("getUnsignedMultisigPsbtV0", () => {
-  const updateFixturePsbtInputs = (
-    fixturePsbtBase64: string,
-    psbt: Psbt,
-  ): Psbt => {
-    const fixturePsbt = Psbt.fromBase64(fixturePsbtBase64);
-    fixturePsbt.data.inputs.forEach((input, index) => {
-      const nonWitnessUtxo = psbt.data.inputs[index].nonWitnessUtxo;
-      if (!input.nonWitnessUtxo && nonWitnessUtxo)
-        fixturePsbt.data.updateInput(index, {
-          nonWitnessUtxo: nonWitnessUtxo,
-        });
-    });
-    return fixturePsbt;
-  };
-
   TEST_FIXTURES.transactions
     .map((fixture) => [psbtArgsFromFixture(fixture), fixture])
     .forEach(([args, fixture]) => {
       it(`can construct an unsigned multisig PSBT which ${fixture.description}`, () => {
         if (fixture.psbt) {
           const psbt = getUnsignedMultisigPsbtV0(args);
-          const fixturePsbt = updateFixturePsbtInputs(fixture.psbt, psbt);
-          expect(psbt.data.toBase64()).toEqual(fixturePsbt.data.toBase64());
+          expect(psbt.data.toBase64()).toEqual(fixture.psbt);
         }
       });
     });
@@ -54,18 +37,9 @@ describe("getUnsignedMultisigPsbtV0", () => {
             ...args,
             includeGlobalXpubs: true,
           });
-
-          const fixturePsbt = updateFixturePsbtInputs(fixture.psbt, psbt);
-          const fixturePsbtWithGlobalXpub = updateFixturePsbtInputs(
-            fixture.psbtWithGlobalXpub,
-            psbt,
-          );
-
-          expect(psbt.data.toBase64()).not.toEqual(fixturePsbt.data.toBase64());
+          expect(psbt.data.toBase64()).not.toEqual(fixture.psbt);
           // Check that the global xpubs are the same
-          expect(psbt.data.toBase64()).toEqual(
-            fixturePsbtWithGlobalXpub.data.toBase64(),
-          );
+          expect(psbt.data.toBase64()).toEqual(fixture.psbtWithGlobalXpub);
         }
       });
     });
