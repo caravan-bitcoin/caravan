@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   createAcceleratedRbfTransaction,
   createCancelRbfTransaction,
+  createCPFPTransaction,
 } from "@caravan/fees";
+import { useSelector } from "react-redux";
 import { Box, Paper } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { useGetPendingTransactions } from "../../hooks";
 import TransactionTable from "./fee-bumping/PendingTransactionTable";
-import RBFOptionsDialog from "./fee-bumping/rbf/RBFOptionsDialog";
-import AccelerateFeeDialog from "./fee-bumping/rbf/AccelerateFeeDialog";
-import CancelTransactionDialog from "./fee-bumping/rbf/CancelTransactionDialog";
-import { AnalyzerWithTimeElapsed } from "components/types/fees";
+import RBFOptionsDialog from "./fee-bumping/rbf/dialogs/RBFOptionsDialog";
+import AccelerateFeeDialog from "./fee-bumping/rbf/dialogs/AccelerateFeeDialog";
+import CancelTransactionDialog from "./fee-bumping/rbf/dialogs/CancelTransactionDialog";
+import CPFPDialog from "./fee-bumping/cpfp/CPFPDialog";
+import { ExtendedAnalyzer, RootState } from "components/types/fees";
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   marginBottom: theme.spacing(2),
@@ -18,23 +21,38 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 const WalletPendingTransactions: React.FC = () => {
   const { pendingTransactions, currentNetworkFeeRate, isLoading, error } =
     useGetPendingTransactions();
-  const [selectedTx, setSelectedTx] = useState<AnalyzerWithTimeElapsed | null>(
-    null,
-  );
+  console.log("check", pendingTransactions);
+  const [selectedTx, setSelectedTx] = useState<ExtendedAnalyzer | null>(null);
   const [showRBFOptions, setShowRBFOptions] = useState(false);
   const [showIncreaseFees, setShowIncreaseFees] = useState(false);
   const [showCancelTx, setShowCancelTx] = useState(false);
+  const [showCPFP, setShowCPFP] = useState(false);
+  const [feePsbt, setFeePsbt] = useState<string | null>(null);
+  const [isGeneratingPSBT, setIsGeneratingPSBT] = useState(false);
   // const estimateBlocksToMine = (feeRate: number): number => {
   // TO DO (MRIGESH) : Implement new methods in client package's BlockchainClient class
   // to enable use of this method ...
   // };
-  const handleRBF = (tx: AnalyzerWithTimeElapsed) => {
+  //
+
+  // get change addr
+
+  const changeAddresses = useSelector((state: RootState) => [
+    ...Object.values(state.wallet.change.nodes),
+  ]);
+
+  console.log("changeadd", changeAddresses[0].multisig.address);
+
+  const settings = useSelector((state: RootState) => state.settings);
+  const handleRBF = (tx: ExtendedAnalyzer) => {
     setSelectedTx(tx);
+    console.log("handleRBF", tx);
+
     setShowRBFOptions(true);
   };
-  const handleCPFP = (tx: AnalyzerWithTimeElapsed) => {
-    console.log("CPFP initiated for transaction:", tx.txid);
-    //To Implement CPFP logic here
+  const handleCPFP = (tx: ExtendedAnalyzer) => {
+    setSelectedTx(tx);
+    setShowCPFP(true);
   };
   const handleIncreaseFees = () => {
     setShowRBFOptions(false);
@@ -48,37 +66,162 @@ const WalletPendingTransactions: React.FC = () => {
     setShowRBFOptions(false);
     setShowIncreaseFees(false);
     setShowCancelTx(false);
+    setShowCPFP(false);
     setSelectedTx(null);
+    setFeePsbt(null);
   };
 
   const handleAccelerateFee = async (newFeeRate: number) => {
     if (selectedTx) {
       try {
-        const result = await createAcceleratedRbfTransaction({
+        const result = createAcceleratedRbfTransaction({
           originalTx: selectedTx.txHex,
           targetFeeRate: newFeeRate,
-          // Add other necessary options here
+          network: settings.network,
+          availableInputs: selectedTx.analyzer.availableUTXOs,
+          dustThreshold: "546",
+          scriptType: settings.addressType,
+          requiredSigners: settings.requiredSigners,
+          totalSigners: settings.totalSigners,
+          absoluteFee: selectedTx.analyzer.fee,
+          changeIndex: selectedTx.analyzer["_changeOutputIndex"],
         });
-        console.log("Accelerated RBF transaction created:", result);
-        closeAllModals();
+        setFeePsbt(result);
+        setShowIncreaseFees(false);
       } catch (error) {
         console.error("Error creating accelerated RBF transaction:", error);
+        //TO DO :  Handle error (e.g., show an error message to the user)
       }
     }
   };
 
+  const createAccelerateFeePsbt = useCallback(
+    (newFeeRate: number): string => {
+      if (selectedTx) {
+        setIsGeneratingPSBT(true);
+        try {
+          const result = createAcceleratedRbfTransaction({
+            originalTx: selectedTx.txHex,
+            targetFeeRate: newFeeRate,
+            network: settings.network,
+            availableInputs: selectedTx.analyzer.availableUTXOs,
+            changeAddress: settings.changeAddress,
+            dustThreshold: "546",
+            scriptType: settings.addressType,
+            requiredSigners: settings.requiredSigners,
+            totalSigners: settings.totalSigners,
+            absoluteFee: selectedTx.analyzer.fee,
+            changeIndex: 0,
+          });
+          return result;
+        } catch (error) {
+          console.error("Error creating accelerated RBF transaction:", error);
+          throw error; // Rethrow the error to be handled in the dialog
+        } finally {
+          setIsGeneratingPSBT(false);
+        }
+      }
+      throw new Error("No transaction selected");
+    },
+    [selectedTx, settings],
+  );
+
   const handleCancelTransaction = async (newFeeRate: number) => {
     if (selectedTx) {
       try {
-        const result = await createCancelRbfTransaction({
+        const result = createCancelRbfTransaction({
           originalTx: selectedTx.txHex,
           targetFeeRate: newFeeRate,
-          // Add other necessary options here
+          network: settings.network,
+          availableInputs: selectedTx.analyzer.availableUTXOs,
+          cancelAddress: changeAddresses[0].multisig.address,
+          dustThreshold: "546",
+          scriptType: settings.addressType,
+          requiredSigners: settings.requiredSigners,
+          totalSigners: settings.totalSigners,
+          absoluteFee: selectedTx.analyzer.fee,
         });
-        console.log("Cancel RBF transaction created:", result);
-        closeAllModals();
+        setFeePsbt(result);
+        setShowCancelTx(false);
       } catch (error) {
         console.error("Error creating cancel RBF transaction:", error);
+        //TO DO :  Handle error (e.g., show an error message to the user)
+      }
+    }
+  };
+
+  const createCancelFeePsbt = useCallback(
+    (newFeeRate: number): string => {
+      if (selectedTx) {
+        setIsGeneratingPSBT(true);
+        try {
+          const result = createCancelRbfTransaction({
+            originalTx: selectedTx.txHex,
+            targetFeeRate: newFeeRate,
+            network: settings.network,
+            availableInputs: selectedTx.analyzer.availableUTXOs,
+            cancelAddress: changeAddresses[0].multisig.address,
+            dustThreshold: "546",
+            scriptType: settings.addressType,
+            requiredSigners: settings.requiredSigners,
+            totalSigners: settings.totalSigners,
+            absoluteFee: selectedTx.analyzer.fee,
+          });
+          return result;
+        } catch (error) {
+          console.error("Error creating accelerated RBF transaction:", error);
+          throw error; // Rethrow the error to be handled in the dialog
+        } finally {
+          setIsGeneratingPSBT(false);
+        }
+      }
+      throw new Error("No transaction selected");
+    },
+    [selectedTx, settings],
+  );
+
+  const createCPFPPsbt = useCallback(
+    (newFeeRate: number): string => {
+      if (selectedTx) {
+        setIsGeneratingPSBT(true);
+        try {
+          const result = createCPFPTransaction({
+            originalTx: selectedTx.txHex,
+            targetFeeRate: newFeeRate,
+            network: settings.network,
+            availableInputs: selectedTx.analyzer.availableUTXOs,
+            changeAddress: changeAddresses[0].multisig.address,
+            dustThreshold: "546",
+            scriptType: settings.addressType,
+            requiredSigners: settings.requiredSigners,
+            totalSigners: settings.totalSigners,
+            absoluteFee: selectedTx.analyzer.fee,
+            spendableOutputIndex: selectedTx.analyzer.outputs.findIndex(
+              (output) => output.isMalleable,
+            ),
+          });
+          return result;
+        } catch (error) {
+          console.error("Error creating CPFP transaction:", error);
+          throw error;
+        } finally {
+          setIsGeneratingPSBT(false);
+        }
+      }
+      throw new Error("No transaction selected");
+    },
+    [selectedTx, settings, changeAddresses],
+  );
+
+  const handleConfirmCPFP = async (newFeeRate: number) => {
+    if (selectedTx) {
+      try {
+        const result = createCPFPPsbt(newFeeRate);
+        setFeePsbt(result);
+        setShowCPFP(false);
+      } catch (error) {
+        console.error("Error creating CPFP transaction:", error);
+        // TODO: Handle error (e.g., show an error message to the user)
       }
     }
   };
@@ -105,15 +248,30 @@ const WalletPendingTransactions: React.FC = () => {
         open={showIncreaseFees}
         onClose={closeAllModals}
         onConfirm={handleAccelerateFee}
+        createPsbt={createAccelerateFeePsbt}
         transaction={selectedTx}
         currentNetworkFeeRate={currentNetworkFeeRate!}
+        isGeneratingPSBT={isGeneratingPSBT}
       />
+
       <CancelTransactionDialog
         open={showCancelTx}
         onClose={closeAllModals}
         onConfirm={handleCancelTransaction}
+        createPsbt={createCancelFeePsbt}
         transaction={selectedTx}
         currentNetworkFeeRate={currentNetworkFeeRate!}
+        isGeneratingPSBT={isGeneratingPSBT}
+      />
+      <CPFPDialog
+        open={showCPFP}
+        onClose={closeAllModals}
+        onConfirm={handleConfirmCPFP}
+        createPsbt={createCPFPPsbt}
+        transaction={selectedTx}
+        currentNetworkFeeRate={currentNetworkFeeRate!}
+        isGeneratingPSBT={isGeneratingPSBT}
+        defaultChangeAddress=""
       />
     </Box>
   );
