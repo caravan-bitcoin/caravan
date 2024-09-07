@@ -327,6 +327,8 @@ UTXOSet.propTypes = {
   existingTransactionInputs: PropTypes.arrayOf(PropTypes.shape({})),
   setSpendCheckbox: PropTypes.func,
   autoSpend: PropTypes.bool.isRequired,
+  feeRate: PropTypes.string,
+  walletConfig: PropTypes.object,
 };
 
 UTXOSet.defaultProps = {

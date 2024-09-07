@@ -432,6 +432,7 @@ AddressExpander.propTypes = {
   requiredSigners: PropTypes.number.isRequired,
   totalSigners: PropTypes.number.isRequired,
   setSpendCheckbox: PropTypes.func,
+  feeRate: PropTypes.string,
 };
 
 AddressExpander.defaultProps = {

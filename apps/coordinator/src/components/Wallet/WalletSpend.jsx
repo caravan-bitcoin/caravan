@@ -224,9 +224,13 @@ class WalletSpend extends React.Component {
                   </Box>
                 </Grid>
                 <Box component="div" display={autoSpend ? "none" : "block"}>
-                  <NodeSet addNode={addNode} updateNode={updateNode} feeRate={feeRate}/>
+                  <NodeSet
+                    addNode={addNode}
+                    updateNode={updateNode}
+                    feeRate={feeRate}
+                  />
                 </Box>
-                <OutputsForm onFeeEstimate={this.handleFeeEstimate}/>
+                <OutputsForm onFeeEstimate={this.handleFeeEstimate} />
                 <Box mt={2}>
                   <Button
                     onClick={this.handleShowPreview}
