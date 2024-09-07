@@ -17,6 +17,7 @@ import {
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import { WasteMetrics } from "@caravan/health";
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
@@ -165,6 +166,20 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
     } = this.props;
 
+    const wasteMetrics = new WasteMetrics();
+    const weight = fee / satoshisToBitcoins(feeRate);
+    // Doubt-1: How do I know what is the amount that I want to actually spend and what is change amount?
+    const spendAmount = 10000;
+    // Doubt-2: In caravan context, How do we want to plan L value?
+    const L = 100; // longTermFeeEstimate
+    const wasteAmount = wasteMetrics.spendWasteAmount(
+      weight, // vB
+      feeRate, // sats/vB
+      inputsTotalSats, // sats
+      spendAmount, // sats
+      L, // sats/vB
+    );
+
     return (
       <Box>
         <h2>Transaction Preview</h2>
@@ -185,6 +200,15 @@ class TransactionPreview extends React.Component {
           <Grid item xs={4}>
             <h3>Total</h3>
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
+          </Grid>
+          <Grid item xs={4}>
+            <h3>Waste Analysis</h3>
+            <div>
+              {wasteAmount > 0
+                ? `Waiting for FeeRate to decrease to ${L} sats/vB will save you `
+                : `Spend now or in future if FeeRate increases to ${L} sats/vB you will lose `}
+              {`${wasteAmount} Sats`}
+            </div>
           </Grid>
         </Grid>
         <Box mt={2}>
