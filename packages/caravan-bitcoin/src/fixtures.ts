@@ -1293,27 +1293,6 @@ const MULTISIGS = MULTISIGS_BASE.map((test) => {
     braidDetails: braidConfig(test.braidDetails),
     bip32Derivation: test.bip32Derivation,
   };
-  const processMultisig = (output, type) => {
-    if (!(output.redeemScript || output.witnessScript)) {
-      return null;
-    }
-    return {
-      address: output.address,
-      bip32Derivation: output.bip32Derivation,
-      redeem: {
-        output:
-          type === P2SH || type === P2SH_P2WSH
-            ? output.redeemScript
-            : output.witnessScript,
-        redeem:
-          type == P2SH_P2WSH
-            ? {
-                output: output.witnessScript,
-              }
-            : undefined,
-      },
-    };
-  };
   return {
     ...test,
     ...{
@@ -1332,10 +1311,7 @@ const MULTISIGS = MULTISIGS_BASE.map((test) => {
         ...{
           outputs: test.transaction.outputs.map((output) => ({
             ...output,
-            ...{
-              amountSats: new BigNumber(output.amountSats).toString(),
-              multisig: processMultisig(output, test.type),
-            },
+            ...{ amountSats: new BigNumber(output.amountSats).toString() },
           })),
         },
       },
