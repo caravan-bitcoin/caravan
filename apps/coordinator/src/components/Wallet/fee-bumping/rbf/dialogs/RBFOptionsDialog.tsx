@@ -29,10 +29,16 @@ const RBFOptionsDialog: React.FC<RBFOptionsDialogProps> = ({
       </Typography>
     </DialogContent>
     <DialogActions>
-      <Button onClick={onIncreaseFees} color="primary">
+      <Button
+        onClick={onIncreaseFees}
+        sx={{ backgroundColor: "#4CAF50", color: "#fff" }}
+      >
         Increase Fees
       </Button>
-      <Button onClick={onCancelTx} color="secondary">
+      <Button
+        onClick={onCancelTx}
+        sx={{ backgroundColor: "#F44336", color: "#fff" }}
+      >
         Cancel Transaction
       </Button>
     </DialogActions>
