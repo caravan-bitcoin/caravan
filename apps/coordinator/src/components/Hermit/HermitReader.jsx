@@ -65,7 +65,7 @@ class HermitReader extends Component {
 
     if (status === ACTIVE) {
       return (
-        <div style={{ padding: "3rem" }}>
+        <div style={{ padding: "3rem", height: "1000px" }}>
           <Grid container direction="column">
             <Grid item>
               <QrReader
