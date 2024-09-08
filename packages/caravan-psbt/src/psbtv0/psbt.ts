@@ -106,10 +106,11 @@ const psbtInputFormatter = (
 ) => {
   const tx = Transaction.fromHex(input.transactionHex);
   const inputData: any = { ...input };
+  const nonWitnessUtxo = tx.toBuffer();
   if (addressType === P2SH) {
-    const nonWitnessUtxo = tx.toBuffer();
     inputData.nonWitnessUtxo = nonWitnessUtxo;
   } else {
+    inputData.nonWitnessUtxo = nonWitnessUtxo;
     inputData.witnessUtxo = tx.outs[input.index];
   }
 
