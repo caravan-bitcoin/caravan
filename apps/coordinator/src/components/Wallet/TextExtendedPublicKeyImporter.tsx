@@ -19,8 +19,8 @@ const TextExtendedPublicKeyImporter = ({
   network,
 }: {
   validateAndSetExtendedPublicKey: (
-    arg: string,
-    arg1: (e: string) => void,
+    extendedPublicKey: string,
+    errCb: (e: string) => void,
   ) => void;
   network: Network;
 }) => {
