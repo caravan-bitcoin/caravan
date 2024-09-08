@@ -143,8 +143,7 @@ export const convertLegacyOutput = (output: LegacyOutput): PsbtOutput => {
     value: new BigNumber(output.amountSats).toNumber(),
     bip32Derivation:
       output.bip32Derivation || getBip32Derivation(output.multisig),
-    witnessScript: output.witnessScript || output.multisig?.witness?.output,
-    redeemScript: output.redeemScript || output.multisig?.redeem?.output,
+    ...psbtMultisigLock(output.multisig),
   };
 };
 
