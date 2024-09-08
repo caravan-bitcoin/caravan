@@ -9,7 +9,11 @@ import {
 } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
-import { combineBip32Paths, secureSecretPath } from "./paths";
+import {
+  combineBip32Paths,
+  getRelativeBip32Sequence,
+  secureSecretPath,
+} from "./paths";
 import { KeyOrigin } from "./types";
 
 /**
@@ -29,15 +33,10 @@ export const isValidChildPubKey = (
   globalXpub: KeyOrigin,
   network: Network = Network.MAINNET,
 ): boolean => {
-  const globalSequence = bip32PathToSequence(globalXpub.bip32Path);
-  const derivationSequence = bip32PathToSequence(derivation.path);
-
-  const difference = derivationSequence.length - globalSequence.length;
-  if (difference < 0)
-    throw new Error(
-      `Child key longer than parent: Parent: ${globalXpub.bip32Path}, Child: ${derivation.path}`,
-    );
-  const lastElements = derivationSequence.slice(-difference);
+  const lastElements = getRelativeBip32Sequence(
+    globalXpub.bip32Path,
+    derivation.path,
+  );
   const relativePath = bip32SequenceToPath(lastElements);
 
   const childPubkey = deriveChildPublicKey(

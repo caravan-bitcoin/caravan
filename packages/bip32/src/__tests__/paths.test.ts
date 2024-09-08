@@ -1,6 +1,11 @@
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
-import { combineBip32Paths, getUnmaskedPath, secureSecretPath } from "../paths";
+import {
+  combineBip32Paths,
+  getRelativeBip32Sequence,
+  getUnmaskedPath,
+  secureSecretPath,
+} from "../paths";
 import { KeyOrigin } from "../types";
 
 const globalOrigin: KeyOrigin = {
@@ -95,5 +100,20 @@ describe("secureSecretPath", () => {
       failures += 1;
     }
     expect(failures).toBe(2);
+  });
+});
+
+describe("getRelativeBip32Sequence", () => {
+  it("should return the relative BIP32 sequence for a child key", () => {
+    const parentPath = "m/45'/0'/0'";
+    const childPath = "m/45'/0'/0'/0/0";
+    const relativeSequence = getRelativeBip32Sequence(parentPath, childPath);
+    expect(relativeSequence).toEqual([0, 0]);
+  });
+
+  it("should throw an error if the child key is longer than the parent key", () => {
+    const childPath = "m/45'/0'/0'";
+    const parentPath = "m/45'/0'/0'/0/0/0";
+    expect(() => getRelativeBip32Sequence(parentPath, childPath)).toThrow();
   });
 });

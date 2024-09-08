@@ -19,6 +19,11 @@ that can be used to derive the child pubkey from the global xpub.
 This is useful when you have a child xpub (e.g. a blinded xpub) derived
 from a masked xpub and you need to generate the full, unmasked path.
 
+### `getRelativeBip32Sequence`
+
+A utility to use when you have a parent and child bip32 paths and want the "relative"
+sequence (the path elements from the child that are added on to the parent).
+
 ## Keys
 
 ### `getRandomChildXpub`

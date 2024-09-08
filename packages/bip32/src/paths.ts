@@ -89,6 +89,33 @@ export const combineBip32Paths = (
 };
 
 /**
+ * A utility function to get the relative BIP32 sequence of a child key
+ * Given two paths, we want the path difference from the child.
+ *
+ * @example
+ * getRelativeBip32Sequence("m/45'/0'/0'", "m/45'/0'/0'/0/0")
+ * // returns [0, 0]
+ * @param parentPath The path of the parent key from which the child should be derived
+ * @param childPath The full path of the child derived from the parent
+ * @returns
+ */
+export const getRelativeBip32Sequence = (
+  parentPath: string,
+  childPath: string,
+) => {
+  const parentSequence = bip32PathToSequence(parentPath);
+  const childSequence = bip32PathToSequence(childPath);
+
+  const difference = childSequence.length - parentSequence.length;
+  if (difference < 0) {
+    throw new Error(
+      `Child key longer than parent: Parent: ${parentPath}, Child: ${childPath}`,
+    );
+  }
+  return childSequence.slice(-difference);
+};
+
+/**
  * Given a derivation and a global xpub, return the unmasked path
  * that can be used to derive the child pubkey from the global xpub.
  * This is useful when you have a child xpub (e.g. a blinded xpub) derived
@@ -102,14 +129,10 @@ export const getUnmaskedPath = (
   globalXpub: KeyOrigin,
 ): string => {
   const globalSequence = bip32PathToSequence(globalXpub.bip32Path);
-  const derivationSequence = bip32PathToSequence(derivation.path);
-
-  const difference = derivationSequence.length - globalSequence.length;
-  if (difference < 0)
-    throw new Error(
-      `Child key longer than parent: Parent: ${globalXpub.bip32Path}, Child: ${derivation.path}`,
-    );
-  const lastElements = derivationSequence.slice(-difference);
+  const lastElements = getRelativeBip32Sequence(
+    globalXpub.bip32Path,
+    derivation.path,
+  );
 
   return bip32SequenceToPath(globalSequence.concat(lastElements));
 };
