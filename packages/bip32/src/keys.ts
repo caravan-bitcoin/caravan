@@ -1,7 +1,6 @@
 import {
   ExtendedPublicKey,
   Network,
-  bip32PathToSequence,
   bip32SequenceToPath,
   deriveChildExtendedPublicKey,
   deriveChildPublicKey,

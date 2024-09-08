@@ -91,12 +91,12 @@ describe("secureSecretPath", () => {
     let failures = 0;
     try {
       await secureSecretPath(32);
-    } catch (e: any) {
+    } catch (e: unknown) {
       failures += 1;
     }
     try {
       await secureSecretPath(0);
-    } catch (e: any) {
+    } catch (e: unknown) {
       failures += 1;
     }
     expect(failures).toBe(2);
