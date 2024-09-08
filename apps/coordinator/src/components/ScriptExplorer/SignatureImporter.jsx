@@ -145,7 +145,7 @@ class SignatureImporter extends React.Component {
       fee,
       isWallet,
       extendedPublicKeyImporter,
-      unsignedPsbt,
+      unsignedPSBT,
       extendedPublicKeys,
       requiredSigners,
       addressType,
@@ -173,6 +173,7 @@ class SignatureImporter extends React.Component {
           validateAndSetSignature={this.validateAndSetSignature}
           enableChangeMethod={this.enableChangeMethod}
           disableChangeMethod={this.disableChangeMethod}
+          unsignedPSBT={unsignedPSBT}
           walletConfig={{
             addressType,
             network,
@@ -194,7 +195,7 @@ class SignatureImporter extends React.Component {
           outputs={outputs}
           inputsTotalSats={inputsTotalSats}
           fee={fee}
-          unsignedPsbt={unsignedPsbt}
+          unsignedPSBT={unsignedPSBT}
           extendedPublicKeyImporter={extendedPublicKeyImporter}
           validateAndSetBIP32Path={this.validateAndSetBIP32Path}
           resetBIP32Path={this.resetBIP32Path}
@@ -621,7 +622,7 @@ SignatureImporter.propTypes = {
   txid: PropTypes.string.isRequired,
   unsignedTransaction: PropTypes.shape({}).isRequired,
   setSigningKey: PropTypes.func.isRequired,
-  unsignedPsbt: PropTypes.string,
+  unsignedPSBT: PropTypes.string,
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
@@ -630,7 +631,7 @@ SignatureImporter.propTypes = {
 
 SignatureImporter.defaultProps = {
   extendedPublicKeyImporter: {},
-  unsignedPsbt: "",
+  unsignedPSBT: "",
 };
 
 function mapStateToProps(state, ownProps) {
