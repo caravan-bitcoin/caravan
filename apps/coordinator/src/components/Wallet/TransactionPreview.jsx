@@ -2,7 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
+import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
@@ -13,6 +13,8 @@ import {
   TableRow,
   TableCell,
   Grid,
+  Slider,
+  Typography,
 } from "@mui/material";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
@@ -20,6 +22,14 @@ import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../
 import { WasteMetrics } from "@caravan/health";
 
 class TransactionPreview extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      longTermFeeEstimate: this.props.feeRate, // Initial value for L
+      wasteAmount: 0, // Initial waste amount
+    };
+  }
+
   componentDidMount() {
     const {
       outputs,
@@ -156,6 +166,39 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtBase64, "transaction.psbt");
   };
 
+  spendOutputsTotal = () => {
+    const { outputs, changeAddress } = this.props;
+    let spendAmount = 0;
+    outputs.forEach((output) => {
+      if (output.address !== changeAddress) {
+        spendAmount += output.amount;
+      }
+    });
+    return bitcoinsToSatoshis(spendAmount);
+  };
+
+  handleLongTermFeeEstimateChange = (event, newValue) => {
+    this.setState({ longTermFeeEstimate: newValue }, this.calculateWaste);
+  };
+
+  calculateWaste = () => {
+    const { feeRate, fee, inputsTotalSats } = this.props;
+    const { longTermFeeEstimate } = this.state;
+    const wasteMetrics = new WasteMetrics();
+    const weight = bitcoinsToSatoshis(fee) / feeRate;
+    const spendAmount = this.spendOutputsTotal();
+
+    const wasteAmount = wasteMetrics.spendWasteAmount(
+      weight, // vB
+      feeRate, // sats/vB
+      inputsTotalSats, // sats
+      spendAmount, // sats
+      longTermFeeEstimate, //sats/vB
+    );
+
+    this.setState({ wasteAmount });
+  };
+
   render = () => {
     const {
       feeRate,
@@ -166,20 +209,7 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
     } = this.props;
 
-    const wasteMetrics = new WasteMetrics();
-    const weight = fee / satoshisToBitcoins(feeRate);
-    // Doubt-1: How do I know what is the amount that I want to actually spend and what is change amount?
-    const spendAmount = 10000;
-    // Doubt-2: In caravan context, How do we want to plan L value?
-    const L = 100; // longTermFeeEstimate
-    const wasteAmount = wasteMetrics.spendWasteAmount(
-      weight, // vB
-      feeRate, // sats/vB
-      inputsTotalSats, // sats
-      spendAmount, // sats
-      L, // sats/vB
-    );
-
+    const { longTermFeeEstimate, wasteAmount } = this.state;
     return (
       <Box>
         <h2>Transaction Preview</h2>
@@ -201,14 +231,22 @@ class TransactionPreview extends React.Component {
             <h3>Total</h3>
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={12}>
             <h3>Waste Analysis</h3>
-            <div>
-              {wasteAmount > 0
-                ? `Waiting for FeeRate to decrease to ${L} sats/vB will save you `
-                : `Spend now or in future if FeeRate increases to ${L} sats/vB you will lose `}
-              {`${wasteAmount} Sats`}
-            </div>
+            <Typography gutterBottom>
+              Spend Waste Amount: {wasteAmount.toFixed(2)} Sats
+            </Typography>
+            <Slider
+              value={longTermFeeEstimate}
+              min={1}
+              max={3000}
+              step={1}
+              onChange={this.handleLongTermFeeEstimateChange}
+              aria-labelledby="long-term-fee-estimate-slider"
+            />
+            <Typography id="long-term-fee-estimate-slider" gutterBottom>
+              Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
+            </Typography>
           </Grid>
         </Grid>
         <Box mt={2}>
