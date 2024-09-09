@@ -180,7 +180,7 @@ describe("BtcTxOutputTemplate", () => {
       });
       expect(() => {
         output.lock();
-      }).toThrow("Output is already locked and cannot be modified.");
+      }).not.toThrow();
     });
   });
 

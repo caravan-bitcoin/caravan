@@ -270,29 +270,33 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
     if (subtractAmount.isGreaterThan(this._amountSats)) {
       throw new Error("Cannot subtract more than the current amount");
     }
-    this._amountSats = this._amountSats.minus(subtractAmount);
+    this.setAmount(this._amountSats.minus(subtractAmount).toString());
   }
 
   /**
    * Locks the output, preventing further modifications to its amount.
    *
    * This method sets the malleability of the output to false. Once called,
-   * the output amount cannot be changed, and attempts to do so will throw an error.
-   * This operation is irreversible - once locked, an output cannot be unlocked.
+   * the output amount cannot be changed. If the output is already locked,
+   * this method has no effect.
    *
    * Typical use cases include:
    * - Finalizing a transaction before signing
    * - Ensuring that certain outputs (like recipient amounts) are not accidentally modified
    *
-   * For EXTERNAL outputs, an amount must be specified before locking. This is to prevent
-   * locking an output with an undefined amount, which could lead to invalid transactions.
+   * An amount must be specified before locking. This is to prevent
+   * locking an output with a zero amount, which could lead to invalid transactions.
    *
-   * @throws {Error} If the output is already locked (non-malleable)
-   * @throws {Error} If trying to lock an EXTERNAL output with an undefined amount
+   * @throws {Error} If trying to lock an output with a zero amount
    */
   lock(): void {
     if (!this.isMalleable) {
-      throw new Error("Output is already locked and cannot be modified.");
+      // Output is already locked, so we just return without doing anything
+      return;
+    }
+
+    if (this._amountSats.isEqualTo(0)) {
+      throw new Error("Cannot lock an output with a zero amount.");
     }
 
     this._malleable = false;
@@ -303,9 +307,9 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
    *
    * This method performs several checks to ensure the output is properly formed:
    *
-   * 1. For EXTERNAL outputs:
-   *    - Ensures that an amount is specified (not undefined).
-   *    - Throws an error if the amount is undefined, as external outputs must always have an amount.
+   * 1. For locked outputs:
+   *    - Ensures that a non-zero amount is specified.
+   *    - Throws an error if the amount is zero, as locked outputs must always have a valid amount.
    *
    * 2. For all output types:
    *    - Checks if the output has a non-zero amount (via hasAmount() method).
@@ -317,14 +321,14 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
    * Special considerations:
    * - OP_RETURN outputs might require different validation logic (not implemented here).
    * - Zero-amount outputs for certain special cases (like Ephemeral Anchors) are not
-   *   considered valid by this basic check. Implement custom logic if needed.
+   *   considered valid by this basic check. Implement custom logic if needed for such cases.
    *
    * @returns {boolean} True if the output is valid, false otherwise.
-   * @throws {Error} If an EXTERNAL output has an undefined amount.
+   * @throws {Error} If a locked output has a zero amount.
    */
   isValid(): boolean {
     if (!this.isMalleable && this._amountSats.isEqualTo(0)) {
-      throw new Error("External outputs must have an amount specified");
+      throw new Error("Locked outputs must have a non-zero amount specified");
     }
     return this.hasAmount() && this._address !== "";
   }
