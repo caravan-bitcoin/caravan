@@ -1,6 +1,13 @@
 import { Transaction } from "bitcoinjs-lib-v6";
 import { Network } from "@caravan/bitcoin";
-import { UTXO, AnalyzerOptions, FeeBumpStrategy, Satoshis } from "./types";
+import {
+  UTXO,
+  AnalyzerOptions,
+  FeeBumpStrategy,
+  Satoshis,
+  ScriptType,
+  SCRIPT_TYPES,
+} from "./types";
 import {
   BtcTxComponent,
   BtcTxInputTemplate,
@@ -8,6 +15,20 @@ import {
 } from "./btcTransactionComponents";
 import { getOutputAddress, estimateTransactionVsize } from "./utils";
 import BigNumber from "bignumber.js";
+
+// added type for validation of Analyzer Options
+interface ValidatedAnalyzerOptions {
+  rawTx: Transaction;
+  network: Network;
+  targetFeeRate: number;
+  absoluteFee: BigNumber;
+  availableUtxos: UTXO[];
+  changeOutputIndex: number | undefined;
+  incrementalRelayFee: BigNumber;
+  requiredSigners: number;
+  totalSigners: number;
+  addressType: ScriptType;
+}
 
 /**
  * TransactionAnalyzer Class
@@ -25,13 +46,13 @@ import BigNumber from "bignumber.js";
  * - Provides detailed transaction information for wallet integration
  *
  * Usage:
- * const analyzer = new TransactionAnalyzer(txHex, options);
+ * const analyzer = new TransactionAnalyzer({txHex,...other-options});
  * const analysis = analyzer.analyze();
  *
  * @class
  */
 export class TransactionAnalyzer {
-  private readonly _originalTx: Transaction;
+  private readonly _rawTx: Transaction;
   private readonly _network: Network;
   private readonly _targetFeeRate: number;
   private readonly _absoluteFee: BigNumber;
@@ -40,7 +61,7 @@ export class TransactionAnalyzer {
   private readonly _incrementalRelayFee: BigNumber;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
-  private readonly _addressType: string;
+  private readonly _addressType: ScriptType;
 
   private _inputs: BtcTxInputTemplate[] | null = null;
   private _outputs: BtcTxOutputTemplate[] | null = null;
@@ -58,27 +79,21 @@ export class TransactionAnalyzer {
    * @throws {Error} If the transaction is invalid or lacks inputs/outputs
    */
   constructor(options: AnalyzerOptions) {
-    try {
-      this._originalTx = Transaction.fromHex(options.txHex);
-    } catch (error) {
-      throw new Error(
-        `Invalid transaction: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    this.validateTransaction();
-    this._network = options.network;
-    this._targetFeeRate = options.targetFeeRate;
-    this._absoluteFee = new BigNumber(options.absoluteFee);
-    this._availableUtxos = options.availableUtxos;
+    const validatedOptions = TransactionAnalyzer.validateOptions(options);
+
+    this._rawTx = validatedOptions.rawTx;
+    this._network = validatedOptions.network;
+    this._targetFeeRate = validatedOptions.targetFeeRate;
+    this._absoluteFee = validatedOptions.absoluteFee;
+    this._availableUtxos = validatedOptions.availableUtxos;
 
     // TO DO (MRIGESH)
     // Make this and accelerate RBF fn work with an array of change indices
-
-    this._changeOutputIndex = options.changeOutputIndex;
-    this._incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
-    this._requiredSigners = options.requiredSigners;
-    this._totalSigners = options.totalSigners;
-    this._addressType = options.addressType;
+    this._changeOutputIndex = validatedOptions.changeOutputIndex;
+    this._incrementalRelayFee = validatedOptions.incrementalRelayFee;
+    this._requiredSigners = validatedOptions.requiredSigners;
+    this._totalSigners = validatedOptions.totalSigners;
+    this._addressType = validatedOptions.addressType;
   }
 
   /**
@@ -86,7 +101,7 @@ export class TransactionAnalyzer {
    * @returns {string} The transaction ID
    */
   get txid(): string {
-    return this._originalTx.getId();
+    return this._rawTx.getId();
   }
 
   /**
@@ -97,7 +112,7 @@ export class TransactionAnalyzer {
    * @returns {number} The virtual size of the transaction
    */
   get vsize(): number {
-    return this._originalTx.virtualSize();
+    return this._rawTx.virtualSize();
   }
 
   /**
@@ -105,7 +120,7 @@ export class TransactionAnalyzer {
    * @returns {number} The weight of the transaction
    */
   get weight(): number {
-    return this._originalTx.weight();
+    return this._rawTx.weight();
   }
 
   /**
@@ -477,7 +492,7 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected deserializeInputs(): BtcTxInputTemplate[] {
-    return this._originalTx.ins.map((input) => {
+    return this._rawTx.ins.map((input) => {
       const template = new BtcTxInputTemplate({
         txid: input.hash.reverse().toString("hex"), // reversed (big-endian) format
         vout: input.index,
@@ -506,7 +521,7 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected deserializeOutputs(): BtcTxOutputTemplate[] {
-    return this._originalTx.outs.map((output, index) => {
+    return this._rawTx.outs.map((output, index) => {
       return new BtcTxOutputTemplate({
         amountSats: output.value.toString(),
         address: getOutputAddress(output.script, this._network),
@@ -522,7 +537,7 @@ export class TransactionAnalyzer {
    */
   protected isRBFSignaled(): boolean {
     if (!this._canRBF) {
-      this._canRBF = this._originalTx.ins.some(
+      this._canRBF = this._rawTx.ins.some(
         (input) => input.sequence < 0xfffffffe,
       );
     }
@@ -574,11 +589,109 @@ export class TransactionAnalyzer {
    * @private
    */
   private validateTransaction() {
-    if (this._originalTx.ins.length === 0) {
+    if (this._rawTx.ins.length === 0) {
       throw new Error("Transaction has no inputs");
     }
-    if (this._originalTx.outs.length === 0) {
+    if (this._rawTx.outs.length === 0) {
       throw new Error("Transaction has no outputs");
     }
+  }
+
+  private static validateOptions(
+    options: AnalyzerOptions,
+  ): ValidatedAnalyzerOptions {
+    const validatedOptions: Partial<ValidatedAnalyzerOptions> = {};
+
+    // Raw transaction validation
+    try {
+      const tx = Transaction.fromHex(options.txHex);
+      if (tx.ins.length === 0) {
+        throw new Error("Transaction has no inputs");
+      }
+      if (tx.outs.length === 0) {
+        throw new Error("Transaction has no outputs");
+      }
+    } catch (error) {
+      throw new Error(
+        `Invalid transaction: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    validatedOptions.rawTx = Transaction.fromHex(options.txHex);
+
+    // Network validation
+    if (!Object.values(Network).includes(options.network)) {
+      throw new Error(`Invalid network: ${options.network}`);
+    }
+    validatedOptions.network = options.network;
+
+    // Target fee rate validation
+    if (
+      typeof options.targetFeeRate !== "number" ||
+      options.targetFeeRate <= 0
+    ) {
+      throw new Error(`Invalid target fee rate: ${options.targetFeeRate}`);
+    }
+    validatedOptions.targetFeeRate = options.targetFeeRate;
+
+    // Absolute fee validation
+    const absoluteFee = new BigNumber(options.absoluteFee);
+    if (absoluteFee.isLessThanOrEqualTo(0)) {
+      throw new Error(`Invalid absolute fee: ${options.absoluteFee}`);
+    }
+    validatedOptions.absoluteFee = absoluteFee;
+
+    // Available UTXOs validation
+    if (!Array.isArray(options.availableUtxos)) {
+      throw new Error("Available UTXOs must be an array");
+    }
+    validatedOptions.availableUtxos = options.availableUtxos;
+
+    //If Change output is given then it's validation
+    if (options.changeOutputIndex)
+      if (
+        options.changeOutputIndex !== undefined &&
+        (typeof options.changeOutputIndex !== "number" ||
+          options.changeOutputIndex < 0)
+      ) {
+        throw new Error(
+          `Invalid change output index: ${options.changeOutputIndex}`,
+        );
+      }
+    validatedOptions.changeOutputIndex = options.changeOutputIndex;
+
+    //If Incremental relay fee is given then it's validation
+    const incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
+    if (incrementalRelayFee.isLessThanOrEqualTo(0)) {
+      throw new Error(
+        `Invalid incremental relay fee: ${options.incrementalRelayFee}`,
+      );
+    }
+    validatedOptions.incrementalRelayFee = incrementalRelayFee;
+
+    // Required and total signers validation
+    if (
+      typeof options.requiredSigners !== "number" ||
+      options.requiredSigners <= 0
+    ) {
+      throw new Error(`Invalid required signers: ${options.requiredSigners}`);
+    }
+    if (typeof options.totalSigners !== "number" || options.totalSigners <= 0) {
+      throw new Error(`Invalid total signers: ${options.totalSigners}`);
+    }
+    if (options.requiredSigners > options.totalSigners) {
+      throw new Error(
+        `Required signers (${options.requiredSigners}) cannot be greater than total signers (${options.totalSigners})`,
+      );
+    }
+    validatedOptions.requiredSigners = options.requiredSigners;
+    validatedOptions.totalSigners = options.totalSigners;
+
+    // Address type validation
+    if (!Object.values(SCRIPT_TYPES).includes(options.addressType)) {
+      throw new Error(`Invalid address type: ${options.addressType}`);
+    }
+    validatedOptions.addressType = options.addressType;
+
+    return validatedOptions as ValidatedAnalyzerOptions;
   }
 }

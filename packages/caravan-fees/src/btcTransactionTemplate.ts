@@ -4,7 +4,7 @@ import {
 } from "./btcTransactionComponents";
 import { Network } from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
-import { Satoshis, TransactionTemplateOptions } from "./types";
+import { Satoshis, TransactionTemplateOptions, ScriptType } from "./types";
 import BigNumber from "bignumber.js";
 import {
   DEFAULT_DUST_THRESHOLD_IN_SATS,
@@ -31,7 +31,7 @@ export class BtcTransactionTemplate {
   private readonly _targetFeeRate: BigNumber;
   private readonly _dustThreshold: BigNumber;
   private readonly _network: Network;
-  private readonly _scriptType: string;
+  private readonly _scriptType: ScriptType;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
 

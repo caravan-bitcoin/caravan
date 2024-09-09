@@ -3,6 +3,7 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
+import { MULTISIG_ADDRESS_TYPES } from "@caravan/bitcoin";
 
 /**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
@@ -101,7 +102,7 @@ export interface AnalyzerOptions {
    * This is used to determine the input size for different address types
    * when estimating transaction size.
    */
-  addressType: string;
+  addressType: ScriptType;
 
   /**
    * The hexadecimal representation of the raw transaction.
@@ -256,7 +257,7 @@ export interface TransactionTemplateOptions {
    * The type of script used for the transaction (e.g., "p2pkh", "p2sh", "p2wpkh", "p2wsh").
    * This affects how the transaction is constructed and signed.
    */
-  scriptType: string;
+  scriptType: ScriptType;
 
   /**
    * Optional array of input templates to use in the transaction.
@@ -279,16 +280,6 @@ export interface TransactionTemplateOptions {
    * This is used along with requiredSigners for multisig transactions.
    */
   totalSigners: number;
-}
-
-export enum ScriptType {
-  P2PKH = "p2pkh",
-  P2SH = "p2sh",
-  P2WPKH = "p2wpkh",
-  P2WSH = "p2wsh",
-  P2SH_P2WPKH = "p2sh-p2wpkh",
-  P2SH_P2WSH = "p2sh-p2wsh",
-  UNKNOWN = "unknown",
 }
 
 /**
@@ -324,7 +315,7 @@ export interface CancelRbfOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: string;
+  scriptType: ScriptType;
 
   /**
    * The number of required signers for the multisig setup.
@@ -413,7 +404,7 @@ export interface CPFPOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: string;
+  scriptType: ScriptType;
 
   /**
    * The target fee rate in satoshis per virtual byte. This is used to calculate
@@ -442,3 +433,36 @@ export interface CPFPOptions {
    */
   strict?: boolean;
 }
+
+/**
+ * Comprehensive object containing all supported Bitcoin script types.
+ * This includes multisig address types from Caravan and additional types.
+ *
+ * @readonly
+ * @enum {string}
+ */
+export const SCRIPT_TYPES = {
+  /** Pay to Public Key Hash */
+  P2PKH: "P2PKH",
+  /** Pay to Witness Public Key Hash (Native SegWit) */
+  P2WPKH: "P2WPKH",
+  /** Pay to Script Hash wrapping a Pay to Witness Public Key Hash (Nested SegWit) */
+  P2SH_P2WPKH: "P2SH_P2WPKH",
+  /** Unknown or unsupported script type */
+  UNKNOWN: "UNKNOWN",
+  /** Pay to Script Hash */
+  P2SH: MULTISIG_ADDRESS_TYPES.P2SH as "P2SH",
+  /** Pay to Script Hash wrapping a Pay to Witness Script Hash */
+  P2SH_P2WSH: MULTISIG_ADDRESS_TYPES.P2SH_P2WSH as "P2SH-P2WSH",
+  /** Pay to Witness Script Hash (Native SegWit for scripts) */
+  P2WSH: MULTISIG_ADDRESS_TYPES.P2WSH as "P2WSH",
+} as const;
+
+/**
+ * Union type representing all possible Bitcoin script types.
+ * This type can be used for type checking and autocompletion in functions
+ * that deal with different Bitcoin address formats.
+ *
+ * @typedef {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
+ */
+export type ScriptType = (typeof SCRIPT_TYPES)[keyof typeof SCRIPT_TYPES];

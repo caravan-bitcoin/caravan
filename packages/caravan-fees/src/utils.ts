@@ -12,7 +12,7 @@ import {
   Transaction,
   Network as BitcoinJSNetwork,
 } from "bitcoinjs-lib-v6";
-import { ScriptType } from "./types";
+import { ScriptType, SCRIPT_TYPES } from "./types";
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
@@ -162,7 +162,7 @@ export function getOutputAddress(script: Buffer, network: Network): string {
  */
 export function estimateTransactionVsize(
   config: {
-    addressType?: string;
+    addressType?: ScriptType;
     numInputs?: number;
     numOutputs?: number;
     m?: number;
@@ -170,7 +170,7 @@ export function estimateTransactionVsize(
   } = {},
 ): number {
   const {
-    addressType = "P2SH",
+    addressType = SCRIPT_TYPES.P2SH,
     numInputs = 1,
     numOutputs = 1,
     m = 1,
@@ -181,29 +181,28 @@ export function estimateTransactionVsize(
   const normalizedAddressType = addressType.toUpperCase();
 
   switch (normalizedAddressType) {
-    case "P2SH":
+    case SCRIPT_TYPES.P2SH:
       return estimateMultisigP2SHTransactionVSize({
         numInputs,
         numOutputs,
         m,
         n,
       });
-    case "P2SH-P2WSH":
-    case "P2SH_P2WSH":
+    case SCRIPT_TYPES.P2SH_P2WSH:
       return estimateMultisigP2SH_P2WSHTransactionVSize({
         numInputs,
         numOutputs,
         m,
         n,
       });
-    case "P2WSH":
+    case SCRIPT_TYPES.P2WSH:
       return estimateMultisigP2WSHTransactionVSize({
         numInputs,
         numOutputs,
         m,
         n,
       });
-    case "P2WPKH":
+    case SCRIPT_TYPES.P2WPKH:
       return estimateP2WSHMultisigTransactionVSize({
         numInputs,
         numOutputs,
@@ -668,24 +667,24 @@ export function getScriptType(scriptPubKey: Buffer): ScriptType {
   try {
     // Check for Pay-to-PubKey-Hash (P2PKH)
     if (payments.p2pkh({ output: scriptPubKey }).output?.equals(scriptPubKey)) {
-      return ScriptType.P2PKH;
+      return SCRIPT_TYPES.P2PKH;
     }
 
     // Check for Pay-to-Script-Hash (P2SH)
     if (payments.p2sh({ output: scriptPubKey }).output?.equals(scriptPubKey)) {
-      return ScriptType.P2SH;
+      return SCRIPT_TYPES.P2SH as ScriptType;
     }
 
     // Check for Pay-to-Witness-PubKey-Hash (P2WPKH)
     if (
       payments.p2wpkh({ output: scriptPubKey }).output?.equals(scriptPubKey)
     ) {
-      return ScriptType.P2WPKH;
+      return SCRIPT_TYPES.P2WPKH;
     }
 
     // Check for Pay-to-Witness-Script-Hash (P2WSH)
     if (payments.p2wsh({ output: scriptPubKey }).output?.equals(scriptPubKey)) {
-      return ScriptType.P2WSH;
+      return SCRIPT_TYPES.P2WSH;
     }
 
     // Check for Pay-to-Script-Hash with Pay-to-Witness-PubKey-Hash (P2SH-P2WPKH)
@@ -694,7 +693,7 @@ export function getScriptType(scriptPubKey: Buffer): ScriptType {
       redeem: payments.p2wpkh({ output: scriptPubKey }),
     });
     if (p2shP2wpkh.output?.equals(scriptPubKey)) {
-      return ScriptType.P2SH_P2WPKH;
+      return SCRIPT_TYPES.P2SH_P2WPKH;
     }
 
     // Check for Pay-to-Script-Hash with Pay-to-Witness-Script-Hash (P2SH-P2WSH)
@@ -703,16 +702,16 @@ export function getScriptType(scriptPubKey: Buffer): ScriptType {
       redeem: payments.p2wsh({ output: scriptPubKey }),
     });
     if (p2shP2wsh.output?.equals(scriptPubKey)) {
-      return ScriptType.P2SH_P2WSH;
+      return SCRIPT_TYPES.P2SH_P2WSH;
     }
 
     // If none of the types match, return 'unknown'
-    return ScriptType.UNKNOWN;
+    return SCRIPT_TYPES.UNKNOWN;
   } catch (error) {
     console.error(
       `Error determining script type: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return ScriptType.UNKNOWN; // Return 'unknown' if there's an error in processing
+    return SCRIPT_TYPES.UNKNOWN; // Return 'unknown' if there's an error in processing
   }
 }
 
