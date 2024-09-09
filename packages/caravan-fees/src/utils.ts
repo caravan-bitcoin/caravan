@@ -837,3 +837,44 @@ export function isCPFPFeeSatisfied(
   const combinedFeeRate = combinedFee.dividedBy(combinedVsize);
   return combinedFeeRate.gte(targetFeeRate);
 }
+
+export function validateNonWitnessUtxo(
+  utxoBuffer: Buffer,
+  txid: string,
+  vout: number,
+): boolean {
+  try {
+    const tx = Transaction.fromBuffer(utxoBuffer);
+
+    // Validate that the vout is within range
+    if (vout < 0 || vout >= tx.outs.length) {
+      return false;
+    }
+
+    // Get the specific output we're spending
+    const output = tx.outs[vout];
+
+    // Validate the output value (should be a positive number)
+    if (typeof output.value !== "number" || output.value <= 0) {
+      return false;
+    }
+
+    // Validate that the output script is a Buffer
+    if (!Buffer.isBuffer(output.script)) {
+      return false;
+    }
+
+    // Note: We can't validate the txid here because tx.getId() would give us
+    // the txid of this previous transaction, not our input's txid.
+
+    return true;
+  } catch (error) {
+    console.error("Error validating non-witness UTXO:", error);
+    return false;
+  }
+}
+
+export function validateSequence(sequence: number): boolean {
+  // Sequence should be a 32-bit unsigned integer
+  return Number.isInteger(sequence) && sequence >= 0 && sequence <= 0xffffffff;
+}

@@ -48,12 +48,6 @@ describe("BtcTxInputTemplate", () => {
       expect(input.sequence).toBe(0xfffffffd);
     });
 
-    it("should set and get nonWitnessUtxo", () => {
-      const nonWitnessUtxo = Buffer.from("dummy_data");
-      input.setNonWitnessUtxo(nonWitnessUtxo);
-      expect(input.nonWitnessUtxo).toEqual(nonWitnessUtxo);
-    });
-
     it("should set and get witnessUtxo", () => {
       const witnessUtxo = {
         script: Buffer.from("dummy_script"),

@@ -1,5 +1,9 @@
 import { Satoshis, BTC, UTXO } from "./types";
-import { satoshisToBTC } from "./utils";
+import {
+  satoshisToBTC,
+  validateNonWitnessUtxo,
+  validateSequence,
+} from "./utils";
 import BigNumber from "bignumber.js";
 
 /**
@@ -126,7 +130,34 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * @param {number} sequence - The sequence number
    */
   setSequence(sequence: number): void {
+    if (!validateSequence(sequence)) {
+      throw new Error("Invalid sequence number");
+    }
     this._sequence = sequence;
+  }
+
+  /**
+   * Enables Replace-By-Fee (RBF) signaling for this input.
+   * Sets the sequence number to 0xfffffffd .
+   */
+  enableRBF(): void {
+    this.setSequence(0xfffffffd);
+  }
+
+  /**
+   * Disables Replace-By-Fee (RBF) signaling for this input.
+   * Sets the sequence number to 0xffffffff.
+   */
+  disableRBF(): void {
+    this.setSequence(0xffffffff);
+  }
+
+  /**
+   * Checks if RBF is enabled for this input.
+   * @returns {boolean} True if RBF is enabled, false otherwise.
+   */
+  isRBFEnabled(): boolean {
+    return this._sequence !== undefined && this._sequence < 0xfffffffe;
   }
 
   /**
@@ -142,6 +173,9 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * @param {Buffer} value - The full transaction containing the UTXO being spent
    */
   setNonWitnessUtxo(value: Buffer): void {
+    if (!validateNonWitnessUtxo(value, this._txid, this._vout)) {
+      throw new Error("Invalid non-witness UTXO");
+    }
     this._nonWitnessUtxo = value;
   }
 
