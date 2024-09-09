@@ -109,7 +109,7 @@ export const getRelativeBip32Sequence = (
   const difference = childSequence.length - parentSequence.length;
   if (difference < 0) {
     throw new Error(
-      `Child key longer than parent: Parent: ${parentPath}, Child: ${childPath}`,
+      `Child key shorter than parent: Parent: ${parentPath}, Child: ${childPath}`,
     );
   }
   return childSequence.slice(-difference);
