@@ -69,7 +69,7 @@ class HermitReader extends Component {
           <Grid container direction="column">
             <Grid item>
               <QrReader
-                delay={QR_CODE_READER_DELAY}
+                scanDelay={QR_CODE_READER_DELAY}
                 onError={this.handleError}
                 onScan={this.handleScan}
                 style={{ width }}
