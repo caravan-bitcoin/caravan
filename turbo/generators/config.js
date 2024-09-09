@@ -34,7 +34,7 @@ module.exports = function(plop) {
       {
         type: "confirm",
         name: "jestConfig",
-        message: "Do you want a jest.config.js?",
+        message: "Do you want a jest.config.ts?",
         default: true,
       },
       {
@@ -128,7 +128,7 @@ module.exports = function(plop) {
           path: path.join(process.cwd(), `packages/${data.name}/.eslintrc.js`),
           templateFile: path.join(
             process.cwd(),
-            "turbo/generators/templates/.eslintrc.js.hbs"
+            "turbo/generators/templates/.eslintrc.cjs.hbs"
           ),
         });
       }
