@@ -183,7 +183,7 @@ class HermitSignatureImporter extends React.Component<
       psbtToSign = psbt.toBase64();
       setUnsignedPSBT(psbtToSign);
     } else {
-      psbtToSign = unsignedPsbt === "" ? unsignedPsbtFromState : unsignedPsbt;
+      psbtToSign = !unsignedPsbt ? unsignedPsbtFromState : unsignedPsbt;
     }
 
     return new HermitSignMultisigTransaction({
