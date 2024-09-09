@@ -166,15 +166,24 @@ describe("BtcTxOutputTemplate", () => {
       expect(output.isMalleable).toBe(false);
     });
 
-    it("should throw error when locking an already locked output", () => {
+    it("should not throw error and remain locked when locking an already locked output", () => {
       const output = new BtcTxOutputTemplate({
         address: "dummy",
         amountSats: "100000",
         locked: true,
       });
+
       expect(() => {
         output.lock();
       }).not.toThrow();
+
+      // Verify that the output is still locked
+      expect(output.isMalleable).toBe(false);
+
+      // Try to modify the output to ensure it's still locked
+      expect(() => {
+        output.setAmount("200000");
+      }).toThrow("Cannot modify non-malleable output");
     });
   });
 
@@ -203,6 +212,49 @@ describe("BtcTxOutputTemplate", () => {
           locked: true,
         });
       }).toThrow("Locked outputs must have an amount specified.");
+    });
+  });
+
+  describe("RBF signaling", () => {
+    it("should signal RBF when sequence is set to 0xfffffffd", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      input.setSequence(0xfffffffd);
+      expect(input.isRBFEnabled()).toBe(true);
+    });
+
+    it("should not signal RBF when sequence is set to 0xffffffff", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      input.setSequence(0xffffffff);
+      expect(input.isRBFEnabled()).toBe(false);
+    });
+
+    it("should not signal RBF by default", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      expect(input.isRBFEnabled()).toBe(false);
+    });
+  });
+
+  describe("setNonWitnessUtxo", () => {
+    it("should throw error when setting non-witness UTXO with dummy script", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      const nonWitnessUtxo = Buffer.from("dummy_non_witness_utxo");
+      expect(() => {
+        input.setNonWitnessUtxo(nonWitnessUtxo);
+      }).toThrow();
+    });
+  });
+  describe("setSequence", () => {
+    it("should set sequence number", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      input.setSequence(0xfffffffd);
+      expect(input.sequence).toBe(0xfffffffd);
+    });
+
+    it("should throw error when setting invalid sequence number", () => {
+      const input = new BtcTxInputTemplate(inputTemplateFixtures[0].test);
+      expect(() => {
+        input.setSequence(0x100000000); // Greater than 32-bit unsigned integer
+      }).toThrow("Invalid sequence number");
     });
   });
 });
