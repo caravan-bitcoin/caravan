@@ -1,6 +1,12 @@
-import React, { Component } from "react";
-import PropTypes from "prop-types";
-import { PENDING, ACTIVE, BCURDecoder } from "@caravan/wallets";
+import React, { useMemo, useState } from "react";
+import {
+  PENDING,
+  ACTIVE,
+  BCURDecoder,
+  HermitSignMultisigTransaction,
+  Message,
+} from "@caravan/wallets";
+import type { OnResultFunction } from "react-qr-reader";
 import { QrReader } from "react-qr-reader";
 import {
   Grid,
@@ -13,194 +19,245 @@ import Copyable from "../Copyable";
 
 const QR_CODE_READER_DELAY = 300; // ms?
 
-class HermitReader extends Component {
-  constructor(props) {
-    super(props);
-    this.decoder = new BCURDecoder(); // FIXME do we need useMemo ?
-    this.state = {
-      status: PENDING,
-      error: "",
-      totalParts: 0,
-      partsReceived: 0,
-      percentageReceived: 0,
-    };
-  }
+interface PendingHermitReaderProps {
+  interaction: HermitSignMultisigTransaction;
+  startText: string;
+  handleStart: () => void;
+}
 
-  render = () => {
-    const { status, error, percentageReceived, partsReceived, totalParts } =
-      this.state;
-    const { interaction, width, startText } = this.props;
+type CommandMessage = Message & {
+  instructions: string[];
+  command: string;
+  mode: unknown;
+};
 
-    if (status === PENDING) {
-      const commandMessage = interaction.messageFor({
-        state: status,
-        code: "hermit.command",
-      });
-      return (
-        <div>
-          <p>{commandMessage.instructions}</p>
-          <Grid container justifyContent="center" className="mb-2">
-            <Copyable text={commandMessage.command} showText={false}>
-              <code>
-                <strong>{commandMessage.mode}&gt;</strong>{" "}
-                {commandMessage.command}
-              </code>
-            </Copyable>
+// based on OnResultFunction
+type HandleScanFn = (
+  result: { text: string } | null | undefined,
+  error: { stack: string } | null | undefined,
+) => void;
+
+const PendingHermitReader = ({
+  interaction,
+  startText,
+  handleStart,
+}: PendingHermitReaderProps) => {
+  const commandMessage: CommandMessage | null = interaction.messageFor({
+    state: status,
+    code: "hermit.command",
+  }) as CommandMessage | null;
+
+  if (!commandMessage) return null;
+
+  return (
+    <div>
+      <p>{commandMessage.instructions}</p>
+      <Grid container justifyContent="center" className="mb-2">
+        <Copyable text={commandMessage.command} showText={false}>
+          <code>
+            <strong>{commandMessage.mode}&gt;</strong> {commandMessage.command}
+          </code>
+        </Copyable>
+      </Grid>
+      <p>When you are ready, scan the QR codes produced by Hermit.</p>
+      <Box mt={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          className="mt-2"
+          size="large"
+          onClick={handleStart}
+        >
+          {startText}
+        </Button>
+      </Box>
+    </div>
+  );
+};
+
+const ActiveHermitReader = ({
+  handleStop,
+  width,
+  progress,
+  handleScan,
+}: {
+  handleStop: () => void;
+  handleError: (message: string) => void;
+  width: number | string;
+  progress: {
+    totalParts: number;
+    partsReceived: number;
+    percentageReceived: number;
+  };
+  handleScan: HandleScanFn;
+}) => {
+  return (
+    <div style={{ padding: "3rem" }}>
+      <Grid container direction="column">
+        <Grid item>
+          <QrReader
+            scanDelay={QR_CODE_READER_DELAY}
+            onResult={handleScan as OnResultFunction}
+            videoStyle={{ width }}
+            constraints={{ facingMode: "user" }}
+          />
+        </Grid>
+        {progress.percentageReceived === 0 ? (
+          <Grid item style={{ width }}>
+            <LinearProgress />
+            <p>Waiting for first QR code...</p>
           </Grid>
-          <p>When you are ready, scan the QR codes produced by Hermit.</p>
-          <Box mt={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              className="mt-2"
-              size="large"
-              onClick={this.handleStart}
-            >
-              {startText}
-            </Button>
-          </Box>
-        </div>
-      );
-    }
-
-    if (status === ACTIVE) {
-      return (
-        <div style={{ padding: "3rem", height: "1000px" }}>
-          <Grid container direction="column">
-            <Grid item>
-              <QrReader
-                scanDelay={QR_CODE_READER_DELAY}
-                onError={this.handleError}
-                onScan={this.handleScan}
-                style={{ width }}
-                facingMode="user"
-              />
-            </Grid>
-            {percentageReceived === 0 ? (
-              <Grid item style={{ width }}>
-                <LinearProgress />
-                <p>Waiting for first QR code...</p>
-              </Grid>
-            ) : (
-              <Grid item style={{ width }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={percentageReceived}
-                />
-                <p>
-                  Scanned {partsReceived} of {totalParts} QR codes...
-                </p>
-              </Grid>
-            )}
-
-            <Grid item>
-              <Button
-                variant="contained"
-                color="secondary"
-                size="small"
-                onClick={this.handleStop}
-              >
-                Cancel
-              </Button>
-            </Grid>
+        ) : (
+          <Grid item style={{ width }}>
+            <LinearProgress
+              variant="determinate"
+              value={progress.percentageReceived}
+            />
+            <p>
+              Scanned {progress.partsReceived} of {progress.totalParts} QR
+              codes...
+            </p>
           </Grid>
-        </div>
-      );
-    }
+        )}
 
-    if (status === "error" || status === "success") {
-      return (
-        <div>
-          <FormHelperText error>{error}</FormHelperText>
+        <Grid item>
           <Button
             variant="contained"
             color="secondary"
             size="small"
-            onClick={this.handleStop}
+            onClick={handleStop}
           >
-            Reset
+            Cancel
           </Button>
-        </div>
-      );
-    }
+        </Grid>
+      </Grid>
+    </div>
+  );
+};
 
-    return null;
+interface HermitReaderProps {
+  onStart: () => void;
+  onSuccess: (data: string | null) => void;
+  onClear: () => void;
+  width: string;
+  startText: string;
+  interaction: HermitSignMultisigTransaction;
+}
+
+const HermitReader = ({
+  onStart,
+  onSuccess,
+  onClear,
+  width = "256px",
+  startText = "Scan",
+  interaction,
+}: HermitReaderProps) => {
+  const [status, setStatus] = useState(PENDING);
+  const [error, setError] = useState("");
+  const decoder = useMemo(() => new BCURDecoder(), []);
+
+  const [progress, setProgress] = useState({
+    totalParts: 0,
+    partsReceived: 0,
+    percentageReceived: 0,
+  });
+
+  const handleError = (message: string) => {
+    setStatus("error");
+    setError(message);
   };
 
-  handleStart = () => {
-    const { onStart } = this.props;
-    this.setState({ status: ACTIVE, error: "" });
+  const handleStart = () => {
+    setStatus(ACTIVE);
+    setError("");
     if (onStart) {
       onStart();
     }
   };
 
-  handleError = (error) => {
-    const { onClear } = this.props;
-    this.setState({ status: "error", error: error.message });
+  const handleStop = () => {
+    setStatus(PENDING);
+    setError("");
+    setProgress({
+      totalParts: 0,
+      partsReceived: 0,
+      percentageReceived: 0,
+    });
+
     if (onClear) {
+      decoder.reset();
       onClear();
     }
   };
 
-  handleScan = (qrCodeString) => {
-    const { onSuccess } = this.props;
+  const handleScan: HandleScanFn = (result, error) => {
+    const qrCodeString = result?.text;
+
+    if (error?.stack) {
+      setError(error.stack);
+    }
+
     if (qrCodeString) {
-      this.decoder.receivePart(qrCodeString);
-      const progress = this.decoder.progress();
+      decoder.receivePart(result.text);
+      const progress = decoder.progress();
       const newPercentageReceived =
         progress.totalParts > 0
           ? (progress.partsReceived / progress.totalParts) * 100
           : 0;
-      this.setState({
+
+      setProgress({
         partsReceived: progress.partsReceived,
         totalParts: progress.totalParts,
         percentageReceived: newPercentageReceived,
       });
 
-      if (this.decoder.isComplete()) {
-        if (this.decoder.isSuccess()) {
-          const data = this.decoder.data();
+      if (decoder.isComplete()) {
+        if (decoder.isSuccess()) {
+          const data = decoder.data();
           onSuccess(data);
         } else {
-          const errorMessage = this.decoder.errorMessage();
-          this.setState({ status: "error", error: errorMessage });
+          const errorMessage = decoder.errorMessage();
+          if (errorMessage) handleError(errorMessage);
         }
       }
     }
   };
 
-  handleStop = () => {
-    const { onClear } = this.props;
-    this.setState({
-      status: PENDING,
-      error: "",
-      totalParts: 0,
-      partsReceived: 0,
-      percentageReceived: 0,
-    });
-    if (onClear) {
-      this.decoder.reset();
-      onClear();
-    }
-  };
-}
+  if (status === ACTIVE) {
+    return (
+      <ActiveHermitReader
+        handleStop={handleStop}
+        handleError={handleError}
+        handleScan={handleScan}
+        progress={progress}
+        width={width}
+      />
+    );
+  }
 
-HermitReader.propTypes = {
-  onStart: PropTypes.func.isRequired,
-  onSuccess: PropTypes.func.isRequired,
-  onClear: PropTypes.func.isRequired,
-  width: PropTypes.string,
-  startText: PropTypes.string,
-  interaction: PropTypes.shape({
-    messageFor: PropTypes.func,
-    parse: PropTypes.func,
-  }).isRequired,
-};
-
-HermitReader.defaultProps = {
-  width: "256px",
-  startText: "Scan",
+  if (status === "error" || status === "success") {
+    return (
+      <div>
+        <FormHelperText error>{error}</FormHelperText>
+        <Button
+          variant="contained"
+          color="secondary"
+          size="small"
+          onClick={handleStop}
+        >
+          Reset
+        </Button>
+      </div>
+    );
+  }
+  // default pending reader
+  return (
+    <PendingHermitReader
+      interaction={interaction}
+      startText={startText}
+      handleStart={handleStart}
+    />
+  );
 };
 
 export default HermitReader;
