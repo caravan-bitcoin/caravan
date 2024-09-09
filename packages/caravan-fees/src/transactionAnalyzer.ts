@@ -128,10 +128,7 @@ export class TransactionAnalyzer {
    * @returns {BtcTxInputTemplate[]} An array of transaction inputs
    */
   get inputs(): BtcTxInputTemplate[] {
-    if (!this._inputs) {
-      this._inputs = this.deserializeInputs();
-    }
-    return this._inputs;
+    return this.deserializeInputs();
   }
 
   /**
@@ -139,10 +136,7 @@ export class TransactionAnalyzer {
    * @returns {BtcTxOutputTemplate[]} An array of transaction outputs
    */
   get outputs(): BtcTxOutputTemplate[] {
-    if (!this._outputs) {
-      this._outputs = this.deserializeOutputs();
-    }
-    return this._outputs;
+    return this.deserializeOutputs();
   }
 
   /**
@@ -158,10 +152,7 @@ export class TransactionAnalyzer {
    * @returns {string} The transaction fee rate in satoshis per vbyte
    */
   get feeRate(): string {
-    if (!this._feeRate) {
-      this._feeRate = this._absoluteFee.dividedBy(this.vsize);
-    }
-    return this._feeRate.toString();
+    return this._absoluteFee.dividedBy(this.vsize).toString();
   }
 
   /**
@@ -225,10 +216,7 @@ export class TransactionAnalyzer {
    * @returns {boolean} True if CPFP is possible, false otherwise.
    */
   get canCPFP(): boolean {
-    if (!this._canCPFP) {
-      this._canCPFP = this.canPerformCPFP();
-    }
-    return this._canCPFP;
+    return this.canPerformCPFP();
   }
 
   /**
@@ -236,10 +224,7 @@ export class TransactionAnalyzer {
    * @returns {FeeBumpStrategy} The recommended fee bumping strategy
    */
   get recommendedStrategy(): FeeBumpStrategy {
-    if (!this._recommendedStrategy) {
-      this._recommendedStrategy = this.recommendStrategy();
-    }
-    return this._recommendedStrategy;
+    return this.recommendStrategy();
   }
 
   /**
@@ -264,16 +249,13 @@ export class TransactionAnalyzer {
    * @see https://bitcoinops.org/en/topics/replace-by-fee/
    */
   get rbfFeeRate(): string {
-    if (!this._rbfFeeRate) {
-      const currentFeeRate = new BigNumber(this.feeRate);
-      const minReplacementFeeRate = BigNumber.max(
-        new BigNumber(currentFeeRate).plus(this._incrementalRelayFee),
-        new BigNumber(this.targetFeeRate),
-      );
+    const currentFeeRate = new BigNumber(this.feeRate);
+    const minReplacementFeeRate = BigNumber.max(
+      new BigNumber(currentFeeRate).plus(this._incrementalRelayFee),
+      new BigNumber(this.targetFeeRate),
+    );
 
-      this._rbfFeeRate = minReplacementFeeRate;
-    }
-    return this._rbfFeeRate.toString();
+    return minReplacementFeeRate.toString();
   }
 
   /**
@@ -281,28 +263,25 @@ export class TransactionAnalyzer {
    * @returns {string} The CPFP fee rate in satoshis per vbyte
    */
   get cpfpFeeRate(): string {
-    if (!this._cpfpFeeRate) {
-      const config = {
-        addressType: this._addressType,
-        numInputs: 1, // Assuming 1 input for the child transaction
-        numOutputs: 1, // Assuming 1 output for the child transaction
-        m: this._requiredSigners,
-        n: this._totalSigners,
-      };
+    const config = {
+      addressType: this._addressType,
+      numInputs: 1, // Assuming 1 input for the child transaction
+      numOutputs: 1, // Assuming 1 output for the child transaction
+      m: this._requiredSigners,
+      n: this._totalSigners,
+    };
 
-      const childVsize = estimateTransactionVsize(config);
-      const packageSize = this.vsize + childVsize;
-      const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
-        packageSize,
-      );
-      const expectedFeeRate = BigNumber.max(
-        desiredPackageFee.minus(this.fee).dividedBy(childVsize),
-        new BigNumber(0),
-      );
+    const childVsize = estimateTransactionVsize(config);
+    const packageSize = this.vsize + childVsize;
+    const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
+      packageSize,
+    );
+    const expectedFeeRate = BigNumber.max(
+      desiredPackageFee.minus(this.fee).dividedBy(childVsize),
+      new BigNumber(0),
+    );
 
-      this._cpfpFeeRate = expectedFeeRate;
-    }
-    return this._cpfpFeeRate.toString();
+    return expectedFeeRate.toString();
   }
 
   /**
