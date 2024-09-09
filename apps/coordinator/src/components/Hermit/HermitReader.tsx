@@ -91,14 +91,17 @@ const ActiveHermitReader = ({
   };
   handleScan: HandleScanFn;
 }) => {
+  // NOTE: the styling here feels kind of arbitrary. It
+  // would be nice if it was a little more predictable, but
+  // this seems to render well in the main wallet signing flow
   return (
-    <div style={{ padding: "3rem" }}>
+    <div style={{ padding: "3rem", height: width }}>
       <Grid container direction="column">
         <Grid item>
           <QrReader
             scanDelay={QR_CODE_READER_DELAY}
             onResult={handleScan as OnResultFunction}
-            videoStyle={{ width }}
+            videoStyle={{ width, height: width, top: "10px" }}
             constraints={{ facingMode: "user" }}
           />
         </Grid>
