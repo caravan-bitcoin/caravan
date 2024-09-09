@@ -280,7 +280,7 @@ The package allows for advanced customization through various options:
 
 - **Validate Transactions**: Always validate transactions before broadcasting.
 - **Consider Mempool State**: Consider the mempool state and current network conditions when setting fee rates.
-- **Use Strict Mode**: Use the strict mode in CPFP transactions for mission-critical operations.
+- **Use Strict Mode**: Use the strict mode in RBF/CPFP transactions for mission-critical operations.
 - **Update Regularly**: Regularly update the package to ensure compatibility with the latest Bitcoin network rules.
 
 ## References
