@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=20"
   },
-  "private": "false",
+  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
