@@ -48,8 +48,8 @@ export class BtcTransactionTemplate {
     );
     this._network = options.network;
     this._scriptType = options.scriptType;
-    this._requiredSigners = options.requiredSigners || 1;
-    this._totalSigners = options.totalSigners || 1;
+    this._requiredSigners = options.requiredSigners;
+    this._totalSigners = options.totalSigners;
   }
 
   /**
@@ -62,81 +62,16 @@ export class BtcTransactionTemplate {
    * @returns A new BtcTransactionTemplate instance
    * @throws Error if PSBT parsing fails or required information is missing
    */
-  static rawPsbt(
+  static fromPsbt(
     psbtHex: string,
     options: Omit<TransactionTemplateOptions, "inputs" | "outputs">,
   ): BtcTransactionTemplate {
     const psbt = initializePsbt(psbtHex);
-    const inputs: BtcTxInputTemplate[] = [];
-    const outputs: BtcTxOutputTemplate[] = [];
-
-    // Process inputs
-    for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-      const txid = psbt.PSBT_IN_PREVIOUS_TXID[i];
-      const vout = psbt.PSBT_IN_OUTPUT_INDEX[i];
-
-      if (!txid || vout === undefined) {
-        throw new Error(`Missing txid or vout for input ${i}`);
-      }
-
-      const input = new BtcTxInputTemplate({
-        txid: Buffer.from(txid, "hex").reverse().toString("hex"),
-        vout,
-      });
-
-      let amountSats: string;
-      const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[i];
-      const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[i];
-
-      if (witnessUtxo) {
-        // add amount
-        amountSats = parseWitnessUtxoValue(witnessUtxo, i).toString();
-
-        // Parse the witness UTXO
-        const witnessUtxoBuffer = Buffer.from(witnessUtxo, "hex");
-        const value = witnessUtxoBuffer.readUInt32LE(0); // Read the first 4 bytes as the value
-        const script = witnessUtxoBuffer.slice(4); // The rest is the script
-        input.setWitnessUtxo({ script, value });
-      } else if (nonWitnessUtxo) {
-        // add amount
-        amountSats = parseNonWitnessUtxoValue(
-          nonWitnessUtxo,
-          i,
-          psbt,
-        ).toString();
-
-        input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
-      } else {
-        throw new Error(`Missing UTXO information for input ${i}`);
-      }
-      //set Amount
-      input.amountSats = amountSats;
-
-      inputs.push(input);
-    }
-
-    // Process outputs (unchanged)
-    for (let i = 0; i < psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
-      const script = Buffer.from(psbt.PSBT_OUT_SCRIPT[i], "hex");
-      const amount = psbt.PSBT_OUT_AMOUNT[i];
-
-      if (!script || amount === undefined) {
-        throw new Error(`Missing script or amount for output ${i}`);
-      }
-
-      const address = getOutputAddress(script, options.network);
-      if (!address) {
-        throw new Error(`Unable to derive address for output ${i}`);
-      }
-
-      outputs.push(
-        new BtcTxOutputTemplate({
-          address: address || "",
-          amountSats: amount.toString(),
-          locked: true, // We dont want to change these outputs
-        }),
-      );
-    }
+    const inputs = BtcTransactionTemplate.processInputs(psbt);
+    const outputs = BtcTransactionTemplate.processOutputs(
+      psbt,
+      options.network,
+    );
 
     return new BtcTransactionTemplate({
       ...options,
@@ -149,7 +84,7 @@ export class BtcTransactionTemplate {
    * Gets the inputs of the transaction.
    * @returns A read-only array of inputs
    */
-  get inputs(): ReadonlyArray<BtcTxInputTemplate> {
+  get inputs(): readonly BtcTxInputTemplate[] {
     return this._inputs;
   }
 
@@ -157,7 +92,7 @@ export class BtcTransactionTemplate {
    * Gets the outputs of the transaction.
    * @returns A read-only array of outputs
    */
-  get outputs(): ReadonlyArray<BtcTxOutputTemplate> {
+  get outputs(): readonly BtcTxOutputTemplate[] {
     return this._outputs;
   }
 
@@ -174,10 +109,7 @@ export class BtcTransactionTemplate {
    * @returns {Satoshis} The target fees in satoshis (as a string)
    */
   get targetFeesToPay(): Satoshis {
-    return this._targetFeeRate
-      .times(this.calculateEstimatedVsize())
-      .integerValue(BigNumber.ROUND_CEIL)
-      .toString();
+    return this.targetFees().toString();
   }
 
   /**
@@ -185,7 +117,7 @@ export class BtcTransactionTemplate {
    * @returns {Satoshis} The current fee in satoshis (as a string)
    */
   get currentFee(): Satoshis {
-    return this.calculateFee().toString();
+    return this.calculateCurrentFee().toString();
   }
 
   /**
@@ -193,7 +125,7 @@ export class BtcTransactionTemplate {
    * @returns True if the fees are paid, false otherwise
    */
   areFeesPaid(): boolean {
-    return this.calculateFee().gte(new BigNumber(this.targetFeesToPay));
+    return this.calculateCurrentFee().gte(this.targetFees());
   }
 
   /**
@@ -209,13 +141,13 @@ export class BtcTransactionTemplate {
    * @returns True if a change output is needed, false otherwise
    */
   get needsChangeOutput(): boolean {
-    const targetFeesWithDustBuffer = new BigNumber(this.targetFeesToPay).plus(
+    const targetFeesWithDustBuffer = this.targetFees().plus(
       this._dustThreshold,
     );
 
     return (
       !this.malleableOutputs.length &&
-      new BigNumber(this.currentFee).gt(targetFeesWithDustBuffer)
+      this.calculateCurrentFee().gt(targetFeesWithDustBuffer)
     );
   }
 
@@ -262,7 +194,7 @@ export class BtcTransactionTemplate {
    * @returns {string} The estimated fee rate in satoshis per vbyte
    */
   get estimatedFeeRate(): string {
-    return this.calculateFee()
+    return this.calculateCurrentFee()
       .dividedBy(this.calculateEstimatedVsize())
       .toString();
   }
@@ -315,28 +247,29 @@ export class BtcTransactionTemplate {
 
     const newChangeAmount = this.calculateTotalInputAmount()
       .minus(totalOutWithoutChange)
-      .minus(new BigNumber(this.targetFeesToPay));
+      .minus(this.targetFees());
 
-    if (newChangeAmount.gte(0)) {
-      const changeAmountDiff = newChangeAmount.minus(currentChangeAmount);
-
-      if (!changeAmountDiff.isZero()) {
-        changeOutput.addAmount(changeAmountDiff.toString());
-      }
-      // get current out amount after adjustment
-
-      const balanceCheck = this.calculateTotalInputAmount()
-        .minus(this.calculateTotalOutputAmount())
-        .minus(new BigNumber(this.targetFeesToPay));
-
-      if (!balanceCheck.isZero()) {
-        throw new Error(
-          `Transaction does not balance. Discrepancy: ${balanceCheck.toString()} satoshis`,
-        );
-      }
-    } else {
+    if (newChangeAmount.lt(0)) {
       throw new Error(
         `New Change Amount ${newChangeAmount.toString()} cannot be negative`,
+      );
+    }
+
+    const changeAmountDiff = newChangeAmount.minus(currentChangeAmount);
+
+    if (!changeAmountDiff.isZero()) {
+      changeOutput.addAmount(changeAmountDiff.toString());
+    }
+
+    // get current out amount after adjustment
+
+    const balanceCheck = this.calculateTotalInputAmount()
+      .minus(this.calculateTotalOutputAmount())
+      .minus(this.targetFees());
+
+    if (!balanceCheck.isZero()) {
+      throw new Error(
+        `Transaction does not balance. Discrepancy: ${balanceCheck.toString()} satoshis`,
       );
     }
   }
@@ -347,9 +280,7 @@ export class BtcTransactionTemplate {
    * @throws Error if the fee rate or absolute fee is absurdly high
    */
   validate(): boolean {
-    if (
-      new BigNumber(this.currentFee).lt(new BigNumber(this.targetFeesToPay))
-    ) {
+    if (this.calculateCurrentFee().lt(this.targetFees())) {
       return false;
     }
 
@@ -363,7 +294,7 @@ export class BtcTransactionTemplate {
       new BigNumber(this.estimatedFeeRate).gte(
         new BigNumber(ABSURDLY_HIGH_FEE_RATE),
       ) ||
-      new BigNumber(this.currentFee).gte(new BigNumber(ABSURDLY_HIGH_ABS_FEE))
+      this.calculateCurrentFee().gte(new BigNumber(ABSURDLY_HIGH_ABS_FEE))
     ) {
       throw new Error(
         "Absurdly high fee detected. Transaction rejected for safety.",
@@ -397,11 +328,11 @@ export class BtcTransactionTemplate {
     const psbt = new PsbtV2();
 
     // Add Inputs to PSBT
-    this._inputs.forEach((input) => addInputToPsbt(psbt, input)); // already checked for validness
+    this._inputs.forEach((input) => addInputToPsbt(psbt, input)); // already checks for validity
 
     // Add Outputs to PSBT
     this._outputs.forEach((output) => {
-      if (this.isOutputValid(output)) {
+      if (output.isValid()) {
         addOutputToPsbt(psbt, output, this._network);
       }
     });
@@ -426,15 +357,6 @@ export class BtcTransactionTemplate {
     return this._inputs.every(
       (input) => input.hasRequiredFieldsforPSBT() && input.isValid(),
     );
-  }
-
-  /**
-   * Checks if an output is valid.
-   * @param output - The output to check
-   * @returns True if the output is valid, false otherwise
-   */
-  private isOutputValid(output: BtcTxOutputTemplate): boolean {
-    return output.isValid() && new BigNumber(output.amountSats).gt(0);
   }
 
   /**
@@ -495,12 +417,131 @@ export class BtcTransactionTemplate {
 
   /**
    * Calculates the current fee of the transaction.
-   * @returns {BigNumber} The current fee in satoshis
+   * @returns {BigNumber} The current fee in satoshis (as a BN)
    * @private
    */
-  private calculateFee(): BigNumber {
+  private calculateCurrentFee(): BigNumber {
     return this.calculateTotalInputAmount().minus(
       this.calculateTotalOutputAmount(),
     );
+  }
+
+  /**
+   * Calculates the target fees to pay based on the estimated size and target fee rate.
+   * @returns {Satoshis} The target fees in satoshis (as a BN)
+   * @private
+   */
+  private targetFees(): BigNumber {
+    return this._targetFeeRate
+      .times(this.calculateEstimatedVsize())
+      .integerValue(BigNumber.ROUND_CEIL);
+  }
+
+  /**
+   * Processes the inputs from a PSBT and creates BtcTxInputTemplate instances.
+   *
+   * @param psbt - The initialized PSBT
+   * @returns An array of BtcTxInputTemplate instances
+   * @throws Error if required input information is missing
+   */
+  private static processInputs(psbt: PsbtV2): BtcTxInputTemplate[] {
+    const inputs: BtcTxInputTemplate[] = [];
+
+    for (let i = 0; i < psbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+      const txid = psbt.PSBT_IN_PREVIOUS_TXID[i];
+      const vout = psbt.PSBT_IN_OUTPUT_INDEX[i];
+
+      if (!txid || vout === undefined) {
+        throw new Error(`Missing txid or vout for input ${i}`);
+      }
+
+      const input = new BtcTxInputTemplate({
+        txid: Buffer.from(txid, "hex").reverse().toString("hex"),
+        vout,
+      });
+
+      BtcTransactionTemplate.setInputUtxo(input, psbt, i);
+
+      inputs.push(input);
+    }
+
+    return inputs;
+  }
+
+  /**
+   * Sets the UTXO information for a given input.
+   *
+   * @param input - The BtcTxInputTemplate to update
+   * @param psbt - The PSBT containing the input information
+   * @param index - The index of the input in the PSBT
+   * @throws Error if UTXO information is missing
+   */
+  private static setInputUtxo(
+    input: BtcTxInputTemplate,
+    psbt: PsbtV2,
+    index: number,
+  ): void {
+    const witnessUtxo = psbt.PSBT_IN_WITNESS_UTXO[index];
+    const nonWitnessUtxo = psbt.PSBT_IN_NON_WITNESS_UTXO[index];
+
+    if (witnessUtxo) {
+      const amountSats = parseWitnessUtxoValue(witnessUtxo, index).toString();
+      const witnessUtxoBuffer = Buffer.from(witnessUtxo, "hex");
+      const value = witnessUtxoBuffer.readUInt32LE(0);
+      const script = witnessUtxoBuffer.slice(4);
+
+      input.setWitnessUtxo({ script, value });
+      input.amountSats = amountSats;
+    } else if (nonWitnessUtxo) {
+      const amountSats = parseNonWitnessUtxoValue(
+        nonWitnessUtxo,
+        index,
+        psbt,
+      ).toString();
+
+      input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
+      input.amountSats = amountSats;
+    } else {
+      throw new Error(`Missing UTXO information for input ${index}`);
+    }
+  }
+
+  /**
+   * Processes the outputs from a PSBT and creates BtcTxOutputTemplate instances.
+   *
+   * @param psbt - The initialized PSBT
+   * @param network - The Bitcoin network
+   * @returns An array of BtcTxOutputTemplate instances
+   * @throws Error if required output information is missing
+   */
+  private static processOutputs(
+    psbt: PsbtV2,
+    network: Network,
+  ): BtcTxOutputTemplate[] {
+    const outputs: BtcTxOutputTemplate[] = [];
+
+    for (let i = 0; i < psbt.PSBT_GLOBAL_OUTPUT_COUNT; i++) {
+      const script = Buffer.from(psbt.PSBT_OUT_SCRIPT[i], "hex");
+      const amount = psbt.PSBT_OUT_AMOUNT[i];
+
+      if (!script || amount === undefined) {
+        throw new Error(`Missing script or amount for output ${i}`);
+      }
+
+      const address = getOutputAddress(script, network);
+      if (!address) {
+        throw new Error(`Unable to derive address for output ${i}`);
+      }
+
+      outputs.push(
+        new BtcTxOutputTemplate({
+          address,
+          amountSats: amount.toString(),
+          locked: true, // We don't want to change these outputs
+        }),
+      );
+    }
+
+    return outputs;
   }
 }

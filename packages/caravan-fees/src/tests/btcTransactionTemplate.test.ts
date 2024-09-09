@@ -287,7 +287,7 @@ describe("BtcTxOutputTemplate", () => {
     });
   });
 
-  describe("static fromRawPsbt", () => {
+  describe("static from Psbt", () => {
     // https://en.bitcoin.it/wiki/BIP_0174
     const fixture = {
       test: {
@@ -331,7 +331,7 @@ describe("BtcTxOutputTemplate", () => {
     };
 
     it("should correctly parse the PSBT and create a BtcTransactionTemplate", () => {
-      const txTemplate = BtcTransactionTemplate.rawPsbt(
+      const txTemplate = BtcTransactionTemplate.fromPsbt(
         fixture.test.psbtHex,
         fixture.test.options,
       );
@@ -378,7 +378,7 @@ describe("BtcTxOutputTemplate", () => {
     });
 
     it("should correctly calculate fee-related properties", () => {
-      const txTemplate = BtcTransactionTemplate.rawPsbt(
+      const txTemplate = BtcTransactionTemplate.fromPsbt(
         fixture.test.psbtHex,
         fixture.test.options,
       );
@@ -390,7 +390,7 @@ describe("BtcTxOutputTemplate", () => {
     });
 
     it("should handle malleable outputs correctly", () => {
-      const txTemplate = BtcTransactionTemplate.rawPsbt(
+      const txTemplate = BtcTransactionTemplate.fromPsbt(
         fixture.test.psbtHex,
         fixture.test.options,
       );
@@ -402,7 +402,7 @@ describe("BtcTxOutputTemplate", () => {
     it("should throw an error for invalid PSBT", () => {
       const invalidPsbtHex = "invalidPsbtHex";
       expect(() => {
-        BtcTransactionTemplate.rawPsbt(invalidPsbtHex, fixture.test.options);
+        BtcTransactionTemplate.fromPsbt(invalidPsbtHex, fixture.test.options);
       }).toThrow();
     });
 
@@ -411,7 +411,7 @@ describe("BtcTxOutputTemplate", () => {
       const psbtWithMissingInputInfo =
         "cHNidP8BAEwCAAAAAALT3/UFAAAAABl2qRTQxZkDxbrChodg6Q/VIaRmWqdlIIisAOH1BQAAAAAXqRQ1RebjO4MsRwUPJNPuuTycA5SLx4ezLhMAAAAA";
 
-      const templateIn = BtcTransactionTemplate.rawPsbt(
+      const templateIn = BtcTransactionTemplate.fromPsbt(
         psbtWithMissingInputInfo,
         fixture.test.options,
       );

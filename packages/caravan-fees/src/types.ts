@@ -272,13 +272,13 @@ export interface TransactionTemplateOptions {
    * The number of signatures required in a multisig setup.
    * This is used for multisig transactions and affects the transaction size.
    */
-  requiredSigners?: number;
+  requiredSigners: number;
 
   /**
    * The total number of signers in a multisig setup.
    * This is used along with requiredSigners for multisig transactions.
    */
-  totalSigners?: number;
+  totalSigners: number;
 }
 
 export enum ScriptType {
