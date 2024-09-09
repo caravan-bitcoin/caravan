@@ -6,6 +6,7 @@ import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
+  IconButton,
   Table,
   TableHead,
   TableBody,
@@ -14,8 +15,10 @@ import {
   TableCell,
   Grid,
   Slider,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
@@ -232,9 +235,21 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
           <Grid item xs={12}>
-            <h3>Waste Analysis</h3>
+            <h3>
+              Waste Analysis
+              <Tooltip title="Waste analysis helps calculate inefficiencies in the transaction due to fees, UTXO consolidation, etc.">
+                <IconButton size="small" sx={{ marginLeft: 1 }}>
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </h3>
             <Typography gutterBottom>
-              Spend Waste Amount: {wasteAmount.toFixed(2)} Sats
+              Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} Sats
+              <Tooltip title="SWA represents the amount of waste in Satoshis spent during the transaction due to inefficiencies. Postive SWA means that it would be efficient to spend this transaction later when the feerate decreases. For Negative SWA, spending now could be the best decision.">
+                <IconButton size="small" sx={{ marginLeft: 1 }}>
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Typography>
             <Slider
               value={longTermFeeEstimate}
@@ -246,6 +261,11 @@ class TransactionPreview extends React.Component {
             />
             <Typography id="long-term-fee-estimate-slider" gutterBottom>
               Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
+              <Tooltip title="L refers to the long-term estimated fee rate in Satoshis per vByte for future transactions.">
+                <IconButton size="small" sx={{ marginLeft: 1 }}>
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Typography>
           </Grid>
         </Grid>
