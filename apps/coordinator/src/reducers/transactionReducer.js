@@ -283,6 +283,7 @@ function finalizeOutputs(state, action) {
   let unsignedTransaction;
   // First try to build the transaction via PSBT, if that fails (e.g. an input doesn't know about its braid),
   // then try to build it using the old TransactionBuilder plumbing.
+  let unsignedPSBT = "";
   try {
     const args = {
       network: state.network,
@@ -293,6 +294,7 @@ function finalizeOutputs(state, action) {
     unsignedTransaction = Transaction.fromHex(
       psbt.data.globalMap.unsignedTx.toBuffer().toString("hex"),
     );
+    unsignedPSBT = psbt.toBase64();
   } catch (e) {
     // probably has an input that isn't braid aware.
     // NOTE: This won't work for txs with taproot outputs
@@ -304,7 +306,7 @@ function finalizeOutputs(state, action) {
   }
   return {
     ...state,
-    ...{ finalizedOutputs: action.value, unsignedTransaction },
+    ...{ finalizedOutputs: action.value, unsignedTransaction, unsignedPSBT },
   };
 }
 

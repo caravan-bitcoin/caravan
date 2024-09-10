@@ -45,6 +45,7 @@ class DirectSignatureImporter extends React.Component {
       outputs,
       walletConfig,
       extendedPublicKeyImporter,
+      unsignedPSBT,
     } = this.props;
     const keystore = signatureImporter.method;
     const bip32Paths = inputs.map((input) => {
@@ -64,6 +65,7 @@ class DirectSignatureImporter extends React.Component {
       bip32Paths,
       walletConfig,
       policyHmac,
+      psbt: unsignedPSBT,
       returnSignatureArray: true,
     });
   };
@@ -295,6 +297,7 @@ DirectSignatureImporter.propTypes = {
     method: PropTypes.string,
   }).isRequired,
   signatureImporters: PropTypes.shape({}).isRequired,
+  unsignedPSBT: PropTypes.string.isRequired,
   walletConfig: PropTypes.shape(walletConfigPropType).isRequired,
   validateAndSetBIP32Path: PropTypes.func.isRequired,
   validateAndSetSignature: PropTypes.func.isRequired,

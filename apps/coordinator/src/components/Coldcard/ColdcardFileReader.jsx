@@ -2,7 +2,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import Dropzone from "react-dropzone";
-import { Buffer } from "buffer/";
+import { Buffer } from "buffer";
 import { Box, Button, FormHelperText, Grid, TextField } from "@mui/material";
 import { CloudUpload as UploadIcon } from "@mui/icons-material";
 import { PSBT_MAGIC_HEX } from "@caravan/bitcoin";

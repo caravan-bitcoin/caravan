@@ -150,7 +150,9 @@ export function psbtInputFormatter(input) {
   //   we dont have isSegWit info on our inputs at the moment, so we don't know for sure.
   //   This assumption holds in our fixtures, but it may need to be remedied in the future.
   const isSegWit = multisigWitnessScript(input.multisig) !== null;
-  const utxoToVerify = isSegWit ? { witnessUtxo } : { nonWitnessUtxo };
+  const utxoToVerify = isSegWit
+    ? { nonWitnessUtxo, witnessUtxo }
+    : { nonWitnessUtxo };
   const multisigScripts = psbtMultisigLock(input.multisig);
 
   const bip32Derivation = psbtInputDerivation(input);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- [#124](https://github.com/caravan-bitcoin/caravan/pull/124) [`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d) Thanks [@chadchapnick](https://github.com/chadchapnick)! - SegWit PSBT fixes: include non witness utxo for inputs and witness script for outputs
+
 ## 0.3.0
 
 ### Minor Changes

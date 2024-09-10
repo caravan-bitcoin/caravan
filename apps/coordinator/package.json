@@ -94,6 +94,7 @@
     "not op_mini all"
   ],
   "dependencies": {
+    "@caravan/bip32": "*",
     "@caravan/bitcoin": "*",
     "@caravan/clients": "*",
     "@caravan/descriptors": "^0.1.1",
