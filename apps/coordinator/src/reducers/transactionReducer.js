@@ -289,6 +289,7 @@ function finalizeOutputs(state, action) {
       network: state.network,
       inputs: state.inputs.map(convertLegacyInput),
       outputs: state.outputs.map(convertLegacyOutput),
+      includeGlobalXpubs: true,
     };
     const psbt = getUnsignedMultisigPsbtV0(args);
     unsignedTransaction = Transaction.fromHex(
