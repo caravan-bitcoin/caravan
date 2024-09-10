@@ -2,11 +2,10 @@ import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import BigNumber from "bignumber.js";
-import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
-  IconButton,
   Table,
   TableHead,
   TableBody,
@@ -14,25 +13,12 @@ import {
   TableRow,
   TableCell,
   Grid,
-  Slider,
-  Tooltip,
-  Typography,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
-import { WasteMetrics } from "@caravan/health";
 
 class TransactionPreview extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      longTermFeeEstimate: this.props.feeRate, // Initial value for L
-      wasteAmount: 0, // Initial waste amount
-    };
-  }
-
   componentDidMount() {
     const {
       outputs,
@@ -46,7 +32,6 @@ class TransactionPreview extends React.Component {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
       }
     });
-    this.calculateWaste();
   }
 
   renderAddresses = () => {
@@ -170,39 +155,6 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtBase64, "transaction.psbt");
   };
 
-  spendOutputsTotal = () => {
-    const { outputs, changeAddress } = this.props;
-    let spendAmount = 0;
-    outputs.forEach((output) => {
-      if (output.address !== changeAddress) {
-        spendAmount += output.amount;
-      }
-    });
-    return bitcoinsToSatoshis(spendAmount);
-  };
-
-  handleLongTermFeeEstimateChange = (event, newValue) => {
-    this.setState({ longTermFeeEstimate: newValue }, this.calculateWaste);
-  };
-
-  calculateWaste = () => {
-    const { feeRate, fee, inputsTotalSats } = this.props;
-    const { longTermFeeEstimate } = this.state;
-    const wasteMetrics = new WasteMetrics();
-    const weight = bitcoinsToSatoshis(fee) / feeRate;
-    const spendAmount = this.spendOutputsTotal();
-
-    const wasteAmount = wasteMetrics.spendWasteAmount(
-      weight, // vB
-      feeRate, // sats/vB
-      inputsTotalSats, // sats
-      spendAmount, // sats
-      longTermFeeEstimate, //sats/vB
-    );
-
-    this.setState({ wasteAmount });
-  };
-
   render = () => {
     const {
       feeRate,
@@ -213,7 +165,6 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
     } = this.props;
 
-    const { longTermFeeEstimate, wasteAmount } = this.state;
     return (
       <Box>
         <h2>Transaction Preview</h2>
@@ -234,40 +185,6 @@ class TransactionPreview extends React.Component {
           <Grid item xs={4}>
             <h3>Total</h3>
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
-          </Grid>
-          <Grid item xs={12}>
-            <h3>
-              Waste Analysis
-              <Tooltip title="Waste analysis helps calculate inefficiencies in the transaction due to fees, UTXO consolidation, etc.">
-                <IconButton size="small" sx={{ marginLeft: 1 }}>
-                  <InfoIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </h3>
-            <Typography gutterBottom>
-              Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} Sats
-              <Tooltip title="SWA represents the amount of waste in Satoshis spent during the transaction due to inefficiencies. Postive SWA means that it would be efficient to spend this transaction later when the feerate decreases. For Negative SWA, spending now could be the best decision.">
-                <IconButton size="small" sx={{ marginLeft: 1 }}>
-                  <InfoIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Typography>
-            <Slider
-              value={longTermFeeEstimate}
-              min={1}
-              max={500}
-              step={1}
-              onChange={this.handleLongTermFeeEstimateChange}
-              aria-labelledby="long-term-fee-estimate-slider"
-            />
-            <Typography id="long-term-fee-estimate-slider" gutterBottom>
-              Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
-              <Tooltip title="L refers to the long-term estimated fee rate in Satoshis per vByte for future transactions.">
-                <IconButton size="small" sx={{ marginLeft: 1 }}>
-                  <InfoIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Typography>
           </Grid>
         </Grid>
         <Box mt={2}>
