@@ -46,6 +46,7 @@ class TransactionPreview extends React.Component {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
       }
     });
+    this.calculateWaste();
   }
 
   renderAddresses = () => {
@@ -254,7 +255,7 @@ class TransactionPreview extends React.Component {
             <Slider
               value={longTermFeeEstimate}
               min={1}
-              max={3000}
+              max={500}
               step={1}
               onChange={this.handleLongTermFeeEstimateChange}
               aria-labelledby="long-term-fee-estimate-slider"

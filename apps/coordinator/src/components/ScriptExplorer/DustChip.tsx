@@ -2,8 +2,14 @@ import { useSelector } from "react-redux";
 import { WasteMetrics } from "@caravan/health";
 import { getWalletConfig } from "../../selectors/wallet";
 import { Chip } from "@mui/material";
+import React from "react";
 
-const DustChip = ({ amountSats, feeRate }) => {
+interface DustChipProps {
+  amountSats: number; // Type for amountSats
+  feeRate: number; // Type for feeRate
+}
+
+const DustChip: React.FC<DustChipProps> = ({ amountSats, feeRate }) => {
   const walletConfig = useSelector(getWalletConfig);
   const wasteMetrics = new WasteMetrics();
   const scriptType = walletConfig.addressType;
@@ -16,8 +22,12 @@ const DustChip = ({ amountSats, feeRate }) => {
     scriptType,
     config,
   );
-  let chipArgs = {
-    color: "success",
+
+  let chipArgs: {
+    color: "error" | "success" | "warning";
+    label: React.ReactNode;
+  } = {
+    color: "success", // Use valid color values
     label: "economical",
   };
 
