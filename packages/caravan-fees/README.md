@@ -287,7 +287,7 @@ The package allows for advanced customization through various options:
 
 - **[BIP 125: Opt-in Full Replace-by-Fee Signaling](https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki)**
 - **[Bitcoin Core RBF Implementation](https://github.com/bitcoin/bitcoin/pull/6871)**
-- **[Bitcoin Optech: Replace-by-Fee](https://bitcoinops.org/en/topics/rbf/)**
+- **[Bitcoin Optech: Replace-by-Fee](https://bitcoinops.org/en/topics/replace-by-fee/)**
 - **[Bitcoin Optech: Child Pays for Parent](https://bitcoinops.org/en/topics/cpfp/)**
 - **[BIP 174: Partially Signed Bitcoin Transaction Format](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)**
 
