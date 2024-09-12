@@ -6,7 +6,6 @@ import {
 } from "./btcTransactionComponents";
 import { FeeBumpStrategy, CPFPOptions } from "./types";
 import BigNumber from "bignumber.js";
-import { isCPFPFeeSatisfied } from "./utils";
 
 /**
  * Creates a Child-Pays-for-Parent (CPFP) transaction to accelerate the confirmation
@@ -246,3 +245,57 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   // Step 10: Convert to PSBT and return as base64
   return childTxTemplate.toPsbt();
 };
+
+/**
+ * Determines if the combined fee rate of a parent and child transaction meets or exceeds
+ * the target fee rate for a Child-Pays-for-Parent (CPFP) transaction.
+ *
+ * This function calculates the combined fee rate of a parent transaction and its child
+ * (CPFP) transaction, then compares it to the target fee rate. It's used to ensure that
+ * the CPFP transaction provides sufficient fee incentive for miners to include both
+ * transactions in a block.
+ *
+ * The combined fee rate is calculated as:
+ * (parentFee + childFee) / (parentVsize + childVsize)
+ *
+ * @param {BigNumber} parentFee - The fee of the parent transaction in satoshis.
+ * @param {number} parentVsize - The virtual size of the parent transaction in vbytes.
+ * @param {BigNumber} childFee - The fee of the child transaction in satoshis.
+ * @param {number} childVsize - The virtual size of the child transaction in vbytes.
+ * @param {number} targetFeeRate - The target fee rate in satoshis per vbyte.
+ * @returns {boolean} True if the combined fee rate meets or exceeds the target fee rate, false otherwise.
+ *
+ * @example
+ * const parentFee = new BigNumber(1000);
+ * const parentVsize = 200;
+ * const childFee = new BigNumber(2000);
+ * const childVsize = 150;
+ * const targetFeeRate = 5;
+ * const isSatisfied = isCPFPFeeSatisfied(parentFee, parentVsize, childFee, childVsize, targetFeeRate);
+ * console.log(isSatisfied); // true or false
+ *
+ * @throws {Error} If any of the input parameters are negative.
+ */
+export function isCPFPFeeSatisfied(
+  parentFee: BigNumber,
+  parentVsize: number,
+  childFee: BigNumber,
+  childVsize: number,
+  targetFeeRate: number,
+): boolean {
+  // Input validation
+  if (
+    parentFee.isNegative() ||
+    parentVsize < 0 ||
+    childFee.isNegative() ||
+    childVsize < 0 ||
+    targetFeeRate < 0
+  ) {
+    throw new Error("All input parameters must be non-negative.");
+  }
+
+  const combinedFee = parentFee.plus(childFee);
+  const combinedVsize = parentVsize + childVsize;
+  const combinedFeeRate = combinedFee.dividedBy(combinedVsize);
+  return combinedFeeRate.gte(targetFeeRate);
+}
