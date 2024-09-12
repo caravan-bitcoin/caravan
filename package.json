@@ -11,6 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "gen": "turbo gen run",
     "lint": "turbo lint",
+    "test": "turbo test",
     "version": "turbo run build lint test && changeset version && npm install --package-lock-only",
     "release": "turbo run build lint test && changeset publish",
     "dev:coordinator": "turbo run dev --filter=caravan-coordinator"
@@ -23,7 +24,8 @@
     "@vitejs/plugin-react": "^4.3.1",
     "vitest": "^2.0.5",
     "prettier": "^3.1.1",
-    "turbo": "^2.0.3"
+    "turbo": "^2.0.3",
+    "vitest": "^2.0.5"
   },
   "dependencies": {
     "@ledgerhq/hw-transport-webusb": "6.27.12"

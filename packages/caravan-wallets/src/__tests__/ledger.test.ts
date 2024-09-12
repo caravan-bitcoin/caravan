@@ -1,9 +1,5 @@
-/**
- * @jest-environment jsdom
- */
-
 import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
-import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
+import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "../interaction";
 import {
   LedgerGetMetadata,
   LedgerExportPublicKey,
@@ -14,8 +10,10 @@ import {
   LedgerConfirmMultisigAddress,
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
-} from "./ledger";
+} from "../ledger";
 import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {

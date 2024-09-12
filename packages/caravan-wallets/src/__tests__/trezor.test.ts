@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import {
   ROOT_FINGERPRINT,
   TEST_FIXTURES,
@@ -9,7 +5,9 @@ import {
   networkData,
   Network,
 } from "@caravan/bitcoin";
-import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
+import { PENDING, ACTIVE, INFO, ERROR } from "../interaction";
+
+import { describe, it, expect } from "vitest";
 
 import {
   trezorCoin,
@@ -21,7 +19,7 @@ import {
   TrezorSignMultisigTransaction,
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
-} from "./trezor";
+} from "../trezor";
 import { ECPair, payments } from "bitcoinjs-lib";
 
 import TrezorConnect from "@trezor/connect-web";
