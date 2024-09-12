@@ -1124,4 +1124,251 @@ describe("BlockchainClient", () => {
       );
     });
   });
+
+  describe("getTransaction", () => {
+    // https://unchained.mempool.space/tx/3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84
+    const mockTxid =
+      "3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84";
+    const mockTxData = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "3044022055831f73fc755df0e3ab4b29fdae593312f9c395fac3c11e4d26d559dbe7e3f202201971c090da1721e41bbb8b7719d48f3117c0595a3495ca8d2359d1ac72d4b0a201",
+            "033688c799699d3d9ed7fffccb5c59960d8788ecdf81258a0dffd813d02b93f94a",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "0014d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1q6g3jjcxy2qla09jsc4qmpw2uhnep9u9z6rjvhf",
+            value: 130.00123744,
+          },
+        },
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "304402202fdcd389d3cf70e8c3d8ead029b4257adb21a5ee3841445ad97f45875f36e60b0220537741d6e3e333dcb9e4d83f79a1e90a055d206d4ecdb3a30c5169df8b20414001",
+            "0313f50b92e4f73cf0e0de9375b29d4f275a400149d9609b09cf334989171cfa26",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "00140c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 0c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1qpsc99kp272rr73ukgw4c9gu2kqlk8vn9j73833",
+            value: 0.202756,
+          },
+        },
+      ],
+      vout: [
+        {
+          scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+          scriptpubkey_asm:
+            "OP_DUP OP_HASH160 OP_PUSHBYTES_20 a9808a3da3a4574b7eae1c6f4f19160f927fb9e0 OP_EQUALVERIFY OP_CHECKSIG",
+          scriptpubkey_type: "p2pkh",
+          scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          value: 20398739,
+        },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      status: {
+        confirmed: true,
+        block_height: 861058,
+        block_hash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        block_time: 1694567537,
+      },
+    };
+
+    it("should get transaction details for PRIVATE client", async () => {
+      const mockCallBitcoind = jest.spyOn(bitcoind, "callBitcoind");
+      mockCallBitcoind.mockResolvedValue({ result: mockTxData });
+
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      const result = await client.getTransaction(mockTxid);
+
+      expect(mockCallBitcoind).toHaveBeenCalledWith(
+        client.bitcoindParams.url,
+        client.bitcoindParams.auth,
+        "getrawtransaction",
+        [mockTxid, true],
+      );
+
+      expect(result).toEqual({
+        txid: mockTxid,
+        version: 1,
+        locktime: 861057,
+        vin: [
+          {
+            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+            vout: 0,
+            sequence: 4294967293,
+          },
+          {
+            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+            vout: 0,
+            sequence: 4294967293,
+          },
+        ],
+        vout: [
+          {
+            value: 20398739,
+            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          },
+        ],
+        size: 342,
+        weight: 720,
+        fee: 0.00000605,
+        status: {
+          confirmed: true,
+          block_height: 861058,
+          block_hash:
+            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+          block_time: 1694567537,
+        },
+      });
+    });
+
+    it("should get transaction details for BLOCKSTREAM client", async () => {
+      const mockGet = jest.fn().mockResolvedValue(mockTxData);
+
+      const client = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+      client.Get = mockGet;
+
+      const result = await client.getTransaction(mockTxid);
+
+      expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+
+      expect(result).toEqual({
+        txid: mockTxid,
+        version: 1,
+        locktime: 861057,
+        vin: [
+          {
+            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+            vout: 0,
+            sequence: 4294967293,
+          },
+          {
+            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+            vout: 0,
+            sequence: 4294967293,
+          },
+        ],
+        vout: [
+          {
+            value: "0.20398739",
+            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          },
+        ],
+        size: 342,
+        weight: 720,
+        fee: 0.00000605,
+        status: {
+          confirmed: true,
+          block_height: 861058,
+          block_hash:
+            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+          block_time: 1694567537,
+        },
+      });
+    });
+
+    it("should get transaction details for MEMPOOL client", async () => {
+      const mockGet = jest.fn().mockResolvedValue(mockTxData);
+
+      const client = new BlockchainClient({
+        type: ClientType.MEMPOOL,
+        network: Network.MAINNET,
+      });
+      client.Get = mockGet;
+
+      const result = await client.getTransaction(mockTxid);
+
+      expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+
+      expect(result).toEqual({
+        txid: mockTxid,
+        version: 1,
+        locktime: 861057,
+        vin: [
+          {
+            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+            vout: 0,
+            sequence: 4294967293,
+          },
+          {
+            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+            vout: 0,
+            sequence: 4294967293,
+          },
+        ],
+        vout: [
+          {
+            value: "0.20398739",
+            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          },
+        ],
+        size: 342,
+        weight: 720,
+        fee: 0.00000605,
+        status: {
+          confirmed: true,
+          block_height: 861058,
+          block_hash:
+            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+          block_time: 1694567537,
+        },
+      });
+    });
+
+    it("should throw an error for invalid client type", async () => {
+      const client = new BlockchainClient({
+        type: "INVALID" as ClientType,
+        network: Network.MAINNET,
+      });
+
+      await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+        "Invalid client type",
+      );
+    });
+
+    it("should handle errors when fetching transaction details", async () => {
+      const mockError = new Error("Failed to fetch transaction");
+      const mockGet = jest.fn().mockRejectedValue(mockError);
+
+      const client = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+      client.Get = mockGet;
+
+      await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+        `Failed to get transaction: ${mockError.message}`,
+      );
+    });
+  });
 });
