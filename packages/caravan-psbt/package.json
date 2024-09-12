@@ -30,7 +30,7 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src",
     "ci": "npm run lint && npm run test",
-    "test": "vitest src",
+    "test": "vitest --watch=false src",
     "test:watch": "vitest src --watch",
     "test:debug": "node --inspect-brk vitest --runInBand"
   },
