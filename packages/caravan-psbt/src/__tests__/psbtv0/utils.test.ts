@@ -1,4 +1,5 @@
-import { autoLoadPSBT } from "./utils";
+import { autoLoadPSBT } from "../../psbtv0/utils";
+import { describe, expect, it } from "vitest";
 
 describe("autoLoadPSBT", () => {
   it("should fail if you don't send a String", () => {
