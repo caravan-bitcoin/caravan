@@ -1,9 +1,6 @@
 import { Satoshis, BTC, UTXO } from "./types";
-import {
-  satoshisToBTC,
-  validateNonWitnessUtxo,
-  validateSequence,
-} from "./utils";
+import { validateNonWitnessUtxo, validateSequence } from "./utils";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 
 /**
@@ -41,7 +38,7 @@ export abstract class BtcTxComponent {
    * @returns The amount in BTC (as a string)
    */
   get amountBTC(): BTC {
-    return satoshisToBTC(this._amountSats.toString());
+    return satoshisToBitcoins(this._amountSats.toString());
   }
 
   hasAmount(): boolean {
