@@ -7,6 +7,7 @@ import {
   Satoshis,
   ScriptType,
   SCRIPT_TYPES,
+  FeeRateSatsPerVByte,
 } from "./types";
 import {
   BtcTxComponent,
@@ -20,11 +21,11 @@ import BigNumber from "bignumber.js";
 interface ValidatedAnalyzerOptions {
   rawTx: Transaction;
   network: Network;
-  targetFeeRate: number;
+  targetFeeRate: FeeRateSatsPerVByte;
   absoluteFee: BigNumber;
   availableUtxos: UTXO[];
   changeOutputIndex: number | undefined;
-  incrementalRelayFee: BigNumber;
+  incrementalRelayFeeRate: BigNumber;
   requiredSigners: number;
   totalSigners: number;
   addressType: ScriptType;
@@ -58,7 +59,7 @@ export class TransactionAnalyzer {
   private readonly _absoluteFee: BigNumber;
   private readonly _availableUtxos: UTXO[];
   private readonly _changeOutputIndex: number | undefined;
-  private readonly _incrementalRelayFee: BigNumber;
+  private readonly _incrementalRelayFeeRate: BigNumber;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
   private readonly _addressType: ScriptType;
@@ -90,7 +91,7 @@ export class TransactionAnalyzer {
     // TO DO (MRIGESH)
     // Make this and accelerate RBF fn work with an array of change indices
     this._changeOutputIndex = validatedOptions.changeOutputIndex;
-    this._incrementalRelayFee = validatedOptions.incrementalRelayFee;
+    this._incrementalRelayFeeRate = validatedOptions.incrementalRelayFeeRate;
     this._requiredSigners = validatedOptions.requiredSigners;
     this._totalSigners = validatedOptions.totalSigners;
     this._addressType = validatedOptions.addressType;
@@ -141,18 +142,18 @@ export class TransactionAnalyzer {
 
   /**
    * Calculates and returns the fee of the transaction in satoshis.
-   * @returns {string} The transaction fee in satoshis
+   * @returns {Satoshis} The transaction fee in satoshis
    */
-  get fee(): string {
+  get fee(): Satoshis {
     return this._absoluteFee.toString();
   }
 
   /**
    * Calculates and returns the fee rate of the transaction in satoshis per vbyte.
-   * @returns {string} The transaction fee rate in satoshis per vbyte
+   * @returns {FeeRateSatsPerVByte} The transaction fee rate in satoshis per vbyte
    */
-  get feeRate(): string {
-    return this._absoluteFee.dividedBy(this.vsize).toString();
+  get feeRate(): FeeRateSatsPerVByte {
+    return this._absoluteFee.dividedBy(this.vsize).toNumber();
   }
 
   /**
@@ -187,6 +188,15 @@ export class TransactionAnalyzer {
    * 1. Signaled RBF (BIP125): At least one input has a sequence number < 0xfffffffe.
    * 2. Full RBF: Replacing any unconfirmed transaction, regardless of signaling.
    *
+   * This method determines if RBF is possible based on three criteria:
+   * 1. The transaction signals RBF (or full RBF is assumed).
+   * 2. The wallet controls at least one input of the transaction.
+   * 3. The necessary input is available in the wallet's UTXO set.
+   *
+   * It uses the transaction's input templates and compares them against the available UTXOs
+   * to ensure that the wallet has control over at least one input, which is necessary for RBF.
+   *
+   *
    * While BIP125 defines the standard for signaled RBF, some nodes and miners
    * may accept full RBF, allowing replacement of any unconfirmed transaction.
    *
@@ -208,7 +218,25 @@ export class TransactionAnalyzer {
         "Assuming RBF is possible, but transaction does not signal RBF. This may cause issues with some nodes or services.",
       );
     }
-    return signaled || this._assumeRBF;
+
+    // Check if RBF is signaled or assumed
+    if (!(signaled || this._assumeRBF)) {
+      return false;
+    }
+
+    // Get input templates from the transaction
+    const inputTemplates = this.getInputTemplates();
+
+    // Check if any of the transaction's inputs are in the available UTXOs
+    const hasControlledInput = this._availableUtxos.some((utxo) =>
+      inputTemplates.some(
+        (template) =>
+          template.txid === utxo.txid && template.vout === utxo.vout,
+      ),
+    );
+
+    // RBF is only possible if the wallet controls at least one input
+    return hasControlledInput;
   }
 
   /**
@@ -237,9 +265,9 @@ export class TransactionAnalyzer {
 
   /**
    * Gets the current target fee rate in satoshis per vbyte.
-   * @returns {number} The target fee rate in satoshis per vbyte.
+   * @returns {FeeRateSatsPerVByte } The target fee rate in satoshis per vbyte.
    */
-  get targetFeeRate(): number {
+  get targetFeeRate(): FeeRateSatsPerVByte {
     return this._targetFeeRate;
   }
 
@@ -249,13 +277,7 @@ export class TransactionAnalyzer {
    * @see https://bitcoinops.org/en/topics/replace-by-fee/
    */
   get rbfFeeRate(): string {
-    const currentFeeRate = new BigNumber(this.feeRate);
-    const minReplacementFeeRate = BigNumber.max(
-      new BigNumber(currentFeeRate).plus(this._incrementalRelayFee),
-      new BigNumber(this.targetFeeRate),
-    );
-
-    return minReplacementFeeRate.toString();
+    return new BigNumber(this.minimumRBFFee).dividedBy(this.vsize).toString();
   }
 
   /**
@@ -263,21 +285,11 @@ export class TransactionAnalyzer {
    * @returns {string} The CPFP fee rate in satoshis per vbyte
    */
   get cpfpFeeRate(): string {
-    const config = {
-      addressType: this._addressType,
-      numInputs: 1, // Assuming 1 input for the child transaction
-      numOutputs: 1, // Assuming 1 output for the child transaction
-      m: this._requiredSigners,
-      n: this._totalSigners,
-    };
-
-    const childVsize = estimateTransactionVsize(config);
-    const packageSize = this.vsize + childVsize;
     const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
-      packageSize,
+      this.CPFPPackageSize,
     );
     const expectedFeeRate = BigNumber.max(
-      desiredPackageFee.minus(this.fee).dividedBy(childVsize),
+      desiredPackageFee.minus(this.fee).dividedBy(this.estimatedCPFPChildSize),
       new BigNumber(0),
     );
 
@@ -285,44 +297,50 @@ export class TransactionAnalyzer {
   }
 
   /**
-   * Estimates the fee required for a successful RBF (Replace-By-Fee) operation.
+   * Calculates the minimum total fee required for a valid RBF (Replace-By-Fee) replacement transaction.
    *
-   * This method calculates the minimum additional fee needed to replace the current transaction
-   * using the RBF protocol, as defined in BIP 125. It considers:
+   * This method determines the minimum fee needed to replace the current transaction
+   * using the RBF protocol, as defined in BIP 125. It considers three key factors:
    * 1. The current transaction fee
-   * 2. The incremental relay fee (to ensure the new transaction is attractive to miners)
-   * 3. The target fee rate for the replacement transaction
+   * 2. The minimum required fee increase (incremental relay fee * transaction size)
+   * 3. The user-specified target fee rate
    *
-   * The calculation ensures that the new transaction meets both the minimum relay fee
-   * requirement for replacement and the desired target fee rate.
+   * The calculation ensures that the new transaction meets both:
+   * a) The minimum fee increase required by the RBF rules
+   * b) The user's desired fee rate (which may be higher than the minimum required)
+   *
+   * This approach allows for fee bumping even if the user-specified target fee rate
+   * is lower than what's needed to unstick the transaction.
    *
    * References:
    * - BIP 125 (RBF): https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
    * - Bitcoin Core RBF implementation:
    *   https://github.com/bitcoin/bitcoin/blob/master/src/policy/rbf.cpp
    *
-   * @returns {Satoshis} The estimated additional RBF fee in satoshis.
-   *                     A positive value indicates the amount of additional fee required.
-   *                     A zero or negative value suggests that no fee increase is necessary,
-   *                     which could occur if the current fee already meets or exceeds requirements.
+   * @returns {Satoshis} The minimum total fee required for the replacement transaction in satoshis.
+   *                     This is always at least the current fee plus the minimum required increase,
+   *                     but may be higher if the user-specified target fee rate demands it.
    */
+  get minimumRBFFee(): Satoshis {
+    // Calculate the minimum fee increase required by RBF rules
+    const minReplacementFee = new BigNumber(this.feeRate)
+      .plus(this._incrementalRelayFeeRate)
+      .multipliedBy(this.vsize);
 
-  get estimateRBFFee(): Satoshis {
-    const currentFee = this.fee;
-    const vsize = this.vsize;
+    // Calculate the fee based on the user-specified target fee rate
+    const targetFeeBasedOnUserRate = new BigNumber(
+      this.targetFeeRate,
+    ).multipliedBy(this.vsize);
 
-    const minReplacementFee = BigNumber.max(
-      new BigNumber(currentFee).plus(
-        this._incrementalRelayFee.multipliedBy(vsize),
-      ),
-      new BigNumber(this.rbfFeeRate).multipliedBy(vsize),
-    );
-
-    return minReplacementFee.minus(currentFee).toString();
+    // Return the maximum of the two calculations
+    // This ensures we meet both RBF rules and user's desired fee rate
+    return BigNumber.max(minReplacementFee, targetFeeBasedOnUserRate)
+      .integerValue(BigNumber.ROUND_CEIL)
+      .toString();
   }
 
   /**
-   * Estimates the fee required for a successful CPFP (Child-Pays-For-Parent) operation.
+   * Calculates the minimum total fee required for a successful CPFP (Child-Pays-For-Parent) operation.
    *
    * This method calculates the  fee needed for a child transaction to boost the
    * fee rate of the current (parent) transaction using the CPFP technique. It considers:
@@ -351,7 +369,17 @@ export class TransactionAnalyzer {
    *                     A zero or negative value (rare) could indicate that the current
    *                     transaction's fee is already sufficient for the desired rate.
    */
-  get estimateCPFPFee(): Satoshis {
+  get minimumCPFPFee(): Satoshis {
+    return new BigNumber(this.cpfpFeeRate)
+      .multipliedBy(this.CPFPPackageSize)
+      .toString();
+  }
+
+  /**
+   * Estimates the virtual size of a potential CPFP child transaction.
+   * @returns {number} The estimated vsize of the child transaction in vbytes
+   */
+  get estimatedCPFPChildSize(): number {
     const config = {
       addressType: this._addressType,
       numInputs: 1, // Assuming 1 input for the child transaction
@@ -359,9 +387,16 @@ export class TransactionAnalyzer {
       m: this._requiredSigners,
       n: this._totalSigners,
     };
-    const childVsize = estimateTransactionVsize(config);
-    const packageSize = this.vsize + childVsize;
-    return new BigNumber(this.cpfpFeeRate).multipliedBy(packageSize).toString();
+    return estimateTransactionVsize(config);
+  }
+
+  /**
+   * Calculates the total package size for a potential CPFP transaction.
+   * This includes the size of the current (parent) transaction and the estimated size of the child transaction.
+   * @returns {number} The total package size in vbytes
+   */
+  get CPFPPackageSize(): number {
+    return this.vsize + this.estimatedCPFPChildSize;
   }
 
   /**
@@ -372,8 +407,8 @@ export class TransactionAnalyzer {
     txid: string;
     vsize: number;
     weight: number;
-    fee: string;
-    feeRate: string;
+    fee: Satoshis;
+    feeRate: FeeRateSatsPerVByte;
     inputs: BtcTxInputTemplate[];
     outputs: BtcTxOutputTemplate[];
     isRBFSignaled: boolean;
@@ -395,8 +430,8 @@ export class TransactionAnalyzer {
       canRBF: this.canRBF,
       canCPFP: this.canCPFP,
       recommendedStrategy: this.recommendedStrategy,
-      estimatedRBFFee: this.estimateRBFFee,
-      estimatedCPFPFee: this.estimateCPFPFee,
+      estimatedRBFFee: this.minimumRBFFee,
+      estimatedCPFPFee: this.minimumCPFPFee,
     };
   }
 
@@ -547,8 +582,8 @@ export class TransactionAnalyzer {
       return FeeBumpStrategy.NONE;
     }
 
-    const rbfFee = this.estimateRBFFee;
-    const cpfpFee = this.estimateCPFPFee;
+    const rbfFee = this.minimumRBFFee;
+    const cpfpFee = this.minimumCPFPFee;
 
     if (
       this.canRBF &&
@@ -562,20 +597,6 @@ export class TransactionAnalyzer {
     return FeeBumpStrategy.NONE;
   }
 
-  /**
-   * Validates the transaction to ensure it has inputs and outputs.
-   * @throws {Error} If the transaction has no inputs or outputs
-   * @private
-   */
-  private validateTransaction() {
-    if (this._rawTx.ins.length === 0) {
-      throw new Error("Transaction has no inputs");
-    }
-    if (this._rawTx.outs.length === 0) {
-      throw new Error("Transaction has no outputs");
-    }
-  }
-
   private static validateOptions(
     options: AnalyzerOptions,
   ): ValidatedAnalyzerOptions {
@@ -584,9 +605,6 @@ export class TransactionAnalyzer {
     // Raw transaction validation
     try {
       const tx = Transaction.fromHex(options.txHex);
-      if (tx.ins.length === 0) {
-        throw new Error("Transaction has no inputs");
-      }
       if (tx.outs.length === 0) {
         throw new Error("Transaction has no outputs");
       }
@@ -596,7 +614,6 @@ export class TransactionAnalyzer {
       );
     }
     validatedOptions.rawTx = Transaction.fromHex(options.txHex);
-
     // Network validation
     if (!Object.values(Network).includes(options.network)) {
       throw new Error(`Invalid network: ${options.network}`);
@@ -639,13 +656,15 @@ export class TransactionAnalyzer {
     validatedOptions.changeOutputIndex = options.changeOutputIndex;
 
     //If Incremental relay fee is given then it's validation
-    const incrementalRelayFee = new BigNumber(options.incrementalRelayFee || 1);
+    const incrementalRelayFee = new BigNumber(
+      options.incrementalRelayFeeRate || 1,
+    );
     if (incrementalRelayFee.isLessThanOrEqualTo(0)) {
       throw new Error(
-        `Invalid incremental relay fee: ${options.incrementalRelayFee}`,
+        `Invalid incremental relay fee: ${options.incrementalRelayFeeRate}`,
       );
     }
-    validatedOptions.incrementalRelayFee = incrementalRelayFee;
+    validatedOptions.incrementalRelayFeeRate = incrementalRelayFee;
 
     // Required and total signers validation
     if (

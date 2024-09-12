@@ -56,7 +56,7 @@ export interface AnalyzerOptions {
    * The absolute fee of the original transaction in satoshis.
    * This is used as the basis for fee calculations and comparisons.
    */
-  absoluteFee: string | number;
+  absoluteFee: Satoshis;
 
   /**
    * An array of Unspent Transaction Outputs (UTXOs) that are available
@@ -74,14 +74,14 @@ export interface AnalyzerOptions {
   changeOutputIndex?: number;
 
   /**
-   * The incremental relay fee in satoshis per vbyte. This is the minimum
+   * The incremental relay fee-rate in satoshis per vbyte. This is the minimum
    * fee rate increase required for nodes to accept a replacement transaction.
    * It's used in RBF calculations to ensure the new transaction meets
    * network requirements.
    * Default value in Bitcoin Core is 1 sat/vbyte.
    * @see https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.h
    */
-  incrementalRelayFee?: string | number;
+  incrementalRelayFeeRate?: FeeRateSatsPerVByte;
 
   /**
    * The number of signatures required in a multisig setup.
@@ -177,42 +177,6 @@ export interface TransactionInput {
 }
 
 /**
- * Represents an output in a Bitcoin transaction.
- */
-export interface TransactionOutput {
-  /**
-   * The value of the output in satoshis.
-   * This is the amount of bitcoin contained in this output.
-   */
-  value: number;
-
-  /**
-   * The scriptPubKey in hexadecimal format.
-   * This script defines the conditions that must be met to spend this output.
-   */
-  scriptPubKey: string;
-
-  /**
-   * The Bitcoin address associated with this output.
-   * This is derived from the scriptPubKey and provides a human-readable format.
-   */
-  address: string;
-
-  /**
-   * Indicates whether this output is spendable by the user.
-   *
-   * This is crucial for CPFP (Child-Pays-for-Parent) operations:
-   * - If true, this output can be used as an input in a child transaction for CPFP.
-   * - This includes both change outputs and any other outputs sent to addresses
-   *   controlled by the user's wallet.
-   *
-   * Note: The term "isChange" is replaced with "isSpendable" to more accurately
-   * reflect its purpose in CPFP scenarios.
-   */
-  isSpendable: boolean;
-}
-
-/**
  * Represents a fee rate in satoshis per virtual byte.
  * This is used for fee estimation and fee bumping calculations.
  * @see https://bitcoinops.org/en/topics/fee-estimation/
@@ -239,7 +203,7 @@ export interface TransactionTemplateOptions {
    * The target fee rate in satoshis per virtual byte.
    * This is used to calculate the appropriate fee for the transaction.
    */
-  targetFeeRate: number;
+  targetFeeRate: FeeRateSatsPerVByte;
 
   /**
    * The dust threshold in satoshis.
@@ -451,11 +415,11 @@ export const SCRIPT_TYPES = {
   /** Unknown or unsupported script type */
   UNKNOWN: "UNKNOWN",
   /** Pay to Script Hash */
-  P2SH: MULTISIG_ADDRESS_TYPES.P2SH as "P2SH",
+  P2SH: MULTISIG_ADDRESS_TYPES.P2SH,
   /** Pay to Script Hash wrapping a Pay to Witness Script Hash */
-  P2SH_P2WSH: MULTISIG_ADDRESS_TYPES.P2SH_P2WSH as "P2SH-P2WSH",
+  P2SH_P2WSH: MULTISIG_ADDRESS_TYPES.P2SH_P2WSH,
   /** Pay to Witness Script Hash (Native SegWit for scripts) */
-  P2WSH: MULTISIG_ADDRESS_TYPES.P2WSH as "P2WSH",
+  P2WSH: MULTISIG_ADDRESS_TYPES.P2WSH,
 } as const;
 
 /**
@@ -463,6 +427,6 @@ export const SCRIPT_TYPES = {
  * This type can be used for type checking and autocompletion in functions
  * that deal with different Bitcoin address formats.
  *
- * @typedef {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
+ * @type {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
  */
 export type ScriptType = (typeof SCRIPT_TYPES)[keyof typeof SCRIPT_TYPES];
