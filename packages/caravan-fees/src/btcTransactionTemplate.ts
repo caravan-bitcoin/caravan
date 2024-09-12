@@ -12,8 +12,7 @@ import {
   ABSURDLY_HIGH_FEE_RATE,
 } from "./constants";
 import {
-  addInputToPsbt,
-  addOutputToPsbt,
+  createOutputScript,
   estimateTransactionVsize,
   initializePsbt,
   getOutputAddress,
@@ -328,12 +327,12 @@ export class BtcTransactionTemplate {
     const psbt = new PsbtV2();
 
     // Add Inputs to PSBT
-    this._inputs.forEach((input) => addInputToPsbt(psbt, input)); // already checks for validity
+    this._inputs.forEach((input) => this.addInputToPsbt(psbt, input)); // already checks for validity
 
     // Add Outputs to PSBT
     this._outputs.forEach((output) => {
       if (output.isValid()) {
-        addOutputToPsbt(psbt, output, this._network);
+        this.addOutputToPsbt(psbt, output);
       }
     });
     return psbt.serialize("base64");
@@ -496,8 +495,9 @@ export class BtcTransactionTemplate {
       const amountSats = parseNonWitnessUtxoValue(
         nonWitnessUtxo,
         index,
-        psbt,
       ).toString();
+      input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
+      input.amountSats = amountSats;
 
       input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
       input.amountSats = amountSats;
@@ -543,5 +543,67 @@ export class BtcTransactionTemplate {
     }
 
     return outputs;
+  }
+
+  /**
+   * Adds a single input to the provided PSBT based on the given input template (used in BtcTransactionTemplate)
+   * @param {PsbtV2} psbt - The PsbtV2 object.
+   * @param input - The input template to be processed and added.
+   * @throws {Error} - Throws an error if script extraction or PSBT input addition fails.
+   */
+  private addInputToPsbt(psbt: PsbtV2, input: BtcTxInputTemplate): void {
+    if (!input.hasRequiredFieldsforPSBT()) {
+      throw new Error(
+        `Input ${input.txid}:${input.vout} lacks required UTXO information`,
+      );
+    }
+
+    const inputData: any = {
+      previousTxId: input.txid,
+      outputIndex: input.vout,
+    };
+    // Add non-witness UTXO if available
+    if (input.nonWitnessUtxo) {
+      inputData.nonWitnessUtxo = input.nonWitnessUtxo;
+    }
+
+    // Add witness UTXO if available
+    if (input.witnessUtxo) {
+      inputData.witnessUtxo = {
+        amount: input.witnessUtxo.value,
+        script: input.witnessUtxo.script,
+      };
+    }
+
+    // Add sequence if set
+    if (input.sequence !== undefined) {
+      inputData.sequence = input.sequence;
+    }
+    try {
+      psbt.addInput(inputData);
+    } catch (error) {
+      throw new Error(
+        `Failed to add input to PSBT: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  /**
+   * Adds an output to the PSBT(used in BtcTransactionTemplate)
+   *
+   * @param {PsbtV2} psbt - The PsbtV2 object.
+   * @param {BtcTxOutputTemplate} output - The output template to be processed and added.
+   * @throws {Error} - Throws an error if output script creation fails.
+   */
+  private addOutputToPsbt(psbt: PsbtV2, output: BtcTxOutputTemplate): void {
+    const script = createOutputScript(output.address, this._network);
+    if (!script) {
+      throw new Error(
+        `Unable to create output script for address: ${output.address}`,
+      );
+    }
+    psbt.addOutput({
+      script,
+      amount: parseInt(output.amountSats),
+    });
   }
 }
