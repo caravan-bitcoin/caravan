@@ -17,8 +17,7 @@
     // Ensure that Babel can safely transpile files in the TypeScript project
     "isolatedModules": true,
     "outDir": "lib",
+    "types": ["vitest/globals"]
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"]
 }
