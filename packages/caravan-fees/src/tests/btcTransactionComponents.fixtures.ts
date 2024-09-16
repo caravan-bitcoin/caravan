@@ -1,8 +1,9 @@
 import { UTXO } from "../types";
 
-export const inputTemplateFixtures = [
+export const validInputTemplateFixtures = [
   {
-    test: {
+    case: "Valid input with positive amount",
+    data: {
       txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       vout: 0,
       amountSats: "100000",
@@ -16,7 +17,28 @@ export const inputTemplateFixtures = [
     },
   },
   {
-    test: {
+    case: "Valid input with RBF signaling",
+    data: {
+      txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+      vout: 1,
+      amountSats: "200000",
+      sequence: 0xfffffffd,
+    },
+    expected: {
+      txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+      vout: 1,
+      amountSats: "200000",
+      amountBTC: "0.002",
+      isValid: true,
+      isRBFEnabled: undefined,
+    },
+  },
+];
+
+export const invalidInputTemplateFixtures = [
+  {
+    case: "Invalid input with negative amount",
+    data: {
       txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
       vout: 1,
       amountSats: "-100000",
@@ -29,11 +51,24 @@ export const inputTemplateFixtures = [
       isValid: false,
     },
   },
+  {
+    case: "Invalid input with invalid sequence number",
+    data: {
+      txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      vout: 0,
+      amountSats: "100000",
+      sequence: 0x100000000, // Greater than 32-bit unsigned integer
+    },
+    expected: {
+      error: "Invalid sequence number",
+    },
+  },
 ];
 
-export const outputTemplateFixtures = [
+export const validOutputTemplateFixtures = [
   {
-    test: {
+    case: "Valid output with positive amount",
+    data: {
       address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
       amountSats: "50000",
     },
@@ -46,7 +81,8 @@ export const outputTemplateFixtures = [
     },
   },
   {
-    test: {
+    case: "Valid locked output",
+    data: {
       address: "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
       amountSats: "100000",
       locked: true,
@@ -57,6 +93,34 @@ export const outputTemplateFixtures = [
       amountBTC: "0.001",
       isMalleable: false,
       isValid: true,
+    },
+  },
+];
+
+export const invalidOutputTemplateFixtures = [
+  {
+    case: "Invalid output with zero amount",
+    data: {
+      address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+      amountSats: "0",
+    },
+    expected: {
+      address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2",
+      amountSats: "0",
+      amountBTC: "0",
+      isMalleable: true,
+      isValid: false,
+    },
+  },
+  {
+    case: "Invalid locked output with zero amount",
+    data: {
+      address: "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy",
+      amountSats: "0",
+      locked: true,
+    },
+    expected: {
+      error: "Locked outputs must have an amount specified.",
     },
   },
 ];
