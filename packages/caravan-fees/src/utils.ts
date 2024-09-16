@@ -382,35 +382,6 @@ export function mapCaravanNetworkToBitcoinJS(
   }
 }
 
-function reverseBuffer(buffer: Buffer): Buffer {
-  const reversed = Buffer.alloc(buffer.length);
-  for (let i = 0; i < buffer.length; i++) {
-    reversed[i] = buffer[buffer.length - 1 - i];
-  }
-  return reversed;
-}
-
-/**
- * Reverses the byte order of a transaction ID (txid).
- *
- * In Bitcoin, transaction IDs are often displayed in reversed byte order
- * compared to how they are used internally. This function converts between
- * these two representations.
- *
- * @param {string} txid - The transaction ID to reverse, in hexadecimal format.
- * @returns {string} The reversed transaction ID, in hexadecimal format.
- *
- * @example
- * const originalTxid = "3ca92b7286514670bf7a69dc2d6ebc6cdb70fe6a8286bf288e3a360632d32d7d";
- * const reversedTxid = reverseTxid(originalTxid);
- * console.log(reversedTxid); // "7d2dd33206363a8e28bf86826afe70db6cbc6e2ddc697abf70465186722ba93c"
- *
- * @throws {Error} If the input is not a valid hexadecimal string.
- */
-export function reverseTxid(txid: string): string {
-  return reverseBuffer(Buffer.from(txid, "hex")).toString("hex");
-}
-
 /**
  * Validates a non-witness UTXO (Unspent Transaction Output) for use in a PSBT.
  *
