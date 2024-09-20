@@ -1,14 +1,4 @@
 import { PsbtV2, getPsbtVersionNumber } from "../../psbtv2";
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeEach,
-  test,
-  beforeAll,
-  afterAll,
-} from "vitest";
 
 import { KeyType, PsbtGlobalTxModifiableBits } from "../../psbtv2/types";
 

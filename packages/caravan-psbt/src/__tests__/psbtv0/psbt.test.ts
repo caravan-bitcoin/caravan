@@ -12,8 +12,6 @@ import {
 import _ from "lodash";
 import { psbtArgsFromFixture } from "../../psbtv0/utils";
 
-import { describe, expect, it, test } from "vitest";
-
 describe("getUnsignedMultisigPsbtV0", () => {
   TEST_FIXTURES.transactions
     .map((fixture) => [psbtArgsFromFixture(fixture), fixture])
