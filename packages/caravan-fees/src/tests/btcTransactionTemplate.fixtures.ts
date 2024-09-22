@@ -2,9 +2,8 @@ import { Network } from "@caravan/bitcoin";
 
 export const fixtures: TestFixture[] = [
   {
-    // https://mempool.space/tx/d66730234997ea82005838c72e56470164fd6fb31c192791f898d9eadfad84a6
-    name: "Single input, multiple outputs transaction",
-    test: {
+    case: "Single input, multiple outputs transaction",
+    input: {
       inputs: [
         {
           txid: "781e5527d1af148125f6f1c29177cd2168246d84210dd223019811286b2f4718",
@@ -14,7 +13,10 @@ export const fixtures: TestFixture[] = [
           prevTxHex:
             "0100000000010117ba2213d4849fded58c68eb58da6a0a7d310bba86e4eff2dd3a4da88a7044f20500000000ffffffff06297d080000000000160014fe3f10c6682ca520d7d4bb9ce6aac24a3e8887bdbaa2030000000000160014a91587db15572a94389fd4ae1dcbb21b14c61bd631660400000000001600144c43740c628dd1e8a67fa0e8cef7ce6dfc5aba71787e0400000000001976a9142bb0012ff941501d1207f2fba0223d3f4411162288acd01213000000000017a914d3817a569b661bb420560132777c3c4536d925a08703775201000000001600149a5cf45acfa00df89f70fe345be34cc6abbb408e02483045022100b785095310cbf768071fba7da86f57316547dae1c7cceb3b6d2803108cae88660220041fb4dff95fea2247d2582738233e1fb8e8f06abc844de261b6141214ffd59b012103782c80595775eb1b564ee6b136075f90824c5f102c15884546ea590f3636584f00000000",
           witnessUtxo: {
-            script: Buffer.from("00149a5cf45acfa00df89f70fe345be34cc6abbb408e"),
+            script: Buffer.from(
+              "00149a5cf45acfa00df89f70fe345be34cc6abbb408e",
+              "hex",
+            ),
             value: 24810346,
           },
         },
@@ -63,7 +65,7 @@ export const fixtures: TestFixture[] = [
       ],
       network: Network.MAINNET,
       targetFeeRate: 1,
-      scriptType: "P2SH_P2WSH",
+      scriptType: "P2SH-P2WSH",
       requiredSigners: 1,
       totalSigners: 1,
     },
@@ -74,8 +76,8 @@ export const fixtures: TestFixture[] = [
     },
   },
   {
-    name: "Single input, multisig outputs transaction",
-    test: {
+    case: "Single input, multisig outputs transaction",
+    input: {
       inputs: [
         {
           txid: "15a435a2614ee85776e26908fab442e51a57f4e83f5f4a798ca190ef5fd7defe",
@@ -85,7 +87,10 @@ export const fixtures: TestFixture[] = [
           prevTxHex:
             "0100000000010117ba2213d4849fded58c68eb58da6a0a7d310bba86e4eff2dd3a4da88a7044f20500000000ffffffff06297d080000000000160014fe3f10c6682ca520d7d4bb9ce6aac24a3e8887bdbaa2030000000000160014a91587db15572a94389fd4ae1dcbb21b14c61bd631660400000000001600144c43740c628dd1e8a67fa0e8cef7ce6dfc5aba71787e0400000000001976a9142bb0012ff941501d1207f2fba0223d3f4411162288acd01213000000000017a914d3817a569b661bb420560132777c3c4536d925a08703775201000000001600149a5cf45acfa00df89f70fe345be34cc6abbb408e02483045022100b785095310cbf768071fba7da86f57316547dae1c7cceb3b6d2803108cae88660220041fb4dff95fea2247d2582738233e1fb8e8f06abc844de261b6141214ffd59b012103782c80595775eb1b564ee6b136075f90824c5f102c15884546ea590f3636584f00000000",
           witnessUtxo: {
-            script: Buffer.from("00149a5cf45acfa00df89f70fe345be34cc6abbb408e"),
+            script: Buffer.from(
+              "00149a5cf45acfa00df89f70fe345be34cc6abbb408e",
+              "hex",
+            ),
             value: 24810346,
           },
         },
@@ -116,7 +121,7 @@ export const fixtures: TestFixture[] = [
       ],
       network: Network.MAINNET,
       targetFeeRate: 1,
-      scriptType: "P2SH_P2WSH",
+      scriptType: "P2SH-P2WSH",
       requiredSigners: 1,
       totalSigners: 3,
     },
@@ -139,8 +144,8 @@ export interface TestInput {
 }
 
 export interface TestFixture {
-  name: string;
-  test: {
+  case: string;
+  input: {
     inputs: TestInput[];
     outputs: {
       address: string;

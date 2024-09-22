@@ -10,27 +10,27 @@ import BigNumber from "bignumber.js";
 
 describe("BtcTransactionTemplate", () => {
   fixtures.forEach((fixture: TestFixture) => {
-    describe(fixture.name, () => {
+    describe(fixture.case, () => {
       let txTemplate: BtcTransactionTemplate;
 
       beforeEach(() => {
         txTemplate = new BtcTransactionTemplate({
-          inputs: fixture.test.inputs.map((input) =>
+          inputs: fixture.input.inputs.map((input) =>
             BtcTxInputTemplate.fromUTXO(input as unknown as UTXO),
           ),
-          outputs: fixture.test.outputs.map(
+          outputs: fixture.input.outputs.map(
             (output) => new BtcTxOutputTemplate(output),
           ),
-          network: fixture.test.network,
-          targetFeeRate: fixture.test.targetFeeRate,
-          scriptType: fixture.test.scriptType,
-          requiredSigners: fixture.test.requiredSigners,
-          totalSigners: fixture.test.totalSigners,
+          network: fixture.input.network,
+          targetFeeRate: fixture.input.targetFeeRate,
+          scriptType: fixture.input.scriptType,
+          requiredSigners: fixture.input.requiredSigners,
+          totalSigners: fixture.input.totalSigners,
         });
       });
 
       test("should correctly calculate total input amount", () => {
-        const expectedInputAmount = fixture.test.inputs.reduce(
+        const expectedInputAmount = fixture.input.inputs.reduce(
           (sum, input) => sum.plus(input.value),
           new BigNumber(0),
         );
@@ -40,7 +40,7 @@ describe("BtcTransactionTemplate", () => {
       });
 
       test("should correctly calculate total output amount", () => {
-        const expectedOutputAmount = fixture.test.outputs.reduce(
+        const expectedOutputAmount = fixture.input.outputs.reduce(
           (sum, output) => sum.plus(output.amountSats),
           new BigNumber(0),
         );
