@@ -136,7 +136,6 @@ export const createCancelRbfTransaction = (
   newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(originalInput));
 
   // Step 6: Add more inputs if necessary to meet fee requirements
-
   for (const utxo of availableInputs) {
     if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
       break; // Stop adding inputs once fee requirements are met
@@ -171,7 +170,7 @@ export const createCancelRbfTransaction = (
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
   const minRequiredFee = new BigNumber(analysis.fee).plus(
-    txAnalyzer.estimateRBFFee,
+    txAnalyzer.minimumRBFFee,
   );
 
   if (currentFee.isLessThan(minRequiredFee)) {
@@ -383,7 +382,7 @@ export const createAcceleratedRbfTransaction = (
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
   const minRequiredFee = new BigNumber(analysis.fee).plus(
-    txAnalyzer.estimateRBFFee,
+    txAnalyzer.minimumRBFFee,
   );
 
   if (currentFee.isLessThan(minRequiredFee)) {
