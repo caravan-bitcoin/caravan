@@ -190,29 +190,6 @@ export const createCancelRbfTransaction = (
   const currentFee = new BigNumber(newTxTemplate.currentFee);
   const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
 
-  console.log(
-    "testing",
-    "original tx size",
-    analysis.vsize,
-    "original tx fees",
-    analysis.fee,
-    "original tx feeRate",
-    analysis.feeRate,
-  );
-
-  console.log(
-    "\n modified",
-    "bumped tx size",
-    newTxTemplate.estimatedVsize,
-    "bumped tx fees",
-    newTxTemplate.currentFee,
-    "bumped tx targetFeesToPay",
-    newTxTemplate.targetFeesToPay,
-    "bumped tx feeRate",
-    newTxTemplate.estimatedFeeRate,
-    newTxTemplate,
-  );
-
   if (currentFee.isLessThan(minRequiredFee)) {
     if (strict) {
       throw new Error(
