@@ -7,6 +7,7 @@ import {
   convertExtendedPublicKey,
   validateExtendedPublicKey,
   Network,
+  P2SH,
 } from "@caravan/bitcoin";
 import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
@@ -68,7 +69,7 @@ class ExtendedPublicKeyImporter extends React.Component {
   };
 
   renderImport = () => {
-    const { extendedPublicKeyImporter, number } = this.props;
+    const { extendedPublicKeyImporter, number, addressType } = this.props;
     const { disableChangeMethod } = this.state;
     return (
       <div>
@@ -82,7 +83,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             variant="standard"
             onChange={this.handleMethodChange}
           >
-            <MenuItem value={BITBOX}>BitBox</MenuItem>
+            {addressType != P2SH && <MenuItem value={BITBOX}>BitBox</MenuItem>}
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={COLDCARD}>Coldcard</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>

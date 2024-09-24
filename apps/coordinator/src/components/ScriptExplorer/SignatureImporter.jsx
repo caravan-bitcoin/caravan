@@ -7,6 +7,7 @@ import {
   multisigBIP32Root,
   validateBIP32Path,
   getMaskedDerivation,
+  P2SH,
 } from "@caravan/bitcoin";
 import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
@@ -93,7 +94,7 @@ class SignatureImporter extends React.Component {
   };
 
   renderImport = () => {
-    const { signatureImporter, number, isWallet } = this.props;
+    const { signatureImporter, number, isWallet, addressType } = this.props;
     const currentNumber = this.getCurrent();
     const notMyTurn = number > currentNumber;
     const { disableChangeMethod } = this.state;
@@ -119,7 +120,7 @@ class SignatureImporter extends React.Component {
             onChange={this.handleMethodChange}
           >
             <MenuItem value={UNKNOWN}>{"< Select method >"}</MenuItem>
-            <MenuItem value={BITBOX}>BitBox</MenuItem>
+            {addressType != P2SH && <MenuItem value={BITBOX}>BitBox</MenuItem>}
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={COLDCARD} disabled={!isWallet}>
