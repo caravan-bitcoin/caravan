@@ -136,9 +136,22 @@ export const createCancelRbfTransaction = (
   newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(originalInput));
 
   // Step 6: Add more inputs if necessary to meet fee requirements
+
+  // We continue adding inputs until both the fee rate is satisfied and
+  // the absolute fee meets the minimum RBF requirement
   for (const utxo of availableInputs) {
-    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
-      break; // Stop adding inputs once fee requirements are met
+    if (
+      newTxTemplate.feeRateSatisfied &&
+      new BigNumber(newTxTemplate.currentFee).gte(
+        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.minimumRBFFee),
+      )
+    ) {
+      // Stop adding inputs when both conditions are met:
+      // 1. The fee rate satisfies the target rate
+      // 2. The current fee is greater than or equal to the maximum of:
+      //    a) The target fee based on the desired rate by user
+      //    b) The minimum fee required for a valid RBF replacement
+      break;
     }
     // Skip if this UTXO is already added
     if (utxo.txid === originalInput.txid && utxo.vout === originalInput.vout) {
@@ -148,8 +161,14 @@ export const createCancelRbfTransaction = (
   }
 
   // Step 7: Calculate and set the cancellation output amount
+
   const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
-  const fee = new BigNumber(newTxTemplate.targetFeesToPay);
+  // Ensure we're using the higher of the target fee and the minimum RBF fee
+  const fee = BigNumber.max(
+    newTxTemplate.targetFeesToPay,
+    txAnalyzer.minimumRBFFee,
+  );
+  // The cancel output receives all funds minus the fee
   const cancelOutputAmount = totalInputAmount.minus(fee);
 
   if (cancelOutputAmount.isLessThan(dustThreshold)) {
@@ -169,8 +188,29 @@ export const createCancelRbfTransaction = (
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(analysis.fee).plus(
-    txAnalyzer.minimumRBFFee,
+  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+
+  console.log(
+    "testing",
+    "original tx size",
+    analysis.vsize,
+    "original tx fees",
+    analysis.fee,
+    "original tx feeRate",
+    analysis.feeRate,
+  );
+
+  console.log(
+    "\n modified",
+    "bumped tx size",
+    newTxTemplate.estimatedVsize,
+    "bumped tx fees",
+    newTxTemplate.currentFee,
+    "bumped tx targetFeesToPay",
+    newTxTemplate.targetFeesToPay,
+    "bumped tx feeRate",
+    newTxTemplate.estimatedFeeRate,
+    newTxTemplate,
   );
 
   if (currentFee.isLessThan(minRequiredFee)) {
@@ -336,8 +376,18 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 6: Add more inputs if necessary to meet fee requirements
   for (const utxo of availableInputs) {
-    if (newTxTemplate.feeRateSatisfied && newTxTemplate.areFeesPaid()) {
-      break; // Stop adding inputs once fee requirements are met
+    if (
+      newTxTemplate.feeRateSatisfied &&
+      new BigNumber(newTxTemplate.currentFee).gte(
+        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.minimumRBFFee),
+      )
+    ) {
+      // Stop adding inputs when both conditions are met:
+      // 1. The fee rate satisfies the target rate
+      // 2. The current fee is greater than or equal to the maximum of:
+      //    a) The target fee based on the desired rate by user
+      //    b) The minimum fee required for a valid RBF replacement
+      break;
     }
     // Skip if this UTXO is already added
     if (
@@ -356,7 +406,11 @@ export const createAcceleratedRbfTransaction = (
     const totalOutputAmount = new BigNumber(
       newTxTemplate.getTotalOutputAmount(),
     );
-    const fee = new BigNumber(newTxTemplate.targetFeesToPay);
+    // Ensure we're using the higher of the target fee and the minimum RBF fee
+    const fee = BigNumber.max(
+      newTxTemplate.targetFeesToPay,
+      txAnalyzer.minimumRBFFee,
+    );
     const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
 
     if (changeAmount.gt(dustThreshold)) {
@@ -381,9 +435,7 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(analysis.fee).plus(
-    txAnalyzer.minimumRBFFee,
-  );
+  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
 
   if (currentFee.isLessThan(minRequiredFee)) {
     if (strict) {
