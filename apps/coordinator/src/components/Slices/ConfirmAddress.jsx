@@ -21,6 +21,7 @@ import {
   multisigAddressType,
   multisigRequiredSigners,
   multisigTotalSigners,
+  P2SH,
 } from "@caravan/bitcoin";
 import {
   BITBOX,
@@ -232,7 +233,9 @@ const ConfirmAddress = ({ slice, network }) => {
               variant="standard"
             >
               <MenuItem value="">{"< Select method >"}</MenuItem>
-              <MenuItem value={BITBOX}>BitBox</MenuItem>
+              {addressType != P2SH && (
+                <MenuItem value={BITBOX}>BitBox</MenuItem>
+              )}
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD} disabled>
