@@ -115,7 +115,7 @@ export type KEYSTORE_TYPES = (typeof KEYSTORES)[KEYSTORE_KEYS];
 export function GetMetadata({ keystore }: { keystore: KEYSTORE_TYPES }) {
   switch (keystore) {
     case BITBOX:
-      return new BitBoxGetMetadata();
+      return new BitBoxGetMetadata({});
     case LEDGER:
       return new LedgerGetMetadata();
     case TREZOR:
