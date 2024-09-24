@@ -143,14 +143,14 @@ export const createCancelRbfTransaction = (
     if (
       newTxTemplate.feeRateSatisfied &&
       new BigNumber(newTxTemplate.currentFee).gte(
-        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.minimumRBFFee),
+        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.fee),
       )
     ) {
       // Stop adding inputs when both conditions are met:
       // 1. The fee rate satisfies the target rate
       // 2. The current fee is greater than or equal to the maximum of:
       //    a) The target fee based on the desired rate by user
-      //    b) The minimum fee required for a valid RBF replacement
+      //    b) The minimum fee required for a valid RBF replacement >= original fees
       break;
     }
     // Skip if this UTXO is already added
@@ -163,11 +163,8 @@ export const createCancelRbfTransaction = (
   // Step 7: Calculate and set the cancellation output amount
 
   const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
-  // Ensure we're using the higher of the target fee and the minimum RBF fee
-  const fee = BigNumber.max(
-    newTxTemplate.targetFeesToPay,
-    txAnalyzer.minimumRBFFee,
-  );
+  // Ensure we're using the higher of the target fee and the original fee
+  const fee = BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.fee);
   // The cancel output receives all funds minus the fee
   const cancelOutputAmount = totalInputAmount.minus(fee);
 
@@ -188,18 +185,35 @@ export const createCancelRbfTransaction = (
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+  const originalTxFee = new BigNumber(txAnalyzer.fee);
+  const targetFeeForNewSize = new BigNumber(newTxTemplate.targetFeesToPay);
+
+  // Calculate the minimum required fee as the maximum of:
+  // 1. The original transaction fee (to satisfy RBF rules)
+  // 2. The target fee for the new transaction size
+  const minRequiredFee = BigNumber.max(originalTxFee, targetFeeForNewSize);
 
   if (currentFee.isLessThan(minRequiredFee)) {
     if (strict) {
       throw new Error(
-        `New transaction fee (${currentFee.toString()} sats) must be higher than the minimum required fee for RBF (${minRequiredFee.toString()} sats).`,
+        `New transaction fee (${currentFee.toString()} sats) must be at least ${minRequiredFee.toString()} sats. ` +
+          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
+          `the target fee for the new size (${targetFeeForNewSize.toString()} sats).`,
       );
     } else {
       console.warn(
-        `New transaction fee (${currentFee.toString()} sats) is lower than the recommended minimum fee for RBF (${minRequiredFee.toString()} sats). Transaction may not be accepted by all nodes.`,
+        `New transaction fee (${currentFee.toString()} sats) is lower than the required minimum of ${minRequiredFee.toString()} sats. ` +
+          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
+          `the target fee for the new size (${targetFeeForNewSize.toString()} sats). ` +
+          `Transaction may not be accepted by all nodes.`,
       );
     }
+  } else if (currentFee.isGreaterThan(minRequiredFee.times(1.5))) {
+    // Optional: Warn if the fee is significantly higher than necessary
+    console.warn(
+      `New transaction fee (${currentFee.toString()} sats) is significantly higher than the minimum required fee (${minRequiredFee.toString()} sats). ` +
+        `Consider optimizing the fee to avoid overpayment.`,
+    );
   }
 
   // Step 9: Validate the transaction
@@ -356,14 +370,14 @@ export const createAcceleratedRbfTransaction = (
     if (
       newTxTemplate.feeRateSatisfied &&
       new BigNumber(newTxTemplate.currentFee).gte(
-        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.minimumRBFFee),
+        BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.fee),
       )
     ) {
       // Stop adding inputs when both conditions are met:
       // 1. The fee rate satisfies the target rate
       // 2. The current fee is greater than or equal to the maximum of:
       //    a) The target fee based on the desired rate by user
-      //    b) The minimum fee required for a valid RBF replacement
+      //    b) The minimum fee required for a valid RBF replacement >= original fees
       break;
     }
     // Skip if this UTXO is already added
@@ -383,11 +397,8 @@ export const createAcceleratedRbfTransaction = (
     const totalOutputAmount = new BigNumber(
       newTxTemplate.getTotalOutputAmount(),
     );
-    // Ensure we're using the higher of the target fee and the minimum RBF fee
-    const fee = BigNumber.max(
-      newTxTemplate.targetFeesToPay,
-      txAnalyzer.minimumRBFFee,
-    );
+    // Ensure we're using the higher of the target fee and the original fees
+    const fee = BigNumber.max(newTxTemplate.targetFeesToPay, txAnalyzer.fee);
     const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
 
     if (changeAmount.gt(dustThreshold)) {
@@ -412,18 +423,35 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+  const originalTxFee = new BigNumber(txAnalyzer.fee);
+  const targetFeeForNewSize = new BigNumber(newTxTemplate.targetFeesToPay);
+
+  // Calculate the minimum required fee as the maximum of:
+  // 1. The original transaction fee (to satisfy RBF rules)
+  // 2. The target fee for the new transaction size
+  const minRequiredFee = BigNumber.max(originalTxFee, targetFeeForNewSize);
 
   if (currentFee.isLessThan(minRequiredFee)) {
     if (strict) {
       throw new Error(
-        `New transaction fee (${currentFee.toString()} sats) must be higher than the minimum required fee for RBF (${minRequiredFee.toString()} sats).`,
+        `New transaction fee (${currentFee.toString()} sats) must be at least ${minRequiredFee.toString()} sats. ` +
+          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
+          `the target fee for the new size (${targetFeeForNewSize.toString()} sats).`,
       );
     } else {
       console.warn(
-        `New transaction fee (${currentFee.toString()} sats) is lower than the recommended minimum fee for RBF (${minRequiredFee.toString()} sats). Transaction may not be accepted by all nodes.`,
+        `New transaction fee (${currentFee.toString()} sats) is lower than the required minimum of ${minRequiredFee.toString()} sats. ` +
+          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
+          `the target fee for the new size (${targetFeeForNewSize.toString()} sats). ` +
+          `Transaction may not be accepted by all nodes.`,
       );
     }
+  } else if (currentFee.isGreaterThan(minRequiredFee.times(1.5))) {
+    // Optional: Warn if the fee is significantly higher than necessary
+    console.warn(
+      `New transaction fee (${currentFee.toString()} sats) is significantly higher than the minimum required fee (${minRequiredFee.toString()} sats). ` +
+        `Consider optimizing the fee to avoid overpayment.`,
+    );
   }
 
   // Step 9: Validate the transaction
