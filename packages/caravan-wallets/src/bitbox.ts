@@ -36,6 +36,9 @@ import {
  */
 export const BITBOX = "bitbox";
 
+// Callback for showing the BitBox pairing code. It returns a function to hide it again.
+export type TShowPairingCode = (pairingCode: string) => (() => void) | null;
+
 function convertNetwork(network: BitcoinNetwork): BtcCoin {
   return network === 'mainnet' ? 'btc' : 'tbtc';
 }
@@ -103,11 +106,20 @@ async function convertMultisig(pairedBitBox: PairedBitBox, walletConfig: Multisi
  * const result = await interaction.run();
  * console.log(result); // whatever value `app.doSomething(...)` returns
  *
+ * The `showPairingCode` callback can be supplied to display and hide the BitBox pairing code.
+ * If not provided, the default is to open a browser popup showing the pairing code.
  */
 export class BitBoxInteraction extends DirectKeystoreInteraction {
   appVersion?: string;
 
   appName?: string;
+
+  showPairingCode?: TShowPairingCode;
+
+  constructor({ showPairingCode }: { showPairingCode?: TShowPairingCode }) {
+    super();
+    this.showPairingCode = showPairingCode;
+  }
 
   /**
    * Adds `pending` messages at the `info` level about ensuring the
@@ -132,19 +144,60 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
     return messages;
   }
 
+  showPairingCodePopup(pairingCode: string): (() => void) | null {
+    if (this.showPairingCode) {
+      return this.showPairingCode(pairingCode);
+    }
+    const htmlContent = `
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <title>BitBox02 pairing</title>
+  </head>
+  <body>
+    <h1 style="text-align:center;">BitBox02 pairing code</h1>
+    <div id="code" style="white-space:pre;font-family:monospace,monospace;text-align:center;font-size:large;">${pairingCode}</div>
+  </body>
+</html>
+`;
+    const popup = window.open(
+      '',
+      'popupWindow',
+      'width=400,height=300',
+    );
+    if (popup) {
+      popup.document.write(htmlContent);
+      popup.document.close();
+      return () => {
+        popup.close();
+      };
+    }
+    return null;
+  }
+
   async withDevice<T>(f: (device: PairedBitBox) => Promise<T>): Promise<T> {
     const bitbox = await import('bitbox-api');
 
+    let hidePairingCode: (() => void) | null = null;
     try {
       const unpaired = await bitbox.bitbox02ConnectAuto(() => {
+        if (hidePairingCode) {
+          hidePairingCode();
+        }
       })
       const pairing = await unpaired.unlockAndPair()
       const pairingCode = pairing.getPairingCode()
       if (pairingCode) {
+        hidePairingCode = this.showPairingCodePopup(pairingCode);
         // TODO: display pairing code to the user.
         console.log('Pairing code:', pairingCode);
       }
       const pairedBitBox = await pairing.waitConfirm()
+      if (hidePairingCode) {
+        hidePairingCode();
+      }
       try {
         return await f(pairedBitBox)
       } finally {
@@ -156,7 +209,9 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
       const errorMessage = isErrorUnknown ? typedErr.err! : typedErr.message
       throw new Error(errorMessage);
     } finally {
-      // TODO hide pairing code if still shown.
+      if (hidePairingCode) {
+        hidePairingCode();
+      }
     }
   }
 
@@ -209,6 +264,10 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
  *
  */
 export class BitBoxGetMetadata extends BitBoxInteraction {
+  constructor({ showPairingCode }: { showPairingCode?: TShowPairingCode }) {
+    super({ showPairingCode });
+  }
+
   async run() {
     return this.withDevice(async (pairedBitBox) => {
       const product = pairedBitBox.product();
@@ -244,8 +303,13 @@ export class BitBoxExportPublicKey extends BitBoxInteraction {
    * @param {string} bip32Path path
    * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
-  constructor({ network, bip32Path, includeXFP }) {
-    super();
+  constructor({ showPairingCode, network, bip32Path, includeXFP }: {
+    showPairingCode?: TShowPairingCode;
+    network: BitcoinNetwork;
+    bip32Path: string;
+    includeXFP: boolean;
+  }) {
+    super({ showPairingCode });
     this.network = network;
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
@@ -290,8 +354,13 @@ export class BitBoxExportExtendedPublicKey extends BitBoxInteraction {
    * @param {string} network bitcoin network
    * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
-  constructor({ bip32Path, network, includeXFP }) {
-    super();
+  constructor({ showPairingCode, bip32Path, network, includeXFP }: {
+    showPairingCode?: TShowPairingCode;
+    network: BitcoinNetwork;
+    bip32Path: string;
+    includeXFP: boolean;
+  }) {
+    super({ showPairingCode });
     this.bip32Path = bip32Path;
     this.network = network;
     this.includeXFP = includeXFP;
@@ -329,9 +398,13 @@ export class BitBoxRegisterWalletPolicy extends BitBoxInteraction {
   walletConfig: MultisigWalletConfig;
 
   constructor({
+    showPairingCode,
     walletConfig
-  }: { walletConfig: MultisigWalletConfig}) {
-    super();
+  }: {
+    showPairingCode?: TShowPairingCode;
+    walletConfig: MultisigWalletConfig;
+  }) {
+    super({ showPairingCode });
     this.walletConfig = walletConfig;
   }
 
@@ -355,8 +428,13 @@ export class BitBoxConfirmMultisigAddress extends BitBoxInteraction {
 
   walletConfig: MultisigWalletConfig;
 
-  constructor({ network, bip32Path, walletConfig }) {
-    super();
+  constructor({ showPairingCode, network, bip32Path, walletConfig }: {
+    showPairingCode?: TShowPairingCode;
+    network: BitcoinNetwork;
+    bip32Path: string;
+    walletConfig: MultisigWalletConfig;
+  }) {
+    super({ showPairingCode });
     this.network = network;
     this.bip32Path = bip32Path;
     this.walletConfig = walletConfig;
@@ -410,11 +488,17 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
   private unsignedPsbt: string;
 
   constructor({
+    showPairingCode,
     walletConfig,
     psbt,
     returnSignatureArray = false,
+  }: {
+    showPairingCode?: TShowPairingCode;
+    walletConfig: MultisigWalletConfig;
+    psbt: any;
+    returnSignatureArray: boolean;
   }) {
-    super();
+    super({ showPairingCode });
     this.walletConfig = walletConfig;
     this.returnSignatureArray = returnSignatureArray;
 
