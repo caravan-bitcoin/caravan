@@ -83,7 +83,7 @@ describe("RBF Transaction Functions", () => {
         const totalInputAmount = calculateTotalInputValue(psbt);
         const totalOutputAmount = calculateTotalOutputValue(psbt);
         const fee = totalInputAmount.minus(totalOutputAmount);
-        expect(fee.toString()).toBe(fixture.expected.expectedFee);
+        expect(fee.toString()).toBe(fixture.expected.expectedfee);
 
         const feeRate = fee.dividedBy(
           estimateTransactionVsize({
