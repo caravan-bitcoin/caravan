@@ -130,8 +130,8 @@ const TREZOR_DEV =
 
 try {
   TrezorConnect.init({
-    trustedHost: TREZOR_DEV, // if we're in dev mode, lets trust the host
-    debug: TREZOR_DEV,
+    trustedHost: Boolean(TREZOR_DEV), // if we're in dev mode, lets trust the host
+    debug: Boolean(TREZOR_DEV),
     connectSrc: TREZOR_DEV
       ? TREZOR_CONNECT_URL
       : "https://connect.trezor.io/9.1.9/", // pinning to this connect version to avoid backwards incompatible changes
