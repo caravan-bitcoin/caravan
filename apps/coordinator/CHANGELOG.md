@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+### Minor Changes
+
+- [#138](https://github.com/caravan-bitcoin/caravan/pull/138) [`4ecc56a`](https://github.com/caravan-bitcoin/caravan/commit/4ecc56aefc1ecdde7a2ffa157e0d1e29515a5bc4) Thanks [@bucko13](https://github.com/bucko13)! - Add bip32 package and UI for blinded xpub support in wallet creation
+
 ## 1.2.0
 
 ### Minor Changes
