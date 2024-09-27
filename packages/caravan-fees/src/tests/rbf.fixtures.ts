@@ -326,7 +326,6 @@ export const rbfFixtures = {
       totalSigners: 1,
       targetFeeRate: 10,
       absoluteFee: "1229",
-      changeIndex: 0,
       changeAddress: "bc1q7y50e8culkenu3tnn66ly6gq9m43y8ymk70k8z",
       expectedError:
         "Failed to create a valid accelerated RBF transaction. Ensure all inputs and outputs are valid and fee requirements are met.",

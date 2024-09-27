@@ -319,6 +319,17 @@ export interface CancelRbfOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Whether to reuse all inputs from the original transaction in the replacement.
+   *
+   * For cancel transactions, this defaults to false as there's no risk of double-paying.
+   * Setting this to true will include all original inputs, potentially increasing fees
+   * but ensuring maximum conflict with the original transaction.
+   *
+   * @default false
+   */
+  reuseAllInputs?: boolean;
 }
 
 /**
@@ -350,6 +361,19 @@ export interface AcceleratedRbfOptions
    * - Must be a valid Bitcoin address for the specified network.
    */
   changeAddress?: string;
+
+  /**
+   * Whether to reuse all inputs from the original transaction in the replacement while accelerating the transaction.
+   *
+   * Setting this to false can potentially lead to a "replacement cycle attack"
+   * where multiple versions of a transaction could be confirmed if they don't
+   * conflict with each other. Only set this to false if you fully understand
+   * the risks and have implemented appropriate safeguards.
+   *
+   * @see https://bitcoinops.org/en/newsletters/2023/10/25/#fn:rbf-warning
+   * @default true
+   */
+  reuseAllInputs?: boolean;
 }
 
 /**

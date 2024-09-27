@@ -171,7 +171,6 @@ describe("RBF Transaction Functions", () => {
               targetFeeRate: fixture.targetFeeRate,
               absoluteFee: fixture.absoluteFee,
               changeAddress: fixture.changeAddress,
-              changeIndex: fixture.changeIndex,
             });
           }
         }).toThrow(fixture.expectedError);
