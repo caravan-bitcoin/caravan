@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { validatePublicKey as baseValidatePublicKey } from "@caravan/bitcoin";
-import { TREZOR, LEDGER } from "@caravan/wallets";
+import { BITBOX, TREZOR, LEDGER } from "@caravan/wallets";
 
 // Components
 import {
@@ -213,6 +213,7 @@ const PublicKeyImporter = ({
 
   const renderImportByMethod = () => {
     if (
+      publicKeyImporter.method === BITBOX ||
       publicKeyImporter.method === TREZOR ||
       publicKeyImporter.method === LEDGER
     ) {
@@ -261,6 +262,7 @@ const PublicKeyImporter = ({
             variant="standard"
           >
             <MenuItem value="">{"< Select method >"}</MenuItem>
+            <MenuItem value={BITBOX}>BitBox</MenuItem>
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={XPUB}>Derive from extended public key</MenuItem>

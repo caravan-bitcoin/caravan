@@ -2,6 +2,8 @@
   "compilerOptions": {
     // be explicit about the root directory of the project
     "rootDir": "./src",
+    // Allow dynamic imports.
+    "module": "esnext",
     // Target latest version of ECMAScript.
     "target": "esnext",
     // Search under node_modules for non-relative imports.
