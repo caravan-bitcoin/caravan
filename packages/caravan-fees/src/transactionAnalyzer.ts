@@ -64,14 +64,8 @@ export class TransactionAnalyzer {
   private readonly _totalSigners: number;
   private readonly _addressType: ScriptType;
 
-  private _inputs: BtcTxInputTemplate[] | null = null;
-  private _outputs: BtcTxOutputTemplate[] | null = null;
-  private _feeRate: BigNumber | null = null;
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
-  private _rbfFeeRate: BigNumber | null = null;
-  private _cpfpFeeRate: BigNumber | null = null;
-  private _recommendedStrategy: FeeBumpStrategy | null = null;
   private _assumeRBF: boolean = false;
 
   /**
@@ -273,6 +267,14 @@ export class TransactionAnalyzer {
 
   /**
    * Get the estimated fee rate for Replace-by-Fee (RBF).
+   *
+   * This method calculates the effective fee rate for the RBF transaction
+   * based on the minimum RBF fee and the transaction's virtual size.
+   *
+   * It's important to note that this rate might be higher than the original
+   * user-specified target fee rate, as it needs to satisfy both BIP 125 rules
+   * and current network conditions for effective replacement.
+   *
    * @returns {string} The estimated RBF fee rate in satoshis per vbyte.
    * @see https://bitcoinops.org/en/topics/replace-by-fee/
    */
@@ -299,35 +301,44 @@ export class TransactionAnalyzer {
   /**
    * Calculates the minimum total fee required for a valid RBF (Replace-By-Fee) replacement transaction.
    *
-   * This method determines the minimum fee needed to replace the current transaction
-   * using the RBF protocol, as defined in BIP 125. It considers three key factors:
-   * 1. The current transaction fee
-   * 2. The minimum required fee increase (incremental relay fee * transaction size)
-   * 3. The user-specified target fee rate
+   * This method implements the current RBF rules as defined in BIP 125, while also
+   * considering the fee rate importance. It balances:
+   * 1. BIP 125 requirements (anti-DDoS measures)
+   * 2. Current miner preferences for fee rates over absolute fees
+   * 3. User-specified target fee rate
    *
-   * The calculation ensures that the new transaction meets both:
-   * a) The minimum fee increase required by the RBF rules
-   * b) The user's desired fee rate (which may be higher than the minimum required)
+   * Key considerations:
+   * - BIP 125 Rule 4: Replacement must pay for its own bandwidth at minimum relay fee
+   *   This rule doesn't explicitly consider fee rates, focusing on anti-DDoS protection.
+   * - Modern mining preferences favor higher fee rates over absolute fees.
    *
-   * This approach allows for fee bumping even if the user-specified target fee rate
-   * is lower than what's needed to unstick the transaction.
+   * Approach Taken:
+   * 1. Calculate minimum fee based on BIP 125 rules
+   * 2. Calculate fee based on user-specified target fee rate
+   * 3. Use the higher of these two to ensure compliance and desired confirmation speed
+   *
+   * This method allows for effective fee bumping while adhering to current network rules,
+   * even if the user-specified target fee rate is lower than necessary to unstick the transaction.
    *
    * References:
    * - BIP 125 (RBF): https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
-   * - Bitcoin Core RBF implementation:
-   *   https://github.com/bitcoin/bitcoin/blob/master/src/policy/rbf.cpp
+   * - Bitcoin Core RBF implementation: https://github.com/bitcoin/bitcoin/blob/master/src/policy/rbf.cpp
+   * - RBF discussion (2018): https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-February/015724.html
+   * - One-Shot Replace-By-Fee-Rate proposal: https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2024-January/022298.html
    *
    * @returns {Satoshis} The minimum total fee required for the replacement transaction in satoshis.
    *                     This is always at least the current fee plus the minimum required increase,
    *                     but may be higher if the user-specified target fee rate demands it.
    */
   get minimumRBFFee(): Satoshis {
-    // Calculate the minimum fee increase required by RBF rules
+    // Calculate the minimum fee increase required by BIP 125 Rule 4
+    // This includes the original fee rate plus the incremental relay fee rate
     const minReplacementFee = new BigNumber(this.feeRate)
       .plus(this._incrementalRelayFeeRate)
       .multipliedBy(this.vsize);
 
     // Calculate the fee based on the user-specified target fee rate
+    // This addresses modern miner preferences for higher fee rates
     const targetFeeBasedOnUserRate = new BigNumber(
       this.targetFeeRate,
     ).multipliedBy(this.vsize);
@@ -564,7 +575,10 @@ export class TransactionAnalyzer {
    * @protected
    */
   protected canPerformCPFP(): boolean {
-    return this.outputs.some((output) => output.isMalleable);
+    if (!this._canCPFP) {
+      this._canCPFP = this.outputs.some((output) => output.isMalleable);
+    }
+    return this._canCPFP;
   }
 
   /**
