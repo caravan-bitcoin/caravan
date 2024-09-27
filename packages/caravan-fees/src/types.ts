@@ -310,6 +310,12 @@ export interface CancelRbfOptions {
 
   /**
    * If true, enforces stricter validation rules.
+   *
+   * When set to true, the following stricter rules (among others) are applied:
+   * - Ensures the new fee is significantly higher than the original fee
+   * - Strictly enforces output value rules (no increases except for fee)
+   * - Requires change outputs to be above the dust threshold
+   * - Strictly validates RBF signaling on input sequence numbers
    * @default false
    */
   strict?: boolean;
@@ -322,11 +328,26 @@ export interface AcceleratedRbfOptions
   extends Omit<CancelRbfOptions, "cancelAddress"> {
   /**
    * The index of the change output in the original transaction.
+   * Use this option to specify which output from the original transaction
+   * should be treated as the change output and potentially modified.
+   *
+   * @remarks
+   * - Provide either changeIndex or changeAddress, not both.
+   * - If changeIndex is provided, the address of the output at this index
+   *   in the original transaction will be used for the new change output.
+   * - Must be a non-negative integer.
    */
   changeIndex?: number;
 
   /**
    * The address to use for the new change output, if different from the original.
+   * Use this option to specify a new address for the change output.
+   *
+   * @remarks
+   * - Provide either changeAddress or changeIndex, not both.
+   * - If changeAddress is provided, this address will be used for the new change output,
+   *   regardless of the original transaction's change output address.
+   * - Must be a valid Bitcoin address for the specified network.
    */
   changeAddress?: string;
 }
