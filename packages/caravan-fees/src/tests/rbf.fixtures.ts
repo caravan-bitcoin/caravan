@@ -23,7 +23,7 @@ export const rbfFixtures = {
       3. In this case, the new tx size decreases to 159 vBytes due to having only one output
 
       RBF Fee Calculation:
-      - Minimum required fee: 20,880 satoshis (must be >= original fee to satisfy RBF rules)
+      - Minimum required fee: 20,880 satoshis (must be >= original fee to satisfy RBF rule #3)
       - Actual fee rate achieved: 131.32 sat/vB (20,880 / 159)
 
       Key Observation:
@@ -140,7 +140,7 @@ export const rbfFixtures = {
        3. Estimated new tx size: 498 vBytes (may vary slightly based on input/output changes)
 
        RBF Fee Calculation:
-       - Minimum required fee: 20,880 satoshis (must be >= original fee to satisfy RBF rules)
+       - Minimum required fee: 20,880 satoshis (must be >= original fee to satisfy RBF rule #3)
        - Target fee for new size: 39,840 satoshis (498 vBytes * 80 sat/vB)
        - Actual fee to pay: 39,840 satoshis (higher of the two above values)
      */
