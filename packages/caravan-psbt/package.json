@@ -60,7 +60,6 @@
     "lodash": "^4.17.21",
     "ts-node": "^10.9.2",
     "tsup": "^7.2.0",
-    "typescript": "^5.2.2",
-    "vitest": "^2.0.5"
+    "typescript": "^5.2.2"
   }
 }
