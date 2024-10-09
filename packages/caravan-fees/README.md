@@ -60,6 +60,26 @@ const analyzer = new TransactionAnalyzer({
 
 const analysis = analyzer.analyze();
 console.log(analysis);
+
+```
+## Example Output
+
+```json
+{
+  "txid": "1a2b3c4d5e6f...",
+  "vsize": 140,
+  "weight": 560,
+  "fee": "1000",
+  "feeRate": 7.14,
+  "inputs": [...],
+  "outputs": [...],
+  "isRBFSignaled": true,
+  "canRBF": true,
+  "canCPFP": true,
+  "recommendedStrategy": "RBF",
+  "estimatedRBFFee": "1200",
+  "estimatedCPFPFee": "1500"
+}
 ```
 
 # BTC Transaction Template
@@ -71,7 +91,7 @@ The `BtcTransactionTemplate` class provides a flexible way to construct new Bitc
 The template approach offers several advantages:
 
 - **Flexibility**: Easily add, remove, or modify inputs and outputs.
-- **Incremental Building**: Build transactions step-by-step, adjusting as needed.
+- **Incremental Building**: Build transactions step-by-step, adjusting as needed and validating as needed.
 - **Fee Management**: Automatically calculate and adjust fees based on target rates.
 - **Change Handling**: Dynamically manage change outputs.
 
@@ -126,30 +146,43 @@ The RBF functionality allows for the creation of transactions that replace exist
 
 ### RBF Calculations
 
-The package ensures that new RBF transactions meet the following criteria:
+The package provides flexibility in defining constraints for fee bumping while ensuring compliance with BIP125 rules.
+It performs the following key actions:
 
-- Higher fee rate than the original transaction.
-- Higher absolute fee than the original transaction.
-- Includes at least one input from the original transaction.
+- Allows users to specify custom fee rate and absolute fee targets.
+- Ensures the new transaction meets BIP125 requirements, including:
+   - At least one input from the original transaction.
+   - New fee must be higher than the old fee.
+   - New absolute fee must meet the minimum relay fee requirement.
+- Performs sanity checks to prevent overpayment and ensure transaction validity.
 
 
 ## Usage Example
 
 ```javascript
 const cancelRbfTx = createCancelRbfTransaction(
-  originalTxHex,
-  availableUTXOs,
-  'bc1q...', // cancel address
-  Network.MAINNET,
-  '546', // dust threshold
-  'P2WSH',
-  2, // required signers
-  3, // total signers
-  '1000', // original absolute fee
-  false // fullRBF
+  {
+    originalTx: "020000000001...", // original transaction hex
+    availableInputs: [
+      { txid: "abc123...", vout: 0, value: "10000" },
+      // ... more UTXOs
+    ],
+    cancelAddress: "bc1q...",
+    network: Network.MAINNET,
+    dustThreshold: "546",
+    scriptType: "P2WSH",
+    requiredSigners: 2,
+    totalSigners: 3,
+    targetFeeRate: 5,
+    absoluteFee: "1000",
+    fullRBF: false,
+    strict: true
+  }
 );
 
 console.log("Cancel RBF PSBT:", cancelRbfTx);
+// Example output:
+// Cancel RBF PSBT: cHNidP8BAH0CAAAAAbhbgd8Rm7xkjyGgIPz/tQm8YUH4xXcK...
 ```
 
 ## CPFP (Child-Pays-For-Parent)
@@ -170,20 +203,29 @@ child_fee = (target_fee_rate * (parent_size + child_size)) - parent_fee
 ## Usage Example
 ```javascript
 const cpfpTx = createCPFPTransaction(
-  originalTxHex,
-  availableUTXOs,
-  1, // spendable output index
-  'bc1q...', // change address
-  Network.MAINNET,
-  '546', // dust threshold
-  'P2WSH',
-  '1000', // original absolute fee
-  2, // required signers
-  3, // total signers
-  true // strict mode
+  {
+    originalTx: "020000000001...", // original transaction hex
+    availableInputs: [
+      { txid: "def456...", vout: 1, value: "20000" },
+      // ... more UTXOs
+    ],
+    spendableOutputIndex: 1,
+    changeAddress: "bc1q...",
+    network: Network.MAINNET,
+    dustThreshold: "546",
+    scriptType: "P2WSH",
+    targetFeeRate: 10,
+    absoluteFee: "1000",
+    requiredSigners: 2,
+    totalSigners: 3,
+    strict: true
+  }
 );
 
 console.log("CPFP PSBT:", cpfpTx);
+// Example output:
+// CPFP PSBT: cHNidP8BAH0CAAAAAT+X8zhpWKt0cK8nYEslhQLwCxFR5Zk3wl...
+
 ```
 
 
