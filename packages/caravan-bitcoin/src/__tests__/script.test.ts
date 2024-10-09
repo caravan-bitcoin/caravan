@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { scriptToOps, scriptToHex } from "../script";
 import { TEST_FIXTURES } from "../fixtures";
 

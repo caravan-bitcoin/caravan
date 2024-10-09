@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import bs58check from "bs58check";
 import bs58 from "bs58";
 
@@ -396,12 +395,11 @@ describe("keys", () => {
     });
 
     /**
-     * Dev Note:
-     *  This flat structure using test.each() is used differences between Jest and Vitest in handling empty test suites:
-     *  differences between Jest and Vitest in handling empty test suites:
-     * 1. Vitest treats empty describe blocks as errors, while Jest ignores them.
-     * 2. The previous nested forEach structure could create empty describe blocks
-     *    for key types not present in extendedPubKeyNode.
+     * NOTE: vitest's `test.each()` treats empty describe
+     * blocks as errors, in contrast to jest which just ignores
+     * them. Using flatMap instead of forEach avoids
+     * potentially creating empty describe blocks for key types
+     * not present in extended pubkey nodes
      */
     const validConversions = Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS)
       .flatMap((convertTo) =>
