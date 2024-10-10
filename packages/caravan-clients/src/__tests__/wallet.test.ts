@@ -6,8 +6,6 @@ import {
   bitcoindListUnspent,
 } from "../wallet";
 
-import { beforeEach, afterEach, vi, describe, it, expect } from "vitest";
-
 import * as bitcoind from "../bitcoind";
 import BigNumber from "bignumber.js";
 

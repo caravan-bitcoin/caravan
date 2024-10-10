@@ -1,8 +1,6 @@
-import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test, jest } from "@jest/globals";
-import { silenceDescribe } from "react-silence";
+import { PsbtV2, getPsbtVersionNumber } from "../../psbtv2";
 
-import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
+import { KeyType, PsbtGlobalTxModifiableBits } from "../../psbtv2/types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -723,7 +721,14 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
@@ -895,9 +900,9 @@ describe("PsbtV2.isReadyForSigner", () => {
   });
 
   it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
-    jest
-      .spyOn(psbt, "isReadyForTransactionExtractor", "get")
-      .mockReturnValue(true);
+    vi.spyOn(psbt, "isReadyForTransactionExtractor", "get").mockReturnValue(
+      true,
+    );
     expect(psbt.isReadyForSigner).toBe(false);
   });
 
@@ -1066,7 +1071,15 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
@@ -1161,13 +1174,20 @@ describe("getPsbtVersionNumber", () => {
 });
 
 describe("PsbtV2.addPartialSig", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
 
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
   let psbt;
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1229,7 +1249,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
