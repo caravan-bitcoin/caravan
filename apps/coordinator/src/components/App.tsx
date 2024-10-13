@@ -23,15 +23,15 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import ErrorBoundary from "./ErrorBoundary";
 import ErrorNotification from "./ErrorNotification";
+import LandingPage from "./LandingPage";
 
 const App = () => (
   <ThemeProvider theme={theme}>
     <CssBaseline />
     <div className="App">
-      <SnackbarProvider maxSnack={3}>
         <Router basename="/">
-          <Container maxWidth={false} sx={{ maxWidth: "1280px" }}>
             <Navbar />
+            <LandingPage />;
             <ErrorBoundary>
               <Switch>
                 <Route path="/test" component={TestSuiteRun} />
@@ -41,14 +41,11 @@ const App = () => (
                 <Route path="/hermit-psbt" component={HermitPsbtInterface} />
                 <Route path="/wallet" component={Wallet} />
                 <Route path="/help" component={Help} />
-                <Route path="/" component={Help} />
               </Switch>
               <ErrorNotification />
             </ErrorBoundary>
             <Footer />
-          </Container>
         </Router>
-      </SnackbarProvider>
     </div>
   </ThemeProvider>
 );

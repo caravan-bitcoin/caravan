@@ -23,7 +23,8 @@
     "turbo": "^2.0.3"
   },
   "dependencies": {
-    "@ledgerhq/hw-transport-webusb": "6.27.12"
+    "@ledgerhq/hw-transport-webusb": "6.27.12",
+    "styled-components": "^6.1.13"
   },
   "engines": {
     "node": ">=20"
