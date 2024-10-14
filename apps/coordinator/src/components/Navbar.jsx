@@ -5,22 +5,31 @@ import {
   Toolbar,
   Button,
   Typography,
-  Menu,
-  MenuItem,
-  Box,
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
+  Box,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import MenuIcon from "@mui/icons-material/Menu";
+import styled from "styled-components";
 import { Link } from "react-router-dom";
+import HomeIcon from '@mui/icons-material/Home';
+import SettingsIcon from '@mui/icons-material/Settings';
+import WalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import AddressIcon from '@mui/icons-material/LocationOn';
+import ScriptIcon from '@mui/icons-material/Code';
+import CreateIcon from '@mui/icons-material/Create';
+import TestIcon from '@mui/icons-material/CheckCircle';
+import HelpIcon from '@mui/icons-material/Help';
+import Logo from '../../../../assets/images/caravan-logo-transparent.png';
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    height: '100%',
+    height: '100vh',
     display: 'flex',
     flexDirection: 'column',
+    backgroundColor: "#00478E",
   },
   menuButton: {
     marginRight: theme.spacing(2),
@@ -34,20 +43,47 @@ const useStyles = makeStyles((theme) => ({
     paddingX: theme.spacing(3),
   },
   menuLink: {
-    color: "inherit",
+    color: "#fff",
     textDecoration: "none",
   },
-  list: {
-    flexGrow: 1,
+  bottomList: {
+    marginTop: 'auto',
+    backgroundColor: "#00478E",
+    color: "#fff",
+  },
+  toolbar: {
+    padding: 0,
+    backgroundColor: "#00478E",
+  },
+  icon: {
+    color: "#fff",
   },
 }));
 
-const NavItem = ({ href, title, classes, handleClose }) => {
+const LogoButton = styled(Button)`
+  && {
+    background-color: #00478E;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 2rem;
+    outline: none;
+    box-shadow: none;
+    &:hover {
+      background-color: #fff;
+      color: #00478E;
+    }
+    font-weight: bold;
+    text-transform: none;
+  }
+`;
+
+const NavItem = ({ href, title, icon, classes }) => {
   return (
     <Link to={href} className={classes.menuLink}>
-      <MenuItem className={classes.menuItem} onClick={handleClose}>
-        {title}
-      </MenuItem>
+      <ListItem button className={classes.menuItem}>
+        <ListItemIcon className={classes.icon}>{icon}</ListItemIcon>
+        <ListItemText primary={title} />
+      </ListItem>
     </Link>
   );
 };
@@ -55,99 +91,78 @@ const NavItem = ({ href, title, classes, handleClose }) => {
 NavItem.propTypes = {
   href: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
+  icon: PropTypes.element.isRequired,
   classes: PropTypes.shape({
     menuLink: PropTypes.string.isRequired,
     menuItem: PropTypes.string.isRequired,
+    icon: PropTypes.string.isRequired,
   }).isRequired,
-  handleClose: PropTypes.func.isRequired,
 };
 
-const NavbarHeader = ({ classes, handleClick }) => (
+const NavbarHeader = ({ classes }) => (
   <AppBar position="static">
-    <Toolbar>
-      <Typography variant="h6" className={classes.title}>
-        <Button color="inherit" component={Link} to="/">
-          Caravan
-        </Button>
-      </Typography>
+    <Toolbar className={classes.toolbar}>
+      <LogoButton
+        variant="contained"
+        component={Link}
+        to="/"
+        startIcon={<img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />}
+      >
+        Caravan
+      </LogoButton>
     </Toolbar>
   </AppBar>
 );
 
 NavbarHeader.propTypes = {
   classes: PropTypes.object.isRequired,
-  handleClick: PropTypes.func.isRequired,
 };
 
-const NavbarMenu = ({ anchorEl, handleClose, menuItems, classes }) => (
-  <Menu
-    id="simple-menu"
-    anchorEl={anchorEl}
-    keepMounted
-    open={Boolean(anchorEl)}
-    onClose={handleClose}
-  >
-    {menuItems.map(({ href, title }) => (
-      <NavItem
-        href={href}
-        title={title}
-        classes={classes}
-        key={href}
-        handleClose={handleClose}
-      />
-    ))}
-  </Menu>
-);
+const NavbarActive = ({ classes }) => {
+  const navItems = [
+    { title: 'Overview', icon: <HomeIcon />, href: '/overview' },
+    { title: 'Setup', icon: <SettingsIcon />, href: '/setup' },
+  ];
 
-NavbarMenu.propTypes = {
-  anchorEl: PropTypes.object,
-  handleClose: PropTypes.func.isRequired,
-  menuItems: PropTypes.arrayOf(
-    PropTypes.shape({
-      href: PropTypes.string.isRequired,
-      title: PropTypes.string.isRequired,
-    })
-  ).isRequired,
+  return (
+    <Box display="flex" flexDirection="column" alignItems="flex-start" width="100%" p={2} backgroundColor="#00478E" color="#fff">
+      <List>
+        {navItems.map((item, index) => (
+          <NavItem key={index} title={item.title} icon={item.icon} href={item.href} classes={classes} />
+        ))}
+      </List>
+    </Box>
+  );
+};
+
+NavbarActive.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
+const NavbarEmpty = () => <Box flexGrow={1} style={{ backgroundColor: "#00478E" }} />;
+
 const Navbar = () => {
   const classes = useStyles();
-  const [anchorEl, setAnchorEl] = React.useState(null);
-
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const menuItems = [
-    { href: "/wallet", title: "Wallet" },
-    { href: "/address", title: "Create Address" },
-    { href: "/script", title: "Script Explorer" },
-    { href: "/hermit-psbt", title: "Hermit PSBT Interface" },
-    { href: "/test", title: "Test Suite" },
-    { href: "/help", title: "Help" },
+    { href: "/wallet", title: "Wallet", icon: <WalletIcon /> },
+    { href: "/address", title: "Create Address", icon: <AddressIcon /> },
+    { href: "/script", title: "Script Explorer", icon: <ScriptIcon /> },
+    { href: "/hermit-psbt", title: "Hermit PSBT Interface", icon: <CreateIcon /> },
+    { href: "/test", title: "Test Suite", icon: <TestIcon /> },
+    { href: "/help", title: "Help", icon: <HelpIcon /> },
   ];
 
   return (
     <div className={classes.root}>
-      <NavbarHeader classes={classes} handleClick={handleClick} />
-      <List className={classes.list}>
-        {menuItems.map(({ href, title }) => (
-          <ListItem button component={Link} to={href} key={href}>
-            <ListItemText primary={title} />
-          </ListItem>
+      <NavbarHeader classes={classes} />
+      <NavbarActive classes={classes} />
+      <NavbarEmpty />
+      <List className={`${classes.list} ${classes.bottomList}`}>
+        {menuItems.map(({ href, title, icon }) => (
+          <NavItem href={href} title={title} icon={icon} classes={classes} key={href} />
         ))}
       </List>
-      <NavbarMenu
-        anchorEl={anchorEl}
-        handleClose={handleClose}
-        menuItems={menuItems}
-        classes={classes}
-      />
     </div>
   );
 };
