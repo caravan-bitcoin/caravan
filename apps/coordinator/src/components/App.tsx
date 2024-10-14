@@ -44,7 +44,6 @@ const App = () => (
               </Switch>
               <ErrorNotification />
             </ErrorBoundary>
-            <Footer />
         </Router>
     </div>
   </ThemeProvider>
