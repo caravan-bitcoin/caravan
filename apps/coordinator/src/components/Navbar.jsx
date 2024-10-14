@@ -8,6 +8,9 @@ import {
   Menu,
   MenuItem,
   Box,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -15,7 +18,9 @@ import { Link } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
   },
   menuButton: {
     marginRight: theme.spacing(2),
@@ -31,6 +36,9 @@ const useStyles = makeStyles((theme) => ({
   menuLink: {
     color: "inherit",
     textDecoration: "none",
+  },
+  list: {
+    flexGrow: 1,
   },
 }));
 
@@ -54,12 +62,65 @@ NavItem.propTypes = {
   handleClose: PropTypes.func.isRequired,
 };
 
+const NavbarHeader = ({ classes, handleClick }) => (
+  <AppBar position="static">
+    <Toolbar>
+      <Typography variant="h6" className={classes.title}>
+        <Button color="inherit" component={Link} to="/">
+          Caravan
+        </Button>
+      </Typography>
+    </Toolbar>
+  </AppBar>
+);
+
+NavbarHeader.propTypes = {
+  classes: PropTypes.object.isRequired,
+  handleClick: PropTypes.func.isRequired,
+};
+
+const NavbarMenu = ({ anchorEl, handleClose, menuItems, classes }) => (
+  <Menu
+    id="simple-menu"
+    anchorEl={anchorEl}
+    keepMounted
+    open={Boolean(anchorEl)}
+    onClose={handleClose}
+  >
+    {menuItems.map(({ href, title }) => (
+      <NavItem
+        href={href}
+        title={title}
+        classes={classes}
+        key={href}
+        handleClose={handleClose}
+      />
+    ))}
+  </Menu>
+);
+
+NavbarMenu.propTypes = {
+  anchorEl: PropTypes.object,
+  handleClose: PropTypes.func.isRequired,
+  menuItems: PropTypes.arrayOf(
+    PropTypes.shape({
+      href: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  classes: PropTypes.object.isRequired,
+};
+
 const Navbar = () => {
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = React.useState(null);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   const menuItems = [
@@ -73,44 +134,20 @@ const Navbar = () => {
 
   return (
     <div className={classes.root}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" className={classes.title}>
-            <Button color="inherit" component={Link} to="/">
-              Caravan
-            </Button>
-          </Typography>
-
-          <Button
-            aria-controls="simple-menu"
-            aria-haspopup="true"
-            color="inherit"
-            onClick={handleClick}
-          >
-            <Box mr={3}>
-              <Typography>Menu</Typography>
-            </Box>
-            <MenuIcon />
-          </Button>
-          <Menu
-            id="simple-menu"
-            anchorEl={anchorEl}
-            keepMounted
-            open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
-          >
-            {menuItems.map(({ href, title }) => (
-              <NavItem
-                href={href}
-                title={title}
-                classes={classes}
-                key={href}
-                handleClose={() => setAnchorEl(null)}
-              />
-            ))}
-          </Menu>
-        </Toolbar>
-      </AppBar>
+      <NavbarHeader classes={classes} handleClick={handleClick} />
+      <List className={classes.list}>
+        {menuItems.map(({ href, title }) => (
+          <ListItem button component={Link} to={href} key={href}>
+            <ListItemText primary={title} />
+          </ListItem>
+        ))}
+      </List>
+      <NavbarMenu
+        anchorEl={anchorEl}
+        handleClose={handleClose}
+        menuItems={menuItems}
+        classes={classes}
+      />
     </div>
   );
 };
