@@ -57,17 +57,6 @@ const MenuGetStartedButton = styled(Button)`
   }
 `;
 
-const menuItemStyles = {
-  paddingTop: '8px', // Assuming theme.spacing(1) is 8px
-  paddingBottom: '8px',
-  paddingLeft: '32px', // Assuming theme.spacing(4) is 32px
-  paddingRight: '32px',
-  backgroundColor: 'rgba(0, 0, 0, 0.04)', // Assuming theme.palette.action.hover is rgba(0, 0, 0, 0.04)
-  '&:hover': {
-    backgroundColor: 'rgba(0, 0, 0, 0.08)', // Assuming theme.palette.action.selected is rgba(0, 0, 0, 0.08)
-  },
-};
-
 const menuLinkStyles = {
   color: 'black', // Assuming theme.palette.black.main is black
   textDecoration: 'underline',

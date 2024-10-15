@@ -53,7 +53,7 @@ const AppContent = () => {
   return (
     <>
       {location.pathname === "/" ? (
-        <LandingNav />
+        <LandingNav classes={{}} />
       ) : (
         <Drawer
           variant="permanent"
@@ -70,7 +70,7 @@ const AppContent = () => {
         component="main"
         sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3, marginLeft: location.pathname === "/" ? 0 : `300px` }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "100%" }}>
+        <Container maxWidth={false} disableGutters sx={{ maxWidth: "100%" }}>
           <ErrorBoundary>
             <Switch>
               <Route path="/test" component={TestSuiteRun} />
@@ -85,7 +85,7 @@ const AppContent = () => {
             </Switch>
             <ErrorNotification />
           </ErrorBoundary>
-          <Footer />
+          {location.pathname !== "/" && <Footer />}
         </Container>
       </Box>
     </>
