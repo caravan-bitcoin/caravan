@@ -449,7 +449,8 @@ const LandingPage = () => {
         >
           <h1>Take control of your bitcoin. Create a multisig wallet today</h1>
           <p>
-            Manage your Bitcoin with increased security and control. Caravan&apos;s
+            Manage your Bitcoin with increased security and control.
+            Caravan&apos;s
             user-friendly interface guides you through creating,
             recovering, and managing multisig wallets. Take charge of your
             Bitcoin today!

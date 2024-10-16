@@ -10,10 +10,7 @@ import {
   Card,
   Button,
 } from "@mui/material";
-import {
- AccountBalanceWallet,
- SportsVolleyball,
-} from "@mui/icons-material";
+import { AccountBalanceWallet, SportsVolleyball } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
 const Setup = () => (
