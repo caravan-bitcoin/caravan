@@ -438,6 +438,9 @@ export interface CPFPOptions {
 
   /**
    * If true, enforces stricter validation rules.
+   * When set to true, the following stricter rules (among others) are applied:
+   * - Ensures the new fee is significantly higher than the original fee
+   * - Requires change outputs to be above the dust threshold
    * @default false
    */
   strict?: boolean;

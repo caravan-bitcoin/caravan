@@ -74,7 +74,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     txHex: originalTx,
     network,
     changeOutputIndex: spendableOutputIndex,
-    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
+    targetFeeRate, // We need this param. It is required for the analyzer to make decisions and so cannot be 0.
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -83,6 +83,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   });
 
   const analysis = txAnalyzer.analyze();
+
   // Step 2: Verify CPFP suitability
   if (!analysis.canCPFP) {
     throw new Error(
@@ -91,6 +92,11 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   }
 
   if (analysis.recommendedStrategy !== FeeBumpStrategy.CPFP) {
+    if (strict) {
+      throw new Error(
+        `CPFP is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
+      );
+    }
     console.warn(
       "CPFP is not the recommended strategy for this transaction. Consider using the recommended strategy: " +
         analysis.recommendedStrategy,
@@ -166,19 +172,8 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
    * is attractive for miners to include in a block.
    */
 
-  const parentFee = new BigNumber(analysis.fee);
-  const parentVsize = analysis.vsize;
-
   for (const utxo of availableInputs) {
-    if (
-      isCPFPFeeSatisfied(
-        parentFee,
-        parentVsize,
-        new BigNumber(childTxTemplate.currentFee),
-        childTxTemplate.estimatedVsize,
-        parseFloat(txAnalyzer.cpfpFeeRate),
-      )
-    ) {
+    if (isCPFPFeeSatisfied(txAnalyzer, childTxTemplate)) {
       break; // Stop adding inputs once CPFP fee requirements are met
     }
     // Skip if this UTXO is already added
@@ -193,27 +188,25 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   }
 
   // Step 7: Calculate and set the change output amount
-  const totalInputAmount = new BigNumber(childTxTemplate.getTotalInputAmount());
+  const totalInputAmount = new BigNumber(childTxTemplate.totalInputAmount);
   const fee = new BigNumber(childTxTemplate.targetFeesToPay);
   const changeAmount = totalInputAmount.minus(fee);
 
   if (changeAmount.lte(dustThreshold)) {
     if (strict) {
       throw new Error(
-        "Change amount is below the dust threshold. Increase inputs or reduce fee rate.",
+        "Change amount is below the dust threshold. More inputs are needed or try reducing the fee rate.",
       );
     } else {
       console.warn(
         "Change amount is below dust threshold. Adjusting transaction.",
       );
 
-      childTxTemplate.adjustChangeOutput();
+      childTxTemplate.outputs[0].setAmount(changeAmount.toString());
     }
   } else {
     childTxTemplate.outputs[0].setAmount(changeAmount.toString());
   }
-
-  childTxTemplate.outputs[0].setAmount(changeAmount.toString());
 
   // Step 8: Validate the child transaction
   if (!childTxTemplate.validate()) {
@@ -222,25 +215,8 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     );
   }
 
-  // Step 9: Ensure the combined (parent + child) fee rate meets the target
-  const parentSize = new BigNumber(analysis.vsize);
-  const childSize = new BigNumber(childTxTemplate.estimatedVsize);
-  const childFee = new BigNumber(childTxTemplate.currentFee);
-  const combinedFeeRate = parentFee
-    .plus(childFee)
-    .dividedBy(parentSize.plus(childSize));
-
-  if (combinedFeeRate.isLessThan(targetFeeRate)) {
-    if (strict) {
-      throw new Error(
-        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate} sat/vB). Increase inputs or reduce fee rate.`,
-      );
-    } else {
-      console.warn(
-        `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate} sat/vB). Transaction may confirm slower than expected.`,
-      );
-    }
-  }
+  // Step 9: Validate the combined (parent + child) fee rate
+  validateCPFPPackage(txAnalyzer, childTxTemplate, targetFeeRate, strict);
 
   // Step 10: Convert to PSBT and return as base64
   return childTxTemplate.toPsbt();
@@ -258,44 +234,78 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
  * The combined fee rate is calculated as:
  * (parentFee + childFee) / (parentVsize + childVsize)
  *
- * @param {BigNumber} parentFee - The fee of the parent transaction in satoshis.
- * @param {number} parentVsize - The virtual size of the parent transaction in vbytes.
- * @param {BigNumber} childFee - The fee of the child transaction in satoshis.
- * @param {number} childVsize - The virtual size of the child transaction in vbytes.
- * @param {number} targetFeeRate - The target fee rate in satoshis per vbyte.
+ * @param {TransactionAnalyzer} txAnalyzer - The analyzer containing parent transaction information and CPFP fee rate.
+ * @param {BtcTransactionTemplate} childTxTemplate - The child transaction template.
  * @returns {boolean} True if the combined fee rate meets or exceeds the target fee rate, false otherwise.
  *
  * @example
- * const parentFee = new BigNumber(1000);
- * const parentVsize = 200;
- * const childFee = new BigNumber(2000);
- * const childVsize = 150;
- * const targetFeeRate = 5;
- * const isSatisfied = isCPFPFeeSatisfied(parentFee, parentVsize, childFee, childVsize, targetFeeRate);
+ * const txAnalyzer = new TransactionAnalyzer({...});
+ * const childTxTemplate = new BtcTransactionTemplate({...});
+ * const isSatisfied = isCPFPFeeSatisfied(txAnalyzer, childTxTemplate);
  * console.log(isSatisfied); // true or false
  *
  * @throws {Error} If any of the input parameters are negative.
  */
 export function isCPFPFeeSatisfied(
-  parentFee: BigNumber,
-  parentVsize: number,
-  childFee: BigNumber,
-  childVsize: number,
-  targetFeeRate: number,
+  txAnalyzer: TransactionAnalyzer,
+  childTxTemplate: BtcTransactionTemplate,
 ): boolean {
   // Input validation
-  if (
-    parentFee.isNegative() ||
-    parentVsize < 0 ||
-    childFee.isNegative() ||
-    childVsize < 0 ||
-    targetFeeRate < 0
-  ) {
-    throw new Error("All input parameters must be non-negative.");
+  if (!txAnalyzer || !childTxTemplate) {
+    throw new Error("Invalid analyzer or child transaction template.");
   }
+  const parentFee = new BigNumber(txAnalyzer.fee);
+  const parentVsize = txAnalyzer.vsize;
+  const childFee = new BigNumber(childTxTemplate.currentFee);
+  const childVsize = childTxTemplate.estimatedVsize;
+  const targetFeeRate = parseFloat(txAnalyzer.cpfpFeeRate);
 
   const combinedFee = parentFee.plus(childFee);
   const combinedVsize = parentVsize + childVsize;
   const combinedFeeRate = combinedFee.dividedBy(combinedVsize);
+
   return combinedFeeRate.gte(targetFeeRate);
+}
+
+/**
+ * Validates that the combined fee rate of a parent and child transaction
+ * meets or exceeds the target fee rate for a Child-Pays-for-Parent (CPFP) transaction.
+ *
+ * This function calculates the combined fee rate of the parent transaction (from the analyzer)
+ * and its child transaction, then compares it to the target CPFP fee rate. It ensures
+ * that the CPFP transaction provides sufficient fee incentive for miners to include both
+ * transactions in a block.
+ *
+ * @param {TransactionAnalyzer} txAnalyzer - The analyzer containing parent transaction information and CPFP fee rate.
+ * @param {BtcTransactionTemplate} childTxTemplate - The child transaction template.
+ * @param {targetFeeRate}targetFeeRate - The Target fees set when we call the cpfp function.
+ * @param {boolean} strict - If true, throws an error when the fee rate is not satisfied. If false, only logs a warning.
+ * @returns {void}
+ *
+ * @throws {Error} If the combined fee rate is below the target fee rate in strict mode.
+ */
+export function validateCPFPPackage(
+  txAnalyzer: TransactionAnalyzer,
+  childTxTemplate: BtcTransactionTemplate,
+  targetFeeRate: number,
+  strict: boolean,
+): void {
+  const parentFee = new BigNumber(txAnalyzer.fee);
+  const parentSize = new BigNumber(txAnalyzer.vsize);
+  const childFee = new BigNumber(childTxTemplate.currentFee);
+  const childSize = new BigNumber(childTxTemplate.estimatedVsize);
+
+  const combinedFeeRate = parentFee
+    .plus(childFee)
+    .dividedBy(parentSize.plus(childSize));
+
+  if (combinedFeeRate.isLessThan(targetFeeRate)) {
+    const message = `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate.toFixed(2)} sat/vB). ${strict ? "Increase inputs or reduce fee rate." : "Transaction may confirm slower than expected."}`;
+
+    if (strict) {
+      throw new Error(message);
+    } else {
+      console.warn(message);
+    }
+  }
 }
