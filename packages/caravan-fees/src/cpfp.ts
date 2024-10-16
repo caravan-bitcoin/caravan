@@ -4,7 +4,8 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { FeeBumpStrategy, CPFPOptions } from "./types";
+import { FeeBumpStrategy, CPFPOptions, UTXO } from "./types";
+import { createOutputScript } from "./utils";
 import BigNumber from "bignumber.js";
 
 /**
@@ -123,15 +124,18 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     );
   }
 
-  const parentOutputUTXO = availableInputs.find(
-    (utxo) => utxo.txid === analysis.txid && utxo.vout === spendableOutputIndex,
-  );
+  // Create a UTXO from the parent transaction's output
+  const parentOutputUTXO: UTXO = {
+    txid: analysis.txid,
+    vout: spendableOutputIndex,
+    value: parentOutput.amountSats,
+    witnessUtxo: {
+      script: createOutputScript(parentOutput.address, network),
+      value: parseInt(parentOutput.amountSats),
+    },
 
-  if (!parentOutputUTXO) {
-    throw new Error(
-      `UTXO for the spendable output (${analysis.txid}:${spendableOutputIndex}) not found in availableInputs.`,
-    );
-  }
+    prevTxHex: originalTx,
+  };
 
   childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(parentOutputUTXO));
 

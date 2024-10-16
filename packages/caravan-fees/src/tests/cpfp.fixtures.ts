@@ -72,7 +72,7 @@ export const cpfpInvalidFixtures = [
     case: "CPFP not possible due to invalid spendable output index",
     options: {
       ...cpfpValidFixtures[0].options,
-      spendableOutputIndex: 0, // This output doesn't exist in the parent transaction
+      spendableOutputIndex: 10, // This output doesn't exist in the parent transaction
     },
   },
   {
@@ -82,13 +82,5 @@ export const cpfpInvalidFixtures = [
       targetFeeRate: 2000, // Much higher than what can be achieved
     },
   },
-  {
-    case: "Dust output creation",
-    options: {
-      ...cpfpValidFixtures[0].options,
-      availableInputs: [
-        { ...cpfpValidFixtures[0].options.availableInputs[0], value: "1000" },
-      ],
-    },
-  },
+  // Removed the Dust output creation case, as now we use the parent tx to get the spendable output, as child tx's input so cannot override it's amount to create this invalid case .
 ];
