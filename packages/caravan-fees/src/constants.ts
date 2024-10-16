@@ -57,13 +57,13 @@ export const ABSURDLY_HIGH_FEE_RATE = "1000";
  *
  * @constant
  * @type {string}
- * @default "1000000"
+ * @default "2500000"
  *
- * This constant represents an absurdly high absolute fee of 1,000,000 satoshis (0.01 BTC).
+ * This constant represents an absurdly high absolute fee of 2,500,000 satoshis (0.025 BTC).
  * It serves as a cap on the total transaction fee, regardless of the transaction's size.
  *
  * Context:
- * - 1,000,000 satoshis = 0.01 BTC, which is a significant amount for a transaction fee.
+ * - 1,000,000 satoshis = 0.025 BTC, which is a significant amount for a transaction fee.
  * - This limit helps prevent accidental loss of large amounts of Bitcoin due to fee miscalculations.
  * - It's particularly important for larger transactions where a high fee rate could lead to substantial fees.
  *
@@ -71,4 +71,4 @@ export const ABSURDLY_HIGH_FEE_RATE = "1000";
  * - In fee calculation functions for both regular transactions and fee-bumping operations (RBF, CPFP).
  * - As a final safety check before transaction signing and broadcasting.
  */
-export const ABSURDLY_HIGH_ABS_FEE = "1000000";
+export const ABSURDLY_HIGH_ABS_FEE = "2500000";
