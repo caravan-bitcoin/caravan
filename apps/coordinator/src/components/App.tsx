@@ -30,7 +30,6 @@ import Footer from "./Footer";
 import ErrorBoundary from "./ErrorBoundary";
 import ErrorNotification from "./ErrorNotification";
 
-
 const App = () => {
   return (
     <ThemeProvider theme={theme}>

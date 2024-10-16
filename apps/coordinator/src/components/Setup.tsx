@@ -11,8 +11,8 @@ import {
   Button,
 } from "@mui/material";
 import {
-  AccountBalanceWallet,
-  SportsVolleyball,
+ AccountBalanceWallet,
+ SportsVolleyball,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -33,9 +33,10 @@ const Setup = () => (
           <CardContent>
             <Box mb={3}>
               <Typography color="gray" align="center">
-                Let&apos;s get you started. To use Caravan&apos;s multisignature features,
-                you&apos;ll need a compatible wallet. You can either create a new
-                wallet directly in Caravan or import an existing one.
+                Let&apos;s get you started. To use Caravan&apos;s multisignature
+                features, you&apos;ll need a compatible wallet. You can either
+                create a new wallet directly in Caravan or import an existing
+                one.
               </Typography>
             </Box>
             <Grid
