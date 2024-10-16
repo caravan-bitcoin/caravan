@@ -97,6 +97,7 @@ export class BtcTransactionTemplate {
 
   /**
    * Gets the malleable outputs of the transaction.
+   * Malleable outputs are all those that can have their amount changed, e.g. change outputs.
    * @returns An array of malleable outputs
    */
   get malleableOutputs(): BtcTxOutputTemplate[] {
@@ -154,7 +155,7 @@ export class BtcTransactionTemplate {
    * Calculates the total input amount.
    * @returns {Satoshis} The total input amount in satoshis (as a string)
    */
-  getTotalInputAmount(): Satoshis {
+  get totalInputAmount(): Satoshis {
     return this.calculateTotalInputAmount().toString();
   }
 
@@ -170,7 +171,7 @@ export class BtcTransactionTemplate {
    * Calculates the total output amount.
    * @returns {Satoshis} The total output amount in satoshis (as a string)
    */
-  getTotalOutputAmount(): Satoshis {
+  get totalOutputAmount(): Satoshis {
     return this.calculateTotalOutputAmount().toString();
   }
 
@@ -231,13 +232,16 @@ export class BtcTransactionTemplate {
    * The method also handles cases where the change output already has an amount:
    * 1. It calculates the difference between the new and current change amount.
    * 2. If removing change, it ensures the fee doesn't unexpectedly increase.
+   *
+   * @returns {string | null} The new change amount in satoshis as a string, or null if no adjustment was made or the change output was removed.
+   * @throws {Error} If there's not enough input to satisfy non-change outputs and fees, or if the transaction doesn't balance after adjustment.
    */
-  adjustChangeOutput(): void {
-    if (this.malleableOutputs.length === 0) return;
+  adjustChangeOutput(): Satoshis | null {
+    if (this.malleableOutputs.length === 0) return null;
 
     // TO DO (MRIGESH):
     // To handle for multiple change outputs
-    //
+
     const changeOutput = this.malleableOutputs[0];
     const totalOutWithoutChange = this.calculateTotalOutputAmount().minus(
       this.calculateChangeAmount(),
@@ -250,18 +254,29 @@ export class BtcTransactionTemplate {
 
     if (newChangeAmount.lt(0)) {
       throw new Error(
-        `New Change Amount ${newChangeAmount.toString()} cannot be negative`,
+        `Input amount ${newChangeAmount.toString()} not enough to satisfy non-change output amounts.`,
       );
     }
 
     const changeAmountDiff = newChangeAmount.minus(currentChangeAmount);
 
-    if (!changeAmountDiff.isZero()) {
-      changeOutput.addAmount(changeAmountDiff.toString());
+    // add change amount
+    changeOutput.addAmount(changeAmountDiff.toString());
+
+    // Check if the new change amount is below the dust threshold
+    if (new BigNumber(changeOutput.amountSats).lt(this._dustThreshold)) {
+      // If it's dust, remove the change output entirely
+      const changeOutputIndex = this.outputs.findIndex(
+        (output) => output === changeOutput,
+      );
+      if (changeOutputIndex !== -1) {
+        this.removeOutput(changeOutputIndex);
+      }
+      // The fee will automatically adjust as it's calculated based on inputs minus outputs
+      return null;
     }
 
     // get current out amount after adjustment
-
     const balanceCheck = this.calculateTotalInputAmount()
       .minus(this.calculateTotalOutputAmount())
       .minus(this.targetFees());
@@ -271,24 +286,45 @@ export class BtcTransactionTemplate {
         `Transaction does not balance. Discrepancy: ${balanceCheck.toString()} satoshis`,
       );
     }
+
+    return newChangeAmount.toString();
   }
 
   /**
    * Validates the transaction.
+   *
+   * A transaction is considered valid if:
+   * 1. The current fee is greater than or equal to the target fee.
+   * 2. All outputs have positive, non-zero amounts and above dustThreshold.
+   * 3. The fee rate is not absurdly high (below ABSURDLY_HIGH_FEE_RATE).
+   * 4. The absolute fee is not absurdly high (below ABSURDLY_HIGH_ABS_FEE).
+   * 5. The fee rate satisfies the target fee rate.
+   *
+   * A transaction is considered invalid if:
+   * 1. The current fee is less than the target fee.
+   * 2. Any output has a zero or negative amount.
+   * 3. Any output has amount below dustThreshold.
+   * 4. The fee rate does not satisfy the target fee rate.
+   *
+   * The method will throw an error if:
+   * - The fee rate is greater than or equal to ABSURDLY_HIGH_FEE_RATE.
+   * - The absolute fee is greater than or equal to ABSURDLY_HIGH_ABS_FEE.
+   *
    * @returns True if the transaction is valid, false otherwise
    * @throws Error if the fee rate or absolute fee is absurdly high
    */
   validate(): boolean {
+    // Invalid if fee is less than target
     if (this.calculateCurrentFee().lt(this.targetFees())) {
       return false;
     }
-
+    // Invalid if any output is not above the dustThreshold
     for (const output of this._outputs) {
-      if (new BigNumber(output.amountSats).lte(0)) {
+      if (new BigNumber(output.amountSats).lte(this._dustThreshold)) {
         return false;
       }
     }
-
+    // Invalid if fees are absurdly high
     if (
       new BigNumber(this.estimatedFeeRate).gte(
         new BigNumber(ABSURDLY_HIGH_FEE_RATE),
@@ -299,7 +335,7 @@ export class BtcTransactionTemplate {
         "Absurdly high fee detected. Transaction rejected for safety.",
       );
     }
-
+    // Valid if fee rate is satisfied
     return this.feeRateSatisfied;
   }
 
@@ -321,7 +357,7 @@ export class BtcTransactionTemplate {
    * - The resulting PSBT is not signed and may require further processing (e.g., signing) before it can be broadcast.
    */
   toPsbt(): string {
-    if (!this.isInputValid()) {
+    if (!this.validateInputs()) {
       throw new Error("Invalid inputs: missing previous transaction data");
     }
     const psbt = new PsbtV2();
@@ -352,7 +388,7 @@ export class BtcTransactionTemplate {
    *                      the required previous transaction data and meet other
    *                      validation criteria; returns false otherwise.
    */
-  private isInputValid(): boolean {
+  private validateInputs(): boolean {
     return this._inputs.every(
       (input) => input.hasRequiredFieldsforPSBT() && input.isValid(),
     );

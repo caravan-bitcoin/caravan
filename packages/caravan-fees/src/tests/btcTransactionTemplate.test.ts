@@ -34,7 +34,7 @@ describe("BtcTransactionTemplate", () => {
           (sum, input) => sum.plus(input.value),
           new BigNumber(0),
         );
-        expect(txTemplate.getTotalInputAmount()).toBe(
+        expect(txTemplate.totalInputAmount).toBe(
           expectedInputAmount.toString(),
         );
       });
@@ -44,7 +44,7 @@ describe("BtcTransactionTemplate", () => {
           (sum, output) => sum.plus(output.amountSats),
           new BigNumber(0),
         );
-        expect(txTemplate.getTotalOutputAmount()).toBe(
+        expect(txTemplate.totalOutputAmount).toBe(
           expectedOutputAmount.toString(),
         );
       });
@@ -353,10 +353,10 @@ describe("BtcTxOutputTemplate", () => {
       });
 
       // Check total amounts
-      expect(txTemplate.getTotalInputAmount()).toBe(
+      expect(txTemplate.totalInputAmount).toBe(
         fixture.expected.totalInputAmount,
       );
-      expect(txTemplate.getTotalOutputAmount()).toBe(
+      expect(txTemplate.totalOutputAmount).toBe(
         fixture.expected.totalOutputAmount,
       );
 
