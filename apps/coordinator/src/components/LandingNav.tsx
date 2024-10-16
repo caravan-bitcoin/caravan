@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { AppBar, Toolbar, Button, MenuItem, Box } from "@mui/material";
+import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png"; // Import your logo image

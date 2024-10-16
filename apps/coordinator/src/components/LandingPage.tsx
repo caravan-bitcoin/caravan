@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import Box from "@mui/material/Box";
-import { Button, Container } from "@mui/material";
+import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
 import LockIcon from "@mui/icons-material/Lock";
 import LayersIcon from "@mui/icons-material/Layers";
@@ -370,7 +370,7 @@ const LandingPage = () => {
               is the most private way to determine the current state of the
               bitcoin network. Caravan can be easily configured to use your own
               node for consensus information and broadcasting transactions. If
-              you don't want to or cannot run your own full node, Caravan
+              you don&apos;t want to or cannot run your own full node, Caravan
               defaults to using the freely available API at mempool.space.
             </ContentDescription>
           </DescriptionSection>
@@ -405,7 +405,7 @@ const LandingPage = () => {
             </FeatureIcon>
             <FeatureTitle>Security</FeatureTitle>
             <FeatureDescription>
-              Minimize attack vectors with Caravan's stateless design and
+              Minimize attack vectors with Caravan&apos;s stateless design and
               multisig coordination for enhanced Bitcoin security.
             </FeatureDescription>
           </FeatureItem>
@@ -449,7 +449,7 @@ const LandingPage = () => {
         >
           <h1>Take control of your bitcoin. Create a multisig wallet today</h1>
           <p>
-            Manage your Bitcoin with increased security and control. Caravan's
+            Manage your Bitcoin with increased security and control. Caravan&apos;s
             user-friendly interface guides you through creating, recovering, and
             managing multisig wallets. Take charge of your Bitcoin today!
           </p>
@@ -493,7 +493,7 @@ const LandingPage = () => {
           <FooterLink href="#">Source code</FooterLink>
         </FooterColumn>
         <FooterColumn>
-          <FooterTitle>Developer's corner</FooterTitle>
+          <FooterTitle>Developer&apos;s corner</FooterTitle>
           <FooterLink href="#">GitHub</FooterLink>
         </FooterColumn>
         <FooterColumn>

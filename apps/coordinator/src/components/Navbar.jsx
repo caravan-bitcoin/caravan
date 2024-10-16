@@ -4,7 +4,6 @@ import {
   AppBar,
   Toolbar,
   Button,
-  Typography,
   List,
   ListItem,
   ListItemText,

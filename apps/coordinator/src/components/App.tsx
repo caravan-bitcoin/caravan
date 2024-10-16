@@ -30,7 +30,6 @@ import Footer from "./Footer";
 import ErrorBoundary from "./ErrorBoundary";
 import ErrorNotification from "./ErrorNotification";
 
-const drawerWidth = 240;
 
 const App = () => {
   return (
