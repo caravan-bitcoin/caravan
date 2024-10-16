@@ -19,15 +19,25 @@ import {
 import { Link } from "react-router-dom";
 
 const Setup = () => (
-  <Box display="flex" justifyContent="center" alignItems="flex-start" minHeight="100vh" mt={10}>
+  <Box
+    display="flex"
+    justifyContent="center"
+    alignItems="flex-start"
+    minHeight="100vh"
+    mt={10}
+  >
     <Grid container spacing={3} justifyContent="center">
       <Grid item md={8}>
         <Card>
-          <Typography variant="h5" align="center" fontWeight="Bold">Welcome to Caravan!</Typography>
+          <Typography variant="h5" align="center" fontWeight="Bold">
+            Welcome to Caravan!
+          </Typography>
           <CardContent>
             <Box mb={3}>
               <Typography color="gray" align="center">
-                Let's get you started. To use Caravan's multisignature features, you'll need a compatible wallet. You can either create a new wallet directly in Caravan or import an existing one.
+                Let's get you started. To use Caravan's multisignature features,
+                you'll need a compatible wallet. You can either create a new
+                wallet directly in Caravan or import an existing one.
               </Typography>
             </Box>
             <Grid

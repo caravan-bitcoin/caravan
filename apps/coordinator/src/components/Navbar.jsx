@@ -14,21 +14,21 @@ import {
 import { makeStyles } from "@mui/styles";
 import styled from "styled-components";
 import { Link } from "react-router-dom";
-import HomeIcon from '@mui/icons-material/Home';
-import SettingsIcon from '@mui/icons-material/Settings';
-import WalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import AddressIcon from '@mui/icons-material/LocationOn';
-import ScriptIcon from '@mui/icons-material/Code';
-import CreateIcon from '@mui/icons-material/Create';
-import TestIcon from '@mui/icons-material/CheckCircle';
-import HelpIcon from '@mui/icons-material/Help';
-import Logo from '../../../../assets/images/caravan-logo-transparent.png';
+import HomeIcon from "@mui/icons-material/Home";
+import SettingsIcon from "@mui/icons-material/Settings";
+import WalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import AddressIcon from "@mui/icons-material/LocationOn";
+import ScriptIcon from "@mui/icons-material/Code";
+import CreateIcon from "@mui/icons-material/Create";
+import TestIcon from "@mui/icons-material/CheckCircle";
+import HelpIcon from "@mui/icons-material/Help";
+import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
     backgroundColor: "#00478E",
   },
   menuButton: {
@@ -47,7 +47,7 @@ const useStyles = makeStyles((theme) => ({
     textDecoration: "none",
   },
   bottomList: {
-    marginTop: 'auto',
+    marginTop: "auto",
     backgroundColor: "#00478E",
     color: "#fff",
   },
@@ -62,7 +62,7 @@ const useStyles = makeStyles((theme) => ({
 
 const LogoButton = styled(Button)`
   && {
-    background-color: #00478E;
+    background-color: #00478e;
     color: #fff;
     padding: 10px 20px;
     font-size: 2rem;
@@ -70,7 +70,7 @@ const LogoButton = styled(Button)`
     box-shadow: none;
     &:hover {
       background-color: #fff;
-      color: #00478E;
+      color: #00478e;
     }
     font-weight: bold;
     text-transform: none;
@@ -106,7 +106,9 @@ const NavbarHeader = ({ classes }) => (
         variant="contained"
         component={Link}
         to="/"
-        startIcon={<img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />}
+        startIcon={
+          <img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />
+        }
       >
         Caravan
       </LogoButton>
@@ -120,15 +122,29 @@ NavbarHeader.propTypes = {
 
 const NavbarActive = ({ classes }) => {
   const navItems = [
-    { title: 'Overview', icon: <HomeIcon />, href: '/overview' },
-    { title: 'Setup', icon: <SettingsIcon />, href: '/setup' },
+    { title: "Overview", icon: <HomeIcon />, href: "/overview" },
+    { title: "Setup", icon: <SettingsIcon />, href: "/setup" },
   ];
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="flex-start" width="100%" p={2} backgroundColor="#00478E" color="#fff">
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="flex-start"
+      width="100%"
+      p={2}
+      backgroundColor="#00478E"
+      color="#fff"
+    >
       <List>
         {navItems.map((item, index) => (
-          <NavItem key={index} title={item.title} icon={item.icon} href={item.href} classes={classes} />
+          <NavItem
+            key={index}
+            title={item.title}
+            icon={item.icon}
+            href={item.href}
+            classes={classes}
+          />
         ))}
       </List>
     </Box>
@@ -139,7 +155,9 @@ NavbarActive.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-const NavbarEmpty = () => <Box flexGrow={1} style={{ backgroundColor: "#00478E" }} />;
+const NavbarEmpty = () => (
+  <Box flexGrow={1} style={{ backgroundColor: "#00478E" }} />
+);
 
 const Navbar = () => {
   const classes = useStyles();
@@ -148,7 +166,11 @@ const Navbar = () => {
     { href: "/wallet", title: "Wallet", icon: <WalletIcon /> },
     { href: "/address", title: "Create Address", icon: <AddressIcon /> },
     { href: "/script", title: "Script Explorer", icon: <ScriptIcon /> },
-    { href: "/hermit-psbt", title: "Hermit PSBT Interface", icon: <CreateIcon /> },
+    {
+      href: "/hermit-psbt",
+      title: "Hermit PSBT Interface",
+      icon: <CreateIcon />,
+    },
     { href: "/test", title: "Test Suite", icon: <TestIcon /> },
     { href: "/help", title: "Help", icon: <HelpIcon /> },
   ];
@@ -160,7 +182,13 @@ const Navbar = () => {
       <NavbarEmpty />
       <List className={`${classes.list} ${classes.bottomList}`}>
         {menuItems.map(({ href, title, icon }) => (
-          <NavItem href={href} title={title} icon={icon} classes={classes} key={href} />
+          <NavItem
+            href={href}
+            title={title}
+            icon={icon}
+            classes={classes}
+            key={href}
+          />
         ))}
       </List>
     </div>

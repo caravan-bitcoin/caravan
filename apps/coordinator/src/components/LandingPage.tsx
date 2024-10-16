@@ -1,12 +1,12 @@
-import React from 'react';
-import styled from 'styled-components';
+import React from "react";
+import styled from "styled-components";
 import Box from "@mui/material/Box";
-import { Button, Container } from '@mui/material';
-import MultipleStopIcon from '@mui/icons-material/MultipleStop';
-import LockIcon from '@mui/icons-material/Lock';
-import LayersIcon from '@mui/icons-material/Layers';
-import { Link } from 'react-router-dom';
-import Logo from '../../../../assets/images/caravan-logo-transparent.png'; // Import your logo image
+import { Button, Container } from "@mui/material";
+import MultipleStopIcon from "@mui/icons-material/MultipleStop";
+import LockIcon from "@mui/icons-material/Lock";
+import LayersIcon from "@mui/icons-material/Layers";
+import { Link } from "react-router-dom";
+import Logo from "../../../../assets/images/caravan-logo-transparent.png"; // Import your logo image
 
 const HeroSection = styled.section`
   display: flex;
@@ -19,7 +19,7 @@ const HeroSection = styled.section`
   padding-top: 50px;
   padding-bottom: 50px;
   .highlight {
-    color: #1976D2; /* Style for the word "Caravan" */
+    color: #1976d2; /* Style for the word "Caravan" */
   }
 `;
 
@@ -40,13 +40,13 @@ const Subtitle = styled.h2`
 
 const CTAButton = styled(Button)`
   && {
-    background-color: #1976D2;
+    background-color: #1976d2;
     color: #fff;
     padding: 10px 20px;
     font-size: 1.2rem;
     &:hover {
       background-color: #fff;
-      color: #1976D2;
+      color: #1976d2;
     }
   }
 `;
@@ -54,28 +54,28 @@ const CTAButton = styled(Button)`
 const SecondaryButton = styled(Button)`
   && {
     background-color: #fff;
-    color: #1976D2;
+    color: #1976d2;
     padding: 10px 20px;
     font-size: 1.2rem;
-    border: 2px solid #1976D2;
+    border: 2px solid #1976d2;
     &:hover {
-      background-color: #1976D2;
+      background-color: #1976d2;
       color: #fff;
     }
   }
 `;
 
 const YellowButton = styled(Button)`
-    && {
-        background-color: #EA9C0D;
-        color: #333;
-        padding: 10px 20px;
-        font-size: 1.2rem;
-        &:hover {
-        background-color: #333;
-        color: #000;
-        }
+  && {
+    background-color: #ea9c0d;
+    color: #333;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    &:hover {
+      background-color: #333;
+      color: #000;
     }
+  }
 `;
 
 const ContentSection = styled.section`
@@ -83,13 +83,13 @@ const ContentSection = styled.section`
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background: #1976D2;
+  background: #1976d2;
   color: white;
   text-align: center;
   padding: 80px 0;
   border-radius: 10px;
   .highlight {
-    color: #1976D2; /* Style for the word "Caravan" */
+    color: #1976d2; /* Style for the word "Caravan" */
   }
 `;
 
@@ -150,7 +150,7 @@ const FeatureItem = styled.div`
 
 const FeatureIcon = styled.div`
   font-size: 3rem;
-  color: #1976D2;
+  color: #1976d2;
   text-align: left;
 `;
 
@@ -176,7 +176,7 @@ const CtaSection = styled.section`
   text-align: center;
   padding: 80px 0;
   .highlight {
-    color: #1976D2; /* Style for the word "Caravan" */
+    color: #1976d2; /* Style for the word "Caravan" */
   }
 `;
 
@@ -212,14 +212,14 @@ const FooterLink = styled.a`
 const LogoButton = styled(Button)`
   && {
     background-color: #fff;
-    color: #1976D2;
+    color: #1976d2;
     padding: 10px 20px;
     font-size: 2rem;
     outline: none;
     box-shadow: none;
     &:hover {
       background-color: #fff;
-      color: #1976D2;
+      color: #1976d2;
     }
     font-weight: bold;
     text-transform: none;
@@ -232,156 +232,231 @@ const LandingPage = () => {
       {/* Hero Section */}
       <HeroSection>
         <Title>
-            Secure your bitcoin with <span className="highlight">Caravan</span>, a stateless multisig coordinator
+          Secure your bitcoin with <span className="highlight">Caravan</span>, a
+          stateless multisig coordinator
         </Title>
         <Subtitle>
-            Caravan simplifies multisig custody by coordinating your transaction without storing your keys. Gain security and control over your bitcoin.
+          Caravan simplifies multisig custody by coordinating your transaction
+          without storing your keys. Gain security and control over your
+          bitcoin.
         </Subtitle>
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '400px' }}>
-            <Link to="/setup">
-                <CTAButton variant="contained">Get Started</CTAButton>
-            </Link>
-            <SecondaryButton variant="contained">Learn More</SecondaryButton>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            width: "400px",
+          }}
+        >
+          <Link to="/setup">
+            <CTAButton variant="contained">Get Started</CTAButton>
+          </Link>
+          <SecondaryButton variant="contained">Learn More</SecondaryButton>
         </div>
         <img
-            src="src/images/landing/caravan-balance.png"
-            alt="Caravan Balance"
-            style={{ marginTop: '100px', maxWidth: '50%', height: 'auto' }}
+          src="src/images/landing/caravan-balance.png"
+          alt="Caravan Balance"
+          style={{ marginTop: "100px", maxWidth: "50%", height: "auto" }}
         />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', width: '80%', paddingTop: '60px', paddingBottom: '20px' }}>
-            <img
-                src="src/images/landing/trezor.png"
-                alt="Trezor"
-                style={{ height: '80px', width: 'auto' }}
-            />
-            <img
-                src="src/images/landing/ledger.png"
-                alt="Ledger"
-                style={{ height: '80px', width: 'auto' }}
-            />
-            <img
-                src="src/images/landing/coldcard.png"
-                alt="Coldcard"
-                style={{ height: '80px', width: 'auto' }}
-            />
-            <img
-                src="src/images/landing/firefox.png"
-                alt="Firefox"
-                style={{ height: '80px', width: 'auto' }}
-            />
-            <img
-                src="src/images/landing/chrome.png"
-                alt="Chrome"
-                style={{ height: '80px', width: 'auto' }}
-            />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: "20px",
+            width: "80%",
+            paddingTop: "60px",
+            paddingBottom: "20px",
+          }}
+        >
+          <img
+            src="src/images/landing/trezor.png"
+            alt="Trezor"
+            style={{ height: "80px", width: "auto" }}
+          />
+          <img
+            src="src/images/landing/ledger.png"
+            alt="Ledger"
+            style={{ height: "80px", width: "auto" }}
+          />
+          <img
+            src="src/images/landing/coldcard.png"
+            alt="Coldcard"
+            style={{ height: "80px", width: "auto" }}
+          />
+          <img
+            src="src/images/landing/firefox.png"
+            alt="Firefox"
+            style={{ height: "80px", width: "auto" }}
+          />
+          <img
+            src="src/images/landing/chrome.png"
+            alt="Chrome"
+            style={{ height: "80px", width: "auto" }}
+          />
         </div>
       </HeroSection>
 
       <ContentSection>
-            <FullWidthBox>
-                <DescriptionSection>
-                    <ContentTitle>Stateless Multisig Coordinator</ContentTitle>
-                    <ContentDescription>
-                        Caravan makes bitcoin multisig custody easier and safer through transparency and standards.
-                        Caravan is a coordination software for multisig addresses and wallets. Caravan can be used to build a multisig wallet derived from xpubs, or individual multisig addresses derived from pubkeys. In both cases, in order to transact from the wallet or address, you must also have your private keys and BIP32 paths.
-                        Caravan is stateless. It does not itself store any data outside your current browser session. You must safekeep the wallet details (xpubs, BIP32 paths) and addresses (redeem scripts, BIP32 paths) that you create.
-                    </ContentDescription>
-                </DescriptionSection>
-                <ImageSection>
-                    <div style={{ backgroundColor: '#FFE7BB', padding: '20px', borderRadius:'10px' }}>
-                        <img
-                            src="src/images/landing/stateless.png"
-                            alt="Trezor"
-                            style={{ height: '500px', width: 'auto' }}
-                        />
-                    </div>
-                </ImageSection>
-            </FullWidthBox>
+        <FullWidthBox>
+          <DescriptionSection>
+            <ContentTitle>Stateless Multisig Coordinator</ContentTitle>
+            <ContentDescription>
+              Caravan makes bitcoin multisig custody easier and safer through
+              transparency and standards. Caravan is a coordination software for
+              multisig addresses and wallets. Caravan can be used to build a
+              multisig wallet derived from xpubs, or individual multisig
+              addresses derived from pubkeys. In both cases, in order to
+              transact from the wallet or address, you must also have your
+              private keys and BIP32 paths. Caravan is stateless. It does not
+              itself store any data outside your current browser session. You
+              must safekeep the wallet details (xpubs, BIP32 paths) and
+              addresses (redeem scripts, BIP32 paths) that you create.
+            </ContentDescription>
+          </DescriptionSection>
+          <ImageSection>
+            <div
+              style={{
+                backgroundColor: "#FFE7BB",
+                padding: "20px",
+                borderRadius: "10px",
+              }}
+            >
+              <img
+                src="src/images/landing/stateless.png"
+                alt="Trezor"
+                style={{ height: "500px", width: "auto" }}
+              />
+            </div>
+          </ImageSection>
+        </FullWidthBox>
 
-            <FullWidthBox>
-                <ImageSection>
-                    <div style={{ backgroundColor: '#FFE7BB', padding: '20px', borderRadius:'10px' }}>
-                        <img
-                            src="src/images/landing/xpubs.png"
-                            alt="Trezor"
-                            style={{ height: '500px', width: 'auto' }}
-                        />
-                    </div>
-                </ImageSection>
-                <DescriptionSection>
-                    <ContentTitle>Keys</ContentTitle>
-                    <ContentDescription>
-                        All bitcoin is ultimately protected by private keys.
-                        Your private key may live on a piece of paper, a hardware wallet, some software on a laptop, or even just in your mind. Caravan, being stateless, does not store or ask for your private key but it can talk to hardware devices or software applications which do.
-                        Caravan supports entering public keys and signatures via text, so any wallet which can export such data can be made compatible with Caravan.
-                    </ContentDescription>
-                </DescriptionSection>
-            </FullWidthBox>
+        <FullWidthBox>
+          <ImageSection>
+            <div
+              style={{
+                backgroundColor: "#FFE7BB",
+                padding: "20px",
+                borderRadius: "10px",
+              }}
+            >
+              <img
+                src="src/images/landing/xpubs.png"
+                alt="Trezor"
+                style={{ height: "500px", width: "auto" }}
+              />
+            </div>
+          </ImageSection>
+          <DescriptionSection>
+            <ContentTitle>Keys</ContentTitle>
+            <ContentDescription>
+              All bitcoin is ultimately protected by private keys. Your private
+              key may live on a piece of paper, a hardware wallet, some software
+              on a laptop, or even just in your mind. Caravan, being stateless,
+              does not store or ask for your private key but it can talk to
+              hardware devices or software applications which do. Caravan
+              supports entering public keys and signatures via text, so any
+              wallet which can export such data can be made compatible with
+              Caravan.
+            </ContentDescription>
+          </DescriptionSection>
+        </FullWidthBox>
 
-            <FullWidthBox>
-                <DescriptionSection>
-                    <ContentTitle>Consensus</ContentTitle>
-                    <ContentDescription>
-                        In order to look up wallet addresses and their balances, and broadcast transactions, Caravan requires knowledge of the constantly changing bitcoin network.
-                        Running a full bitcoin node is the most private way to determine the current state of the bitcoin network. Caravan can be easily configured to use your own node for consensus information and broadcasting transactions.
-                        If you don't want to or cannot run your own full node, Caravan defaults to using the freely available API at mempool.space.
-                    </ContentDescription>
-                </DescriptionSection>
-                <ImageSection>
-                    <div style={{ backgroundColor: '#FFE7BB', padding: '20px', borderRadius:'10px' }}>
-                        <img
-                            src="src/images/landing/consensus.png"
-                            alt="Trezor"
-                            style={{ height: '500px', width: 'auto' }}
-                        />
-                    </div>
-                </ImageSection>
-            </FullWidthBox>
-        </ContentSection>
+        <FullWidthBox>
+          <DescriptionSection>
+            <ContentTitle>Consensus</ContentTitle>
+            <ContentDescription>
+              In order to look up wallet addresses and their balances, and
+              broadcast transactions, Caravan requires knowledge of the
+              constantly changing bitcoin network. Running a full bitcoin node
+              is the most private way to determine the current state of the
+              bitcoin network. Caravan can be easily configured to use your own
+              node for consensus information and broadcasting transactions. If
+              you don't want to or cannot run your own full node, Caravan
+              defaults to using the freely available API at mempool.space.
+            </ContentDescription>
+          </DescriptionSection>
+          <ImageSection>
+            <div
+              style={{
+                backgroundColor: "#FFE7BB",
+                padding: "20px",
+                borderRadius: "10px",
+              }}
+            >
+              <img
+                src="src/images/landing/consensus.png"
+                alt="Trezor"
+                style={{ height: "500px", width: "auto" }}
+              />
+            </div>
+          </ImageSection>
+        </FullWidthBox>
+      </ContentSection>
 
       {/* Features Section */}
       <FeaturesSection>
-          <h2>Secure your bitcoin with confidence</h2>
-          <h4 style={{ color: 'gray' }}>Powerful benefits for secure multisig management</h4>
-          <FeatureContainer>
-            <FeatureItem>
-              <FeatureIcon>
-                <LockIcon fontSize="large" />
-              </FeatureIcon>
-              <FeatureTitle>Security</FeatureTitle>
-              <FeatureDescription>
-                Minimize attack vectors with Caravan's stateless design and multisig coordination for enhanced Bitcoin security.
-              </FeatureDescription>
-            </FeatureItem>
+        <h2>Secure your bitcoin with confidence</h2>
+        <h4 style={{ color: "gray" }}>
+          Powerful benefits for secure multisig management
+        </h4>
+        <FeatureContainer>
+          <FeatureItem>
+            <FeatureIcon>
+              <LockIcon fontSize="large" />
+            </FeatureIcon>
+            <FeatureTitle>Security</FeatureTitle>
+            <FeatureDescription>
+              Minimize attack vectors with Caravan's stateless design and
+              multisig coordination for enhanced Bitcoin security.
+            </FeatureDescription>
+          </FeatureItem>
 
-            <FeatureItem>
-              <FeatureIcon>
-                <LayersIcon fontSize="large" />
-              </FeatureIcon>
-              <FeatureTitle>Transparency</FeatureTitle>
-              <FeatureDescription>
-                Maintain complete control over your private keys with open standards and user-managed key storage.
-              </FeatureDescription>
-            </FeatureItem>
+          <FeatureItem>
+            <FeatureIcon>
+              <LayersIcon fontSize="large" />
+            </FeatureIcon>
+            <FeatureTitle>Transparency</FeatureTitle>
+            <FeatureDescription>
+              Maintain complete control over your private keys with open
+              standards and user-managed key storage.
+            </FeatureDescription>
+          </FeatureItem>
 
-            <FeatureItem>
-              <FeatureIcon>
-                <MultipleStopIcon fontSize="large" />
-              </FeatureIcon>
-              <FeatureTitle>Flexibility</FeatureTitle>
-              <FeatureDescription>
-                Enjoy seamless integration with hardware wallets, software applications, and a user-friendly interface for effortless multisig management.
-              </FeatureDescription>
-            </FeatureItem>
-          </FeatureContainer>
+          <FeatureItem>
+            <FeatureIcon>
+              <MultipleStopIcon fontSize="large" />
+            </FeatureIcon>
+            <FeatureTitle>Flexibility</FeatureTitle>
+            <FeatureDescription>
+              Enjoy seamless integration with hardware wallets, software
+              applications, and a user-friendly interface for effortless
+              multisig management.
+            </FeatureDescription>
+          </FeatureItem>
+        </FeatureContainer>
       </FeaturesSection>
 
       <CtaSection>
-        <Box sx={{ width: '90%', borderRadius: '8px', padding: '16px', margin: '0 auto', backgroundColor:'#1976D2', paddingBottom: 10, paddingTop: 10 }}>
+        <Box
+          sx={{
+            width: "90%",
+            borderRadius: "8px",
+            padding: "16px",
+            margin: "0 auto",
+            backgroundColor: "#1976D2",
+            paddingBottom: 10,
+            paddingTop: 10,
+          }}
+        >
           <h1>Take control of your bitcoin. Create a multisig wallet today</h1>
-          <p>Manage your Bitcoin with increased security and control. Caravan's user-friendly interface guides you through creating, recovering, and managing multisig wallets. Take charge of your Bitcoin today!</p>
+          <p>
+            Manage your Bitcoin with increased security and control. Caravan's
+            user-friendly interface guides you through creating, recovering, and
+            managing multisig wallets. Take charge of your Bitcoin today!
+          </p>
           <Link to="/setup">
-            <YellowButton variant="contained" style={{ textTransform: 'none' }}>Get started</YellowButton>
+            <YellowButton variant="contained" style={{ textTransform: "none" }}>
+              Get started
+            </YellowButton>
           </Link>
         </Box>
       </CtaSection>
@@ -389,11 +464,20 @@ const LandingPage = () => {
       {/* Footer */}
       <Footer>
         <FooterColumn>
-          <LogoButton variant="contained" startIcon={<img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />}>
-              Caravan
+          <LogoButton
+            variant="contained"
+            startIcon={
+              <img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />
+            }
+          >
+            Caravan
           </LogoButton>
-          <p style={{ alignSelf: 'center', color:'gray'}}>Multisig made easy. Manage your Bitcoin together with Caravan.</p>
-          <p style={{ alignSelf: 'center' }}>&copy; 2024 Caravan Finance. All Rights Reserved.</p>
+          <p style={{ alignSelf: "center", color: "gray" }}>
+            Multisig made easy. Manage your Bitcoin together with Caravan.
+          </p>
+          <p style={{ alignSelf: "center" }}>
+            &copy; 2024 Caravan Finance. All Rights Reserved.
+          </p>
         </FooterColumn>
         <FooterColumn>
           <FooterTitle>Getting started</FooterTitle>

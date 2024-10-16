@@ -36,7 +36,7 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className="App" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="App" style={{ display: "flex", flexDirection: "column" }}>
         <SnackbarProvider maxSnack={3}>
           <Router basename="/">
             <AppContent />
@@ -60,7 +60,7 @@ const AppContent = () => {
           sx={{
             width: 300,
             flexShrink: 0,
-            [`& .MuiDrawer-paper`]: { width: 300, boxSizing: 'border-box' },
+            [`& .MuiDrawer-paper`]: { width: 300, boxSizing: "border-box" },
           }}
         >
           <Navbar />
@@ -68,7 +68,12 @@ const AppContent = () => {
       )}
       <Box
         component="main"
-        sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3, marginLeft: location.pathname === "/" ? 0 : `300px` }}
+        sx={{
+          flexGrow: 1,
+          bgcolor: "background.default",
+          p: 3,
+          marginLeft: location.pathname === "/" ? 0 : `300px`,
+        }}
       >
         <Container maxWidth={false} disableGutters sx={{ maxWidth: "100%" }}>
           <ErrorBoundary>
