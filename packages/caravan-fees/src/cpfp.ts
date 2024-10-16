@@ -192,20 +192,25 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   const fee = new BigNumber(childTxTemplate.targetFeesToPay);
   const changeAmount = totalInputAmount.minus(fee);
 
-  if (changeAmount.lte(dustThreshold)) {
+  // Check if change amount is above dust threshold
+  if (changeAmount.gt(dustThreshold)) {
+    // Change amount is valid, set it as the output amount
+    childTxTemplate.adjustChangeOutput();
+  } else {
+    // Change amount is at or below dust threshold
     if (strict) {
+      // In strict mode, throw an error
       throw new Error(
-        "Change amount is below the dust threshold. More inputs are needed or try reducing the fee rate.",
+        "Change amount is below the dust threshold. Increase inputs or reduce fee rate.",
       );
     } else {
+      // In non-strict mode, warn and proceed with the dust amount
       console.warn(
-        "Change amount is below dust threshold. Adjusting transaction.",
+        "Change amount is below dust threshold. Transaction may be less efficient.",
       );
-
-      childTxTemplate.outputs[0].setAmount(changeAmount.toString());
+      // Set change amount
+      childTxTemplate.adjustChangeOutput();
     }
-  } else {
-    childTxTemplate.outputs[0].setAmount(changeAmount.toString());
   }
 
   // Step 8: Validate the child transaction
