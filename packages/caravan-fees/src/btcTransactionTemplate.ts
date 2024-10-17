@@ -121,6 +121,18 @@ export class BtcTransactionTemplate {
   }
 
   /**
+   * Checks if the transaction needs a change output.
+   * @returns {boolean} True if there's enough leftover funds for a change output above the dust threshold.
+   */
+  get needsChange(): boolean {
+    const totalInput = this.calculateTotalInputAmount();
+    const totalOutput = this.calculateTotalOutputAmount();
+    const fee = new BigNumber(this.targetFeesToPay);
+    const leftover = totalInput.minus(totalOutput).minus(fee);
+    return leftover.isGreaterThan(this._dustThreshold);
+  }
+
+  /**
    * Checks if the current fees are sufficient to meet the target fee rate.
    * @returns True if the fees are paid, false otherwise
    */
