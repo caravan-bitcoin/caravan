@@ -15,7 +15,7 @@ import BigNumber from "bignumber.js";
  * RBF (Replace-By-Fee) Transaction Creation
  *
  * SECURITY NOTE: By default, these functions reuse all inputs from the original
- * transaction in the replacement transaction while acceleration. This is to prevent the "replacement
+ * transaction in the replacement transaction for acceleration. This is to prevent the "replacement
  * cycle attack" where multiple versions of a transaction could potentially be
  * confirmed if they don't conflict with each other.
  *
@@ -91,7 +91,13 @@ export const createCancelRbfTransaction = (
   txAnalyzer.assumeRBF = fullRBF;
 
   const analysis = txAnalyzer.analyze();
-  const originalTxFee = new BigNumber(txAnalyzer.fee);
+
+  // Validate that the target fee rate is higher than the original transaction's fee rate
+  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
+    throw new Error(
+      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
+    );
+  }
 
   // Step 2: Verify RBF possibility and suitability
   if (!analysis.canRBF) {
@@ -107,6 +113,11 @@ export const createCancelRbfTransaction = (
   }
 
   if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
+    if (strict) {
+      throw new Error(
+        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
+      );
+    }
     console.warn(
       "RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: " +
         analysis.recommendedStrategy,
@@ -117,7 +128,7 @@ export const createCancelRbfTransaction = (
   const newTxTemplate = new BtcTransactionTemplate({
     inputs: [],
     outputs: [],
-    targetFeeRate: Number(txAnalyzer.rbfFeeRate), // Use RBF-specific fee rate from analyzer
+    targetFeeRate, // User-Defined Fee-Rate
     dustThreshold,
     network,
     scriptType,
@@ -137,7 +148,7 @@ export const createCancelRbfTransaction = (
 
   // Step 5: Add inputs from the original transaction
   const originalInputTemplates = txAnalyzer.getInputTemplates();
-  const addedInputs = new Set();
+  const addedInputs = new Set<string>();
 
   if (reuseAllInputs) {
     // Add all original inputs
@@ -177,15 +188,15 @@ export const createCancelRbfTransaction = (
   for (const utxo of availableInputs) {
     if (
       newTxTemplate.feeRateSatisfied &&
-      new BigNumber(newTxTemplate.currentFee).gte(
-        BigNumber.max(newTxTemplate.targetFeesToPay, originalTxFee),
-      )
+      new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee) &&
+      newTxTemplate.needsChange
     ) {
-      // Stop adding inputs when both conditions are met:
-      // 1. The fee rate satisfies the target rate
-      // 2. The current fee is greater than or equal to the maximum of:
-      //    a) The target fee based on the desired rate by user
-      //    b) The minimum fee required for a valid RBF replacement >= original fees
+      /*
+        Stop adding inputs when the following conditions are met:
+         1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
+         2. The current fee is gte the minimum required absolute RBF fee amount
+         3. There is enough left over for change
+      */
       break;
     }
     // Skip if this UTXO is already added
@@ -198,69 +209,40 @@ export const createCancelRbfTransaction = (
   }
 
   // Step 7: Calculate and set the cancellation output amount
+  // Note : We cannot use `newTxTemplate.adjustChangeOutput()` here as we need to set fees first (as per RBF rules) and then set change amount
 
-  const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
-  // Ensure we're using the higher of the target fee and the original fee
-  const fee = BigNumber.max(newTxTemplate.targetFeesToPay, originalTxFee);
-  // The cancel output receives all funds minus the fee
-  const cancelOutputAmount = totalInputAmount.minus(fee);
-
-  if (cancelOutputAmount.isLessThan(dustThreshold)) {
-    if (strict) {
-      throw new Error(
-        "Cancel output would be dust. Increase inputs or fee rate.",
-      );
-    } else {
-      console.warn(
-        "Cancel output amount is below dust threshold. Adjusting transaction.",
-      );
-      newTxTemplate.outputs[0].setAmount("0");
-    }
-  } else {
-    newTxTemplate.outputs[0].setAmount(cancelOutputAmount.toString());
-  }
+  const totalInputAmount = new BigNumber(newTxTemplate.totalInputAmount);
+  const totalOutputAmount = new BigNumber(newTxTemplate.totalOutputAmount);
+  const fee = BigNumber.max(
+    newTxTemplate.targetFeesToPay,
+    txAnalyzer.minimumRBFFee,
+  );
+  const cancelOutputAmount = totalInputAmount
+    .minus(totalOutputAmount)
+    .minus(fee);
+  newTxTemplate.outputs[0].setAmount(cancelOutputAmount.toString());
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const targetFeeForNewSize = new BigNumber(newTxTemplate.targetFeesToPay);
+  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+  const targetFee = new BigNumber(newTxTemplate.targetFeesToPay);
 
-  // Calculate the minimum required fee as the maximum of:
-  // 1. The original transaction fee (to satisfy RBF rules)
-  // 2. The target fee for the new transaction size
-  const minRequiredFee = BigNumber.max(originalTxFee, targetFeeForNewSize);
-
+  // Check 1: New fee must be at least the minimum RBF fee
   if (currentFee.isLessThan(minRequiredFee)) {
-    if (strict) {
-      throw new Error(
-        `New transaction fee (${currentFee.toString()} sats) must be at least ${minRequiredFee.toString()} sats. ` +
-          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
-          `the target fee for the new size (${targetFeeForNewSize.toString()} sats).`,
-      );
-    } else {
-      console.warn(
-        `New transaction fee (${currentFee.toString()} sats) is lower than the required minimum of ${minRequiredFee.toString()} sats. ` +
-          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
-          `the target fee for the new size (${targetFeeForNewSize.toString()} sats). ` +
-          `Transaction may not be accepted by all nodes.`,
-      );
-    }
-  } else if (currentFee.isGreaterThan(minRequiredFee.times(1.5))) {
-    // Optional: Warn if the fee is significantly higher than necessary
-    console.warn(
-      `New transaction fee (${currentFee.toString()} sats) is significantly higher than the minimum required fee (${minRequiredFee.toString()} sats). ` +
-        `Consider optimizing the fee to avoid overpayment.`,
-    );
-  }
-
-  // Step 9: Validate the transaction
-  if (!newTxTemplate.validate()) {
     throw new Error(
-      "Failed to create a valid cancel RBF transaction. Ensure all inputs and outputs are valid and fee requirements are met.",
+      `New transaction fee (${currentFee.toString()} sats) must be at least the minimum RBF fee (${minRequiredFee.toString()} sats).`,
     );
   }
 
-  // Step 10: Convert to PSBT and return as base64
-  return newTxTemplate.toPsbt();
+  // Check 2: Target fees must be paid
+  if (currentFee.isLessThan(targetFee)) {
+    throw new Error(
+      `New transaction fee (${currentFee.toString()} sats) is less than the target fee (${targetFee.toString()} sats).`,
+    );
+  }
+
+  // Step 9: Convert to PSBT and return as base64
+  return newTxTemplate.toPsbt(true);
 };
 
 /**
@@ -343,8 +325,15 @@ export const createAcceleratedRbfTransaction = (
   });
 
   txAnalyzer.assumeRBF = fullRBF;
+
   const analysis = txAnalyzer.analyze();
-  const originalTxFee = new BigNumber(txAnalyzer.fee);
+
+  // Validate that the target fee rate is higher than the original transaction's fee rate
+  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
+    throw new Error(
+      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
+    );
+  }
 
   // Step 2: Verify RBF possibility and suitability
   if (!analysis.canRBF) {
@@ -360,6 +349,11 @@ export const createAcceleratedRbfTransaction = (
   }
 
   if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
+    if (strict) {
+      throw new Error(
+        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
+      );
+    }
     console.warn(
       "RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: " +
         analysis.recommendedStrategy,
@@ -370,7 +364,7 @@ export const createAcceleratedRbfTransaction = (
   const newTxTemplate = new BtcTransactionTemplate({
     inputs: [],
     outputs: [],
-    targetFeeRate: Number(txAnalyzer.rbfFeeRate), // Use RBF-specific fee rate from analyzer
+    targetFeeRate, // User-Defined Fee-Rate
     dustThreshold,
     network,
     scriptType,
@@ -434,15 +428,13 @@ export const createAcceleratedRbfTransaction = (
   for (const utxo of availableInputs) {
     if (
       newTxTemplate.feeRateSatisfied &&
-      new BigNumber(newTxTemplate.currentFee).gte(
-        BigNumber.max(newTxTemplate.targetFeesToPay, originalTxFee),
-      )
+      new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee)
     ) {
-      // Stop adding inputs when both conditions are met:
-      // 1. The fee rate satisfies the target rate
-      // 2. The current fee is greater than or equal to the maximum of:
-      //    a) The target fee based on the desired rate by user
-      //    b) The minimum fee required for a valid RBF replacement >= original fees
+      /*
+        Stop adding inputs when the following conditions are met:
+         1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
+         2. The current fee is gte the minimum required absolute RBF fee amount
+      */
       break;
     }
     // Skip if this UTXO is already added
@@ -458,12 +450,12 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 7: Add or adjust change output
   if (newTxTemplate.needsChangeOutput) {
-    const totalInputAmount = new BigNumber(newTxTemplate.getTotalInputAmount());
-    const totalOutputAmount = new BigNumber(
-      newTxTemplate.getTotalOutputAmount(),
+    const totalInputAmount = new BigNumber(newTxTemplate.totalInputAmount);
+    const totalOutputAmount = new BigNumber(newTxTemplate.totalOutputAmount);
+    const fee = BigNumber.max(
+      newTxTemplate.targetFeesToPay,
+      txAnalyzer.minimumRBFFee,
     );
-    // Ensure we're using the higher of the target fee and the original fees
-    const fee = BigNumber.max(newTxTemplate.targetFeesToPay, originalTxFee);
     const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
 
     if (changeAmount.gt(dustThreshold)) {
@@ -488,43 +480,23 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 8: Ensure the new transaction meets RBF requirements
   const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const targetFeeForNewSize = new BigNumber(newTxTemplate.targetFeesToPay);
+  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+  const targetFee = new BigNumber(newTxTemplate.targetFeesToPay);
 
-  // Calculate the minimum required fee as the maximum of:
-  // 1. The original transaction fee (to satisfy RBF rules)
-  // 2. The target fee for the new transaction size
-  const minRequiredFee = BigNumber.max(originalTxFee, targetFeeForNewSize);
-
+  // Check 1: New fee must be at least the minimum RBF fee
   if (currentFee.isLessThan(minRequiredFee)) {
-    if (strict) {
-      throw new Error(
-        `New transaction fee (${currentFee.toString()} sats) must be at least ${minRequiredFee.toString()} sats. ` +
-          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
-          `the target fee for the new size (${targetFeeForNewSize.toString()} sats).`,
-      );
-    } else {
-      console.warn(
-        `New transaction fee (${currentFee.toString()} sats) is lower than the required minimum of ${minRequiredFee.toString()} sats. ` +
-          `This is the higher of the original tx fee (${originalTxFee.toString()} sats) and ` +
-          `the target fee for the new size (${targetFeeForNewSize.toString()} sats). ` +
-          `Transaction may not be accepted by all nodes.`,
-      );
-    }
-  } else if (currentFee.isGreaterThan(minRequiredFee.times(1.5))) {
-    // Optional: Warn if the fee is significantly higher than necessary
-    console.warn(
-      `New transaction fee (${currentFee.toString()} sats) is significantly higher than the minimum required fee (${minRequiredFee.toString()} sats). ` +
-        `Consider optimizing the fee to avoid overpayment.`,
-    );
-  }
-
-  // Step 9: Validate the transaction
-  if (!newTxTemplate.validate()) {
     throw new Error(
-      "Failed to create a valid accelerated RBF transaction. Ensure all inputs and outputs are valid and fee requirements are met.",
+      `New transaction fee (${currentFee.toString()} sats) must be at least the minimum RBF fee (${minRequiredFee.toString()} sats).`,
     );
   }
 
-  // Step 10: Convert to PSBT and return as base64
-  return newTxTemplate.toPsbt();
+  // Check 2: Target fees must be paid
+  if (currentFee.isLessThan(targetFee)) {
+    throw new Error(
+      `New transaction fee (${currentFee.toString()} sats) is less than the target fee (${targetFee.toString()} sats).`,
+    );
+  }
+
+  // Step 9: Convert to PSBT and return as base64
+  return newTxTemplate.toPsbt(true);
 };

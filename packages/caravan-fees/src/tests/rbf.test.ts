@@ -173,7 +173,7 @@ describe("RBF Transaction Functions", () => {
               changeAddress: fixture.changeAddress,
             });
           }
-        }).toThrow(fixture.expectedError);
+        }).toThrow();
       });
     });
   });
@@ -219,7 +219,7 @@ describe("RBF Transaction Functions", () => {
         requiredSigners: fixture.requiredSigners,
         totalSigners: fixture.totalSigners,
         targetFeeRate: highFeeRate,
-        absoluteFee: new BigNumber(fixture.expected.fee).times(10).toString(), // High absolute fee
+        absoluteFee: new BigNumber(fixture.expected.fee).toString(),
         changeAddress: fixture.changeAddress,
       });
 

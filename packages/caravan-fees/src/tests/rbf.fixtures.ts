@@ -30,6 +30,8 @@ export const rbfFixtures = {
       Even though a fee of 12,720 satoshis (159 * 80) would achieve the desired 80 sat/vB rate,
       we must pay the original fee of 20,880 satoshis to satisfy RBF rules. This results in a
       higher effective fee rate than initially targeted.
+      Note here our RBF function pays 21,228 = original(20,880) + incremental_fees * original_tx_size(1 * 348)
+      as we use txAnalyzer to calculate minimum RBF fee which cannot account for changed tx size as in this case so assumes the above minimum fees to be paid
 
       This example illustrates how RBF cancellations can sometimes lead to paying more in fees
       than strictly necessary for the desired fee rate, due to the requirement to pay at least
@@ -114,8 +116,8 @@ export const rbfFixtures = {
         inputCount: 1,
         outputCount: 1,
         fee: "20880", // absolute fees of tx
-        expectedfee: "20880", // rationalized above
-        feeRate: 131.32, // rationalized above
+        expectedfee: "21228", // rationalized above
+        feeRate: 133.509, // rationalized above
       },
     },
   ],
@@ -295,8 +297,8 @@ export const rbfFixtures = {
         inputCount: 2,
         outputCount: 2,
         fee: "905",
-        expectedFee: "1847",
-        feeRate: 6.035,
+        expectedFee: "1836",
+        feeRate: 6,
       },
     },
   ],
