@@ -228,7 +228,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   validateCPFPPackage(txAnalyzer, childTxTemplate, strict);
 
   // Step 10: Convert to PSBT and return as base64
-  return childTxTemplate.toPsbt();
+  return childTxTemplate.toPsbt(true);
 };
 
 /**

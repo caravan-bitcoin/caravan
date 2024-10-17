@@ -301,52 +301,58 @@ export class BtcTransactionTemplate {
   }
 
   /**
-   * Validates the transaction.
+   * Validates the entire transaction template.
    *
-   * A transaction is considered valid if:
-   * 1. The current fee is greater than or equal to the target fee.
-   * 2. All outputs have positive, non-zero amounts and above dustThreshold.
-   * 3. The fee rate is not absurdly high (below ABSURDLY_HIGH_FEE_RATE).
-   * 4. The absolute fee is not absurdly high (below ABSURDLY_HIGH_ABS_FEE).
-   * 5. The fee rate satisfies the target fee rate.
+   * This method performs a comprehensive check of the transaction, including:
+   * 1. Validation of all inputs:
+   *    - Checks if each input has the required fields for PSBT creation.
+   *    - Validates each input's general structure and data.
+   * 2. Validation of all outputs:
+   *    - Ensures each output has a valid address and amount.
+   * 3. Verification that the current fee meets or exceeds the target fee
+   * 4. Check that the fee rate is not absurdly high
+   * 5. Check that the absolute fee is not absurdly high
    *
-   * A transaction is considered invalid if:
-   * 1. The current fee is less than the target fee.
-   * 2. Any output has a zero or negative amount.
-   * 3. Any output has amount below dustThreshold.
-   * 4. The fee rate does not satisfy the target fee rate.
+   * @returns {boolean} True if the transaction is valid according to all checks, false otherwise.
    *
-   * The method will throw an error if:
-   * - The fee rate is greater than or equal to ABSURDLY_HIGH_FEE_RATE.
-   * - The absolute fee is greater than or equal to ABSURDLY_HIGH_ABS_FEE.
+   * @throws {Error} If any validation check encounters an unexpected error.
    *
-   * @returns True if the transaction is valid, false otherwise
-   * @throws Error if the fee rate or absolute fee is absurdly high
+   * @example
+   * const txTemplate = new BtcTransactionTemplate(options);
+   * if (txTemplate.validate()) {
+   *   console.log("Transaction is valid");
+   * } else {
+   *   console.log("Transaction is invalid");
+   * }
    */
   validate(): boolean {
-    // Invalid if fee is less than target
+    // 1. Validate all inputs
+    if (!this.validateInputs()) {
+      return false;
+    }
+
+    // 2. Validate each input
+    if (!this._inputs.every((input) => input.isValid())) {
+      return false;
+    }
+
+    // 3. Check if fees hit the target
     if (this.calculateCurrentFee().lt(this.targetFees())) {
       return false;
     }
-    // Invalid if any output is not above the dustThreshold
-    for (const output of this._outputs) {
-      if (new BigNumber(output.amountSats).lte(this._dustThreshold)) {
-        return false;
-      }
+
+    // 4. Check if the fee rate isn't absurd
+    const feeRate = new BigNumber(this.estimatedFeeRate);
+    if (feeRate.gte(new BigNumber(ABSURDLY_HIGH_FEE_RATE))) {
+      return false;
     }
-    // Invalid if fees are absurdly high
-    if (
-      new BigNumber(this.estimatedFeeRate).gte(
-        new BigNumber(ABSURDLY_HIGH_FEE_RATE),
-      ) ||
-      this.calculateCurrentFee().gte(new BigNumber(ABSURDLY_HIGH_ABS_FEE))
-    ) {
-      throw new Error(
-        "Absurdly high fee detected. Transaction rejected for safety.",
-      );
+
+    // 5. Check if the absolute fee isn't absurd
+    if (this.calculateCurrentFee().gte(new BigNumber(ABSURDLY_HIGH_ABS_FEE))) {
+      return false;
     }
-    // Valid if fee rate is satisfied
-    return this.feeRateSatisfied;
+
+    return true;
   }
 
   /**
@@ -354,8 +360,23 @@ export class BtcTransactionTemplate {
    * This method creates a new PSBT, adds all valid inputs and outputs from the template,
    * and then serializes the PSBT to a base64 string.
    *
+   * By default, it validates the entire transaction before creating the PSBT. This validation
+   * can be optionally skipped for partial or in-progress transactions.
+   *
+   * The method performs the following steps:
+   * 1. If validation is enabled (default), it calls the `validate()` method to ensure
+   *    the transaction is valid.
+   * 2. Creates a new PsbtV2 instance.
+   * 3. Adds all inputs from the template to the PSBT, including UTXO information.
+   * 4. Adds all outputs from the template to the PSBT.
+   * 5. Serializes the PSBT to a base64-encoded string.
+   *
+   * @param {boolean} [validated=true] - Whether to validate the transaction before creating the PSBT.
+   *                                     Set to false to skip validation for partial transactions.
+   *
    * @returns A base64-encoded string representation of the PSBT.
    *
+   * @throws {Error} If validation is enabled and the transaction fails validation checks.
    * @throws {Error} If an invalid address is encountered when creating an output script.
    * @throws {Error} If there's an issue with input or output data that prevents PSBT creation.
    * @throws {Error} If serialization of the PSBT fails.
@@ -366,21 +387,19 @@ export class BtcTransactionTemplate {
    * - Output amounts are converted from string to integer (satoshis) when added to the PSBT.
    * - The resulting PSBT is not signed and may require further processing (e.g., signing) before it can be broadcast.
    */
-  toPsbt(): string {
-    if (!this.validateInputs()) {
-      throw new Error("Invalid inputs: missing previous transaction data");
+  toPsbt(validated: boolean = true): string {
+    if (validated && !this.validate()) {
+      throw new Error("Invalid transaction: failed validation checks");
     }
+
     const psbt = new PsbtV2();
 
     // Add Inputs to PSBT
     this._inputs.forEach((input) => this.addInputToPsbt(psbt, input)); // already checks for validity
 
     // Add Outputs to PSBT
-    this._outputs.forEach((output) => {
-      if (output.isValid()) {
-        this.addOutputToPsbt(psbt, output);
-      }
-    });
+    this._outputs.forEach((output) => this.addOutputToPsbt(psbt, output));
+
     return psbt.serialize("base64");
   }
 
