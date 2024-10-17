@@ -225,7 +225,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
   }
 
   // Step 9: Validate the combined (parent + child) fee rate
-  validateCPFPPackage(txAnalyzer, childTxTemplate, targetFeeRate, strict);
+  validateCPFPPackage(txAnalyzer, childTxTemplate, strict);
 
   // Step 10: Convert to PSBT and return as base64
   return childTxTemplate.toPsbt();
@@ -287,7 +287,6 @@ export function isCPFPFeeSatisfied(
  *
  * @param {TransactionAnalyzer} txAnalyzer - The analyzer containing parent transaction information and CPFP fee rate.
  * @param {BtcTransactionTemplate} childTxTemplate - The child transaction template.
- * @param {targetFeeRate}targetFeeRate - The Target fees set when we call the cpfp function.
  * @param {boolean} strict - If true, throws an error when the fee rate is not satisfied. If false, only logs a warning.
  * @returns {void}
  *
@@ -296,7 +295,6 @@ export function isCPFPFeeSatisfied(
 export function validateCPFPPackage(
   txAnalyzer: TransactionAnalyzer,
   childTxTemplate: BtcTransactionTemplate,
-  targetFeeRate: number,
   strict: boolean,
 ): void {
   const parentFee = new BigNumber(txAnalyzer.fee);
@@ -308,8 +306,8 @@ export function validateCPFPPackage(
     .plus(childFee)
     .dividedBy(parentSize.plus(childSize));
 
-  if (combinedFeeRate.isLessThan(targetFeeRate)) {
-    const message = `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${targetFeeRate.toFixed(2)} sat/vB). ${strict ? "Increase inputs or reduce fee rate." : "Transaction may confirm slower than expected."}`;
+  if (combinedFeeRate.isLessThan(txAnalyzer.targetFeeRate)) {
+    const message = `Combined fee rate (${combinedFeeRate.toFixed(2)} sat/vB) is below the target CPFP fee rate (${txAnalyzer.targetFeeRate.toFixed(2)} sat/vB). ${strict ? "Increase inputs or reduce fee rate." : "Transaction may confirm slower than expected."}`;
 
     if (strict) {
       throw new Error(message);
