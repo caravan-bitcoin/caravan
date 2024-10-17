@@ -42,7 +42,7 @@ export const transactionAnalyzerFixtures = {
         fee: "327",
         feeRate: "2.61",
         recommendedStrategy: FeeBumpStrategy.NONE,
-        estimatedRBFFee: 454, // 327  + 1*125.25
+        estimatedRBFFee: 453, // 327  + 1*125.25
         estimatedCPFPFee: 73,
         inputSequences: [4294967293],
         outputValues: [37114, 0],
@@ -85,7 +85,7 @@ export const transactionAnalyzerFixtures = {
         fee: "482",
         feeRate: "3.43",
         recommendedStrategy: FeeBumpStrategy.CPFP,
-        estimatedRBFFee: 702.5, // 562 + 1*140.5 = 576.5(minimum RBF for bumping , 1 sats/vbyte incremental fee) , here 5(user defined) * 140.5 = 702.5 ... note our txAnalyzer gives 705 for this because of vsize rounding from bitcoin-js lib
+        estimatedRBFFee: 623, // 482 + 1*140.5 = 622.5(minimum RBF for bumping , 1 sats/vbyte incremental fee)
         estimatedCPFPFee: 2303,
         inputSequences: [4294967295],
         outputValues: [16741, 525461],
@@ -130,7 +130,7 @@ export const transactionAnalyzerFixtures = {
         fee: "2289",
         feeRate: "7.02",
         recommendedStrategy: FeeBumpStrategy.RBF,
-        estimatedRBFFee: 4894, // 15(target Rate) * 326.25
+        estimatedRBFFee: 2616, // 2289 + 1 * 326.25
         estimatedCPFPFee: 14692,
         inputSequences: [4294967293],
         outputValues: [
