@@ -229,9 +229,12 @@ export class BtcTransactionTemplate {
    * non-change outputs, and the target fee. It then updates the change output
    * or removes it if the new amount is below the dust threshold.
    *
-   * The method also handles cases where the change output already has an amount:
-   * 1. It calculates the difference between the new and current change amount.
-   * 2. If removing change, it ensures the fee doesn't unexpectedly increase.
+   * Key behaviors:
+   * 1. If there are multiple outputs and the change becomes dust, it removes the change output.
+   * 2. If there's only one output (which must be the change output) and it becomes dust,
+   *    it keeps the output to maintain a valid transaction structure.
+   * 3. It calculates the difference between the new and current change amount.
+   * 4. It ensures the transaction remains balanced after adjustment.
    *
    * @returns {string | null} The new change amount in satoshis as a string, or null if no adjustment was made or the change output was removed.
    * @throws {Error} If there's not enough input to satisfy non-change outputs and fees, or if the transaction doesn't balance after adjustment.
@@ -265,15 +268,22 @@ export class BtcTransactionTemplate {
 
     // Check if the new change amount is below the dust threshold
     if (new BigNumber(changeOutput.amountSats).lt(this._dustThreshold)) {
-      // If it's dust, remove the change output entirely
-      const changeOutputIndex = this.outputs.findIndex(
-        (output) => output === changeOutput,
-      );
-      if (changeOutputIndex !== -1) {
-        this.removeOutput(changeOutputIndex);
+      if (this.outputs.length > 1) {
+        // If there are multiple outputs, we can remove the dust change output
+        const changeOutputIndex = this.outputs.findIndex(
+          (output) => output === changeOutput,
+        );
+        if (changeOutputIndex !== -1) {
+          this.removeOutput(changeOutputIndex);
+        }
+        // The fee will automatically adjust as it's calculated based on inputs minus outputs
+        return null;
+      } else {
+        // If this is the only output, we must keep it to have a valid transaction
+        console.warn(
+          "Change output is below dust threshold but cannot be removed as it's the only output.",
+        );
       }
-      // The fee will automatically adjust as it's calculated based on inputs minus outputs
-      return null;
     }
 
     // get current out amount after adjustment
