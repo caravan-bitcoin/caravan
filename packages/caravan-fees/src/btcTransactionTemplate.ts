@@ -331,8 +331,8 @@ export class BtcTransactionTemplate {
       return false;
     }
 
-    // 2. Validate each input
-    if (!this._inputs.every((input) => input.isValid())) {
+    // 2. Validate each output
+    if (!this._outputs.every((output) => output.isValid())) {
       return false;
     }
 
