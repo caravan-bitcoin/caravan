@@ -833,7 +833,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     // Check if the input exists
-    if (inputIndex < 0 || inputIndex >= this.inputMaps.length) {
+    if (inputIndex < 0 || inputIndex >= this.PSBT_GLOBAL_INPUT_COUNT) {
       throw new Error(`Input at index ${inputIndex} does not exist.`);
     }
 
