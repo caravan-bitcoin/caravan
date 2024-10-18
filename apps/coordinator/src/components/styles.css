@@ -32,7 +32,7 @@
   }
   .description-section {
     flex: 1;
-    min-width: 300px; /* Adjust as needed */
+    min-width: 300px;
   }
 
   .responsive-image {
@@ -44,7 +44,6 @@
   }
 }
 
-/* Flex container to center the grid */
 .image-grid-container {
   display: flex;
   justify-content: center;

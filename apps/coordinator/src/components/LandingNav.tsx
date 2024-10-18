@@ -3,13 +3,13 @@ import PropTypes from "prop-types";
 import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png"; // Import your logo image
+import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
 const rootStyles = {
   flexGrow: 1,
   width: "100%",
   backgroundColor: "#FFFFFF",
-  outline: "none", // Remove outline from the entire navbar
+  outline: "none",
 };
 
 const LogoButton = styled(Button)`
@@ -53,7 +53,7 @@ const MenuGetStartedButton = styled(Button)`
 `;
 
 const menuLinkStyles = {
-  color: "black", // Assuming theme.palette.black.main is black
+  color: "black",
   textDecoration: "underline",
   "&:hover": {
     textDecoration: "none",

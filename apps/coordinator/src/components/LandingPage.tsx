@@ -6,7 +6,7 @@ import MultipleStopIcon from "@mui/icons-material/MultipleStop";
 import LockIcon from "@mui/icons-material/Lock";
 import LayersIcon from "@mui/icons-material/Layers";
 import { Link } from "react-router-dom";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png"; // Import your logo image
+import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
 const HeroSection = styled.section`
   display: flex;
@@ -262,7 +262,6 @@ const LogoButton = styled(Button)`
 const LandingPage = () => {
   return (
     <>
-      {/* Hero Section */}
       <HeroSection>
         <Title>
           Secure your bitcoin with <span className="highlight">Caravan</span>, a
@@ -422,7 +421,6 @@ const LandingPage = () => {
         </FullWidthBox>
       </ContentSection>
 
-      {/* Features Section */}
       <FeaturesSection>
         <h2>Secure your bitcoin with confidence</h2>
         <h4 style={{ color: "gray" }}>
@@ -492,7 +490,6 @@ const LandingPage = () => {
         </Box>
       </CtaSection>
 
-      {/* Footer */}
       <Footer>
         <FooterColumn>
           <LogoButton

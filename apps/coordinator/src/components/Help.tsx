@@ -177,7 +177,7 @@ const Help = () => (
                     {externalLink(
                       "https://unchained.com/blog/gearing-up-the-caravan/",
                       "Blog Post",
-                      "modern-link", // Apply the CSS class
+                      "modern-link",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -190,7 +190,7 @@ const Help = () => (
                     {externalLink(
                       "https://www.youtube.com/playlist?list=PLUM8mrUjWoPRsVGEZ1gTntqPd4xrQZoiH",
                       "Video Tutorials",
-                      "modern-link", // Apply the CSS class
+                      "modern-link",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -203,7 +203,7 @@ const Help = () => (
                     {externalLink(
                       "https://github.com/caravan-bitcoin/caravan",
                       "Source Code",
-                      "modern-link", // Apply the CSS class
+                      "modern-link",
                     )}
                   </ListItemText>
                 </ListItem>
@@ -226,35 +226,35 @@ const Help = () => (
                   {externalLink(
                     "https://shop.trezor.io/product/trezor-one-white",
                     "Trezor One",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://shop.trezor.io/product/trezor-model-t",
                     "Trezor Model T",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://www.ledger.com/products/ledger-nano-s",
                     "Ledger Nano S",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://www.ledger.com/products/ledger-nano-x",
                     "Ledger Nano X",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
                 <li>
                   {externalLink(
                     "https://coldcardwallet.com",
                     "Coldcard Mk2, Mk3, & Mk4",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
               </ul>
@@ -271,7 +271,7 @@ const Help = () => (
                   {externalLink(
                     "https://www.mozilla.org/en-US/firefox/new/",
                     "Firefox",
-                    "modern-link", // Apply the CSS class
+                    "modern-link",
                   )}
                 </li>
               </ul>
