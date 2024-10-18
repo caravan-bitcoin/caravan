@@ -1593,3 +1593,75 @@ describe("PsbtV2.setProprietaryValue", () => {
     );
   });
 });
+
+describe("PsbtV2.setInputSequence", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    psbt.addInput({ previousTxId: Buffer.from([0x01]), outputIndex: 0 });
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
+  });
+
+  it("Successfully sets the sequence for a valid input", () => {
+    const newSequence = 0xfffffffd; // RBF signaling sequence
+    psbt.setInputSequence(0, newSequence);
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(newSequence);
+  });
+
+  it("Throws an error when trying to set sequence for a non-existent input", () => {
+    expect(() => psbt.setInputSequence(2, 0xfffffffd)).toThrow(
+      "Input at index 2 does not exist.",
+    );
+  });
+
+  it("Throws an error when PSBT is not ready for Updater", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = []; // Remove input modifiability
+    expect(() => psbt.setInputSequence(0, 0xfffffffd)).toThrow(
+      "PSBT is not ready for the Updater role.",
+    );
+  });
+
+  it("Overwrites existing sequence when setting a new one", () => {
+    psbt.setInputSequence(0, 0xfffffffe);
+    psbt.setInputSequence(0, 0xfffffffd);
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(0xfffffffd);
+  });
+
+  it("Correctly handles setting sequence to 0", () => {
+    psbt.setInputSequence(0, 0);
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(0);
+  });
+
+  it("Returns false when no inputs signal RBF", () => {
+    expect(psbt.isRBFSignaled).toBe(false);
+  });
+
+  it("Returns true when at least one input signals RBF", () => {
+    psbt.setInputSequence(0, 0xfffffffd);
+    expect(psbt.isRBFSignaled).toBe(true);
+  });
+
+  it("Returns true when only one of multiple inputs signals RBF", () => {
+    psbt.setInputSequence(0, 0xfffffffe); // Non-RBF
+    psbt.setInputSequence(1, 0xfffffffd); // RBF
+    expect(psbt.isRBFSignaled).toBe(true);
+  });
+
+  it("Returns false when all inputs have sequence numbers that don't signal RBF", () => {
+    psbt.setInputSequence(0, 0xfffffffe);
+    psbt.setInputSequence(1, 0xffffffff);
+    expect(psbt.isRBFSignaled).toBe(false);
+  });
+
+  it("Returns true when an input has a sequence number of 0", () => {
+    psbt.setInputSequence(0, 0);
+    expect(psbt.isRBFSignaled).toBe(true);
+  });
+
+  it("Returns false when the PSBT has no inputs", () => {
+    const emptyPsbt = new PsbtV2();
+    expect(emptyPsbt.isRBFSignaled).toBe(false);
+  });
+});

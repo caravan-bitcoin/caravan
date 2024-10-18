@@ -788,6 +788,88 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
+   * Sets the sequence number for a specific input in the transaction.
+   *
+   * This private helper method is crucial for implementing RBF and other
+   * sequence-based transaction features. It writes the provided sequence
+   * number as a 32-bit little-endian unsigned integer and stores it in the
+   * appropriate input's map using the PSBT_IN_SEQUENCE key.
+   *
+   * The sequence number has multiple uses in Bitcoin transactions:
+   * 1. Signaling RBF (values < 0xfffffffe)
+   * 2. Enabling nLockTime (values < 0xffffffff)
+   * 3. Relative timelock with BIP68 (if bit 31 is not set)
+   *
+   * According to BIP125 (Opt-in Full Replace-by-Fee Signaling):
+   *
+   * - For a transaction to be considered opt-in RBF, it must have at least
+   *   one input with a sequence number < 0xfffffffe.
+   * - The recommended sequence for RBF is 0xffffffff-2 (0xfffffffd).
+   *
+   * Sequence number meanings:
+   * - = 0xffffffff: Then the transaction is final no matter the nLockTime.
+   * - < 0xfffffffe: Transaction signals for RBF.
+   * - < 0xefffffff : Then the transaction signals BIP68 relative locktime.
+   *
+   * For using nLocktime along with Opt-in RBF, the sequence value
+   * should be between 0xf0000000 and 0xfffffffd.
+   *
+   * Care should be taken when setting sequence numbers to ensure the desired
+   * transaction properties are correctly signaled. Improper use can lead to
+   * unexpected transaction behavior or rejection by the network.
+   *
+   * References:
+   * - BIP125: Opt-in Full Replace-by-Fee Signaling
+   *   https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   * - BIP68: Relative lock-time using consensus-enforced sequence numbers
+   *   https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+   */
+  public setInputSequence(inputIndex: number, sequence: number) {
+    // Check if the PSBT is ready for the Updater role
+    if (!this.isReadyForUpdater) {
+      throw new Error(
+        "PSBT is not ready for the Updater role. Sequence cannot be changed.",
+      );
+    }
+
+    // Check if the input exists
+    if (inputIndex < 0 || inputIndex >= this.PSBT_GLOBAL_INPUT_COUNT) {
+      throw new Error(`Input at index ${inputIndex} does not exist.`);
+    }
+
+    // Set the sequence number
+    const bw = new BufferWriter();
+    bw.writeU32(sequence);
+    this.inputMaps[inputIndex].set(KeyType.PSBT_IN_SEQUENCE, bw.render());
+  }
+
+  /**
+   * Checks if the transaction signals Replace-by-Fee (RBF).
+   *
+   * This method determines whether the transaction is eligible for RBF by
+   * examining the sequence numbers of all inputs. As per BIP125, a transaction
+   * is considered to have opted in to RBF if it contains at least one input
+   * with a sequence number less than (0xffffffff - 1).
+   *
+   * Return value:
+   * - true: If any input has a sequence number < 0xfffffffe, indicating RBF.
+   * - false: If all inputs have sequence numbers >= 0xfffffffe, indicating no RBF.
+   *
+   * This method is useful for wallets, block explorers, or any service that
+   * needs to determine if a transaction can potentially be replaced before
+   * confirmation.
+   *
+   * References:
+   * - BIP125: Opt-in Full Replace-by-Fee Signaling
+   *   https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
+  get isRBFSignaled(): boolean {
+    return this.PSBT_IN_SEQUENCE.some(
+      (seq) => seq !== null && seq < 0xfffffffe,
+    );
+  }
+
+  /**
    * This method is provided for compatibility issues and probably shouldn't be
    * used since a PsbtV2 with PSBT_GLOBAL_TX_VERSION = 1 is BIP0370
    * non-compliant. No guarantees can be made here that a serialized PsbtV2
@@ -875,6 +957,7 @@ export class PsbtV2 extends PsbtV2Maps {
     map.set(KeyType.PSBT_IN_PREVIOUS_TXID, bw.render());
     bw.writeI32(outputIndex);
     map.set(KeyType.PSBT_IN_OUTPUT_INDEX, bw.render());
+
     if (sequence) {
       bw.writeI32(sequence);
       map.set(KeyType.PSBT_IN_SEQUENCE, bw.render());
