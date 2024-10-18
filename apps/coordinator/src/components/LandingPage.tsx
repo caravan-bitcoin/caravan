@@ -344,14 +344,14 @@ const LandingPage = () => {
               className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
-                padding: "20px",
+                padding: "40px",
                 borderRadius: "10px",
               }}
             >
               <img
                 src="src/images/landing/stateless.png"
                 alt="Trezor"
-                style={{ height: "400px", width: "auto" }}
+                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
               />
             </div>
           </ImageSection>
@@ -363,14 +363,14 @@ const LandingPage = () => {
               className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
-                padding: "20px",
+                padding: "40px",
                 borderRadius: "10px",
               }}
             >
               <img
                 src="src/images/landing/xpubs.png"
                 alt="Trezor"
-                style={{ height: "400px", width: "auto" }}
+                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
               />
             </div>
           </ImageSection>
@@ -408,14 +408,14 @@ const LandingPage = () => {
               className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
-                padding: "20px",
+                padding: "40px",
                 borderRadius: "10px",
               }}
             >
               <img
                 src="src/images/landing/consensus.png"
                 alt="Trezor"
-                style={{ height: "400px", width: "auto" }}
+                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
               />
             </div>
           </ImageSection>
