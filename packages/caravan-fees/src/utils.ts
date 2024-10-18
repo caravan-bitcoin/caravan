@@ -177,23 +177,19 @@ export function getOutputAddress(script: Buffer, network: Network): string {
  *
  * @throws Will throw an error if the address type is unsupported
  */
-export function estimateTransactionVsize(
-  config: {
-    addressType?: ScriptType;
-    numInputs?: number;
-    numOutputs?: number;
-    m?: number;
-    n?: number;
-  } = {},
-): number {
-  const {
-    addressType = SCRIPT_TYPES.P2SH,
-    numInputs = 1,
-    numOutputs = 1,
-    m = 1,
-    n = 2,
-  } = config;
-
+export function estimateTransactionVsize({
+  addressType = SCRIPT_TYPES.P2SH,
+  numInputs = 1,
+  numOutputs = 1,
+  m = 1,
+  n = 2,
+}: {
+  addressType?: ScriptType;
+  numInputs?: number;
+  numOutputs?: number;
+  m?: number;
+  n?: number;
+} = {}): number {
   switch (addressType) {
     case SCRIPT_TYPES.P2SH:
       return estimateMultisigP2SHTransactionVSize({
