@@ -8,6 +8,7 @@ import {
   FeeBumpStrategy,
   CancelRbfOptions,
   AcceleratedRbfOptions,
+  UTXO,
 } from "./types";
 import BigNumber from "bignumber.js";
 
@@ -25,6 +26,187 @@ import BigNumber from "bignumber.js";
  * Only set `reuseAllInputs` to false if you fully understand these risks and have
  * implemented appropriate safeguards in your wallet software.
  */
+
+// Create a utility type for common RBF options
+type RbfBaseOptions = Omit<CancelRbfOptions, "cancelAddress">;
+
+/**
+ * Validates RBF possibility and suitability.
+ * @param analysis - The result of transaction analysis.
+ * @param targetFeeRate - The target fee rate for the new transaction.
+ * @param fullRBF - Whether to allow full RBF even if not signaled.
+ * @param strict - Whether to throw errors for non-recommended strategies.
+ */
+const validateRbfPossibility = (
+  analysis: ReturnType<TransactionAnalyzer["analyze"]>,
+  targetFeeRate: number,
+  fullRBF: boolean,
+  strict: boolean,
+): void => {
+  if (!analysis.canRBF) {
+    if (fullRBF) {
+      console.warn(
+        "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
+      );
+    } else {
+      throw new Error(
+        "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
+      );
+    }
+  }
+
+  if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
+    if (strict) {
+      throw new Error(
+        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
+      );
+    }
+    console.warn(
+      `RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: ${analysis.recommendedStrategy}`,
+    );
+  }
+
+  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
+    throw new Error(
+      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
+    );
+  }
+};
+
+/**
+ * Adds inputs from the original transaction to the new transaction template.
+ * @param txAnalyzer - The transaction analyzer instance.
+ * @param availableInputs - Available UTXOs.
+ * @param options - RBF options.
+ * @param isAccelerated - Whether this is for an accelerated RBF transaction.
+ * @returns A new BtcTransactionTemplate instance with inputs added and a set of added input identifiers.
+ */
+const addOriginalInputs = (
+  txAnalyzer: TransactionAnalyzer,
+  availableInputs: UTXO[],
+  options: RbfBaseOptions,
+  isAccelerated: boolean,
+): { newTxTemplate: BtcTransactionTemplate; addedInputs: Set<string> } => {
+  const newTxTemplate = new BtcTransactionTemplate({
+    inputs: [],
+    outputs: [],
+    targetFeeRate: options.targetFeeRate,
+    dustThreshold: options.dustThreshold,
+    network: options.network,
+    scriptType: options.scriptType,
+    requiredSigners: options.requiredSigners,
+    totalSigners: options.totalSigners,
+  });
+
+  const originalInputTemplates = txAnalyzer.getInputTemplates();
+  const addedInputs = new Set<string>();
+
+  if (options.reuseAllInputs) {
+    // Add all original inputs
+    originalInputTemplates.forEach((template) => {
+      const input = availableInputs.find(
+        (utxo) => utxo.txid === template.txid && utxo.vout === template.vout,
+      );
+      if (input) {
+        newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(input));
+        addedInputs.add(`${input.txid}:${input.vout}`);
+      }
+    });
+  } else {
+    if (isAccelerated) {
+      console.warn(
+        "Not reusing all inputs can lead to a replacement cycle attack. " +
+          "See: https://bitcoinops.org/en/newsletters/2023/10/25/#fn:rbf-warning",
+      );
+    }
+    // Add at least one input from the original transaction
+
+    // TO DO (MRIGESH)
+    // Add coin selection algorithm to add best suited input to start with ...
+    const originalInput = availableInputs.find((utxo) =>
+      originalInputTemplates.some(
+        (template) =>
+          template.txid === utxo.txid && template.vout === template.vout,
+      ),
+    );
+    if (!originalInput) {
+      throw new Error(
+        "None of the original transaction inputs found in available UTXOs.",
+      );
+    }
+    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(originalInput));
+    addedInputs.add(`${originalInput.txid}:${originalInput.vout}`);
+  }
+
+  return { newTxTemplate, addedInputs };
+};
+
+/**
+ * Adds additional inputs to meet fee requirements.
+ * @param newTxTemplate - The transaction template to add inputs to.
+ * @param availableInputs - Available UTXOs.
+ * @param addedInputs - Set of already added input identifiers.
+ * @param txAnalyzer - The transaction analyzer instance.
+ */
+const addAdditionalInputs = (
+  newTxTemplate: BtcTransactionTemplate,
+  availableInputs: UTXO[],
+  addedInputs: Set<string>,
+  txAnalyzer: TransactionAnalyzer,
+): void => {
+  // We continue adding inputs until both the fee rate is satisfied and
+  // the absolute fee meets the minimum RBF requirement
+  for (const utxo of availableInputs) {
+    if (
+      newTxTemplate.feeRateSatisfied &&
+      new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee) &&
+      newTxTemplate.needsChange
+    ) {
+      /*
+        Stop adding inputs when the following conditions are met:
+         1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
+         2. The current fee is gte the minimum required absolute RBF fee amount
+         3. There is enough left over for change
+      */
+      break;
+    }
+    // Skip if this UTXO is already added
+    const utxoKey = `${utxo.txid}:${utxo.vout}`;
+    if (addedInputs.has(utxoKey)) {
+      continue;
+    }
+    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
+    addedInputs.add(utxoKey);
+  }
+};
+
+/**
+ * Ensures the new transaction meets RBF requirements.
+ * @param newTxTemplate - The new transaction template.
+ * @param txAnalyzer - The transaction analyzer instance.
+ */
+const validateRbfRequirements = (
+  newTxTemplate: BtcTransactionTemplate,
+  txAnalyzer: TransactionAnalyzer,
+): void => {
+  const currentFee = new BigNumber(newTxTemplate.currentFee);
+  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
+  const targetFee = new BigNumber(newTxTemplate.targetFeesToPay);
+
+  // Check 1: New fee must be at least the minimum RBF fee
+  if (currentFee.isLessThan(minRequiredFee)) {
+    throw new Error(
+      `New transaction fee (${currentFee.toString()} sats) must be at least the minimum RBF fee (${minRequiredFee.toString()} sats).`,
+    );
+  }
+
+  // Check 2: Target fees must be paid
+  if (currentFee.isLessThan(targetFee)) {
+    throw new Error(
+      `New transaction fee (${currentFee.toString()} sats) is less than the target fee (${targetFee.toString()} sats).`,
+    );
+  }
+};
 
 /**
  * Creates a cancel Replace-By-Fee (RBF) transaction.
@@ -72,7 +254,6 @@ export const createCancelRbfTransaction = (
     requiredSigners,
     totalSigners,
     scriptType,
-    dustThreshold,
     cancelAddress,
     reuseAllInputs = false,
   } = options;
@@ -80,7 +261,7 @@ export const createCancelRbfTransaction = (
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate,
+    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -100,44 +281,18 @@ export const createCancelRbfTransaction = (
   }
 
   // Step 2: Verify RBF possibility and suitability
-  if (!analysis.canRBF) {
-    if (fullRBF) {
-      console.warn(
-        "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
-      );
-    } else {
-      throw new Error(
-        "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
-      );
-    }
-  }
-
-  if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
-    if (strict) {
-      throw new Error(
-        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
-      );
-    }
-    console.warn(
-      "RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: " +
-        analysis.recommendedStrategy,
-    );
-  }
+  validateRbfPossibility(analysis, targetFeeRate, fullRBF, strict);
 
   // Step 3: Create a new transaction template
-  const newTxTemplate = new BtcTransactionTemplate({
-    inputs: [],
-    outputs: [],
-    targetFeeRate, // User-Defined Fee-Rate
-    dustThreshold,
-    network,
-    scriptType,
-    requiredSigners,
-    totalSigners,
-  });
+  // Step 4: Add inputs from the original transaction
+  const { newTxTemplate, addedInputs } = addOriginalInputs(
+    txAnalyzer,
+    availableInputs,
+    { ...options, reuseAllInputs },
+    false, // Not an accelerated transaction
+  );
 
-  // Step 4: Add the cancellation output and delete all previous outputs
-
+  // Step 5: Add the cancellation output
   newTxTemplate.addOutput(
     new BtcTxOutputTemplate({
       address: cancelAddress,
@@ -146,67 +301,8 @@ export const createCancelRbfTransaction = (
     }),
   );
 
-  // Step 5: Add inputs from the original transaction
-  const originalInputTemplates = txAnalyzer.getInputTemplates();
-  const addedInputs = new Set<string>();
-
-  if (reuseAllInputs) {
-    // Add all original inputs
-    originalInputTemplates.forEach((template) => {
-      const input = availableInputs.find(
-        (utxo) => utxo.txid === template.txid && utxo.vout === template.vout,
-      );
-      if (input) {
-        newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(input));
-        addedInputs.add(`${input.txid}:${input.vout}`);
-      }
-    });
-  } else {
-    // Add at least one input from the original transaction
-
-    // TO DO (MRIGESH)
-    // Add coin selection algorithm to add best suited input to start with ...
-    const originalInput = availableInputs.find((utxo) =>
-      originalInputTemplates.some(
-        (template) =>
-          template.txid === utxo.txid && template.vout === template.vout,
-      ),
-    );
-    if (!originalInput) {
-      throw new Error(
-        "None of the original transaction inputs found in available UTXOs.",
-      );
-    }
-    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(originalInput));
-    addedInputs.add(`${originalInput.txid}:${originalInput.vout}`);
-  }
-
   // Step 6: Add more inputs if necessary to meet fee requirements
-
-  // We continue adding inputs until both the fee rate is satisfied and
-  // the absolute fee meets the minimum RBF requirement
-  for (const utxo of availableInputs) {
-    if (
-      newTxTemplate.feeRateSatisfied &&
-      new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee) &&
-      newTxTemplate.needsChange
-    ) {
-      /*
-        Stop adding inputs when the following conditions are met:
-         1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
-         2. The current fee is gte the minimum required absolute RBF fee amount
-         3. There is enough left over for change
-      */
-      break;
-    }
-    // Skip if this UTXO is already added
-    const utxoKey = `${utxo.txid}:${utxo.vout}`;
-    if (addedInputs.has(utxoKey)) {
-      continue;
-    }
-    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
-    addedInputs.add(utxoKey);
-  }
+  addAdditionalInputs(newTxTemplate, availableInputs, addedInputs, txAnalyzer);
 
   // Step 7: Calculate and set the cancellation output amount
   // Note : We cannot use `newTxTemplate.adjustChangeOutput()` here as we need to set fees first (as per RBF rules) and then set change amount
@@ -223,23 +319,7 @@ export const createCancelRbfTransaction = (
   newTxTemplate.outputs[0].setAmount(cancelOutputAmount.toString());
 
   // Step 8: Ensure the new transaction meets RBF requirements
-  const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
-  const targetFee = new BigNumber(newTxTemplate.targetFeesToPay);
-
-  // Check 1: New fee must be at least the minimum RBF fee
-  if (currentFee.isLessThan(minRequiredFee)) {
-    throw new Error(
-      `New transaction fee (${currentFee.toString()} sats) must be at least the minimum RBF fee (${minRequiredFee.toString()} sats).`,
-    );
-  }
-
-  // Check 2: Target fees must be paid
-  if (currentFee.isLessThan(targetFee)) {
-    throw new Error(
-      `New transaction fee (${currentFee.toString()} sats) is less than the target fee (${targetFee.toString()} sats).`,
-    );
-  }
+  validateRbfRequirements(newTxTemplate, txAnalyzer);
 
   // Step 9: Convert to PSBT and return as base64
   return newTxTemplate.toPsbt(true);
@@ -299,7 +379,7 @@ export const createAcceleratedRbfTransaction = (
     reuseAllInputs = true,
   } = options;
 
-  // Validate change output options
+  // Step 1: Validate change output options
   if (changeIndex !== undefined && changeAddress !== undefined) {
     throw new Error(
       "Provide either changeIndex or changeAddress, not both. This ensures unambiguous handling of the change output.",
@@ -311,7 +391,7 @@ export const createAcceleratedRbfTransaction = (
     );
   }
 
-  // Step 1: Analyze the original transaction
+  // Step 2: Analyze the original transaction
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
@@ -328,51 +408,19 @@ export const createAcceleratedRbfTransaction = (
 
   const analysis = txAnalyzer.analyze();
 
-  // Validate that the target fee rate is higher than the original transaction's fee rate
-  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
-    throw new Error(
-      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
-    );
-  }
+  // Step 3: Validate RBF possibility and suitability
+  validateRbfPossibility(analysis, targetFeeRate, fullRBF, strict);
 
-  // Step 2: Verify RBF possibility and suitability
-  if (!analysis.canRBF) {
-    if (fullRBF) {
-      console.warn(
-        "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
-      );
-    } else {
-      throw new Error(
-        "RBF is not possible for this transaction. Ensure at least one input has a sequence number < 0xfffffffe.",
-      );
-    }
-  }
+  // Step 4: Create a new transaction template
+  // Step 5: Add inputs from the original transaction
+  const { newTxTemplate, addedInputs } = addOriginalInputs(
+    txAnalyzer,
+    availableInputs,
+    { ...options, reuseAllInputs },
+    true, // This is an accelerated transaction
+  );
 
-  if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
-    if (strict) {
-      throw new Error(
-        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
-      );
-    }
-    console.warn(
-      "RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: " +
-        analysis.recommendedStrategy,
-    );
-  }
-
-  // Step 3: Create a new transaction template
-  const newTxTemplate = new BtcTransactionTemplate({
-    inputs: [],
-    outputs: [],
-    targetFeeRate, // User-Defined Fee-Rate
-    dustThreshold,
-    network,
-    scriptType,
-    requiredSigners,
-    totalSigners,
-  });
-
-  // Step 4: Add all non-change outputs from the original transaction
+  // Step 6: Add all non-change outputs from the original transaction
   txAnalyzer.getOutputTemplates().forEach((outputTemplate) => {
     if (!outputTemplate.isMalleable) {
       newTxTemplate.addOutput(
@@ -385,70 +433,10 @@ export const createAcceleratedRbfTransaction = (
     }
   });
 
-  // Step 5: Add inputs from the original transaction
-  const originalInputTemplates = txAnalyzer.getInputTemplates();
+  // Step 7: Add additional inputs if necessary
+  addAdditionalInputs(newTxTemplate, availableInputs, addedInputs, txAnalyzer);
 
-  if (reuseAllInputs) {
-    // Add all original inputs
-    originalInputTemplates.forEach((template) => {
-      const input = availableInputs.find(
-        (utxo) => utxo.txid === template.txid && utxo.vout === template.vout,
-      );
-      if (input) {
-        newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(input));
-      }
-    });
-  } else {
-    console.warn(
-      "Not reusing all inputs can lead to a replacement cycle attack. " +
-        "See: https://bitcoinops.org/en/newsletters/2023/10/25/#fn:rbf-warning",
-    );
-    // Add at least one input from the original transaction
-    let singleInputAdded = false;
-    originalInputTemplates.some((template) => {
-      const input = availableInputs.find(
-        (utxo) => utxo.txid === template.txid && utxo.vout === template.vout,
-      );
-      if (input) {
-        newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(input));
-        singleInputAdded = true;
-        return true; // Stop after adding one input
-      }
-      return false;
-    });
-
-    if (!singleInputAdded) {
-      throw new Error(
-        "None of the original transaction's inputs were found in available UTXOs. At least one original input is required for RBF.",
-      );
-    }
-  }
-
-  // Step 6: Add more inputs if necessary to meet fee requirements
-  for (const utxo of availableInputs) {
-    if (
-      newTxTemplate.feeRateSatisfied &&
-      new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee)
-    ) {
-      /*
-        Stop adding inputs when the following conditions are met:
-         1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
-         2. The current fee is gte the minimum required absolute RBF fee amount
-      */
-      break;
-    }
-    // Skip if this UTXO is already added
-    if (
-      newTxTemplate.inputs.some(
-        (input) => input.txid === utxo.txid && input.vout === utxo.vout,
-      )
-    ) {
-      continue;
-    }
-    newTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
-  }
-
-  // Step 7: Add or adjust change output
+  // Step 8: Add or adjust change output
   if (newTxTemplate.needsChangeOutput) {
     const totalInputAmount = new BigNumber(newTxTemplate.totalInputAmount);
     const totalOutputAmount = new BigNumber(newTxTemplate.totalOutputAmount);
@@ -478,25 +466,9 @@ export const createAcceleratedRbfTransaction = (
     newTxTemplate.adjustChangeOutput();
   }
 
-  // Step 8: Ensure the new transaction meets RBF requirements
-  const currentFee = new BigNumber(newTxTemplate.currentFee);
-  const minRequiredFee = new BigNumber(txAnalyzer.minimumRBFFee);
-  const targetFee = new BigNumber(newTxTemplate.targetFeesToPay);
+  // Step 9: Validate RBF requirements
+  validateRbfRequirements(newTxTemplate, txAnalyzer);
 
-  // Check 1: New fee must be at least the minimum RBF fee
-  if (currentFee.isLessThan(minRequiredFee)) {
-    throw new Error(
-      `New transaction fee (${currentFee.toString()} sats) must be at least the minimum RBF fee (${minRequiredFee.toString()} sats).`,
-    );
-  }
-
-  // Check 2: Target fees must be paid
-  if (currentFee.isLessThan(targetFee)) {
-    throw new Error(
-      `New transaction fee (${currentFee.toString()} sats) is less than the target fee (${targetFee.toString()} sats).`,
-    );
-  }
-
-  // Step 9: Convert to PSBT and return as base64
+  // Step 10: Convert to PSBT and return as base64
   return newTxTemplate.toPsbt(true);
 };
