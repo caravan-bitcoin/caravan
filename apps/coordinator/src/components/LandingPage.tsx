@@ -28,6 +28,10 @@ const Title = styled.h1`
   width: 70%;
   margin: 0;
   color: #333;
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+    width: 90%;
+  }
 `;
 
 const Subtitle = styled.h2`
@@ -36,6 +40,10 @@ const Subtitle = styled.h2`
   width: 60%;
   margin: 20px 0;
   color: #666;
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+    width: 90%;
+  }
 `;
 
 const CTAButton = styled(Button)`
@@ -47,6 +55,7 @@ const CTAButton = styled(Button)`
     &:hover {
       background-color: #fff;
       color: #1976d2;
+      outline: #1976d2 solid 1px;
     }
   }
 `;
@@ -57,7 +66,7 @@ const SecondaryButton = styled(Button)`
     color: #1976d2;
     padding: 10px 20px;
     font-size: 1.2rem;
-    border: 2px solid #1976d2;
+    border: 1px solid #1976d2;
     &:hover {
       background-color: #1976d2;
       color: #fff;
@@ -72,8 +81,8 @@ const YellowButton = styled(Button)`
     padding: 10px 20px;
     font-size: 1.2rem;
     &:hover {
-      background-color: #333;
-      color: #000;
+      background-color: #fff;
+      color: #1976d2;
     }
   }
 `;
@@ -99,6 +108,10 @@ const ContentTitle = styled.h3`
   text-align: left;
   width: 80%;
   margin: 20px auto;
+  @media (max-width: 1200px) {
+    font-size: 1.5rem;
+    width: 90%;
+  }
 `;
 
 const ContentDescription = styled.p`
@@ -107,6 +120,10 @@ const ContentDescription = styled.p`
   margin: 0 auto;
   text-align: left;
   font-size: 1.5rem;
+  @media (max-width: 1200px) {
+    font-size: 1.2rem;
+    width: 90%;
+  }
 `;
 
 const FullWidthBox = styled.div`
@@ -114,6 +131,9 @@ const FullWidthBox = styled.div`
   flex-direction: row;
   width: 100%;
   margin-bottom: 20px;
+  @media (max-width: 1200px) {
+    flex-direction: column;
+  }
 `;
 
 const ImageSection = styled.div`
@@ -123,6 +143,10 @@ const ImageSection = styled.div`
   align-items: center;
   margin-right: 20px;
   padding: 50px;
+  @media (max-width: 1200px) {
+    margin-right: 0;
+    padding: 20px;
+  }
 `;
 
 const DescriptionSection = styled.div`
@@ -141,6 +165,11 @@ const FeatureContainer = styled.div`
   justify-content: space-around;
   margin: 40px 200px;
   gap: 100px;
+  @media (max-width: 768px) {
+    flex-direction: column;
+    margin: 20px;
+    gap: 20px;
+  }
 `;
 
 const FeatureItem = styled.div`
@@ -176,7 +205,7 @@ const CtaSection = styled.section`
   text-align: center;
   padding: 80px 0;
   .highlight {
-    color: #1976d2; /* Style for the word "Caravan" */
+    color: #1976d2;
   }
 `;
 
@@ -188,6 +217,10 @@ const Footer = styled.footer`
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   gap: 20px;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
 `;
 
 const FooterColumn = styled.div`
@@ -245,6 +278,7 @@ const LandingPage = () => {
             display: "flex",
             justifyContent: "space-between",
             width: "400px",
+            flexWrap: "wrap",
           }}
         >
           <Link to="/setup">
@@ -257,47 +291,40 @@ const LandingPage = () => {
           alt="Caravan Balance"
           style={{ marginTop: "100px", maxWidth: "50%", height: "auto" }}
         />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: "20px",
-            width: "80%",
-            paddingTop: "60px",
-            paddingBottom: "20px",
-          }}
-        >
-          <img
-            src="src/images/landing/trezor.png"
-            alt="Trezor"
-            style={{ height: "80px", width: "auto" }}
-          />
-          <img
-            src="src/images/landing/ledger.png"
-            alt="Ledger"
-            style={{ height: "80px", width: "auto" }}
-          />
-          <img
-            src="src/images/landing/coldcard.png"
-            alt="Coldcard"
-            style={{ height: "80px", width: "auto" }}
-          />
-          <img
-            src="src/images/landing/firefox.png"
-            alt="Firefox"
-            style={{ height: "80px", width: "auto" }}
-          />
-          <img
-            src="src/images/landing/chrome.png"
-            alt="Chrome"
-            style={{ height: "80px", width: "auto" }}
-          />
+        <div className="image-grid-container">
+          <div className="image-grid">
+            <img
+              src="src/images/landing/trezor.png"
+              alt="Trezor"
+              style={{ height: "80px", width: "auto", padding: "10px" }}
+            />
+            <img
+              src="src/images/landing/ledger.png"
+              alt="Ledger"
+              style={{ height: "80px", width: "auto", padding: "10px" }}
+            />
+            <img
+              src="src/images/landing/coldcard.png"
+              alt="Coldcard"
+              style={{ height: "80px", width: "auto", padding: "10px" }}
+            />
+            <img
+              src="src/images/landing/firefox.png"
+              alt="Firefox"
+              style={{ height: "80px", width: "auto", padding: "10px" }}
+            />
+            <img
+              src="src/images/landing/chrome.png"
+              alt="Chrome"
+              style={{ height: "80px", width: "auto", padding: "10px" }}
+            />
+          </div>
         </div>
       </HeroSection>
 
       <ContentSection>
-        <FullWidthBox>
-          <DescriptionSection>
+        <FullWidthBox className="full-width-box">
+          <DescriptionSection className="description-section">
             <ContentTitle>Stateless Multisig Coordinator</ContentTitle>
             <ContentDescription>
               Caravan makes bitcoin multisig custody easier and safer through
@@ -312,8 +339,9 @@ const LandingPage = () => {
               addresses (redeem scripts, BIP32 paths) that you create.
             </ContentDescription>
           </DescriptionSection>
-          <ImageSection>
+          <ImageSection className="image-section">
             <div
+              className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
                 padding: "20px",
@@ -323,15 +351,16 @@ const LandingPage = () => {
               <img
                 src="src/images/landing/stateless.png"
                 alt="Trezor"
-                style={{ height: "500px", width: "auto" }}
+                style={{ height: "400px", width: "auto" }}
               />
             </div>
           </ImageSection>
         </FullWidthBox>
 
-        <FullWidthBox>
-          <ImageSection>
+        <FullWidthBox className="full-width-box">
+          <ImageSection className="image-section">
             <div
+              className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
                 padding: "20px",
@@ -341,11 +370,11 @@ const LandingPage = () => {
               <img
                 src="src/images/landing/xpubs.png"
                 alt="Trezor"
-                style={{ height: "500px", width: "auto" }}
+                style={{ height: "400px", width: "auto" }}
               />
             </div>
           </ImageSection>
-          <DescriptionSection>
+          <DescriptionSection className="description-section">
             <ContentTitle>Keys</ContentTitle>
             <ContentDescription>
               All bitcoin is ultimately protected by private keys. Your private
@@ -360,8 +389,8 @@ const LandingPage = () => {
           </DescriptionSection>
         </FullWidthBox>
 
-        <FullWidthBox>
-          <DescriptionSection>
+        <FullWidthBox className="full-width-box">
+          <DescriptionSection className="description-section">
             <ContentTitle>Consensus</ContentTitle>
             <ContentDescription>
               In order to look up wallet addresses and their balances, and
@@ -374,8 +403,9 @@ const LandingPage = () => {
               defaults to using the freely available API at mempool.space.
             </ContentDescription>
           </DescriptionSection>
-          <ImageSection>
+          <ImageSection className="image-section">
             <div
+              className="responsive-image"
               style={{
                 backgroundColor: "#FFE7BB",
                 padding: "20px",
@@ -385,7 +415,7 @@ const LandingPage = () => {
               <img
                 src="src/images/landing/consensus.png"
                 alt="Trezor"
-                style={{ height: "500px", width: "auto" }}
+                style={{ height: "400px", width: "auto" }}
               />
             </div>
           </ImageSection>

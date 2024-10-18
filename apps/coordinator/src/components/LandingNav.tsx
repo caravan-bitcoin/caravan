@@ -47,6 +47,7 @@ const MenuGetStartedButton = styled(Button)`
     &:hover {
       background-color: #fff;
       color: #1976d2;
+      outline: #1976d2 solid 1px;
     }
   }
 `;
@@ -81,13 +82,13 @@ const Navbar = () => {
             flexGrow: 1,
           }}
         >
-          <Link to="/home" style={menuLinkStyles}>
+          <Link to="/" style={menuLinkStyles}>
             <MenuButton>About</MenuButton>
           </Link>
-          <Link to="/about" style={menuLinkStyles}>
+          <Link to="/help" style={menuLinkStyles}>
             <MenuButton>Resources</MenuButton>
           </Link>
-          <Link to="/about" style={menuLinkStyles}>
+          <Link to="/test" style={menuLinkStyles}>
             <MenuButton>Test Suite</MenuButton>
           </Link>
         </Box>
