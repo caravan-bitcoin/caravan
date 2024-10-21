@@ -153,13 +153,18 @@ export class BtcTransactionTemplate {
    * @returns True if a change output is needed, false otherwise
    */
   get needsChangeOutput(): boolean {
-    const targetFeesWithDustBuffer = this.targetFees().plus(
-      this._dustThreshold,
+    const MAX_OUTPUT_SIZE = 43; // Large enough to cover P2SH and P2WSH multisig outputs
+    const changeOutputFee = new BigNumber(this._targetFeeRate).multipliedBy(
+      MAX_OUTPUT_SIZE,
     );
+    // Calculate the buffer: target fees + change output fee + dust threshold
+    const changeOutputCost = this.targetFees()
+      .plus(changeOutputFee)
+      .plus(this._dustThreshold);
 
     return (
       !this.malleableOutputs.length &&
-      this.calculateCurrentFee().gt(targetFeesWithDustBuffer)
+      this.calculateCurrentFee().gt(changeOutputCost)
     );
   }
 

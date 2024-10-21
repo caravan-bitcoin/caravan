@@ -8,6 +8,7 @@ import {
   ScriptType,
   SCRIPT_TYPES,
   FeeRateSatsPerVByte,
+  TxAnalysis,
 } from "./types";
 import {
   BtcTxComponent,
@@ -380,24 +381,46 @@ export class TransactionAnalyzer {
   }
 
   /**
-   * Performs a comprehensive analysis of the transaction.
-   * @returns {Object} An object containing detailed transaction analysis
+   * Performs a comprehensive analysis of the Bitcoin transaction.
+   *
+   * This method aggregates various metrics and properties of the transaction,
+   * including size, fees, RBF and CPFP capabilities, and the recommended
+   * fee bumping strategy. It utilizes internal calculations and checks
+   * performed by other methods of the TransactionAnalyzer class.
+   *
+   * @returns {TxAnalysis} A TxAnalysis object containing detailed information about the transaction.
+   *
+   * @property {string} txid - The transaction ID (hash) of the analyzed transaction.
+   * @property {number} vsize - The virtual size of the transaction in virtual bytes (vBytes).
+   * @property {number} weight - The weight of the transaction in weight units (WU).
+   * @property {Satoshis} fee - The total fee of the transaction in satoshis.
+   * @property {FeeRateSatsPerVByte} feeRate - The fee rate of the transaction in satoshis per virtual byte.
+   * @property {BtcTxInputTemplate[]} inputs - An array of the transaction's inputs.
+   * @property {BtcTxOutputTemplate[]} outputs - An array of the transaction's outputs.
+   * @property {boolean} isRBFSignaled - Indicates whether the transaction signals RBF (Replace-By-Fee).
+   * @property {boolean} canRBF - Indicates whether RBF is possible for this transaction.
+   * @property {boolean} canCPFP - Indicates whether CPFP (Child-Pays-For-Parent) is possible for this transaction.
+   * @property {FeeBumpStrategy} recommendedStrategy - The recommended fee bumping strategy for this transaction.
+   * @property {Satoshis} estimatedRBFFee - The estimated fee required for a successful RBF, in satoshis.
+   * @property {Satoshis} estimatedCPFPFee - The estimated fee required for a successful CPFP, in satoshis.
+   *
+   * @throws {Error} May throw an error if any of the internal calculations fail.
+   *
+   * @example
+   * const txAnalyzer = new TransactionAnalyzer(options);
+   * try {
+   *   const analysis = txAnalyzer.analyze();
+   *   console.log(`Transaction ${analysis.txid} analysis:`);
+   *   console.log(`Fee rate: ${analysis.feeRate} sat/vB`);
+   *   console.log(`Can RBF: ${analysis.canRBF}`);
+   *   console.log(`Can CPFP: ${analysis.canCPFP}`);
+   *   console.log(`Recommended strategy: ${analysis.recommendedStrategy}`);
+   * } catch (error) {
+   *   console.error('Analysis failed:', error);
+   * }
+   *
    */
-  public analyze(): {
-    txid: string;
-    vsize: number;
-    weight: number;
-    fee: Satoshis;
-    feeRate: FeeRateSatsPerVByte;
-    inputs: BtcTxInputTemplate[];
-    outputs: BtcTxOutputTemplate[];
-    isRBFSignaled: boolean;
-    canRBF: boolean;
-    canCPFP: boolean;
-    recommendedStrategy: FeeBumpStrategy;
-    estimatedRBFFee: Satoshis;
-    estimatedCPFPFee: Satoshis;
-  } {
+  public analyze(): TxAnalysis {
     return {
       txid: this.txid,
       vsize: this.vsize,
@@ -604,11 +627,16 @@ export class TransactionAnalyzer {
     validatedOptions.network = options.network;
 
     // Target fee rate validation
+    if (options.targetFeeRate === undefined) {
+      throw new Error("Target fee rate is required");
+    }
     if (
       typeof options.targetFeeRate !== "number" ||
       options.targetFeeRate <= 0
     ) {
-      throw new Error(`Invalid target fee rate: ${options.targetFeeRate}`);
+      throw new Error(
+        `Invalid target fee rate: ${options.targetFeeRate}. Must be a positive number.`,
+      );
     }
     validatedOptions.targetFeeRate = options.targetFeeRate;
 

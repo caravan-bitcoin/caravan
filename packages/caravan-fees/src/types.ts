@@ -478,3 +478,55 @@ export const SCRIPT_TYPES = {
  * @type {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
  */
 export type ScriptType = (typeof SCRIPT_TYPES)[keyof typeof SCRIPT_TYPES];
+
+/**
+ * Represents the comprehensive analysis of a Bitcoin transaction.
+ * This interface encapsulates various metrics and properties of a transaction,
+ * including size, fees, RBF and CPFP capabilities, and recommended fee bump strategy.
+ *
+ * @interface TxAnalysis
+ * @property {string} txid - The transaction ID (hash) of the analyzed transaction.
+ * @property {number} vsize - The virtual size of the transaction in virtual bytes (vBytes).
+ * @property {number} weight - The weight of the transaction in weight units (WU).
+ * @property {Satoshis} fee - The total fee of the transaction in satoshis.
+ * @property {FeeRateSatsPerVByte} feeRate - The fee rate of the transaction in satoshis per virtual byte.
+ * @property {BtcTxInputTemplate[]} inputs - An array of the transaction's inputs.
+ * @property {BtcTxOutputTemplate[]} outputs - An array of the transaction's outputs.
+ * @property {boolean} isRBFSignaled - Indicates whether the transaction signals RBF (Replace-By-Fee).
+ * @property {boolean} canRBF - Indicates whether RBF is possible for this transaction.
+ * @property {boolean} canCPFP - Indicates whether CPFP (Child-Pays-For-Parent) is possible for this transaction.
+ * @property {FeeBumpStrategy} recommendedStrategy - The recommended fee bumping strategy for this transaction.
+ * @property {Satoshis} estimatedRBFFee - The estimated fee required for a successful RBF, in satoshis.
+ * @property {Satoshis} estimatedCPFPFee - The estimated fee required for a successful CPFP, in satoshis.
+ *
+ * @remarks
+ * - The `vsize` and `weight` properties are important for fee calculation in segwit transactions.
+ * - `isRBFSignaled` is true if at least one input has a sequence number < 0xfffffffe.
+ * - `canRBF` considers both RBF signaling and the availability of inputs for replacement.
+ * - `canCPFP` is true if there's at least one unspent output that can be used for a child transaction.
+ * - The `recommendedStrategy` is based on the current transaction state and network conditions.
+ * - `estimatedRBFFee` and `estimatedCPFPFee` are calculated based on current network fee rates and minimum required increases.
+ *
+ * @example
+ * const txAnalyzer = new TransactionAnalyzer(options);
+ * const analysis: TxAnalysis = txAnalyzer.analyze();
+ * console.log(`Transaction ${analysis.txid} has a fee rate of ${analysis.feeRate} sat/vB`);
+ * if (analysis.canRBF) {
+ *   console.log(`RBF is possible with an estimated fee of ${analysis.estimatedRBFFee} satoshis`);
+ * }
+ */
+export interface TxAnalysis {
+  txid: string;
+  vsize: number;
+  weight: number;
+  fee: Satoshis;
+  feeRate: FeeRateSatsPerVByte;
+  inputs: BtcTxInputTemplate[];
+  outputs: BtcTxOutputTemplate[];
+  isRBFSignaled: boolean;
+  canRBF: boolean;
+  canCPFP: boolean;
+  recommendedStrategy: FeeBumpStrategy;
+  estimatedRBFFee: Satoshis;
+  estimatedCPFPFee: Satoshis;
+}

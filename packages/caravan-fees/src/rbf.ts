@@ -112,13 +112,12 @@ const addOriginalInputs = (
         addedInputs.add(`${input.txid}:${input.vout}`);
       }
     });
-  } else {
-    if (isAccelerated) {
-      console.warn(
-        "Not reusing all inputs can lead to a replacement cycle attack. " +
-          "See: https://bitcoinops.org/en/newsletters/2023/10/25/#fn:rbf-warning",
-      );
-    }
+  } else if (isAccelerated) {
+    console.warn(
+      "Not reusing all inputs can lead to a replacement cycle attack. " +
+        "See: https://bitcoinops.org/en/newsletters/2023/10/25/#fn:rbf-warning",
+    );
+
     // Add at least one input from the original transaction
 
     // TO DO (MRIGESH)
@@ -160,13 +159,13 @@ const addAdditionalInputs = (
     if (
       newTxTemplate.feeRateSatisfied &&
       new BigNumber(newTxTemplate.currentFee).gte(txAnalyzer.minimumRBFFee) &&
-      newTxTemplate.needsChange
+      (newTxTemplate.needsChange || newTxTemplate.outputs.length > 0)
     ) {
       /*
         Stop adding inputs when the following conditions are met:
          1. The fee rate satisfies the target rate (which must be gte original tx fee rate)
          2. The current fee is gte the minimum required absolute RBF fee amount
-         3. There is enough left over for change
+         3. The tx already has an output or will have enough excess funds to have a change output added
       */
       break;
     }
@@ -225,7 +224,6 @@ const validateRbfRequirements = (
  *   availableInputs: availableUTXOs,
  *   cancelAddress: 'bc1q...', // cancel address
  *   network: Network.MAINNET,
- *   dustThreshold: '546',
  *   scriptType: 'P2WSH',
  *   requiredSigners: 2,
  *   totalSigners: 3,
@@ -261,7 +259,7 @@ export const createCancelRbfTransaction = (
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
+    targetFeeRate,
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -342,7 +340,6 @@ export const createCancelRbfTransaction = (
  *   originalTx: originalTxHex,
  *   availableInputs: availableUTXOs,
  *   network: Network.MAINNET,
- *   dustThreshold: '546',
  *   scriptType: 'P2WSH',
  *   requiredSigners: 2,
  *   totalSigners: 3,
@@ -373,7 +370,6 @@ export const createAcceleratedRbfTransaction = (
     requiredSigners,
     totalSigners,
     scriptType,
-    dustThreshold,
     changeIndex,
     changeAddress,
     reuseAllInputs = true,
@@ -395,7 +391,7 @@ export const createAcceleratedRbfTransaction = (
   const txAnalyzer = new TransactionAnalyzer({
     txHex: originalTx,
     network,
-    targetFeeRate, // We need this param ... very essential for the analyzer to make decisions cannot put it to 0
+    targetFeeRate,
     absoluteFee,
     availableUtxos: availableInputs,
     requiredSigners,
@@ -446,23 +442,13 @@ export const createAcceleratedRbfTransaction = (
     );
     const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
 
-    if (changeAmount.gt(dustThreshold)) {
-      const changeOutput = new BtcTxOutputTemplate({
-        address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
-        amountSats: changeAmount.toString(),
-        locked: false,
-      });
-      newTxTemplate.addOutput(changeOutput);
-    } else if (strict) {
-      throw new Error(
-        "Change amount is below dust threshold. Increase inputs or reduce fee rate.",
-      );
-    } else {
-      console.warn(
-        "Change amount is below dust threshold. Omitting change output.",
-      );
-    }
+    const changeOutput = new BtcTxOutputTemplate({
+      address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
+      amountSats: changeAmount.toString(),
+      locked: false,
+    });
 
+    newTxTemplate.addOutput(changeOutput);
     newTxTemplate.adjustChangeOutput();
   }
 
