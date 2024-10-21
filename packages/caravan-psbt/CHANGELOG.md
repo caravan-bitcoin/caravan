@@ -1,5 +1,20 @@
 # @caravan/psbt
 
+## 1.4.3
+
+### Patch Changes
+
+- [#124](https://github.com/caravan-bitcoin/caravan/pull/124) [`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d) Thanks [@chadchapnick](https://github.com/chadchapnick)! - SegWit PSBT fixes: include non witness utxo for inputs and witness script for outputs
+
+- Updated dependencies [[`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d)]:
+  - @caravan/bitcoin@0.3.1
+
+## 1.4.2
+
+### Patch Changes
+
+- [#120](https://github.com/caravan-bitcoin/caravan/pull/120) [`d8078d8`](https://github.com/caravan-bitcoin/caravan/commit/d8078d80cdbf7d2ebd131e6f9253572a6a133d34) Thanks [@chadchapnick](https://github.com/chadchapnick)! - Restore multisig support for indirect keystore interactions
+
 ## 1.4.1
 
 ### Patch Changes

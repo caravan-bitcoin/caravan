@@ -143,3 +143,17 @@ export function bitcoindImportMulti({ url, auth, addresses, label, rescan }) {
   }
   return callBitcoind(...params);
 }
+
+export async function bitcoindRawTxData(txid){
+  try{
+    return await callBitcoind(
+      this.bitcoindParams.url,
+      this.bitcoindParams.auth,
+      "decoderawtransaction",
+      [txid],
+    );
+  }
+  catch(e){
+    return e;
+  }
+}

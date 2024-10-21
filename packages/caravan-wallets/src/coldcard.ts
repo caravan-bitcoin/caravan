@@ -431,7 +431,6 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
           inputs: inputs.map(convertLegacyInput),
           outputs: outputs.map(convertLegacyOutput),
         });
-        console.log("HELLLO??", this.psbt);
       } catch (e) {
         console.error("Error building PSBT", e);
         throw new Error(
