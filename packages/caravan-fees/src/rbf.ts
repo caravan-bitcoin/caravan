@@ -38,12 +38,11 @@ type RbfBaseOptions = Omit<CancelRbfOptions, "cancelAddress">;
  * @param strict - Whether to throw errors for non-recommended strategies.
  */
 const validateRbfPossibility = (
-  analysis: ReturnType<TransactionAnalyzer["analyze"]>,
-  targetFeeRate: number,
+  txAnalyzer: TransactionAnalyzer,
   fullRBF: boolean,
   strict: boolean,
 ): void => {
-  if (!analysis.canRBF) {
+  if (!txAnalyzer.canRBF) {
     if (fullRBF) {
       console.warn(
         "Transaction does not signal RBF. Proceeding with full RBF, which may not be accepted by all nodes.",
@@ -55,20 +54,24 @@ const validateRbfPossibility = (
     }
   }
 
-  if (analysis.recommendedStrategy !== FeeBumpStrategy.RBF) {
+  if (txAnalyzer.recommendedStrategy !== FeeBumpStrategy.RBF) {
     if (strict) {
       throw new Error(
-        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${analysis.recommendedStrategy}`,
+        `RBF is not the recommended strategy for this transaction. The recommended strategy is: ${txAnalyzer.recommendedStrategy}`,
       );
     }
     console.warn(
-      `RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: ${analysis.recommendedStrategy}`,
+      `RBF is not the recommended strategy for this transaction. Consider using the recommended strategy: ${txAnalyzer.recommendedStrategy}`,
     );
   }
 
-  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
+  if (
+    new BigNumber(txAnalyzer.targetFeeRate).isLessThanOrEqualTo(
+      txAnalyzer.feeRate,
+    )
+  ) {
     throw new Error(
-      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
+      `Target fee rate (${txAnalyzer.targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${txAnalyzer.feeRate} sat/vB).`,
     );
   }
 };
@@ -269,17 +272,15 @@ export const createCancelRbfTransaction = (
 
   txAnalyzer.assumeRBF = fullRBF;
 
-  const analysis = txAnalyzer.analyze();
-
   // Validate that the target fee rate is higher than the original transaction's fee rate
-  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(analysis.feeRate)) {
+  if (new BigNumber(targetFeeRate).isLessThanOrEqualTo(txAnalyzer.feeRate)) {
     throw new Error(
-      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${analysis.feeRate} sat/vB).`,
+      `Target fee rate (${targetFeeRate} sat/vB) must be higher than the original transaction's fee rate (${txAnalyzer.feeRate} sat/vB).`,
     );
   }
 
   // Step 2: Verify RBF possibility and suitability
-  validateRbfPossibility(analysis, targetFeeRate, fullRBF, strict);
+  validateRbfPossibility(txAnalyzer, fullRBF, strict);
 
   // Step 3: Create a new transaction template
   // Step 4: Add inputs from the original transaction
@@ -402,10 +403,8 @@ export const createAcceleratedRbfTransaction = (
 
   txAnalyzer.assumeRBF = fullRBF;
 
-  const analysis = txAnalyzer.analyze();
-
   // Step 3: Validate RBF possibility and suitability
-  validateRbfPossibility(analysis, targetFeeRate, fullRBF, strict);
+  validateRbfPossibility(txAnalyzer, fullRBF, strict);
 
   // Step 4: Create a new transaction template
   // Step 5: Add inputs from the original transaction
