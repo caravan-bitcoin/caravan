@@ -177,8 +177,11 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
    */
 
   for (const utxo of availableInputs) {
-    if (isCPFPFeeSatisfied(txAnalyzer, childTxTemplate)) {
-      break; // Stop adding inputs once CPFP fee requirements are met
+    if (
+      isCPFPFeeSatisfied(txAnalyzer, childTxTemplate) &&
+      childTxTemplate.needsChange
+    ) {
+      break; // Stop adding inputs once CPFP fee requirements and change requirements (to ensure we don't end up with dust Output) are met
     }
     // Skip if this UTXO is already added
     if (
@@ -191,30 +194,16 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
   }
 
-  // Step 7: Calculate and set the change output amount
-  const totalInputAmount = new BigNumber(childTxTemplate.totalInputAmount);
-  const fee = new BigNumber(childTxTemplate.targetFeesToPay);
-  const changeAmount = totalInputAmount.minus(fee);
-
-  // Check if change amount is above dust threshold
-  if (changeAmount.gt(dustThreshold)) {
-    // Change amount is valid, set it as the output amount
-    childTxTemplate.adjustChangeOutput();
-  } else if (strict) {
-    // Change amount is at or below dust threshold
-
-    // In strict mode, throw an error
+  // needsChange returns true if there is enough left over greater than dust.
+  // Since we already added a zero amount output for change, it takes into account the full size of the tx.
+  if (!childTxTemplate.needsChange && strict) {
     throw new Error(
-      "Change amount is below the dust threshold. Increase inputs or reduce fee rate.",
+      "Not enough inputs to create a non-dusty change output in the child transaction",
     );
-  } else {
-    // In non-strict mode, warn and proceed with the dust amount
-    console.warn(
-      "Change amount is below dust threshold. Transaction may be less efficient.",
-    );
-    // Set change amount
-    childTxTemplate.adjustChangeOutput();
   }
+
+  // Step 7: Calculate and set the change output amount
+  childTxTemplate.adjustChangeOutput();
 
   // Step 8: Validate the child transaction
   if (!childTxTemplate.validate()) {
