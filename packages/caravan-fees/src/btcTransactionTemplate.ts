@@ -56,16 +56,16 @@ export class BtcTransactionTemplate {
    * This method parses the PSBT, extracts input and output information,
    * and creates a new BtcTransactionTemplate instance.
    *
-   * @param psbtHex - The raw PSBT hex string
+   * @param rawPsbt - The raw PSBT {PsbtV2 | string | Buffer}
    * @param options - Additional options for creating the template
    * @returns A new BtcTransactionTemplate instance
    * @throws Error if PSBT parsing fails or required information is missing
    */
   static fromPsbt(
-    psbtHex: string,
+    rawPsbt: string,
     options: Omit<TransactionTemplateOptions, "inputs" | "outputs">,
   ): BtcTransactionTemplate {
-    const psbt = initializePsbt(psbtHex);
+    const psbt = initializePsbt(rawPsbt);
     const inputs = BtcTransactionTemplate.processInputs(psbt);
     const outputs = BtcTransactionTemplate.processOutputs(
       psbt,

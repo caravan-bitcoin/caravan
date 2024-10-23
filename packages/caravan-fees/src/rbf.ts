@@ -79,28 +79,19 @@ const validateRbfPossibility = (
 /**
  * Adds inputs from the original transaction to the new transaction template.
  * @param txAnalyzer - The transaction analyzer instance.
+ * @param newTxTemplate - The transaction template to add inputs to.
  * @param availableInputs - Available UTXOs.
  * @param options - RBF options.
  * @param isAccelerated - Whether this is for an accelerated RBF transaction.
- * @returns A new BtcTransactionTemplate instance with inputs added and a set of added input identifiers.
+ * @returns A set of added input identifiers.
  */
 const addOriginalInputs = (
   txAnalyzer: TransactionAnalyzer,
+  newTxTemplate: BtcTransactionTemplate,
   availableInputs: UTXO[],
   options: RbfBaseOptions,
   isAccelerated: boolean,
-): { newTxTemplate: BtcTransactionTemplate; addedInputs: Set<string> } => {
-  const newTxTemplate = new BtcTransactionTemplate({
-    inputs: [],
-    outputs: [],
-    targetFeeRate: options.targetFeeRate,
-    dustThreshold: options.dustThreshold,
-    network: options.network,
-    scriptType: options.scriptType,
-    requiredSigners: options.requiredSigners,
-    totalSigners: options.totalSigners,
-  });
-
+): Set<string> => {
   const originalInputTemplates = txAnalyzer.getInputTemplates();
   const addedInputs = new Set<string>();
 
@@ -140,7 +131,7 @@ const addOriginalInputs = (
     addedInputs.add(`${originalInput.txid}:${originalInput.vout}`);
   }
 
-  return { newTxTemplate, addedInputs };
+  return addedInputs;
 };
 
 /**
@@ -283,9 +274,21 @@ export const createCancelRbfTransaction = (
   validateRbfPossibility(txAnalyzer, fullRBF, strict);
 
   // Step 3: Create a new transaction template
+  const newTxTemplate = new BtcTransactionTemplate({
+    inputs: [],
+    outputs: [],
+    targetFeeRate: options.targetFeeRate,
+    dustThreshold: options.dustThreshold,
+    network: options.network,
+    scriptType: options.scriptType,
+    requiredSigners: options.requiredSigners,
+    totalSigners: options.totalSigners,
+  });
+
   // Step 4: Add inputs from the original transaction
-  const { newTxTemplate, addedInputs } = addOriginalInputs(
+  const addedInputs = addOriginalInputs(
     txAnalyzer,
+    newTxTemplate,
     availableInputs,
     { ...options, reuseAllInputs },
     false, // Not an accelerated transaction
@@ -407,9 +410,24 @@ export const createAcceleratedRbfTransaction = (
   validateRbfPossibility(txAnalyzer, fullRBF, strict);
 
   // Step 4: Create a new transaction template
+  const newTxTemplate = new BtcTransactionTemplate({
+    inputs: [],
+    outputs: [],
+    targetFeeRate: BigNumber.max(
+      options.targetFeeRate,
+      new BigNumber(txAnalyzer.minimumRBFFee).dividedBy(txAnalyzer.vsize),
+    ).toNumber(),
+    dustThreshold: options.dustThreshold,
+    network: options.network,
+    scriptType: options.scriptType,
+    requiredSigners: options.requiredSigners,
+    totalSigners: options.totalSigners,
+  });
+
   // Step 5: Add inputs from the original transaction
-  const { newTxTemplate, addedInputs } = addOriginalInputs(
+  const addedInputs = addOriginalInputs(
     txAnalyzer,
+    newTxTemplate,
     availableInputs,
     { ...options, reuseAllInputs },
     true, // This is an accelerated transaction
@@ -433,20 +451,11 @@ export const createAcceleratedRbfTransaction = (
 
   // Step 8: Add or adjust change output
   if (newTxTemplate.needsChangeOutput) {
-    const totalInputAmount = new BigNumber(newTxTemplate.totalInputAmount);
-    const totalOutputAmount = new BigNumber(newTxTemplate.totalOutputAmount);
-    const fee = BigNumber.max(
-      newTxTemplate.targetFeesToPay,
-      txAnalyzer.minimumRBFFee,
-    );
-    const changeAmount = totalInputAmount.minus(totalOutputAmount).minus(fee);
-
     const changeOutput = new BtcTxOutputTemplate({
       address: changeAddress || txAnalyzer.outputs[changeIndex!].address,
-      amountSats: changeAmount.toString(),
+      amountSats: "0", // adjusted with adjustChangeOutput call below
       locked: false,
     });
-
     newTxTemplate.addOutput(changeOutput);
     newTxTemplate.adjustChangeOutput();
   }
