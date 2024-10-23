@@ -27,9 +27,6 @@ import BigNumber from "bignumber.js";
  * implemented appropriate safeguards in your wallet software.
  */
 
-// Create a utility type for common RBF options
-type RbfBaseOptions = Omit<CancelRbfOptions, "cancelAddress">;
-
 /**
  * Validates RBF possibility and suitability.
  * @param analysis - The result of transaction analysis.
@@ -81,7 +78,7 @@ const validateRbfPossibility = (
  * @param txAnalyzer - The transaction analyzer instance.
  * @param newTxTemplate - The transaction template to add inputs to.
  * @param availableInputs - Available UTXOs.
- * @param options - RBF options.
+ * @param reuseAllInputs - Whether we add all originals inputs or not.
  * @param isAccelerated - Whether this is for an accelerated RBF transaction.
  * @returns A set of added input identifiers.
  */
@@ -89,13 +86,13 @@ const addOriginalInputs = (
   txAnalyzer: TransactionAnalyzer,
   newTxTemplate: BtcTransactionTemplate,
   availableInputs: UTXO[],
-  options: RbfBaseOptions,
+  reuseAllInputs: boolean,
   isAccelerated: boolean,
 ): Set<string> => {
   const originalInputTemplates = txAnalyzer.getInputTemplates();
   const addedInputs = new Set<string>();
 
-  if (options.reuseAllInputs) {
+  if (reuseAllInputs) {
     // Add all original inputs
     originalInputTemplates.forEach((template) => {
       const input = availableInputs.find(
@@ -290,7 +287,7 @@ export const createCancelRbfTransaction = (
     txAnalyzer,
     newTxTemplate,
     availableInputs,
-    { ...options, reuseAllInputs },
+    reuseAllInputs,
     false, // Not an accelerated transaction
   );
 
@@ -429,7 +426,7 @@ export const createAcceleratedRbfTransaction = (
     txAnalyzer,
     newTxTemplate,
     availableInputs,
-    { ...options, reuseAllInputs },
+    reuseAllInputs,
     true, // This is an accelerated transaction
   );
 
