@@ -1,0 +1,51 @@
+{
+  "name": "@caravan/fees",
+  "version": "1.0.0-beta",
+  "description": "Utility library for fee bumping bitcoin transactions",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "ci": "npm run lint && npm run test",
+    "dev": "npm run build -- --watch",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "jest src/tests",
+    "test:watch": "jest --watch src",
+    "lint": "eslint src"
+  },
+  "keywords": [
+    "bitcoin",
+    "cpfp",
+    "rbf",
+    "feebumping",
+    "blockchain"
+  ],
+  "author": "Mrigesh Thakur",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "@inrupt/jest-jsdom-polyfills": "^3.2.1",
+    "ts-jest": "^29.0.5",
+    "tsup": "^7.2.0",
+    "typescript": "^4.9.5",
+    "@caravan/typescript-config": "*",
+    "esbuild-plugin-polyfill-node": "^0.3.0"
+  },
+  "dependencies": {
+    "@caravan/bitcoin": "*",
+    "@caravan/psbt": "*",
+    "bignumber.js": "^9.1.2",
+    "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5"
+  }
+}
