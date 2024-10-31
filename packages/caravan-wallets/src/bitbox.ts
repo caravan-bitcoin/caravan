@@ -40,7 +40,14 @@ export const BITBOX = "bitbox";
 export type TShowPairingCode = (pairingCode: string) => (() => void) | null;
 
 function convertNetwork(network: BitcoinNetwork): BtcCoin {
-  return network === 'mainnet' ? 'btc' : 'tbtc';
+  switch (network) {
+    case 'mainnet':
+      return 'btc';
+    case 'regtest':
+      return 'rbtc';
+    default:
+      return 'tbtc';
+  }
 }
 
 function convertToBtcMultisigScriptType(addressType: MultisigAddressType): BtcMultisigScriptType {

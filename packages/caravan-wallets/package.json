@@ -51,7 +51,7 @@
     "@typescript-eslint/parser": "^5.51.0",
     "babel-jest": "^29.7.0",
     "babel-plugin-transform-inline-environment-variables": "^0.4.3",
-    "bitbox-api": "^0.6.0",
+    "bitbox-api": "^0.7.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^8.34.0",
     "eslint-plugin-import": "^2.27.5",
