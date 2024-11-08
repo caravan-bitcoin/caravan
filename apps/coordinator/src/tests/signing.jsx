@@ -8,6 +8,7 @@ import {
   TEST_FIXTURES,
 } from "@caravan/bitcoin";
 import {
+  BITBOX,
   COLDCARD,
   HERMIT,
   LEDGER,
@@ -193,6 +194,17 @@ export function signingTests(keystore) {
         }
       });
       return transactions;
+    case BITBOX:
+      return TEST_FIXTURES.transactions
+        .filter((fixture) => fixture.braidDetails)
+        .map(
+          (fixture) =>
+            new SignMultisigTransactionTest({
+              ...fixture,
+              ...{ keystore },
+              returnSignatureArray: true,
+            }),
+        );
     case LEDGER:
       return TEST_FIXTURES.transactions
         .filter((fixture) => fixture.policyHmac && fixture.braidDetails)

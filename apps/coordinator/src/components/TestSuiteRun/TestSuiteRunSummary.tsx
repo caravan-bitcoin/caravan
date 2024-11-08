@@ -3,6 +3,7 @@ import moment from "moment";
 import { useSelector, useDispatch } from "react-redux";
 import Bowser from "bowser";
 import {
+  BITBOX,
   TREZOR,
   LEDGER,
   HERMIT,
@@ -178,6 +179,8 @@ const TestSuiteRunSummaryBase = () => {
 
   const keystoreName = (type: string) => {
     switch (type) {
+      case BITBOX:
+        return "BitBox";
       case TREZOR:
         return "Trezor";
       case LEDGER:
