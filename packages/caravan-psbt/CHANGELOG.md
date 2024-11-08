@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.5.0
+
+### Minor Changes
+
+- [#114](https://github.com/caravan-bitcoin/caravan/pull/114) [`8d79fc6`](https://github.com/caravan-bitcoin/caravan/commit/8d79fc6cfbd63bee37f076c4396a94d30e412e6f) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Added methods to handle sequence numbers within PSBTs for better RBF (Replace-By-Fee) support:
+
 ## 1.4.3
 
 ### Patch Changes
