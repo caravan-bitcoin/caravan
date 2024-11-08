@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- [#117](https://github.com/caravan-bitcoin/caravan/pull/117) [`d0e08e8`](https://github.com/caravan-bitcoin/caravan/commit/d0e08e872a63011d2ed72b6b9a68e54db1649b44) Thanks [@benma](https://github.com/benma)! - Add support for the BitBox02 hardware wallet
+
 ## 0.2.4
 
 ### Patch Changes
