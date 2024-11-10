@@ -1,21 +1,21 @@
-import { generateMultisigFromHex } from "./multisig";
+import { generateMultisigFromHex } from "../multisig";
 import {
   unsignedMultisigTransaction,
   signedMultisigTransaction,
   unsignedMultisigPSBT,
   unsignedTransactionObjectFromPSBT,
-} from "./transactions";
-import { toHexString } from "./utils";
-import { P2SH } from "./p2sh";
-import { networkData, Network } from "./networks";
-import { TEST_FIXTURES } from "./fixtures";
-import { P2WSH } from "./p2wsh";
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
+} from "../transactions";
+import { toHexString } from "../utils";
+import { P2SH } from "../p2sh";
+import { networkData, Network } from "../networks";
+import { TEST_FIXTURES } from "../fixtures";
+import { P2WSH } from "../p2wsh";
+import { P2SH_P2WSH } from "../p2sh_p2wsh";
 
 import { address } from "bitcoinjs-lib-v5";
 
 // FIXME: transactionbuilder is deprecating, but we know this. remove this after addressing.
-console.warn = jest.fn();
+console.warn = vi.fn();
 
 describe("transactions", () => {
   describe("unsignedMultisigTransaction", () => {

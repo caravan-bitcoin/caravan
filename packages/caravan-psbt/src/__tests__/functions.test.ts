@@ -1,4 +1,4 @@
-import { bufferize } from "./functions";
+import { bufferize } from "../functions";
 
 describe("bufferize", () => {
   it("should return a buffer when given a hex string", () => {

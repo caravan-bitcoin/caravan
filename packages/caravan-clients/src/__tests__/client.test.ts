@@ -10,16 +10,7 @@ import * as bitcoind from "../bitcoind";
 import * as wallet from "../wallet";
 import BigNumber from "bignumber.js";
 
-import {
-  vi,
-  beforeEach,
-  afterEach,
-  Mocked,
-  MockInstance,
-  describe,
-  it,
-  expect,
-} from "vitest";
+import { Mocked, MockInstance } from "vitest";
 
 import axios from "axios";
 vi.mock("axios");

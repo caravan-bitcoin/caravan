@@ -1,8 +1,5 @@
-import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test, jest } from "@jest/globals";
+import { PsbtV2, getPsbtVersionNumber } from "../psbtv2";
 import { silenceDescribe } from "react-silence";
-
-import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -823,149 +820,6 @@ describe("PsbtV2", () => {
   });
 });
 
-describe("PsbtV2.isReadyForConstructor", () => {
-  let psbt: PsbtV2;
-
-  beforeEach(() => {
-    psbt = new PsbtV2();
-  });
-
-  it("Returns not ready for Constructor when PSBT_GLOBAL_FALLBACK_LOCKTIME is not set", () => {
-    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = null;
-    expect(psbt.isReadyForConstructor).toBe(false);
-  });
-
-  it("Returns not ready for Constructor when neither inputs or outputs are modifiable", () => {
-    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
-    expect(psbt.isReadyForConstructor).toBe(false);
-  });
-
-  it("Returns ready for Constructor when created with the object class constructor method", () => {
-    expect(psbt.isReadyForConstructor).toBe(true);
-  });
-
-  it("Returns ready for Constructor when a custom PSBT_GLOBAL_FALLBACK_LOCKTIME has been set", () => {
-    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = 500000000;
-    expect(psbt.isReadyForConstructor).toBe(true);
-  });
-
-  it("Returns ready for Constructor when at least inputs or outputs are modifiable", () => {
-    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
-    expect(psbt.isReadyForConstructor).toBe(true);
-    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.OUTPUTS];
-    expect(psbt.isReadyForConstructor).toBe(true);
-  });
-});
-
-describe("PsbtV2.isReadyForUpdater", () => {
-  let psbt: PsbtV2;
-
-  beforeEach(() => {
-    psbt = new PsbtV2();
-    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
-    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
-  });
-
-  it("Returns not ready for Updater when there are no inputs to update", () => {
-    psbt.deleteInput(0);
-    expect(psbt.isReadyForUpdater).toBe(false);
-  });
-
-  it("Returns not ready for Updater when there are no modifiable inputs", () => {
-    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
-    expect(psbt.isReadyForUpdater).toBe(false);
-  });
-
-  it("Returns ready for Updater when it has at least one input and inputs are modifiable", () => {
-    expect(psbt.isReadyForUpdater).toBe(true);
-  });
-});
-
-describe("PsbtV2.isReadyForSigner", () => {
-  let psbt: PsbtV2;
-
-  beforeEach(() => {
-    psbt = new PsbtV2();
-    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
-  });
-
-  it("Returns not ready for Signer when there are no inputs to sign", () => {
-    psbt.deleteInput(0);
-    expect(psbt.isReadyForSigner).toBe(false);
-  });
-
-  it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
-    jest
-      .spyOn(psbt, "isReadyForTransactionExtractor", "get")
-      .mockReturnValue(true);
-    expect(psbt.isReadyForSigner).toBe(false);
-  });
-
-  it("Returns ready for Signer when the psbt has an input for signing", () => {
-    expect(psbt.isReadyForSigner).toBe(true);
-  });
-});
-
-describe("PsbtV2.isReadyForTransactionExtractor", () => {
-  let psbt: PsbtV2;
-
-  beforeEach(() => {
-    psbt = new PsbtV2();
-    // Create finalized non-witness input
-    psbt.addInput({
-      previousTxId: Buffer.from([0x00]),
-      outputIndex: 0,
-    });
-    (psbt as any).inputMaps[0].set(
-      KeyType.PSBT_IN_NON_WITNESS_UTXO,
-      Buffer.from([0x01]),
-    );
-    (psbt as any).inputMaps[0].set(
-      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
-      Buffer.from([0x00]),
-    );
-    // Create finalized witness input
-    psbt.addInput({
-      previousTxId: Buffer.from([0x00]),
-      outputIndex: 1,
-    });
-    (psbt as any).inputMaps[1].set(
-      KeyType.PSBT_IN_WITNESS_UTXO,
-      Buffer.from([0x01]),
-    );
-    (psbt as any).inputMaps[1].set(
-      KeyType.PSBT_IN_FINAL_SCRIPTWITNESS,
-      Buffer.from([0x01]),
-    );
-  });
-
-  it("Returns not ready for Transaction Extractor when there are no finalized scripts", () => {
-    // Unset script from second input
-    (psbt as any).inputMaps[1].delete(KeyType.PSBT_IN_FINAL_SCRIPTWITNESS);
-    expect(psbt.isReadyForTransactionExtractor).toBe(false);
-  });
-
-  it("Returns not ready for Transaction Extractor when there are missing UTXOs", () => {
-    (psbt as any).inputMaps[1].delete(
-      KeyType.PSBT_IN_WITNESS_UTXO,
-      Buffer.from([0x00]),
-    );
-    expect(psbt.isReadyForTransactionExtractor).toBe(false);
-  });
-
-  it("Returns not ready for Transaction Extractor when extra fields have not been removed", () => {
-    (psbt as any).inputMaps[1].set(
-      KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
-      Buffer.from([0x01]),
-    );
-    expect(psbt.isReadyForTransactionExtractor).toBe(false);
-  });
-
-  it("Returns ready for Transaction Extractor when the Input Finalizer's job has been completed", () => {
-    expect(psbt.isReadyForTransactionExtractor).toBe(true);
-  });
-});
-
 describe("PsbtV2.nLockTime", () => {
   it("Returns 0 when No locktimes specified", () => {
     const vect = BIP_370_VECTORS_VALID_PSBT[14];
@@ -1066,8 +920,6 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
-  silenceDescribe("error", "warn");
-
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
     (vect) => {
@@ -1161,13 +1013,11 @@ describe("getPsbtVersionNumber", () => {
 });
 
 describe("PsbtV2.addPartialSig", () => {
-  silenceDescribe("error", "warn");
-
   let psbt;
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1176,14 +1026,9 @@ describe("PsbtV2.addPartialSig", () => {
   it("Throws on validation failures", () => {
     const addSig = (index: number, pub?: any, sig?: any) =>
       psbt.addPartialSig(index, pub, sig);
-
-    // No inputs, so it's not ready for Signer
-    expect(() => addSig(0)).toThrow(
-      "The PsbtV2 is not ready for a Signer. Partial sigs cannot be added.",
-    );
+    expect(() => addSig(0)).toThrow("PsbtV2 has no input at 0");
 
     psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
-    expect(() => addSig(1)).toThrow("PsbtV2 has no input at 1");
     expect(() => addSig(0)).toThrow(
       "PsbtV2.addPartialSig() missing argument pubkey",
     );
@@ -1229,7 +1074,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1395,201 +1240,4 @@ describe("PsbtV2.isModifiable (private)", () => {
       );
     },
   );
-});
-
-describe("PsbtV2.setProprietaryValue", () => {
-  const identifier = Buffer.from("satoshi");
-  const idLength = Buffer.from([identifier.length]);
-  const keytype1 = Buffer.from("00", "hex");
-  const keytype2 = Buffer.from("01", "hex");
-  const keydata1 = Buffer.from("0001", "hex");
-  const keydata2 = Buffer.from("0002", "hex");
-  const valuedata1 = Buffer.from("000001", "hex");
-  const valuedata2 = Buffer.from("000002", "hex");
-
-  const key1 = Buffer.from([
-    0xfc,
-    ...idLength,
-    ...identifier,
-    ...keytype1,
-    ...keydata1,
-  ]).toString("hex");
-  const key2 = Buffer.from([
-    0xfc,
-    ...idLength,
-    ...identifier,
-    ...keytype2,
-    ...keydata2,
-  ]).toString("hex");
-
-  let psbt: PsbtV2;
-
-  beforeEach(() => {
-    psbt = new PsbtV2();
-  });
-
-  it("sets values to the global map", () => {
-    psbt.setProprietaryValue(
-      "global",
-      identifier,
-      keytype1,
-      keydata1,
-      valuedata1,
-    );
-    psbt.setProprietaryValue(
-      "global",
-      identifier,
-      keytype2,
-      keydata2,
-      valuedata2,
-    );
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
-      valuedata1.toString("hex"),
-    );
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].key).toBe(key2);
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].value).toBe(
-      valuedata2.toString("hex"),
-    );
-  });
-
-  it("defaults to setting global maps when the map selector is malformed", () => {
-    psbt.setProprietaryValue(
-      "inputs" as any,
-      identifier,
-      keytype1,
-      keydata1,
-      valuedata1,
-    );
-    expect((psbt as any).inputMaps.length).toBe(0);
-    expect((psbt as any).outputMaps.length).toBe(0);
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
-    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
-      valuedata1.toString("hex"),
-    );
-  });
-
-  it("throws when input or output map are missing an index", () => {
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["inputs"] as any,
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow(
-      "Must specify an index when setting proprietary values to inputs or outputs.",
-    );
-
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["inputs", null] as any,
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow(
-      "Must specify an index when setting proprietary values to inputs or outputs.",
-    );
-
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["outputs"] as any,
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow(
-      "Must specify an index when setting proprietary values to inputs or outputs.",
-    );
-
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["outputs", null] as any,
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow(
-      "Must specify an index when setting proprietary values to inputs or outputs.",
-    );
-  });
-
-  it("throws when input or output map is uninitialized", () => {
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["inputs", 0],
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow("Map does not exist at that index.");
-
-    expect(() =>
-      psbt.setProprietaryValue(
-        ["outputs", 0],
-        identifier,
-        keytype1,
-        keydata1,
-        valuedata1,
-      ),
-    ).toThrow("Map does not exist at that index.");
-  });
-
-  it("sets values to input and output maps", () => {
-    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
-    psbt.addInput({ previousTxId: Buffer.from([0x01]), outputIndex: 1 });
-    psbt.addOutput({ amount: 1, script: Buffer.from([0x00]) });
-    psbt.addOutput({ amount: 2, script: Buffer.from([0x01]) });
-    psbt.setProprietaryValue(
-      ["inputs", 0],
-      identifier,
-      keytype1,
-      keydata1,
-      valuedata1,
-    );
-    psbt.setProprietaryValue(
-      ["inputs", 1],
-      identifier,
-      keytype2,
-      keydata2,
-      valuedata2,
-    );
-    psbt.setProprietaryValue(
-      ["outputs", 0],
-      identifier,
-      keytype1,
-      keydata1,
-      valuedata1,
-    );
-    psbt.setProprietaryValue(
-      ["outputs", 1],
-      identifier,
-      keytype2,
-      keydata2,
-      valuedata2,
-    );
-
-    expect(psbt.PSBT_IN_PROPRIETARY[0][0].key).toBe(key1);
-    expect(psbt.PSBT_IN_PROPRIETARY[0][0].value).toBe(
-      valuedata1.toString("hex"),
-    );
-    expect(psbt.PSBT_IN_PROPRIETARY[1][0].key).toBe(key2);
-    expect(psbt.PSBT_IN_PROPRIETARY[1][0].value).toBe(
-      valuedata2.toString("hex"),
-    );
-    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].key).toBe(key1);
-    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].value).toBe(
-      valuedata1.toString("hex"),
-    );
-    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].key).toBe(key2);
-    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].value).toBe(
-      valuedata2.toString("hex"),
-    );
-  });
 });

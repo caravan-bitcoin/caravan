@@ -58,6 +58,7 @@
     "lint-staged": "^13.1.2",
     "mocha": "^10.2.0",
     "prettier": "^3.2.5",
+    "react-silence": "^1.0.4",
     "tsup": "^7.2.0",
     "typescript": "^4.1.3"
   },
@@ -66,8 +67,8 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src/ --ext .ts",
     "ci": "npm run lint && npm run test",
-    "test": "jest src",
-    "test:watch": "jest --watch src"
+    "test": "vitest --watch=false src",
+    "test:watch": "vitest --watch src"
   },
   "bin": {},
   "dependencies": {

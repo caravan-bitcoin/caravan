@@ -1,6 +1,6 @@
-import { PsbtV2, getPsbtVersionNumber } from "./psbtv2";
-import { test } from "@jest/globals";
-import { silenceDescribe } from "react-silence";
+import { PsbtV2, getPsbtVersionNumber } from "../../psbtv2";
+
+import { KeyType, PsbtGlobalTxModifiableBits } from "../../psbtv2/types";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -721,7 +721,14 @@ const BIP_174_VECTORS_VALID_PSBT = [
 ];
 
 describe("PsbtV2", () => {
-  silenceDescribe("error", "warn");
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   test.each(BIP_370_VECTORS_INVALID_PSBT)(
     "Throws with BIP0370 test vectors. $case",
@@ -818,6 +825,149 @@ describe("PsbtV2", () => {
     expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(0);
     expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(0);
     expect(psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME).toBe(0);
+  });
+});
+
+describe("PsbtV2.isReadyForConstructor", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+  });
+
+  it("Returns not ready for Constructor when PSBT_GLOBAL_FALLBACK_LOCKTIME is not set", () => {
+    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = null;
+    expect(psbt.isReadyForConstructor).toBe(false);
+  });
+
+  it("Returns not ready for Constructor when neither inputs or outputs are modifiable", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
+    expect(psbt.isReadyForConstructor).toBe(false);
+  });
+
+  it("Returns ready for Constructor when created with the object class constructor method", () => {
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+
+  it("Returns ready for Constructor when a custom PSBT_GLOBAL_FALLBACK_LOCKTIME has been set", () => {
+    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = 500000000;
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+
+  it("Returns ready for Constructor when at least inputs or outputs are modifiable", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
+    expect(psbt.isReadyForConstructor).toBe(true);
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.OUTPUTS];
+    expect(psbt.isReadyForConstructor).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForUpdater", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [PsbtGlobalTxModifiableBits.INPUTS];
+  });
+
+  it("Returns not ready for Updater when there are no inputs to update", () => {
+    psbt.deleteInput(0);
+    expect(psbt.isReadyForUpdater).toBe(false);
+  });
+
+  it("Returns not ready for Updater when there are no modifiable inputs", () => {
+    psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
+    expect(psbt.isReadyForUpdater).toBe(false);
+  });
+
+  it("Returns ready for Updater when it has at least one input and inputs are modifiable", () => {
+    expect(psbt.isReadyForUpdater).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForSigner", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+  });
+
+  it("Returns not ready for Signer when there are no inputs to sign", () => {
+    psbt.deleteInput(0);
+    expect(psbt.isReadyForSigner).toBe(false);
+  });
+
+  it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
+    vi.spyOn(psbt, "isReadyForTransactionExtractor", "get").mockReturnValue(
+      true,
+    );
+    expect(psbt.isReadyForSigner).toBe(false);
+  });
+
+  it("Returns ready for Signer when the psbt has an input for signing", () => {
+    expect(psbt.isReadyForSigner).toBe(true);
+  });
+});
+
+describe("PsbtV2.isReadyForTransactionExtractor", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+    // Create finalized non-witness input
+    psbt.addInput({
+      previousTxId: Buffer.from([0x00]),
+      outputIndex: 0,
+    });
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_NON_WITNESS_UTXO,
+      Buffer.from([0x01]),
+    );
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
+      Buffer.from([0x00]),
+    );
+    // Create finalized witness input
+    psbt.addInput({
+      previousTxId: Buffer.from([0x00]),
+      outputIndex: 1,
+    });
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_WITNESS_UTXO,
+      Buffer.from([0x01]),
+    );
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTWITNESS,
+      Buffer.from([0x01]),
+    );
+  });
+
+  it("Returns not ready for Transaction Extractor when there are no finalized scripts", () => {
+    // Unset script from second input
+    (psbt as any).inputMaps[1].delete(KeyType.PSBT_IN_FINAL_SCRIPTWITNESS);
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns not ready for Transaction Extractor when there are missing UTXOs", () => {
+    (psbt as any).inputMaps[1].delete(
+      KeyType.PSBT_IN_WITNESS_UTXO,
+      Buffer.from([0x00]),
+    );
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns not ready for Transaction Extractor when extra fields have not been removed", () => {
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
+      Buffer.from([0x01]),
+    );
+    expect(psbt.isReadyForTransactionExtractor).toBe(false);
+  });
+
+  it("Returns ready for Transaction Extractor when the Input Finalizer's job has been completed", () => {
+    expect(psbt.isReadyForTransactionExtractor).toBe(true);
   });
 });
 
@@ -921,6 +1071,16 @@ describe("PsbtV2.nLockTime", () => {
 });
 
 describe("PsbtV2.FromV0", () => {
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
+
   test.each(BIP_174_VECTORS_INVALID_PSBT)(
     "Throws with BIP0174 test vectors. $case",
     (vect) => {
@@ -930,14 +1090,14 @@ describe("PsbtV2.FromV0", () => {
           expect(t).toThrow();
         }
       }
-    }
+    },
   );
 
   it("Throws with valid psbtv0 with PSBT_GLOBAL_TX_VERSION=1 when disallowing txnv1", () => {
     const t = () =>
       PsbtV2.FromV0(
         "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",
-        false
+        false,
       );
     expect(t).toThrow();
   });
@@ -951,13 +1111,13 @@ describe("PsbtV2.FromV0", () => {
           expect(t).not.toThrow();
         }
       }
-    }
+    },
   );
 
   test.each(
     BIP_174_VECTORS_VALID_PSBT.filter(
-      (vect) => vect.inputs !== undefined && vect.outputs !== undefined
-    )
+      (vect) => vect.inputs !== undefined && vect.outputs !== undefined,
+    ),
   )("Returns proper input and output counts. $case", (vect) => {
     const psbt = PsbtV2.FromV0(vect.hex, true);
     expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(vect.inputs);
@@ -965,7 +1125,7 @@ describe("PsbtV2.FromV0", () => {
   });
 
   test.each(
-    BIP_174_VECTORS_VALID_PSBT.filter((vect) => vect.partialSigs !== undefined)
+    BIP_174_VECTORS_VALID_PSBT.filter((vect) => vect.partialSigs !== undefined),
   )("Sets partialSigs when they are present. $case", (vect) => {
     const psbt = PsbtV2.FromV0(vect.hex, true);
     const partialSigs = psbt.PSBT_IN_PARTIAL_SIG;
@@ -1009,16 +1169,25 @@ describe("getPsbtVersionNumber", () => {
     (vect) => {
       const version = getPsbtVersionNumber(vect.psbt);
       expect(version).toEqual(vect.expected);
-    }
+    },
   );
 });
 
 describe("PsbtV2.addPartialSig", () => {
+  beforeAll(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  // Restore console methods
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
   let psbt;
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1027,18 +1196,23 @@ describe("PsbtV2.addPartialSig", () => {
   it("Throws on validation failures", () => {
     const addSig = (index: number, pub?: any, sig?: any) =>
       psbt.addPartialSig(index, pub, sig);
-    expect(() => addSig(0)).toThrow("PsbtV2 has no input at 0");
+
+    // No inputs, so it's not ready for Signer
+    expect(() => addSig(0)).toThrow(
+      "The PsbtV2 is not ready for a Signer. Partial sigs cannot be added.",
+    );
 
     psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    expect(() => addSig(1)).toThrow("PsbtV2 has no input at 1");
     expect(() => addSig(0)).toThrow(
-      "PsbtV2.addPartialSig() missing argument pubkey"
+      "PsbtV2.addPartialSig() missing argument pubkey",
     );
     expect(() => addSig(0, Buffer.from([0x00]))).toThrow(
-      "PsbtV2.addPartialSig() missing argument sig"
+      "PsbtV2.addPartialSig() missing argument sig",
     );
     addSig(0, Buffer.from([0x00]), Buffer.from([0x00]));
     expect(() => addSig(0, Buffer.from([0x00]), Buffer.from([0x00]))).toThrow(
-      "PsbtV2 already has a signature for this input with this pubkey"
+      "PsbtV2 already has a signature for this input with this pubkey",
     );
   });
 
@@ -1075,7 +1249,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1088,7 +1262,7 @@ describe("PsbtV2.removePartialSig", () => {
 
     psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
     expect(() => removeSig(0, Buffer.from([0x00]))).toThrow(
-      "PsbtV2 input has no signature from pubkey 00"
+      "PsbtV2 input has no signature from pubkey 00",
     );
   });
 
@@ -1175,7 +1349,7 @@ describe("PsbtV2.handleSighashType (private)", () => {
     (vect) => {
       psbt.handleSighashType(vect.value);
       expect(psbt.PSBT_GLOBAL_TX_MODIFIABLE).toEqual(vect.expectedModifiable);
-    }
+    },
   );
 });
 
@@ -1237,8 +1411,205 @@ describe("PsbtV2.isModifiable (private)", () => {
       expect(psbt.isModifiable(["OUTPUTS"])).toBe(vect.outputsExpected);
       expect(psbt.isModifiable(["OUTPUTS", "INPUTS"])).toBe(vect.bothExpected);
       expect(psbt.isModifiable(["SIGHASH_SINGLE"])).toBe(
-        vect.sighashSingleExpected
+        vect.sighashSingleExpected,
       );
-    }
+    },
   );
+});
+
+describe("PsbtV2.setProprietaryValue", () => {
+  const identifier = Buffer.from("satoshi");
+  const idLength = Buffer.from([identifier.length]);
+  const keytype1 = Buffer.from("00", "hex");
+  const keytype2 = Buffer.from("01", "hex");
+  const keydata1 = Buffer.from("0001", "hex");
+  const keydata2 = Buffer.from("0002", "hex");
+  const valuedata1 = Buffer.from("000001", "hex");
+  const valuedata2 = Buffer.from("000002", "hex");
+
+  const key1 = Buffer.from([
+    0xfc,
+    ...idLength,
+    ...identifier,
+    ...keytype1,
+    ...keydata1,
+  ]).toString("hex");
+  const key2 = Buffer.from([
+    0xfc,
+    ...idLength,
+    ...identifier,
+    ...keytype2,
+    ...keydata2,
+  ]).toString("hex");
+
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+  });
+
+  it("sets values to the global map", () => {
+    psbt.setProprietaryValue(
+      "global",
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      "global",
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].key).toBe(key2);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[1].value).toBe(
+      valuedata2.toString("hex"),
+    );
+  });
+
+  it("defaults to setting global maps when the map selector is malformed", () => {
+    psbt.setProprietaryValue(
+      "inputs" as any,
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    expect((psbt as any).inputMaps.length).toBe(0);
+    expect((psbt as any).outputMaps.length).toBe(0);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].key).toBe(key1);
+    expect(psbt.PSBT_GLOBAL_PROPRIETARY[0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+  });
+
+  it("throws when input or output map are missing an index", () => {
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs"] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs", null] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs"] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs", null] as any,
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow(
+      "Must specify an index when setting proprietary values to inputs or outputs.",
+    );
+  });
+
+  it("throws when input or output map is uninitialized", () => {
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["inputs", 0],
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow("Map does not exist at that index.");
+
+    expect(() =>
+      psbt.setProprietaryValue(
+        ["outputs", 0],
+        identifier,
+        keytype1,
+        keydata1,
+        valuedata1,
+      ),
+    ).toThrow("Map does not exist at that index.");
+  });
+
+  it("sets values to input and output maps", () => {
+    psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
+    psbt.addInput({ previousTxId: Buffer.from([0x01]), outputIndex: 1 });
+    psbt.addOutput({ amount: 1, script: Buffer.from([0x00]) });
+    psbt.addOutput({ amount: 2, script: Buffer.from([0x01]) });
+    psbt.setProprietaryValue(
+      ["inputs", 0],
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      ["inputs", 1],
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+    psbt.setProprietaryValue(
+      ["outputs", 0],
+      identifier,
+      keytype1,
+      keydata1,
+      valuedata1,
+    );
+    psbt.setProprietaryValue(
+      ["outputs", 1],
+      identifier,
+      keytype2,
+      keydata2,
+      valuedata2,
+    );
+
+    expect(psbt.PSBT_IN_PROPRIETARY[0][0].key).toBe(key1);
+    expect(psbt.PSBT_IN_PROPRIETARY[0][0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_IN_PROPRIETARY[1][0].key).toBe(key2);
+    expect(psbt.PSBT_IN_PROPRIETARY[1][0].value).toBe(
+      valuedata2.toString("hex"),
+    );
+    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].key).toBe(key1);
+    expect(psbt.PSBT_OUT_PROPRIETARY[0][0].value).toBe(
+      valuedata1.toString("hex"),
+    );
+    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].key).toBe(key2);
+    expect(psbt.PSBT_OUT_PROPRIETARY[1][0].value).toBe(
+      valuedata2.toString("hex"),
+    );
+  });
 });

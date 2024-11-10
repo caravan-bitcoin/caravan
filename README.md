@@ -309,6 +309,22 @@ import { BlockchainClient, ClientType } from "@caravan/clients";
 ```
 - Note that now not only if you make a change to `caravan/coordinator` the changes will be reflected almost instantly in the app, but you can also make a change to the dependencies and everything will rebuild (technically turborepo only rebuilds what is necessary, caching the rest). Add a console.log to the `getFeeEstimate` in the `BlockchainClient` app and see for yourself!
 
+## Testing
+
+Caravan monorepo uses [vitest](https://vitest.dev) testing framework to test different pacakges within it.
+
+- For running the test suite runners hit below command in terminal
+
+```bash
+turbo run test
+```
+
+**Editing test suite files:** Test suite files can be found in `__tests__` folder, every pacakge share a common vitest config file which manages test suiter runner environment.
+
+In some files if environment is needed to be changed specifically, it can done by adding control comments at top of the file [docs reference](https://vitest.dev/guide/environment#environments-for-specific-files)
+
+
+
 ## Troubleshooting
 - you might see an error "The request '...' failed to resolve only because it was resolved as fully specified"
 Webpack has an [issue](https://github.com/webpack/webpack/issues/11467#issuecomment-691873586) by default

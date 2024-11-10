@@ -1,6 +1,6 @@
-import { validateAddress } from "./addresses";
-import * as multisig from "./multisig";
-import { Network } from "./networks";
+import { validateAddress } from "../addresses";
+import * as multisig from "../multisig";
+import { Network } from "../networks";
 
 const P2PKH = "P2PKH";
 const P2TR = "P2TR";
