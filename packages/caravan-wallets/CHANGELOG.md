@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+### Patch Changes
+
+- [#151](https://github.com/caravan-bitcoin/caravan/pull/151) [`5c3c456`](https://github.com/caravan-bitcoin/caravan/commit/5c3c456d78e8ab017cb960027d316cff98dc3ca2) Thanks [@bucko13](https://github.com/bucko13)! - fix bundling of internal dependencies
+
 ## 0.4.1
 
 ### Patch Changes
