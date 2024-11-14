@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- [#149](https://github.com/caravan-bitcoin/caravan/pull/149) [`baee2cd`](https://github.com/caravan-bitcoin/caravan/commit/baee2cd3c95db7ead90ff672ad1ce506cf2c6a57) Thanks [@bucko13](https://github.com/bucko13)! - move bitbox to normal dependency
+
 ## 0.4.0
 
 ### Minor Changes
