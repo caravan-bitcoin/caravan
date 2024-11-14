@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.1
+
+### Patch Changes
+
+- [#147](https://github.com/caravan-bitcoin/caravan/pull/147) [`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927) Thanks [@bucko13](https://github.com/bucko13)! - Adds support for translatePSBT for segwit PSBTs. This enables loading tx data directly from a psbt for ledger and trezor
+
+- Updated dependencies [[`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927)]:
+  - @caravan/psbt@1.6.0
+  - @caravan/wallets@0.4.0
+
 ## 1.4.0
 
 ### Minor Changes
