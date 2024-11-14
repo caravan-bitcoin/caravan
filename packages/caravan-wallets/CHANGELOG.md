@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+### Patch Changes
+
+- [#153](https://github.com/caravan-bitcoin/caravan/pull/153) [`480761b`](https://github.com/caravan-bitcoin/caravan/commit/480761b3c7c8a8708978a22bacf11442dd6d4868) Thanks [@bucko13](https://github.com/bucko13)! - fix an issue where caravan/bitcoin couldn't be pre-bundled
+
 ## 0.4.2
 
 ### Patch Changes
