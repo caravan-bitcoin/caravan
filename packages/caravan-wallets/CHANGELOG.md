@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4
+
+### Patch Changes
+
+- [#156](https://github.com/caravan-bitcoin/caravan/pull/156) [`a35893d`](https://github.com/caravan-bitcoin/caravan/commit/a35893d3f2733b8ba6661bc955713813daa3a75d) Thanks [@chadchapnick](https://github.com/chadchapnick)! - support regtest network in coldcard and custom interactions
+
 ## 0.4.3
 
 ### Patch Changes
