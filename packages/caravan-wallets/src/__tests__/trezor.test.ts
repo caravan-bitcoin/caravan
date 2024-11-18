@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import {
   ROOT_FINGERPRINT,
   TEST_FIXTURES,

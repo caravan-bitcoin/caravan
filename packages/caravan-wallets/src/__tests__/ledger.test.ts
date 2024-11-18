@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "../interaction";
 import {
