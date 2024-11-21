@@ -43,3 +43,70 @@ export interface FeeRatePercentile {
   avgFee_90: number;
   avgFee_100: number;
 }
+
+interface RawTxInput {
+  txid: string;
+  vout: number;
+  sequence: number;
+  scriptSig?: string;
+  witness?: string[];
+  prevout?: {
+    scriptpubkey: string;
+    scriptpubkey_asm: string;
+    scriptpubkey_type: string;
+    scriptpubkey_address: string;
+    value: number;
+  };
+}
+
+interface RawTxOutput {
+  value: number;
+  scriptpubkey: string;
+  scriptpubkey_asm?: string;
+  scriptpubkey_type?: string;
+  scriptpubkey_address?: string;
+}
+
+interface RawTxStatus {
+  confirmed: boolean;
+  block_height?: number;
+  block_hash?: string;
+  block_time?: number;
+}
+
+export interface RawTransactionData {
+  txid: string;
+  version: number;
+  locktime: number;
+  vin: RawTxInput[];
+  vout: RawTxOutput[];
+  size: number;
+  weight: number;
+  fee: number;
+  status: RawTxStatus;
+}
+
+export interface TransactionDetails {
+  txid: string;
+  version: number;
+  locktime: number;
+  vin: Array<{
+    txid: string;
+    vout: number;
+    sequence: number;
+  }>;
+  vout: Array<{
+    value: number;
+    scriptpubkey: string;
+    scriptpubkey_address?: string;
+  }>;
+  size: number;
+  weight: number;
+  fee: number;
+  status: {
+    confirmed: boolean;
+    block_height?: number;
+    block_hash?: string;
+    block_time?: number;
+  };
+}

@@ -102,7 +102,7 @@ export async function bitcoindGetAddressStatus({ url, auth, address }) {
     if (isWalletAddressNotFoundError(e))
       // eslint-disable-next-line no-console
       console.warn(
-        `Address ${address} not found in bitcoind's wallet. Query failed.`
+        `Address ${address} not found in bitcoind's wallet. Query failed.`,
       );
     else console.error(e.message); // eslint-disable-line no-console
     return e;
@@ -144,16 +144,14 @@ export function bitcoindImportMulti({ url, auth, addresses, label, rescan }) {
   return callBitcoind(...params);
 }
 
-export async function bitcoindRawTxData(txid){
-  try{
-    return await callBitcoind(
-      this.bitcoindParams.url,
-      this.bitcoindParams.auth,
-      "decoderawtransaction",
-      [txid],
-    );
-  }
-  catch(e){
-    return e;
+export async function bitcoindRawTxData(url, auth, txid) {
+  try {
+    const response = await callBitcoind(url, auth, "getrawtransaction", [
+      txid,
+      true,
+    ]);
+    return response.result;
+  } catch (error) {
+    throw new Error(`Failed to get raw transaction data : ${error.message}`);
   }
 }
