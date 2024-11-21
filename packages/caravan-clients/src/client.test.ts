@@ -8,7 +8,7 @@ import {
 import * as bitcoind from "./bitcoind";
 import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
-import { UTXO } from "./types";
+import { UTXO, RawTransactionData, TransactionDetails } from "./types";
 import axios from "axios";
 jest.mock("axios");
 
@@ -1129,7 +1129,8 @@ describe("BlockchainClient", () => {
     // https://unchained.mempool.space/tx/3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84
     const mockTxid =
       "3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84";
-    const mockTxData = {
+
+    const mockRawTransactionData: RawTransactionData = {
       txid: mockTxid,
       version: 1,
       locktime: 861057,
@@ -1193,182 +1194,159 @@ describe("BlockchainClient", () => {
       },
     };
 
-    it("should get transaction details for PRIVATE client", async () => {
-      const mockCallBitcoind = jest.spyOn(bitcoind, "callBitcoind");
-      mockCallBitcoind.mockResolvedValue({ result: mockTxData });
-
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-      });
-
-      const result = await client.getTransaction(mockTxid);
-
-      expect(mockCallBitcoind).toHaveBeenCalledWith(
-        client.bitcoindParams.url,
-        client.bitcoindParams.auth,
-        "getrawtransaction",
-        [mockTxid, true],
-      );
-
-      expect(result).toEqual({
-        txid: mockTxid,
-        version: 1,
-        locktime: 861057,
-        vin: [
-          {
-            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
-            vout: 0,
-            sequence: 4294967293,
-          },
-          {
-            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
-            vout: 0,
-            sequence: 4294967293,
-          },
-        ],
-        vout: [
-          {
-            value: 20398739,
-            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
-            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
-          },
-        ],
-        size: 342,
-        weight: 720,
-        fee: 0.00000605,
-        status: {
-          confirmed: true,
-          block_height: 861058,
-          block_hash:
-            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
-          block_time: 1694567537,
+    // Expected normalized transaction data
+    const expectedTransactionDetails: TransactionDetails = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293,
         },
-      });
-    });
-
-    it("should get transaction details for BLOCKSTREAM client", async () => {
-      const mockGet = jest.fn().mockResolvedValue(mockTxData);
-
-      const client = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
-        network: Network.MAINNET,
-      });
-      client.Get = mockGet;
-
-      const result = await client.getTransaction(mockTxid);
-
-      expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
-
-      expect(result).toEqual({
-        txid: mockTxid,
-        version: 1,
-        locktime: 861057,
-        vin: [
-          {
-            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
-            vout: 0,
-            sequence: 4294967293,
-          },
-          {
-            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
-            vout: 0,
-            sequence: 4294967293,
-          },
-        ],
-        vout: [
-          {
-            value: "0.20398739",
-            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
-            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
-          },
-        ],
-        size: 342,
-        weight: 720,
-        fee: 0.00000605,
-        status: {
-          confirmed: true,
-          block_height: 861058,
-          block_hash:
-            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
-          block_time: 1694567537,
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293,
         },
-      });
-    });
-
-    it("should get transaction details for MEMPOOL client", async () => {
-      const mockGet = jest.fn().mockResolvedValue(mockTxData);
-
-      const client = new BlockchainClient({
-        type: ClientType.MEMPOOL,
-        network: Network.MAINNET,
-      });
-      client.Get = mockGet;
-
-      const result = await client.getTransaction(mockTxid);
-
-      expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
-
-      expect(result).toEqual({
-        txid: mockTxid,
-        version: 1,
-        locktime: 861057,
-        vin: [
-          {
-            txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
-            vout: 0,
-            sequence: 4294967293,
-          },
-          {
-            txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
-            vout: 0,
-            sequence: 4294967293,
-          },
-        ],
-        vout: [
-          {
-            value: "0.20398739",
-            scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
-            scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
-          },
-        ],
-        size: 342,
-        weight: 720,
-        fee: 0.00000605,
-        status: {
-          confirmed: true,
-          block_height: 861058,
-          block_hash:
-            "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
-          block_time: 1694567537,
+      ],
+      vout: [
+        {
+          value: mockRawTransactionData.vout[0].value,
+          scriptpubkey: mockRawTransactionData.vout[0].scriptpubkey,
+          scriptpubkey_address:
+            mockRawTransactionData.vout[0].scriptpubkey_address,
         },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      status: {
+        confirmed: true,
+        block_height: 861058,
+        block_hash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        block_time: 1694567537,
+      },
+    };
+
+    describe("client type specific behavior", () => {
+      let client: BlockchainClient;
+
+      afterEach(() => {
+        jest.resetAllMocks();
+      });
+
+      describe("PRIVATE client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.PRIVATE,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockBitcoindRawTxData = jest.spyOn(
+            bitcoind,
+            "bitcoindRawTxData",
+          );
+          mockBitcoindRawTxData.mockResolvedValue({
+            result: mockRawTransactionData,
+          });
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockBitcoindRawTxData).toHaveBeenCalledWith(
+            client.bitcoindParams.url,
+            client.bitcoindParams.auth,
+            mockTxid,
+          );
+          expect(result).toEqual(expectedTransactionDetails);
+        });
+      });
+
+      describe("BLOCKSTREAM client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.BLOCKSTREAM,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = jest.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
+      });
+
+      describe("MEMPOOL client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.MEMPOOL,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = jest.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
       });
     });
 
-    it("should throw an error for invalid client type", async () => {
-      const client = new BlockchainClient({
-        type: "INVALID" as ClientType,
-        network: Network.MAINNET,
+    describe("error handling", () => {
+      it("should throw an error for invalid client type", async () => {
+        const client = new BlockchainClient({
+          type: "INVALID" as ClientType,
+          network: Network.MAINNET,
+        });
+
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          "Invalid client type",
+        );
       });
 
-      await expect(client.getTransaction(mockTxid)).rejects.toThrow(
-        "Invalid client type",
-      );
-    });
+      it("should handle errors when fetching transaction details", async () => {
+        const mockError = new Error("Failed to fetch transaction");
+        const mockGet = jest.fn().mockRejectedValue(mockError);
 
-    it("should handle errors when fetching transaction details", async () => {
-      const mockError = new Error("Failed to fetch transaction");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+        const client = new BlockchainClient({
+          type: ClientType.BLOCKSTREAM,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
 
-      const client = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
-        network: Network.MAINNET,
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          `Failed to get transaction: ${mockError.message}`,
+        );
       });
-      client.Get = mockGet;
-
-      await expect(client.getTransaction(mockTxid)).rejects.toThrow(
-        `Failed to get transaction: ${mockError.message}`,
-      );
     });
   });
 });

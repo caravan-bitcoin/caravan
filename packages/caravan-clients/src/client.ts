@@ -19,7 +19,13 @@ import {
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
-import { FeeRatePercentile, Transaction, UTXO } from "./types";
+import {
+  FeeRatePercentile,
+  Transaction,
+  UTXO,
+  TransactionDetails,
+  RawTransactionData,
+} from "./types";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -32,31 +38,6 @@ export enum ClientType {
   PRIVATE = "private",
   BLOCKSTREAM = "blockstream",
   MEMPOOL = "mempool",
-}
-
-interface TransactionDetails {
-  txid: string;
-  version: number;
-  locktime: number;
-  vin: Array<{
-    txid: string;
-    vout: number;
-    sequence: number;
-  }>;
-  vout: Array<{
-    value: number;
-    scriptpubkey: string;
-    scriptpubkey_address?: string;
-  }>;
-  size: number;
-  weight: number;
-  fee: number;
-  status: {
-    confirmed: boolean;
-    block_height?: number;
-    block_hash?: string;
-    block_time?: number;
-  };
 }
 
 const delay = () => {
@@ -481,14 +462,13 @@ export class BlockchainClient extends ClientBase {
 
   public async getTransaction(txid: string): Promise<TransactionDetails> {
     try {
-      let txData: any;
+      let txData: RawTransactionData;
 
       if (this.type === ClientType.PRIVATE) {
-        const response = await callBitcoind(
+        const response = await bitcoindRawTxData(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
-          "getrawtransaction",
-          [txid, true],
+          txid,
         );
         txData = response.result;
       } else if (
@@ -539,7 +519,9 @@ export class BlockchainClient extends ClientBase {
     return await bitcoindWalletInfo({ ...this.bitcoindParams });
   }
 
-  private normalizeTransactionData(txData: any): TransactionDetails {
+  private normalizeTransactionData(
+    txData: RawTransactionData,
+  ): TransactionDetails {
     return {
       txid: txData.txid,
       version: txData.version,
