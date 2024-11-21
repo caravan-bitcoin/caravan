@@ -220,7 +220,7 @@ class AddressExpander extends React.Component {
   };
 
   expandContent = () => {
-    const { client, node, setSpendCheckbox } = this.props;
+    const { client, node, setSpendCheckbox, feeRate } = this.props;
     const { utxos, balanceSats, multisig, bip32Path, spend } = node;
     const { expandMode } = this.state;
 
@@ -242,6 +242,7 @@ class AddressExpander extends React.Component {
               selectAll={spend}
               node={node}
               setSpendCheckbox={setSpendCheckbox}
+              feeRate={feeRate}
             />
           </Grid>
         );
@@ -431,6 +432,7 @@ AddressExpander.propTypes = {
   requiredSigners: PropTypes.number.isRequired,
   totalSigners: PropTypes.number.isRequired,
   setSpendCheckbox: PropTypes.func,
+  feeRate: PropTypes.string,
 };
 
 AddressExpander.defaultProps = {
