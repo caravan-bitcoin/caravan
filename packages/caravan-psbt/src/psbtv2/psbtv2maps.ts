@@ -168,8 +168,6 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       );
     }
 
-    console.log(tx.toHex());
-
     return tx.toBuffer();
   }
 
