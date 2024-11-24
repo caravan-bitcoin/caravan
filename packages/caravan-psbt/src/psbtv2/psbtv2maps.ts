@@ -1,9 +1,9 @@
 import { BufferReader, BufferWriter } from "bufio";
+import { Transaction } from "bitcoinjs-lib-v6";
 
 import { readAndSetKeyPairs, serializeMap } from "./functions";
-import { Key, KeyType, Value } from "./types";
+import { Key, KeyType, V0KeyTypes, Value } from "./types";
 import { PSBT_MAGIC_BYTES } from "../constants";
-import { PsbtV2 } from "./psbtv2";
 import { bufferize } from "../functions";
 
 /**
@@ -81,7 +81,7 @@ export abstract class PsbtV2Maps {
   }
 
   /**
-   * Copies the maps in this PsbtV2 object to another PsbtV2 object.
+   * Copies the maps in this PsbtV2Maps object to another PsbtV2Maps object.
    *
    * NOTE: This copy method is made available to achieve parity with the PSBT
    * api required by `ledger-bitcoin` for creating merklized PSBTs. HOWEVER, it
@@ -89,7 +89,7 @@ export abstract class PsbtV2Maps {
    * validation defined in the constructor, so it could create a psbtv2 in an
    * invalid psbt state. PsbtV2.serialize is preferable whenever possible.
    */
-  public copy(to: PsbtV2) {
+  public copy(to: PsbtV2Maps) {
     this.copyMap(this.globalMap, to.globalMap);
     this.copyMaps(this.inputMaps, to.inputMaps);
     this.copyMaps(this.outputMaps, to.outputMaps);
@@ -109,4 +109,114 @@ export abstract class PsbtV2Maps {
   private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
     from.forEach((v, k) => to.set(k, Buffer.from(v)));
   }
+}
+
+/**
+ * A PsbtV2Maps class that allows for the addition of and removal of map fields
+ * specifically for converting between PSBT versions.
+ */
+export class PsbtConversionMaps extends PsbtV2Maps {
+  /**
+   * Builds the unsigned transaction that is required on global map key 0x00 for
+   * a PSBTv0. Relies on bitcoinjs-lib to construct the transaction.
+   */
+  private buildUnsignedTx() {
+    const tx = new Transaction();
+
+    tx.version =
+      this.globalMap.get(KeyType.PSBT_GLOBAL_TX_VERSION)?.readUInt8() || 0;
+    tx.locktime =
+      this.globalMap
+        .get(KeyType.PSBT_GLOBAL_FALLBACK_LOCKTIME)
+        ?.readUInt32LE() || 0;
+
+    const numInputs =
+      this.globalMap.get(KeyType.PSBT_GLOBAL_INPUT_COUNT)?.readUInt8() || 0;
+    const numOutputs =
+      this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT)?.readUInt8() || 0;
+
+    for (let i = 0; i < numInputs; i++) {
+      if (!this.inputMaps[i].has(KeyType.PSBT_IN_PREVIOUS_TXID)) {
+        console.warn(`Input ${i} is missing previous txid. Skipping.`);
+        continue;
+      }
+      tx.addInput(
+        this.inputMaps[i].get(KeyType.PSBT_IN_PREVIOUS_TXID) as Buffer,
+        this.inputMaps[i].get(KeyType.PSBT_IN_OUTPUT_INDEX)?.readUint32LE() ||
+          0,
+        this.inputMaps[i].get(KeyType.PSBT_IN_SEQUENCE)?.readUint32LE(),
+      );
+    }
+
+    for (let i = 0; i < numOutputs; i++) {
+      if (
+        !this.outputMaps[i].has(KeyType.PSBT_OUT_SCRIPT) ||
+        !this.outputMaps[i].has(KeyType.PSBT_OUT_AMOUNT)
+      ) {
+        console.warn(
+          `Output ${i} is missing previous out script or amount. Skipping.`,
+        );
+        continue;
+      }
+      const bigintAmount = (
+        this.outputMaps[i].get(KeyType.PSBT_OUT_AMOUNT) as Buffer
+      ).readBigInt64LE();
+      const numberAmount = parseInt(bigintAmount.toString());
+      tx.addOutput(
+        this.outputMaps[i].get(KeyType.PSBT_OUT_SCRIPT) as Buffer,
+        numberAmount,
+      );
+    }
+
+    console.log(tx.toHex());
+
+    return tx.toBuffer();
+  }
+
+  /**
+   * Warns and then deletes map values. Intended for use when converting to a
+   * PsbtV0.
+   */
+  private v0delete(map: Map<Key, Value>, key: KeyType) {
+    if (map.has(key)) {
+      const keyName = Object.keys(KeyType)[Object.values(KeyType).indexOf(key)];
+      console.warn(
+        `Key ${keyName} key is not supported on PSBTv0 and will be omitted.`,
+      );
+    }
+
+    map.delete(key);
+  }
+
+  /**
+   * Constructs an unsigned txn to be added to the PSBT_GLOBAL_UNSIGNED_TX key
+   * which is required on PsbtV0. Then removes all the fields which a PsbtV0 is
+   * incompatible with.
+   */
+  public convertToV0 = () => {
+    this.globalMap.set(
+      V0KeyTypes.PSBT_GLOBAL_UNSIGNED_TX,
+      this.buildUnsignedTx(),
+    );
+
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_TX_VERSION);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_FALLBACK_LOCKTIME);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_INPUT_COUNT);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_TX_MODIFIABLE);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_VERSION);
+
+    for (const inputMap of this.inputMaps) {
+      this.v0delete(inputMap, KeyType.PSBT_IN_PREVIOUS_TXID);
+      this.v0delete(inputMap, KeyType.PSBT_IN_OUTPUT_INDEX);
+      this.v0delete(inputMap, KeyType.PSBT_IN_SEQUENCE);
+      this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_TIME_LOCKTIME);
+      this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME);
+    }
+
+    for (const outputMap of this.outputMaps) {
+      this.v0delete(outputMap, KeyType.PSBT_OUT_AMOUNT);
+      this.v0delete(outputMap, KeyType.PSBT_OUT_SCRIPT);
+    }
+  };
 }
