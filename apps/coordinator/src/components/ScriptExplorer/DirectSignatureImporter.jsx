@@ -56,7 +56,10 @@ class DirectSignatureImporter extends React.Component {
     const policyHmac = walletConfig.ledgerPolicyHmacs.find(
       (hmac) => hmac.xfp === extendedPublicKeyImporter.rootXfp,
     )?.policyHmac;
-
+    const keyDetails = {
+      xfp: extendedPublicKeyImporter.rootXfp,
+      path: signatureImporter.bip32Path,
+    };
     return SignMultisigTransaction({
       network,
       keystore,
@@ -65,6 +68,7 @@ class DirectSignatureImporter extends React.Component {
       bip32Paths,
       walletConfig,
       policyHmac,
+      keyDetails,
       psbt: unsignedPSBT,
       returnSignatureArray: true,
     });

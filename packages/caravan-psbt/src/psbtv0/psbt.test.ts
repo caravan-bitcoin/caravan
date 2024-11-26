@@ -4,6 +4,7 @@
 
 import {
   generateMultisigFromHex,
+  getRelativeBIP32Path,
   P2WSH,
   ROOT_FINGERPRINT,
   TEST_FIXTURES,
@@ -15,6 +16,8 @@ import {
 } from "./psbt";
 import _ from "lodash";
 import { psbtArgsFromFixture } from "./utils";
+import assert from "assert";
+import { combineBip32Paths } from "@caravan/bip32";
 
 describe("getUnsignedMultisigPsbtV0", () => {
   TEST_FIXTURES.transactions
@@ -105,20 +108,46 @@ describe("translatePsbt", () => {
 
   const tx = _.cloneDeep(TEST_FIXTURES.transactions[0]);
   const ms = MULTISIGS[0];
+  it("handles P2WSH transactions", () => {
+    const fixture = TEST_FIXTURES.transactions.find((tx) => tx.segwit);
+    const signingKey = fixture.braidDetails.extendedPublicKeys[0];
+    const psbt = fixture.psbt;
+    const translated = translatePSBT(tx.network, P2WSH, psbt, {
+      xfp: signingKey.rootFingerprint,
+      path: signingKey.path,
+    });
+    // make typescript happy in the desctructuring
+    assert(translated !== null);
 
-  it("throws error with non-p2sh address type", () => {
-    expect(() =>
-      translatePSBT(
-        tx.network,
-        P2WSH,
-        // @ts-expect-error - we are testing an error case
-        {},
-        {
-          xfp: ROOT_FINGERPRINT,
-          path: "m/45'/1'/100'",
-        },
-      ),
-    ).toThrow(/Unsupported addressType/i);
+    const { unchainedInputs, unchainedOutputs, bip32Derivations } = translated;
+    expect(unchainedInputs).toHaveLength(fixture.inputs.length);
+    expect(unchainedOutputs).toHaveLength(fixture.outputs.length);
+    expect(bip32Derivations).toHaveLength(fixture.signature.length);
+
+    for (const input of unchainedInputs) {
+      const match = fixture.inputs.find(
+        (fixtureInput) => input.txid === fixtureInput.txid,
+      );
+      expect(match).toBeDefined();
+      expect(+input.amountSats).toEqual(+match.amountSats);
+    }
+
+    for (const output of unchainedOutputs) {
+      const match = fixture.outputs.find(
+        (fixtureOutput) => output.address === fixtureOutput.address,
+      );
+      expect(match).toBeDefined();
+      expect(+output.amountSats).toEqual(+match.amountSats);
+    }
+
+    for (const derivation of bip32Derivations) {
+      expect(derivation.masterFingerprint.toString("hex")).toEqual(
+        signingKey.rootFingerprint,
+      );
+      const path = getRelativeBIP32Path(signingKey.path, derivation.path);
+      const combined = combineBip32Paths(signingKey.path, `m/${path}`);
+      expect(combined).toEqual(derivation.path);
+    }
   });
 
   it(`returns the inputs/outputs translated from the psbt`, () => {

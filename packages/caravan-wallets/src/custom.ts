@@ -68,7 +68,11 @@ export class CustomExportExtendedPublicKey extends CustomInteraction {
 
   constructor({ network, bip32Path }) {
     super();
-    if ([Network.MAINNET, Network.TESTNET].find((net) => net === network)) {
+    if (
+      [Network.MAINNET, Network.TESTNET, Network.REGTEST].find(
+        (net) => net === network
+      )
+    ) {
       this.network = network;
     } else {
       throw new Error("Unknown network.");

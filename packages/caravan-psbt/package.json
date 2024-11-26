@@ -1,6 +1,6 @@
 {
   "name": "@caravan/psbt",
-  "version": "1.4.3",
+  "version": "1.6.0",
   "description": "typescript library for working with PSBTs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -51,6 +51,7 @@
   "author": "unchained capital",
   "license": "ISC",
   "devDependencies": {
+    "@caravan/bip32": "*",
     "@caravan/eslint-config": "*",
     "@caravan/multisig": "*",
     "@caravan/typescript-config": "*",

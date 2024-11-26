@@ -23,7 +23,9 @@
     "test:watch": {
       "dependsOn": [
         "^build"
-      ]
+      ],
+      "cache": false,
+      "persistent": true
     },
     "dev": {
       "cache": false,
