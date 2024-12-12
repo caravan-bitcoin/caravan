@@ -701,6 +701,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
     psbt,
     keyDetails,
     returnSignatureArray,
+    addressType,
   }) {
     super({ network });
     if (!psbt || !keyDetails) {
@@ -715,7 +716,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
       }
       const translatedPsbt = translatePSBT(
         network,
-        P2SH,
+        addressType,
         this.psbt,
         keyDetails
       );
