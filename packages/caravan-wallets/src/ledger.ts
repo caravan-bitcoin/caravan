@@ -990,7 +990,7 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
 
       const translatedPsbt = translatePSBT(
         network,
-        P2SH,
+        v2Options?.addressType || P2SH,
         this.psbt,
         keyDetails
       );
