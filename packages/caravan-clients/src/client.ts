@@ -19,7 +19,13 @@ import {
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
-import { FeeRatePercentile, Transaction, UTXO } from "./types";
+import {
+  FeeRatePercentile,
+  Transaction,
+  UTXO,
+  TransactionDetails,
+  RawTransactionData,
+} from "./types";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -454,6 +460,32 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+  public async getTransaction(txid: string): Promise<TransactionDetails> {
+    try {
+      let txData: RawTransactionData;
+
+      if (this.type === ClientType.PRIVATE) {
+        const response = await bitcoindRawTxData(
+          this.bitcoindParams.url,
+          this.bitcoindParams.auth,
+          txid,
+        );
+        txData = response.result;
+      } else if (
+        this.type === ClientType.BLOCKSTREAM ||
+        this.type === ClientType.MEMPOOL
+      ) {
+        txData = await this.Get(`/tx/${txid}`);
+      } else {
+        throw new Error("Invalid client type");
+      }
+
+      return this.normalizeTransactionData(txData);
+    } catch (error: any) {
+      throw new Error(`Failed to get transaction: ${error.message}`);
+    }
+  }
+
   public async importDescriptors({
     receive,
     change,
@@ -485,5 +517,37 @@ export class BlockchainClient extends ClientBase {
     }
 
     return await bitcoindWalletInfo({ ...this.bitcoindParams });
+  }
+
+  private normalizeTransactionData(
+    txData: RawTransactionData,
+  ): TransactionDetails {
+    return {
+      txid: txData.txid,
+      version: txData.version,
+      locktime: txData.locktime,
+      vin: txData.vin.map((input: any) => ({
+        txid: input.txid,
+        vout: input.vout,
+        sequence: input.sequence,
+      })),
+      vout: txData.vout.map((output: any) => ({
+        value:
+          this.type === ClientType.PRIVATE
+            ? output.value
+            : satoshisToBitcoins(output.value),
+        scriptpubkey: output.scriptpubkey,
+        scriptpubkey_address: output.scriptpubkey_address,
+      })),
+      size: txData.size,
+      weight: txData.weight,
+      fee: this.type === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
+      status: {
+        confirmed: txData.status.confirmed,
+        block_height: txData.status.block_height,
+        block_hash: txData.status.block_hash,
+        block_time: txData.status.block_time,
+      },
+    };
   }
 }
