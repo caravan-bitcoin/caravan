@@ -16,7 +16,7 @@ import {
   getOptionalMappedBytesAsUInt,
   parseDerivationPathNodesToBytes,
 } from "./functions";
-import { PsbtV2Maps } from "./psbtv2maps";
+import { PsbtConversionMaps, PsbtV2Maps } from "./psbtv2maps";
 import { bufferize } from "../functions";
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
@@ -915,6 +915,7 @@ export class PsbtV2 extends PsbtV2Maps {
     redeemScript,
     witnessScript,
     bip32Derivation,
+    sighashType,
   }: {
     previousTxId: Buffer | string;
     outputIndex: number;
@@ -928,6 +929,7 @@ export class PsbtV2 extends PsbtV2Maps {
       masterFingerprint: Buffer;
       path: string;
     }[];
+    sighashType?: SighashType;
   }) {
     // TODO: This must accept and add appropriate locktime fields. There is
     // significant validation concerning this step detailed in the BIP0370
@@ -989,6 +991,10 @@ export class PsbtV2 extends PsbtV2Maps {
         bw.writeBytes(parseDerivationPathNodesToBytes(bip32.path));
         map.set(key, bw.render());
       }
+    }
+    if (sighashType !== undefined) {
+      bw.writeU32(sighashType);
+      map.set(KeyType.PSBT_IN_SIGHASH_TYPE, bw.render());
     }
 
     this.PSBT_GLOBAL_INPUT_COUNT = this.inputMaps.push(map);
@@ -1307,8 +1313,9 @@ export class PsbtV2 extends PsbtV2Maps {
    * Attempts to return a PsbtV2 by converting from a PsbtV0 string or Buffer.
    *
    * This method first starts with a fresh PsbtV2 having just been created. It
-   * then takes the PsbtV2 through its operator saga through the Signer role. In
-   * this sense validation for each operator role will be performed.
+   * then takes the PsbtV2 through its operator saga and through the Input
+   * Finalizer role. In this sense, validation for each operator role will be
+   * performed as the Psbt saga is replayed.
    */
   static FromV0(psbt: string | Buffer, allowTxnVersion1 = false): PsbtV2 {
     const psbtv0Buf = bufferize(psbt);
@@ -1325,6 +1332,8 @@ export class PsbtV2 extends PsbtV2Maps {
         .getTransaction()
         .readInt32LE(0);
     }
+
+    psbtv2.PSBT_GLOBAL_FALLBACK_LOCKTIME = psbtv0.locktime;
 
     // Constructor Role
     for (const globalXpub of psbtv0GlobalMap.globalXpub ?? []) {
@@ -1354,6 +1363,7 @@ export class PsbtV2 extends PsbtV2Maps {
         redeemScript: input.redeemScript,
         witnessScript: input.witnessScript,
         bip32Derivation: input.bip32Derivation,
+        sighashType: input.sighashType,
       });
     }
 
@@ -1374,16 +1384,47 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     // Signer Role
-
-    // Finally, add partialSigs to inputs. This has to be performed last since
-    // it may change PSBT_GLOBAL_TX_MODIFIABLE preventing inputs or outputs from
-    // being added.
+    // This may change PSBT_GLOBAL_TX_MODIFIABLE preventing inputs or outputs
+    // from being added.
     for (const [index, input] of psbtv0.data.inputs.entries()) {
       for (const sig of input.partialSig || []) {
         psbtv2.addPartialSig(index, sig.pubkey, sig.signature);
       }
     }
 
+    // Input Finalizer
+    // TODO: Add input finalizer method which removes other input fields. The
+    // Input Finalizer role is supposed to remove the other script and partial
+    // sig fields from the input after the input is finalized. This is maybe
+    // safe as-is for now since it is building from a v0 conversion.
+    for (const [index, input] of psbtv0.data.inputs.entries()) {
+      if (input.finalScriptSig) {
+        psbtv2.inputMaps[index].set(
+          KeyType.PSBT_IN_FINAL_SCRIPTSIG,
+          input.finalScriptSig,
+        );
+      }
+      if (input.finalScriptWitness) {
+        psbtv2.inputMaps[index].set(
+          KeyType.PSBT_IN_FINAL_SCRIPTWITNESS,
+          input.finalScriptWitness,
+        );
+      }
+    }
+
     return psbtv2;
+  }
+
+  /**
+   * Outputs a serialized PSBTv0 from a best-attempt conversion of the fields in
+   * this PSBTv2. Accepts optional desired format as a string (default base64).
+   */
+  public toV0(format?: "base64" | "hex") {
+    const converterMap = new PsbtConversionMaps();
+    // Copy the values from this PsbtV2 into the converter map.
+    this.copy(converterMap);
+    // Creates the unsigned tx and adds it to the map and then removes v2 keys.
+    converterMap.convertToV0();
+    return converterMap.serialize(format);
   }
 }
