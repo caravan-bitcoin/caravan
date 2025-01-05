@@ -46,6 +46,11 @@ import {
   SET_BALANCE_ERROR,
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
+  SET_TRANSACTIONS,
+  SET_TRANSACTIONS_LOADING,
+  SET_TRANSACTIONS_ERROR,
+  CLEAR_TRANSACTIONS,
+  UPDATE_TRANSACTION,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -103,6 +108,12 @@ export const initialState = () => ({
   signingKeys: [0, 0], // default 2 required signers
   spendingStep: SPEND_STEP_CREATE,
   unsignedPSBT: "",
+  transactions: {
+    transactions: [],
+    isLoading: false, // Array to store actual transactions
+    error: null,
+    lastUpdated: null,
+  },
 });
 
 function updateInputs(state, action) {
@@ -455,6 +466,55 @@ export default (state = initialState(), action) => {
       return updateState(state, { balanceError: action.value });
     case SET_SPEND_STEP:
       return updateState(state, { spendingStep: action.value });
+    case SET_TRANSACTIONS:
+      return updateState(state, {
+        transactions: {
+          ...state.transactions,
+          transactions: action.payload,
+          lastUpdated: Date.now(),
+          error: null,
+        },
+      });
+
+    case SET_TRANSACTIONS_LOADING:
+      return updateState(state, {
+        transactions: {
+          ...state.transactions,
+          isLoading: action.payload,
+        },
+      });
+
+    case SET_TRANSACTIONS_ERROR:
+      return updateState(state, {
+        transactions: {
+          ...state.transactions,
+          error: action.payload,
+          isLoading: false,
+        },
+      });
+
+    case CLEAR_TRANSACTIONS:
+      return updateState(state, {
+        transactions: {
+          transactions: [],
+          isLoading: false,
+          error: null,
+          lastUpdated: null,
+        },
+      });
+
+    case UPDATE_TRANSACTION:
+      return updateState(state, {
+        transactions: {
+          ...state.transactions,
+          transactions: state.transactions.transactions.map((tx) =>
+            tx.txid === action.payload.txid
+              ? { ...tx, ...action.payload.update }
+              : tx,
+          ),
+          lastUpdated: Date.now(),
+        },
+      });
     default:
       return state;
   }

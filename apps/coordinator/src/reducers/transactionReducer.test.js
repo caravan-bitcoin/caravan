@@ -21,6 +21,11 @@ import {
   FINALIZE_OUTPUTS,
   RESET_OUTPUTS,
   SET_TXID,
+  SET_TRANSACTIONS,
+  SET_TRANSACTIONS_LOADING,
+  SET_TRANSACTIONS_ERROR,
+  CLEAR_TRANSACTIONS,
+  UPDATE_TRANSACTION,
 } from "../actions/transactionActions";
 import reducer, {
   initialOutputState,
@@ -381,6 +386,161 @@ describe("Test transactionReducer", () => {
         },
       );
       expect(r.txid).toEqual(txid);
+    });
+  });
+
+  const mockTransaction = {
+    txid: "acf031ed300ef6a360acf542db293525df6d9e3036331cb0d6b0bec25af9dd7c",
+    status: {
+      confirmed: true,
+      block_time: 1234567890,
+    },
+    size: 224,
+    fee: 38525,
+  };
+  describe("Test SET_TRANSACTIONS action", () => {
+    it("should properly set transactions array and update timestamp", () => {
+      const now = Date.now();
+      const r = reducer(initialState(), {
+        type: SET_TRANSACTIONS,
+        payload: [mockTransaction],
+      });
+
+      expect(r.transactions.transactions).toEqual([mockTransaction]);
+      expect(r.transactions.error).toBeNull();
+      expect(r.transactions.lastUpdated).toBeGreaterThanOrEqual(now);
+    });
+
+    it("should handle empty transaction array", () => {
+      const r = reducer(initialState(), {
+        type: SET_TRANSACTIONS,
+        payload: [],
+      });
+
+      expect(r.transactions.transactions).toEqual([]);
+      expect(r.transactions.error).toBeNull();
+    });
+  });
+
+  describe("Test SET_TRANSACTIONS_LOADING action", () => {
+    it("should set loading state to true", () => {
+      const r = reducer(initialState(), {
+        type: SET_TRANSACTIONS_LOADING,
+        payload: true,
+      });
+
+      expect(r.transactions.isLoading).toBe(true);
+    });
+
+    it("should set loading state to false", () => {
+      const state = {
+        ...initialState(),
+        transactions: {
+          ...initialState().transactions,
+          isLoading: true,
+        },
+      };
+
+      const r = reducer(state, {
+        type: SET_TRANSACTIONS_LOADING,
+        payload: false,
+      });
+
+      expect(r.transactions.isLoading).toBe(false);
+    });
+  });
+
+  describe("Test SET_TRANSACTIONS_ERROR action", () => {
+    it("should set error message and clear loading state", () => {
+      const errorMessage = "Failed to fetch transactions";
+      const r = reducer(initialState(), {
+        type: SET_TRANSACTIONS_ERROR,
+        payload: errorMessage,
+      });
+
+      expect(r.transactions.error).toBe(errorMessage);
+      expect(r.transactions.isLoading).toBe(false);
+    });
+  });
+
+  describe("Test CLEAR_TRANSACTIONS action", () => {
+    it("should reset transactions state to initial values", () => {
+      const populatedState = {
+        ...initialState(),
+        transactions: {
+          transactions: [mockTransaction],
+          isLoading: true,
+          error: "Some error",
+          lastUpdated: Date.now(),
+        },
+      };
+
+      const r = reducer(populatedState, {
+        type: CLEAR_TRANSACTIONS,
+      });
+
+      expect(r.transactions).toEqual({
+        transactions: [],
+        isLoading: false,
+        error: null,
+        lastUpdated: null,
+      });
+    });
+  });
+
+  describe("Test UPDATE_TRANSACTION action", () => {
+    it("should update specific transaction by txid", () => {
+      const initialState = {
+        transactions: {
+          transactions: [mockTransaction],
+          isLoading: false,
+          error: null,
+          lastUpdated: null,
+        },
+      };
+
+      const update = {
+        status: { confirmed: true, block_time: 1234567899 },
+      };
+
+      const r = reducer(initialState, {
+        type: UPDATE_TRANSACTION,
+        payload: {
+          txid: mockTransaction.txid,
+          update,
+        },
+      });
+
+      expect(r.transactions.transactions[0]).toEqual({
+        ...mockTransaction,
+        ...update,
+      });
+      expect(r.transactions.lastUpdated).toBeDefined();
+    });
+
+    it("should not modify other transactions when updating one", () => {
+      const otherTx = { ...mockTransaction, txid: "def456" };
+      const initialState = {
+        transactions: {
+          transactions: [mockTransaction, otherTx],
+          isLoading: false,
+          error: null,
+          lastUpdated: null,
+        },
+      };
+
+      const update = { fee: 2000 };
+
+      const r = reducer(initialState, {
+        type: UPDATE_TRANSACTION,
+        payload: {
+          txid: mockTransaction.txid,
+          update,
+        },
+      });
+
+      expect(r.transactions.transactions).toHaveLength(2);
+      expect(r.transactions.transactions[1]).toEqual(otherTx);
     });
   });
 });
