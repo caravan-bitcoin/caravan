@@ -70,17 +70,17 @@ export function normalizeTransactionData(
         clientType === ClientType.PRIVATE
           ? output.value
           : satoshisToBitcoins(output.value),
-      scriptpubkey: output.scriptpubkey,
-      scriptpubkey_address: output.scriptpubkey_address,
+      scriptPubkey: output.scriptpubkey,
+      scriptPubkeyAddress: output.scriptpubkey_address,
     })),
     size: txData.size,
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
     status: {
       confirmed: txData.status.confirmed,
-      block_height: txData.status.block_height,
-      block_hash: txData.status.block_hash,
-      block_time: txData.status.block_time,
+      blockHeight: txData.status.block_height,
+      blockHash: txData.status.block_hash,
+      blockTime: txData.status.block_time,
     },
   };
 }

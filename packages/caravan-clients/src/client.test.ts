@@ -1214,8 +1214,8 @@ describe("BlockchainClient", () => {
       vout: [
         {
           value: mockRawTransactionData.vout[0].value,
-          scriptpubkey: mockRawTransactionData.vout[0].scriptpubkey,
-          scriptpubkey_address:
+          scriptPubkey: mockRawTransactionData.vout[0].scriptpubkey,
+          scriptPubkeyAddress:
             mockRawTransactionData.vout[0].scriptpubkey_address,
         },
       ],
@@ -1224,10 +1224,10 @@ describe("BlockchainClient", () => {
       fee: 0.00000605,
       status: {
         confirmed: true,
-        block_height: 861058,
-        block_hash:
+        blockHeight: 861058,
+        blockHash:
           "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
-        block_time: 1694567537,
+        blockTime: 1694567537,
       },
     };
 

@@ -97,16 +97,16 @@ export interface TransactionDetails {
   }>;
   vout: Array<{
     value: number;
-    scriptpubkey: string;
-    scriptpubkey_address?: string;
+    scriptPubkey: string;
+    scriptPubkeyAddress?: string;
   }>;
   size: number;
   weight: number;
   fee: number;
   status: {
     confirmed: boolean;
-    block_height?: number;
-    block_hash?: string;
-    block_time?: number;
+    blockHeight?: number;
+    blockHash?: string;
+    blockTime?: number;
   };
 }
