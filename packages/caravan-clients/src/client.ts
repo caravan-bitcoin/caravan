@@ -44,6 +44,47 @@ const delay = () => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
 
+/**
+ * Normalizes transaction data from different sources (private node, blockstream, mempool)
+ * into a consistent format for use throughout the application.
+ *
+ * @param txData - Raw transaction data from various sources
+ * @param clientType - The type of client that provided the data (private, blockstream, mempool)
+ * @returns Normalized transaction details in a consistent format
+ */
+export function normalizeTransactionData(
+  txData: RawTransactionData,
+  clientType: ClientType,
+): TransactionDetails {
+  return {
+    txid: txData.txid,
+    version: txData.version,
+    locktime: txData.locktime,
+    vin: txData.vin.map((input: any) => ({
+      txid: input.txid,
+      vout: input.vout,
+      sequence: input.sequence,
+    })),
+    vout: txData.vout.map((output: any) => ({
+      value:
+        clientType === ClientType.PRIVATE
+          ? output.value
+          : satoshisToBitcoins(output.value),
+      scriptpubkey: output.scriptpubkey,
+      scriptpubkey_address: output.scriptpubkey_address,
+    })),
+    size: txData.size,
+    weight: txData.weight,
+    fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
+    status: {
+      confirmed: txData.status.confirmed,
+      block_height: txData.status.block_height,
+      block_hash: txData.status.block_hash,
+      block_time: txData.status.block_time,
+    },
+  };
+}
+
 export class ClientBase {
   private readonly throttled: boolean;
   public readonly host: string;
@@ -480,7 +521,7 @@ export class BlockchainClient extends ClientBase {
         throw new Error("Invalid client type");
       }
 
-      return this.normalizeTransactionData(txData);
+      return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
     }
@@ -517,37 +558,5 @@ export class BlockchainClient extends ClientBase {
     }
 
     return await bitcoindWalletInfo({ ...this.bitcoindParams });
-  }
-
-  private normalizeTransactionData(
-    txData: RawTransactionData,
-  ): TransactionDetails {
-    return {
-      txid: txData.txid,
-      version: txData.version,
-      locktime: txData.locktime,
-      vin: txData.vin.map((input: any) => ({
-        txid: input.txid,
-        vout: input.vout,
-        sequence: input.sequence,
-      })),
-      vout: txData.vout.map((output: any) => ({
-        value:
-          this.type === ClientType.PRIVATE
-            ? output.value
-            : satoshisToBitcoins(output.value),
-        scriptpubkey: output.scriptpubkey,
-        scriptpubkey_address: output.scriptpubkey_address,
-      })),
-      size: txData.size,
-      weight: txData.weight,
-      fee: this.type === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
-      status: {
-        confirmed: txData.status.confirmed,
-        block_height: txData.status.block_height,
-        block_hash: txData.status.block_hash,
-        block_time: txData.status.block_time,
-      },
-    };
   }
 }
