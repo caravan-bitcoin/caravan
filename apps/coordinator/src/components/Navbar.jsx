@@ -57,24 +57,27 @@ const useStyles = makeStyles((theme) => ({
   icon: {
     color: "#fff",
   },
+  logoButton: {
+    backgroundColor: "#00478e",
+    color: "#fff",
+    padding: "10px 20px",
+    fontSize: "2rem",
+    outline: "none",
+    boxShadow: "none",
+    fontWeight: "bold",
+    textTransform: "none",
+    "&:hover": {
+      backgroundColor: "#00478e",
+      color: "#fff",
+      outline: "none",
+      boxShadow: "none",
+    },
+    "&:focus": {
+      outline: "none",
+      boxShadow: "none",
+    },
+  },
 }));
-
-const LogoButton = styled(Button)`
-  && {
-    background-color: #00478e;
-    color: #fff;
-    padding: 10px 20px;
-    font-size: 2rem;
-    outline: none;
-    box-shadow: none;
-    &:hover {
-      background-color: #fff;
-      color: #00478e;
-    }
-    font-weight: bold;
-    text-transform: none;
-  }
-`;
 
 const NavItem = ({ href, title, icon, classes }) => {
   return (
@@ -101,7 +104,8 @@ NavItem.propTypes = {
 const NavbarHeader = ({ classes }) => (
   <AppBar position="static">
     <Toolbar className={classes.toolbar}>
-      <LogoButton
+      <Button
+        className={classes.logoButton}
         variant="contained"
         component={Link}
         to="/"
@@ -110,7 +114,7 @@ const NavbarHeader = ({ classes }) => (
         }
       >
         Caravan
-      </LogoButton>
+      </Button>
     </Toolbar>
   </AppBar>
 );
@@ -131,11 +135,10 @@ const NavbarActive = ({ classes }) => {
       flexDirection="column"
       alignItems="flex-start"
       width="100%"
-      p={2}
       backgroundColor="#00478E"
       color="#fff"
     >
-      <List>
+      <List style={{ width: "100%" }}>
         {navItems.map((item, index) => (
           <NavItem
             key={index}

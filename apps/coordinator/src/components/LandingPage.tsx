@@ -1,5 +1,5 @@
 import React from "react";
-import styled from "styled-components";
+import { makeStyles } from "@mui/styles";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
@@ -8,324 +8,371 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { Link } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const HeroSection = styled.section`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background: white;
-  color: white;
-  text-align: center;
-  padding-top: 50px;
-  padding-bottom: 50px;
-  .highlight {
-    color: #1976d2; /* Style for the word "Caravan" */
-  }
-`;
-
-const Title = styled.h1`
-  font-size: 4rem;
-  width: 70%;
-  margin: 0;
-  color: #333;
-  @media (max-width: 768px) {
-    font-size: 2.5rem;
-    width: 90%;
-  }
-`;
-
-const Subtitle = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 300;
-  width: 60%;
-  margin: 20px 0;
-  color: #666;
-  @media (max-width: 768px) {
-    font-size: 1.2rem;
-    width: 90%;
-  }
-`;
-
-const CTAButton = styled(Button)`
-  && {
-    background-color: #1976d2;
-    color: #fff;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    &:hover {
-      background-color: #fff;
-      color: #1976d2;
-      outline: #1976d2 solid 1px;
-    }
-  }
-`;
-
-const SecondaryButton = styled(Button)`
-  && {
-    background-color: #fff;
-    color: #1976d2;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    border: 1px solid #1976d2;
-    &:hover {
-      background-color: #1976d2;
-      color: #fff;
-    }
-  }
-`;
-
-const YellowButton = styled(Button)`
-  && {
-    background-color: #ea9c0d;
-    color: #333;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    &:hover {
-      background-color: #fff;
-      color: #1976d2;
-    }
-  }
-`;
-
-const ContentSection = styled.section`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background: #1976d2;
-  color: white;
-  text-align: center;
-  padding: 80px 0;
-  border-radius: 10px;
-  .highlight {
-    color: #1976d2; /* Style for the word "Caravan" */
-  }
-`;
-
-const ContentTitle = styled.h3`
-  font-size: 2rem;
-  color: #fff;
-  text-align: left;
-  width: 80%;
-  margin: 20px auto;
-  @media (max-width: 1200px) {
-    font-size: 1.5rem;
-    width: 90%;
-  }
-`;
-
-const ContentDescription = styled.p`
-  color: #fff;
-  width: 80%;
-  margin: 0 auto;
-  text-align: left;
-  font-size: 1.5rem;
-  @media (max-width: 1200px) {
-    font-size: 1.2rem;
-    width: 90%;
-  }
-`;
-
-const FullWidthBox = styled.div`
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  margin-bottom: 20px;
-  @media (max-width: 1200px) {
-    flex-direction: column;
-  }
-`;
-
-const ImageSection = styled.div`
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-right: 20px;
-  padding: 50px;
-  @media (max-width: 1200px) {
-    margin-right: 0;
-    padding: 20px;
-  }
-`;
-
-const DescriptionSection = styled.div`
-  flex: 2;
-  padding: 10px;
-`;
-
-const FeaturesSection = styled.section`
-  padding: 80px 0;
-  background: #fff;
-  text-align: center;
-`;
-
-const FeatureContainer = styled.div`
-  display: flex;
-  justify-content: space-around;
-  margin: 40px 200px;
-  gap: 100px;
-  @media (max-width: 768px) {
-    flex-direction: column;
-    margin: 20px;
-    gap: 20px;
-  }
-`;
-
-const FeatureItem = styled.div`
-  flex: 1;
-  padding: 20px;
-`;
-
-const FeatureIcon = styled.div`
-  font-size: 3rem;
-  color: #1976d2;
-  text-align: left;
-`;
-
-const FeatureTitle = styled.h3`
-  margin-top: 20px;
-  font-size: 1.5rem;
-  color: #333;
-  text-align: left;
-`;
-
-const FeatureDescription = styled.p`
-  color: #666;
-  text-align: left;
-`;
-
-const CtaSection = styled.section`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background: #fff;
-  color: white;
-  text-align: center;
-  padding: 80px 0;
-  .highlight {
-    color: #1976d2;
-  }
-`;
-
-const Footer = styled.footer`
-  padding: 40px 0;
-  background: #fff;
-  color: #000;
-  text-align: left;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-  gap: 20px;
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-`;
-
-const FooterColumn = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const FooterTitle = styled.h4`
-  margin-bottom: 10px;
-  color: #000;
-`;
-
-const FooterLink = styled.a`
-  color: #000;
-  text-decoration: none;
-  margin-bottom: 5px;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const LogoButton = styled(Button)`
-  && {
-    background-color: #fff;
-    color: #1976d2;
-    padding: 10px 20px;
-    font-size: 2rem;
-    outline: none;
-    box-shadow: none;
-    &:hover {
-      background-color: #fff;
-      color: #1976d2;
-    }
-    font-weight: bold;
-    text-transform: none;
-  }
-`;
+const useStyles = makeStyles((theme) => ({
+  heroSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+    background: "white",
+    color: "white",
+    textAlign: "center",
+    paddingTop: "50px",
+    paddingBottom: "50px",
+    "& .highlight": {
+      color: "#1976d2",
+    },
+  },
+  title: {
+    fontSize: "4rem",
+    width: "70%",
+    margin: 0,
+    color: "#333",
+    "@media (max-width: 768px)": {
+      fontSize: "2.5rem",
+      width: "90%",
+    },
+  },
+  subtitle: {
+    fontSize: "1.5rem",
+    fontWeight: 300,
+    width: "60%",
+    margin: "20px 0",
+    color: "#666",
+    "@media (max-width: 768px)": {
+      fontSize: "1.2rem",
+      width: "90%",
+    },
+  },
+  ctaButton: {
+    backgroundColor: "#1976d2",
+    color: "#fff",
+    padding: "10px 20px",
+    fontSize: "1.2rem",
+    "&:hover": {
+      backgroundColor: "#fff",
+      color: "#1976d2",
+      outline: "#1976d2 solid 1px",
+    },
+  },
+  secondaryButton: {
+    backgroundColor: "#fff",
+    color: "#1976d2",
+    padding: "10px 20px",
+    fontSize: "1.2rem",
+    border: "1px solid #1976d2",
+    "&:hover": {
+      backgroundColor: "#1976d2",
+      color: "#fff",
+    },
+  },
+  yellowButton: {
+    backgroundColor: "#ea9c0d",
+    color: "#333",
+    padding: "10px 20px",
+    fontSize: "1.2rem",
+    "&:hover": {
+      backgroundColor: "#fff",
+      color: "#1976d2",
+    },
+  },
+  contentSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+    background: "#1976d2",
+    color: "white",
+    textAlign: "center",
+    padding: "80px 0",
+    borderRadius: "10px",
+    "& .highlight": {
+      color: "#1976d2",
+    },
+  },
+  contentTitle: {
+    fontSize: "2rem",
+    color: "#fff",
+    textAlign: "left",
+    width: "80%",
+    margin: "20px auto",
+    "@media (max-width: 1200px)": {
+      fontSize: "1.5rem",
+      width: "90%",
+    },
+  },
+  contentDescription: {
+    color: "#fff",
+    width: "80%",
+    margin: "0 auto",
+    textAlign: "left",
+    fontSize: "1.5rem",
+    "@media (max-width: 1200px)": {
+      fontSize: "1.2rem",
+      width: "90%",
+    },
+  },
+  fullWidthBox: {
+    display: "flex",
+    flexDirection: "row",
+    width: "100%",
+    marginBottom: "20px",
+    "@media (max-width: 1400px)": {
+      flexDirection: "column",
+    },
+  },
+  imageSection: {
+    flex: 2,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: "20px",
+    padding: "20px",
+    "@media (max-width: 1400px)": {
+      marginRight: 0,
+      padding: "20px",
+      order: 2,
+    },
+  },
+  descriptionSection: {
+    flex: 1,
+    padding: "10px",
+    "@media (max-width: 1400px)": {
+      order: 1,
+    },
+  },
+  featuresSection: {
+    padding: "80px 0",
+    background: "#fff",
+    textAlign: "center",
+    width: "100%",
+  },
+  featureContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: "40px auto",
+    gap: "100px",
+    maxWidth: "1200px",
+    padding: "0 20px",
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      margin: "20px auto",
+      gap: "40px",
+      padding: "0 20px",
+    },
+  },
+  featureItem: {
+    flex: 1,
+    padding: "20px",
+    maxWidth: "350px",
+    "@media (max-width: 768px)": {
+      maxWidth: "100%",
+    },
+  },
+  featureIcon: {
+    fontSize: "3rem",
+    color: "#1976d2",
+    textAlign: "left",
+  },
+  featureTitle: {
+    marginTop: "20px",
+    fontSize: "1.5rem",
+    color: "#333",
+    textAlign: "left",
+  },
+  featureDescription: {
+    color: "#666",
+    textAlign: "left",
+  },
+  ctaSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+    background: "#fff",
+    color: "white",
+    textAlign: "center",
+    padding: "80px 0",
+    "& .highlight": {
+      color: "#1976d2",
+    },
+  },
+  footer: {
+    padding: "40px 0",
+    background: "#fff",
+    color: "#000",
+    textAlign: "left",
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+    gap: "20px",
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "1fr",
+      textAlign: "center",
+    },
+  },
+  footerColumn: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  footerTitle: {
+    marginBottom: "10px",
+    color: "#000",
+  },
+  footerLink: {
+    color: "#000",
+    textDecoration: "none",
+    marginBottom: "5px",
+    "&:hover": {
+      textDecoration: "underline",
+    },
+  },
+  logoButton: {
+    backgroundColor: "#fff",
+    color: "#1976d2",
+    padding: "10px 20px",
+    fontSize: "2rem",
+    outline: "none",
+    boxShadow: "none",
+    fontWeight: "bold",
+    textTransform: "none",
+    "&:hover": {
+      backgroundColor: "#fff",
+      color: "#1976d2",
+      outline: "none",
+      boxShadow: "none",
+    },
+    "&:focus": {
+      outline: "none",
+      boxShadow: "none",
+    },
+    "&:active": {
+      boxShadow: "none",
+    },
+  },
+  buttonContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    width: "400px",
+    flexWrap: "wrap",
+  },
+  mainImage: {
+    marginTop: "100px",
+    maxWidth: "50%",
+    height: "auto",
+  },
+  imageGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 1fr)",
+    gap: "20px",
+    maxWidth: "100%",
+    paddingTop: "60px",
+    paddingBottom: "20px",
+    "@media (max-width: 1024px)": {
+      gridTemplateColumns: "repeat(2, 1fr)",
+    },
+    "@media (max-width: 600px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  gridImage: {
+    height: "80px",
+    width: "auto",
+    padding: "10px",
+  },
+  responsiveImage: {
+    backgroundColor: "#FFE7BB",
+    padding: "20px",
+    borderRadius: "10px",
+    width: "100%",
+    "& img": {
+      width: "100%",
+      height: "auto",
+      maxHeight: "700px",
+      minHeight: "500px",
+      borderRadius: "10px",
+      objectFit: "contain",
+      "@media (max-width: 1200px)": {
+        maxHeight: "500px",
+        minHeight: "350px",
+      },
+      "@media (max-width: 700px)": {
+        maxHeight: "300px",
+        minHeight: "200px",
+      },
+    },
+    "@media (max-width: 1400px)": {
+      padding: "20px",
+    },
+  },
+}));
 
 const LandingPage = () => {
+  const classes = useStyles();
+
   return (
     <>
-      <HeroSection>
-        <Title>
+      <section className={classes.heroSection}>
+        <h1 className={classes.title}>
           Secure your bitcoin with <span className="highlight">Caravan</span>, a
           stateless multisig coordinator
-        </Title>
-        <Subtitle>
+        </h1>
+        <h2 className={classes.subtitle}>
           Caravan simplifies multisig custody by coordinating your transaction
           without storing your keys. Gain security and control over your
           bitcoin.
-        </Subtitle>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            width: "400px",
-            flexWrap: "wrap",
-          }}
-        >
+        </h2>
+        <div className={classes.buttonContainer}>
           <Link to="/setup">
-            <CTAButton variant="contained">Get Started</CTAButton>
+            <Button className={classes.ctaButton} variant="contained">
+              Get Started
+            </Button>
           </Link>
-          <SecondaryButton variant="contained">Learn More</SecondaryButton>
+          <Button className={classes.secondaryButton} variant="contained">
+            Learn More
+          </Button>
         </div>
         <img
           src="src/images/landing/caravan-balance.png"
           alt="Caravan Balance"
-          style={{ marginTop: "100px", maxWidth: "50%", height: "auto" }}
+          className={classes.mainImage}
         />
-        <div className="image-grid-container">
-          <div className="image-grid">
-            <img
-              src="src/images/landing/trezor.png"
-              alt="Trezor"
-              style={{ height: "80px", width: "auto", padding: "10px" }}
-            />
-            <img
-              src="src/images/landing/ledger.png"
-              alt="Ledger"
-              style={{ height: "80px", width: "auto", padding: "10px" }}
-            />
-            <img
-              src="src/images/landing/coldcard.png"
-              alt="Coldcard"
-              style={{ height: "80px", width: "auto", padding: "10px" }}
-            />
-            <img
-              src="src/images/landing/firefox.png"
-              alt="Firefox"
-              style={{ height: "80px", width: "auto", padding: "10px" }}
-            />
-            <img
-              src="src/images/landing/chrome.png"
-              alt="Chrome"
-              style={{ height: "80px", width: "auto", padding: "10px" }}
-            />
-          </div>
+        <div className={classes.imageGrid}>
+          <img
+            src="src/images/landing/trezor.png"
+            alt="Trezor"
+            className={classes.gridImage}
+          />
+          <img
+            src="src/images/landing/ledger.png"
+            alt="Ledger"
+            className={classes.gridImage}
+          />
+          <img
+            src="src/images/landing/coldcard.png"
+            alt="Coldcard"
+            className={classes.gridImage}
+          />
+          <img
+            src="src/images/landing/firefox.png"
+            alt="Firefox"
+            className={classes.gridImage}
+          />
+          <img
+            src="src/images/landing/chrome.png"
+            alt="Chrome"
+            className={classes.gridImage}
+          />
         </div>
-      </HeroSection>
+      </section>
 
-      <ContentSection>
-        <FullWidthBox className="full-width-box">
-          <DescriptionSection className="description-section">
-            <ContentTitle>Stateless Multisig Coordinator</ContentTitle>
-            <ContentDescription>
+      <section className={classes.contentSection}>
+        <div className={classes.fullWidthBox}>
+          <div className={classes.descriptionSection}>
+            <h3 className={classes.contentTitle}>
+              Stateless Multisig Coordinator
+            </h3>
+            <p className={classes.contentDescription}>
               Caravan makes bitcoin multisig custody easier and safer through
               transparency and standards. Caravan is a coordination software for
               multisig addresses and wallets. Caravan can be used to build a
@@ -336,46 +383,27 @@ const LandingPage = () => {
               itself store any data outside your current browser session. You
               must safekeep the wallet details (xpubs, BIP32 paths) and
               addresses (redeem scripts, BIP32 paths) that you create.
-            </ContentDescription>
-          </DescriptionSection>
-          <ImageSection className="image-section">
-            <div
-              className="responsive-image"
-              style={{
-                backgroundColor: "#FFE7BB",
-                padding: "40px",
-                borderRadius: "10px",
-              }}
-            >
+            </p>
+          </div>
+          <div className={classes.imageSection}>
+            <div className={classes.responsiveImage}>
               <img
                 src="src/images/landing/stateless.png"
-                alt="Trezor"
-                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
+                alt="Stateless Architecture"
               />
             </div>
-          </ImageSection>
-        </FullWidthBox>
+          </div>
+        </div>
 
-        <FullWidthBox className="full-width-box">
-          <ImageSection className="image-section">
-            <div
-              className="responsive-image"
-              style={{
-                backgroundColor: "#FFE7BB",
-                padding: "40px",
-                borderRadius: "10px",
-              }}
-            >
-              <img
-                src="src/images/landing/xpubs.png"
-                alt="Trezor"
-                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
-              />
+        <div className={classes.fullWidthBox}>
+          <div className={classes.imageSection}>
+            <div className={classes.responsiveImage}>
+              <img src="src/images/landing/xpubs.png" alt="XPubs" />
             </div>
-          </ImageSection>
-          <DescriptionSection className="description-section">
-            <ContentTitle>Keys</ContentTitle>
-            <ContentDescription>
+          </div>
+          <div className={classes.descriptionSection}>
+            <h3 className={classes.contentTitle}>Keys</h3>
+            <p className={classes.contentDescription}>
               All bitcoin is ultimately protected by private keys. Your private
               key may live on a piece of paper, a hardware wallet, some software
               on a laptop, or even just in your mind. Caravan, being stateless,
@@ -384,14 +412,14 @@ const LandingPage = () => {
               supports entering public keys and signatures via text, so any
               wallet which can export such data can be made compatible with
               Caravan.
-            </ContentDescription>
-          </DescriptionSection>
-        </FullWidthBox>
+            </p>
+          </div>
+        </div>
 
-        <FullWidthBox className="full-width-box">
-          <DescriptionSection className="description-section">
-            <ContentTitle>Consensus</ContentTitle>
-            <ContentDescription>
+        <div className={classes.fullWidthBox}>
+          <div className={classes.descriptionSection}>
+            <h3 className={classes.contentTitle}>Consensus</h3>
+            <p className={classes.contentDescription}>
               In order to look up wallet addresses and their balances, and
               broadcast transactions, Caravan requires knowledge of the
               constantly changing bitcoin network. Running a full bitcoin node
@@ -400,70 +428,59 @@ const LandingPage = () => {
               node for consensus information and broadcasting transactions. If
               you don&apos;t want to or cannot run your own full node, Caravan
               defaults to using the freely available API at mempool.space.
-            </ContentDescription>
-          </DescriptionSection>
-          <ImageSection className="image-section">
-            <div
-              className="responsive-image"
-              style={{
-                backgroundColor: "#FFE7BB",
-                padding: "40px",
-                borderRadius: "10px",
-              }}
-            >
-              <img
-                src="src/images/landing/consensus.png"
-                alt="Trezor"
-                style={{ height: "400px", width: "auto", borderRadius: "10px" }}
-              />
+            </p>
+          </div>
+          <div className={classes.imageSection}>
+            <div className={classes.responsiveImage}>
+              <img src="src/images/landing/consensus.png" alt="Consensus" />
             </div>
-          </ImageSection>
-        </FullWidthBox>
-      </ContentSection>
+          </div>
+        </div>
+      </section>
 
-      <FeaturesSection>
+      <section className={classes.featuresSection}>
         <h2>Secure your bitcoin with confidence</h2>
         <h4 style={{ color: "gray" }}>
           Powerful benefits for secure multisig management
         </h4>
-        <FeatureContainer>
-          <FeatureItem>
-            <FeatureIcon>
+        <div className={classes.featureContainer}>
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
               <LockIcon fontSize="large" />
-            </FeatureIcon>
-            <FeatureTitle>Security</FeatureTitle>
-            <FeatureDescription>
+            </div>
+            <h3 className={classes.featureTitle}>Security</h3>
+            <p className={classes.featureDescription}>
               Minimize attack vectors with Caravan&apos;s stateless design and
               multisig coordination for enhanced Bitcoin security.
-            </FeatureDescription>
-          </FeatureItem>
+            </p>
+          </div>
 
-          <FeatureItem>
-            <FeatureIcon>
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
               <LayersIcon fontSize="large" />
-            </FeatureIcon>
-            <FeatureTitle>Transparency</FeatureTitle>
-            <FeatureDescription>
+            </div>
+            <h3 className={classes.featureTitle}>Transparency</h3>
+            <p className={classes.featureDescription}>
               Maintain complete control over your private keys with open
               standards and user-managed key storage.
-            </FeatureDescription>
-          </FeatureItem>
+            </p>
+          </div>
 
-          <FeatureItem>
-            <FeatureIcon>
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
               <MultipleStopIcon fontSize="large" />
-            </FeatureIcon>
-            <FeatureTitle>Flexibility</FeatureTitle>
-            <FeatureDescription>
+            </div>
+            <h3 className={classes.featureTitle}>Flexibility</h3>
+            <p className={classes.featureDescription}>
               Enjoy seamless integration with hardware wallets, software
               applications, and a user-friendly interface for effortless
               multisig management.
-            </FeatureDescription>
-          </FeatureItem>
-        </FeatureContainer>
-      </FeaturesSection>
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <CtaSection>
+      <section className={classes.ctaSection}>
         <Box
           sx={{
             width: "90%",
@@ -483,53 +500,74 @@ const LandingPage = () => {
             Bitcoin today!
           </p>
           <Link to="/setup">
-            <YellowButton variant="contained" style={{ textTransform: "none" }}>
+            <Button className={classes.yellowButton} variant="contained">
               Get started
-            </YellowButton>
+            </Button>
           </Link>
         </Box>
-      </CtaSection>
+      </section>
 
-      <Footer>
-        <FooterColumn>
-          <LogoButton
+      <footer className={classes.footer}>
+        <div className={classes.footerColumn}>
+          <Button
+            className={classes.logoButton}
             variant="contained"
             startIcon={
               <img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />
             }
           >
             Caravan
-          </LogoButton>
+          </Button>
           <p style={{ alignSelf: "center", color: "gray" }}>
             Multisig made easy. Manage your Bitcoin together with Caravan.
           </p>
           <p style={{ alignSelf: "center" }}>
             &copy; 2024 Caravan Finance. All Rights Reserved.
           </p>
-        </FooterColumn>
-        <FooterColumn>
-          <FooterTitle>Getting started</FooterTitle>
-          <FooterLink href="#">Home</FooterLink>
-          <FooterLink href="#">About</FooterLink>
-          <FooterLink href="#">Test suite</FooterLink>
-          <FooterLink href="#">Help</FooterLink>
-        </FooterColumn>
-        <FooterColumn>
-          <FooterTitle>Resources</FooterTitle>
-          <FooterLink href="#">Blog</FooterLink>
-          <FooterLink href="#">Tutorial</FooterLink>
-          <FooterLink href="#">Source code</FooterLink>
-        </FooterColumn>
-        <FooterColumn>
-          <FooterTitle>Developer&apos;s corner</FooterTitle>
-          <FooterLink href="#">GitHub</FooterLink>
-        </FooterColumn>
-        <FooterColumn>
-          <FooterTitle>Social</FooterTitle>
-          <FooterLink href="#">Twitter</FooterLink>
-          <FooterLink href="#">Discord</FooterLink>
-        </FooterColumn>
-      </Footer>
+        </div>
+        <div className={classes.footerColumn}>
+          <h4 className={classes.footerTitle}>Getting started</h4>
+          <a href="#" className={classes.footerLink}>
+            Home
+          </a>
+          <a href="#" className={classes.footerLink}>
+            About
+          </a>
+          <a href="#" className={classes.footerLink}>
+            Test suite
+          </a>
+          <a href="#" className={classes.footerLink}>
+            Help
+          </a>
+        </div>
+        <div className={classes.footerColumn}>
+          <h4 className={classes.footerTitle}>Resources</h4>
+          <a href="#" className={classes.footerLink}>
+            Blog
+          </a>
+          <a href="#" className={classes.footerLink}>
+            Tutorial
+          </a>
+          <a href="#" className={classes.footerLink}>
+            Source code
+          </a>
+        </div>
+        <div className={classes.footerColumn}>
+          <h4 className={classes.footerTitle}>Developer&apos;s corner</h4>
+          <a href="#" className={classes.footerLink}>
+            GitHub
+          </a>
+        </div>
+        <div className={classes.footerColumn}>
+          <h4 className={classes.footerTitle}>Social</h4>
+          <a href="#" className={classes.footerLink}>
+            Twitter
+          </a>
+          <a href="#" className={classes.footerLink}>
+            Discord
+          </a>
+        </div>
+      </footer>
     </>
   );
 };
