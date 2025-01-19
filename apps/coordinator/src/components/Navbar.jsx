@@ -11,7 +11,6 @@ import {
   Box,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import styled from "styled-components";
 import { Link } from "react-router-dom";
 import HomeIcon from "@mui/icons-material/Home";
 import SettingsIcon from "@mui/icons-material/Settings";

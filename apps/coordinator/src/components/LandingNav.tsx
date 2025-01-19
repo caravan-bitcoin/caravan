@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { makeStyles } from "@mui/styles";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   root: {
     flexGrow: 1,
     width: "100%",

@@ -8,7 +8,7 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { Link } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   heroSection: {
     display: "flex",
     alignItems: "center",
@@ -45,35 +45,35 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   ctaButton: {
-    backgroundColor: "#1976d2",
-    color: "#fff",
-    padding: "10px 20px",
-    fontSize: "1.2rem",
+    backgroundColor: "#1976d2 !important",
+    color: "#fff !important",
+    padding: "10px 20px !important",
+    fontSize: "1.2rem !important",
     "&:hover": {
-      backgroundColor: "#fff",
-      color: "#1976d2",
-      outline: "#1976d2 solid 1px",
+      backgroundColor: "#fff !important",
+      color: "#1976d2 !important",
+      outline: "#1976d2 solid 1px !important",
     },
   },
   secondaryButton: {
-    backgroundColor: "#fff",
-    color: "#1976d2",
-    padding: "10px 20px",
-    fontSize: "1.2rem",
-    border: "1px solid #1976d2",
+    backgroundColor: "#fff !important",
+    color: "#1976d2 !important",
+    padding: "10px 20px !important",
+    fontSize: "1.2rem !important",
+    border: "1px solid #1976d2 !important",
     "&:hover": {
-      backgroundColor: "#1976d2",
-      color: "#fff",
+      backgroundColor: "#1976d2 !important",
+      color: "#fff !important",
     },
   },
   yellowButton: {
-    backgroundColor: "#ea9c0d",
-    color: "#333",
-    padding: "10px 20px",
-    fontSize: "1.2rem",
+    backgroundColor: "#ea9c0d !important",
+    color: "#333 !important",
+    padding: "10px 20px !important",
+    fontSize: "1.2rem !important",
     "&:hover": {
-      backgroundColor: "#fff",
-      color: "#1976d2",
+      backgroundColor: "#fff !important",
+      color: "#1976d2 !important",
     },
   },
   contentSection: {
