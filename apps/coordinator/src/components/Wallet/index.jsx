@@ -150,12 +150,14 @@ class CreateWallet extends React.Component {
       method: (method, index) => {
         if (
           [
+            "bitbox",
             "trezor",
             "coldcard",
             "ledger",
             "hermit",
             "xpub",
             "text",
+            "sparrow",
             undefined,
           ].includes(method)
         ) {

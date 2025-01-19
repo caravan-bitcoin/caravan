@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.5.0
+
+### Minor Changes
+
+- [#163](https://github.com/caravan-bitcoin/caravan/pull/163) [`205ced7`](https://github.com/caravan-bitcoin/caravan/commit/205ced73dc1dfa1d10f28e18371dbb70d4dcdf5d) Thanks [@kimlwh](https://github.com/kimlwh)! - bump @trezor/connect-web from 9.1.12 to 9.4.7
+
+### Patch Changes
+
+- Updated dependencies [[`205ced7`](https://github.com/caravan-bitcoin/caravan/commit/205ced73dc1dfa1d10f28e18371dbb70d4dcdf5d)]:
+  - @caravan/wallets@0.5.0
+
+## 1.4.1
+
+### Patch Changes
+
+- [#147](https://github.com/caravan-bitcoin/caravan/pull/147) [`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927) Thanks [@bucko13](https://github.com/bucko13)! - Adds support for translatePSBT for segwit PSBTs. This enables loading tx data directly from a psbt for ledger and trezor
+
+- Updated dependencies [[`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927)]:
+  - @caravan/psbt@1.6.0
+  - @caravan/wallets@0.4.0
+
+## 1.4.0
+
+### Minor Changes
+
+- [#117](https://github.com/caravan-bitcoin/caravan/pull/117) [`d0e08e8`](https://github.com/caravan-bitcoin/caravan/commit/d0e08e872a63011d2ed72b6b9a68e54db1649b44) Thanks [@benma](https://github.com/benma)! - Add support for the BitBox02 hardware wallet
+
+### Patch Changes
+
+- Updated dependencies [[`d0e08e8`](https://github.com/caravan-bitcoin/caravan/commit/d0e08e872a63011d2ed72b6b9a68e54db1649b44)]:
+  - @caravan/wallets@0.3.0
+
 ## 1.3.0
 
 ### Minor Changes

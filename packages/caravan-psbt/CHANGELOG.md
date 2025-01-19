@@ -1,5 +1,17 @@
 # @caravan/psbt
 
+## 1.6.0
+
+### Minor Changes
+
+- [#147](https://github.com/caravan-bitcoin/caravan/pull/147) [`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927) Thanks [@bucko13](https://github.com/bucko13)! - Adds support for translatePSBT for segwit PSBTs. This enables loading tx data directly from a psbt for ledger and trezor
+
+## 1.5.0
+
+### Minor Changes
+
+- [#114](https://github.com/caravan-bitcoin/caravan/pull/114) [`8d79fc6`](https://github.com/caravan-bitcoin/caravan/commit/8d79fc6cfbd63bee37f076c4396a94d30e412e6f) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Added methods to handle sequence numbers within PSBTs for better RBF (Replace-By-Fee) support:
+
 ## 1.4.3
 
 ### Patch Changes
