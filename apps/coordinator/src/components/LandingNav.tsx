@@ -1,12 +1,10 @@
 import React from "react";
 import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom";
-import { Theme } from "@mui/material/styles";
 import { makeStyles, createStyles } from "@mui/styles";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
-import { styled } from "@mui/material/styles";
 
-const useStyles = makeStyles((theme: Theme) =>
+const useStyles = makeStyles(() =>
   createStyles({
     root: {
       flexGrow: 1,

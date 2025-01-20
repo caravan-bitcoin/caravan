@@ -1,5 +1,4 @@
 import React from "react";
-import { Theme } from "@mui/material/styles";
 import { makeStyles, createStyles } from "@mui/styles";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
@@ -9,7 +8,7 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { Link } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const useStyles = makeStyles((theme: Theme) =>
+const useStyles = makeStyles(() =>
   createStyles({
     heroSection: {
       display: "flex",
