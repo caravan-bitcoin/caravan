@@ -483,6 +483,7 @@ class CreateWallet extends React.Component {
                 balance={+satoshisToBitcoins(confirmedBalance)}
                 pendingBalance={+satoshisToBitcoins(pendingBalance)}
                 network={network}
+                style={{ fontSize: "inherit" }}
               />
             </Grid>
             <Grid item xs={10} md={6}>
