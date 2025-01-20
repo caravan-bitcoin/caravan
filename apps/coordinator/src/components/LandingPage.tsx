@@ -353,33 +353,33 @@ const LandingPage = () => {
           </Button>
         </div>
         <img
-          src="src/images/landing/caravan-balance.png"
+          src="/images/landing/caravan-balance.png"
           alt="Caravan Balance"
           className={classes.mainImage}
         />
         <div className={classes.imageGrid}>
           <img
-            src="src/images/landing/trezor.png"
+            src="/images/landing/trezor.png"
             alt="Trezor"
             className={classes.gridImage}
           />
           <img
-            src="src/images/landing/ledger.png"
+            src="/images/landing/ledger.png"
             alt="Ledger"
             className={classes.gridImage}
           />
           <img
-            src="src/images/landing/coldcard.png"
+            src="/images/landing/coldcard.png"
             alt="Coldcard"
             className={classes.gridImage}
           />
           <img
-            src="src/images/landing/firefox.png"
+            src="/images/landing/firefox.png"
             alt="Firefox"
             className={classes.gridImage}
           />
           <img
-            src="src/images/landing/chrome.png"
+            src="/images/landing/chrome.png"
             alt="Chrome"
             className={classes.gridImage}
           />
@@ -408,7 +408,7 @@ const LandingPage = () => {
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
               <img
-                src="src/images/landing/stateless.png"
+                src="/images/landing/stateless.png"
                 alt="Stateless Architecture"
               />
             </div>
@@ -418,7 +418,7 @@ const LandingPage = () => {
         <div className={classes.fullWidthBox}>
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
-              <img src="src/images/landing/xpubs.png" alt="XPubs" />
+              <img src="/images/landing/xpubs.png" alt="XPubs" />
             </div>
           </div>
           <div className={classes.descriptionSection}>
@@ -452,7 +452,7 @@ const LandingPage = () => {
           </div>
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
-              <img src="src/images/landing/consensus.png" alt="Consensus" />
+              <img src="/images/landing/consensus.png" alt="Consensus" />
             </div>
           </div>
         </div>
