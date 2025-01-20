@@ -51,7 +51,7 @@ const AppContent = () => {
   return (
     <>
       {location.pathname === "/" ? (
-        <LandingNav classes={{}} />
+        <LandingNav />
       ) : (
         <Drawer
           variant="permanent"
