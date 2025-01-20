@@ -46,7 +46,6 @@ const useStyles = makeStyles(() =>
     },
     menuLink: {
       color: "black",
-      textDecoration: "underline",
       "&:hover": {
         textDecoration: "none",
       },
@@ -93,14 +92,18 @@ const Navbar = () => {
               About
             </Button>
           </Link>
-          <Link to="/help" className={classes.menuLink}>
-            <Button
-              className={classes.menuButton}
-              style={{ textTransform: "none" }}
-            >
-              Resources
-            </Button>
-          </Link>
+          <Button
+            className={classes.menuButton}
+            style={{ textTransform: "none" }}
+            onClick={() =>
+              window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: "smooth",
+              })
+            }
+          >
+            Resources
+          </Button>
           <Link to="/test" className={classes.menuLink}>
             <Button
               className={classes.menuButton}
@@ -110,7 +113,9 @@ const Navbar = () => {
             </Button>
           </Link>
         </Box>
-        <Button className={classes.getStartedButton}>Get Started</Button>
+        <Link to="/setup" style={{ textDecoration: "none" }}>
+          <Button className={classes.getStartedButton}>Get Started</Button>
+        </Link>
       </Toolbar>
     </AppBar>
   );

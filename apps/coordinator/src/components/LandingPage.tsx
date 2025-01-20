@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { makeStyles, createStyles } from "@mui/styles";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
 import LockIcon from "@mui/icons-material/Lock";
 import LayersIcon from "@mui/icons-material/Layers";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
 const useStyles = makeStyles(() =>
@@ -307,6 +307,24 @@ const useStyles = makeStyles(() =>
 
 const LandingPage = () => {
   const classes = useStyles();
+  const contentSectionRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === "#content" && contentSectionRef.current) {
+      const yOffset = -80; // Adjust this value to account for any fixed headers
+      const y =
+        contentSectionRef.current.getBoundingClientRect().top +
+        window.pageYOffset +
+        yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  }, [location]);
+
+  const scrollToContent = (e: React.MouseEvent) => {
+    e.preventDefault();
+    contentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <>
@@ -326,7 +344,11 @@ const LandingPage = () => {
               Get Started
             </Button>
           </Link>
-          <Button className={classes.secondaryButton} variant="contained">
+          <Button
+            className={classes.secondaryButton}
+            variant="contained"
+            onClick={scrollToContent}
+          >
             Learn More
           </Button>
         </div>
@@ -364,7 +386,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className={classes.contentSection}>
+      <section className={classes.contentSection} ref={contentSectionRef}>
         <div className={classes.fullWidthBox}>
           <div className={classes.descriptionSection}>
             <h3 className={classes.contentTitle}>
@@ -521,49 +543,74 @@ const LandingPage = () => {
             Multisig made easy. Manage your Bitcoin together with Caravan.
           </p>
           <p style={{ alignSelf: "center" }}>
-            &copy; 2024 Caravan Finance. All Rights Reserved.
+            &copy; Copyright 2025 by Unchained Capital
+            <br />
+            Released under an MIT license.
           </p>
         </div>
         <div className={classes.footerColumn}>
           <h4 className={classes.footerTitle}>Getting started</h4>
-          <a href="#" className={classes.footerLink}>
+          <Link
+            to="/"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className={classes.footerLink}
+          >
             Home
-          </a>
-          <a href="#" className={classes.footerLink}>
+          </Link>
+          <Link to="/" onClick={scrollToContent} className={classes.footerLink}>
             About
-          </a>
-          <a href="#" className={classes.footerLink}>
+          </Link>
+          <Link to="/test" className={classes.footerLink}>
             Test suite
-          </a>
-          <a href="#" className={classes.footerLink}>
-            Help
-          </a>
+          </Link>
         </div>
         <div className={classes.footerColumn}>
           <h4 className={classes.footerTitle}>Resources</h4>
-          <a href="#" className={classes.footerLink}>
+          <a
+            href="https://unchained.com/blog/"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Blog
           </a>
-          <a href="#" className={classes.footerLink}>
+          <a
+            href="https://github.com/caravan-bitcoin/caravan/blob/main/apps/coordinator/README.md"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Tutorial
           </a>
-          <a href="#" className={classes.footerLink}>
+          <a
+            href="https://github.com/caravan-bitcoin/caravan"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Source code
           </a>
         </div>
         <div className={classes.footerColumn}>
           <h4 className={classes.footerTitle}>Developer&apos;s corner</h4>
-          <a href="#" className={classes.footerLink}>
+          <a
+            href="https://github.com/caravan-bitcoin/caravan/issues"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             GitHub
           </a>
         </div>
         <div className={classes.footerColumn}>
           <h4 className={classes.footerTitle}>Social</h4>
-          <a href="#" className={classes.footerLink}>
+          <a
+            href="https://twitter.com/unchainedcom"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Twitter
-          </a>
-          <a href="#" className={classes.footerLink}>
-            Discord
           </a>
         </div>
       </footer>
