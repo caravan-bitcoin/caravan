@@ -10,7 +10,7 @@ import {
   ListItemIcon,
   Box,
 } from "@mui/material";
-import { makeStyles } from "@mui/styles";
+import { makeStyles, createStyles } from "@mui/styles";
 import { Link } from "react-router-dom";
 import HomeIcon from "@mui/icons-material/Home";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -22,61 +22,59 @@ import TestIcon from "@mui/icons-material/CheckCircle";
 import HelpIcon from "@mui/icons-material/Help";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    backgroundColor: "#00478E",
-  },
-  menuButton: {
-    marginRight: theme.spacing(2),
-  },
-  title: {
-    flexGrow: 1,
-  },
-  menuItem: {
-    paddingTop: theme.spacing(2),
-    paddingBottom: theme.spacing(2),
-    paddingX: theme.spacing(3),
-  },
-  menuLink: {
-    color: "#fff",
-    textDecoration: "none",
-  },
-  bottomList: {
-    marginTop: "auto",
-    backgroundColor: "#00478E",
-    color: "#fff",
-  },
-  toolbar: {
-    padding: 0,
-    backgroundColor: "#00478E",
-  },
-  icon: {
-    color: "#fff",
-  },
-  logoButton: {
-    backgroundColor: "#00478e",
-    color: "#fff",
-    padding: "10px 20px",
-    fontSize: "2rem",
-    outline: "none",
-    boxShadow: "none",
-    fontWeight: "bold",
-    textTransform: "none",
-    "&:hover": {
-      backgroundColor: "#00478e",
+const useStyles = makeStyles((theme) =>
+  createStyles({
+    root: {
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: "#00478E !important",
+    },
+    menuButton: {
+      marginRight: theme.spacing(2),
+    },
+    title: {
+      flexGrow: 1,
+    },
+    menuItem: {
+      paddingTop: theme.spacing(2),
+      paddingBottom: theme.spacing(2),
+      paddingX: theme.spacing(3),
+    },
+    menuLink: {
+      color: "#fff !important",
+      textDecoration: "none !important",
+    },
+    bottomList: {
+      marginTop: "auto",
+      backgroundColor: "#00478E",
       color: "#fff",
-      outline: "none",
-      boxShadow: "none",
     },
-    "&:focus": {
-      outline: "none",
-      boxShadow: "none",
+    toolbar: {
+      padding: 0,
+      backgroundColor: "#00478E",
     },
-  },
-}));
+    icon: {
+      color: "#fff !important",
+    },
+    logoButton: {
+      backgroundColor: "#00478E !important",
+      color: "#fff !important",
+      padding: "10px 20px !important",
+      fontSize: "2rem !important",
+      outline: "none !important",
+      boxShadow: "none !important",
+      fontWeight: "bold !important",
+      textTransform: "none !important",
+      width: "100% !important",
+      justifyContent: "flex-start !important",
+      "&:focus": {
+        outline: "none !important",
+        boxShadow: "none !important",
+      },
+    },
+  }),
+);
 
 const NavItem = ({ href, title, icon, classes }) => {
   return (

@@ -1,5 +1,6 @@
 import React from "react";
-import { makeStyles } from "@mui/styles";
+import { Theme } from "@mui/material/styles";
+import { makeStyles, createStyles } from "@mui/styles";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
@@ -8,304 +9,302 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { Link } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
-const useStyles = makeStyles(() => ({
-  heroSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    background: "white",
-    color: "white",
-    textAlign: "center",
-    paddingTop: "50px",
-    paddingBottom: "50px",
-    "& .highlight": {
-      color: "#1976d2",
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    heroSection: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column",
+      background: "white",
+      color: "white",
+      textAlign: "center",
+      paddingTop: "50px",
+      paddingBottom: "50px",
+      "& .highlight": {
+        color: "#1976d2",
+      },
     },
-  },
-  title: {
-    fontSize: "4rem",
-    width: "70%",
-    margin: 0,
-    color: "#333",
-    "@media (max-width: 768px)": {
-      fontSize: "2.5rem",
-      width: "90%",
+    title: {
+      fontSize: "4rem",
+      width: "70%",
+      margin: 0,
+      color: "#333",
+      "@media (max-width: 768px)": {
+        fontSize: "2.5rem",
+        width: "90%",
+      },
     },
-  },
-  subtitle: {
-    fontSize: "1.5rem",
-    fontWeight: 300,
-    width: "60%",
-    margin: "20px 0",
-    color: "#666",
-    "@media (max-width: 768px)": {
-      fontSize: "1.2rem",
-      width: "90%",
+    subtitle: {
+      fontSize: "1.5rem",
+      fontWeight: 300,
+      width: "60%",
+      margin: "20px 0",
+      color: "#666",
+      "@media (max-width: 768px)": {
+        fontSize: "1.2rem",
+        width: "90%",
+      },
     },
-  },
-  ctaButton: {
-    backgroundColor: "#1976d2 !important",
-    color: "#fff !important",
-    padding: "10px 20px !important",
-    fontSize: "1.2rem !important",
-    "&:hover": {
-      backgroundColor: "#fff !important",
-      color: "#1976d2 !important",
-      outline: "#1976d2 solid 1px !important",
-    },
-  },
-  secondaryButton: {
-    backgroundColor: "#fff !important",
-    color: "#1976d2 !important",
-    padding: "10px 20px !important",
-    fontSize: "1.2rem !important",
-    border: "1px solid #1976d2 !important",
-    "&:hover": {
+    ctaButton: {
       backgroundColor: "#1976d2 !important",
       color: "#fff !important",
+      padding: "10px 20px !important",
+      fontSize: "1.2rem !important",
+      "&:hover": {
+        backgroundColor: "#fff !important",
+        color: "#1976d2 !important",
+        outline: "#1976d2 solid 1px !important",
+      },
     },
-  },
-  yellowButton: {
-    backgroundColor: "#ea9c0d !important",
-    color: "#333 !important",
-    padding: "10px 20px !important",
-    fontSize: "1.2rem !important",
-    "&:hover": {
+    secondaryButton: {
       backgroundColor: "#fff !important",
       color: "#1976d2 !important",
+      padding: "10px 20px !important",
+      fontSize: "1.2rem !important",
+      border: "1px solid #1976d2 !important",
+      "&:hover": {
+        backgroundColor: "#1976d2 !important",
+        color: "#fff !important",
+      },
     },
-  },
-  contentSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    background: "#1976d2",
-    color: "white",
-    textAlign: "center",
-    padding: "80px 0",
-    borderRadius: "10px",
-    "& .highlight": {
-      color: "#1976d2",
+    yellowButton: {
+      backgroundColor: "#ea9c0d !important",
+      color: "#333 !important",
+      padding: "10px 20px !important",
+      fontSize: "1.2rem !important",
+      "&:hover": {
+        backgroundColor: "#fff !important",
+        color: "#1976d2 !important",
+      },
     },
-  },
-  contentTitle: {
-    fontSize: "2rem",
-    color: "#fff",
-    textAlign: "left",
-    width: "80%",
-    margin: "20px auto",
-    "@media (max-width: 1200px)": {
-      fontSize: "1.5rem",
-      width: "90%",
-    },
-  },
-  contentDescription: {
-    color: "#fff",
-    width: "80%",
-    margin: "0 auto",
-    textAlign: "left",
-    fontSize: "1.5rem",
-    "@media (max-width: 1200px)": {
-      fontSize: "1.2rem",
-      width: "90%",
-    },
-  },
-  fullWidthBox: {
-    display: "flex",
-    flexDirection: "row",
-    width: "100%",
-    marginBottom: "20px",
-    "@media (max-width: 1400px)": {
+    contentSection: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
       flexDirection: "column",
+      background: "#1976d2",
+      color: "white",
+      textAlign: "center",
+      padding: "80px 0",
+      borderRadius: "10px",
+      "& .highlight": {
+        color: "#1976d2",
+      },
     },
-  },
-  imageSection: {
-    flex: 2,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: "20px",
-    padding: "20px",
-    "@media (max-width: 1400px)": {
-      marginRight: 0,
-      padding: "20px",
-      order: 2,
-    },
-  },
-  descriptionSection: {
-    flex: 1,
-    padding: "10px",
-    "@media (max-width: 1400px)": {
-      order: 1,
-    },
-  },
-  featuresSection: {
-    padding: "80px 0",
-    background: "#fff",
-    textAlign: "center",
-    width: "100%",
-  },
-  featureContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    margin: "40px auto",
-    gap: "100px",
-    maxWidth: "1200px",
-    padding: "0 20px",
-    "@media (max-width: 768px)": {
-      flexDirection: "column",
+    contentTitle: {
+      fontSize: "2rem",
+      color: "#fff",
+      textAlign: "left",
+      width: "80%",
       margin: "20px auto",
-      gap: "40px",
+      "@media (max-width: 1200px)": {
+        fontSize: "1.5rem",
+        width: "90%",
+      },
+    },
+    contentDescription: {
+      color: "#fff",
+      width: "80%",
+      margin: "0 auto",
+      textAlign: "left",
+      fontSize: "1.5rem",
+      "@media (max-width: 1200px)": {
+        fontSize: "1.2rem",
+        width: "90%",
+      },
+    },
+    fullWidthBox: {
+      display: "flex",
+      flexDirection: "row",
+      width: "100%",
+      marginBottom: "20px",
+      "@media (max-width: 1400px)": {
+        flexDirection: "column",
+      },
+    },
+    imageSection: {
+      flex: 2,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: "20px",
+      padding: "20px",
+      "@media (max-width: 1400px)": {
+        marginRight: 0,
+        padding: "20px",
+        order: 2,
+      },
+    },
+    descriptionSection: {
+      flex: 1,
+      padding: "10px",
+      "@media (max-width: 1400px)": {
+        order: 1,
+      },
+    },
+    featuresSection: {
+      padding: "80px 0",
+      background: "#fff",
+      textAlign: "center",
+      width: "100%",
+    },
+    featureContainer: {
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      margin: "40px auto",
+      gap: "100px",
+      maxWidth: "1200px",
       padding: "0 20px",
+      "@media (max-width: 768px)": {
+        flexDirection: "column",
+        margin: "20px auto",
+        gap: "40px",
+        padding: "0 20px",
+      },
     },
-  },
-  featureItem: {
-    flex: 1,
-    padding: "20px",
-    maxWidth: "350px",
-    "@media (max-width: 768px)": {
-      maxWidth: "100%",
+    featureItem: {
+      flex: 1,
+      padding: "20px",
+      maxWidth: "350px",
+      "@media (max-width: 768px)": {
+        maxWidth: "100%",
+      },
     },
-  },
-  featureIcon: {
-    fontSize: "3rem",
-    color: "#1976d2",
-    textAlign: "left",
-  },
-  featureTitle: {
-    marginTop: "20px",
-    fontSize: "1.5rem",
-    color: "#333",
-    textAlign: "left",
-  },
-  featureDescription: {
-    color: "#666",
-    textAlign: "left",
-  },
-  ctaSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    background: "#fff",
-    color: "white",
-    textAlign: "center",
-    padding: "80px 0",
-    "& .highlight": {
+    featureIcon: {
+      fontSize: "3rem",
       color: "#1976d2",
+      textAlign: "left",
     },
-  },
-  footer: {
-    padding: "40px 0",
-    background: "#fff",
-    color: "#000",
-    textAlign: "left",
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
-    gap: "20px",
-    "@media (max-width: 768px)": {
-      gridTemplateColumns: "1fr",
+    featureTitle: {
+      marginTop: "20px",
+      fontSize: "1.5rem",
+      color: "#333",
+      textAlign: "left",
+    },
+    featureDescription: {
+      color: "#666",
+      textAlign: "left",
+    },
+    ctaSection: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column",
+      background: "#fff",
+      color: "white",
+      textAlign: "center",
+      padding: "80px 0",
+      "& .highlight": {
+        color: "#1976d2",
+      },
+    },
+    footer: {
+      padding: "40px 0",
+      background: "#fff",
+      color: "#000",
+      textAlign: "left",
+      display: "grid",
+      gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+      gap: "20px",
+      "@media (max-width: 768px)": {
+        gridTemplateColumns: "1fr",
+        textAlign: "center",
+      },
+    },
+    footerColumn: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
       textAlign: "center",
     },
-  },
-  footerColumn: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  footerTitle: {
-    marginBottom: "10px",
-    color: "#000",
-  },
-  footerLink: {
-    color: "#000",
-    textDecoration: "none",
-    marginBottom: "5px",
-    "&:hover": {
-      textDecoration: "underline",
+    footerTitle: {
+      marginBottom: "10px",
+      color: "#000",
     },
-  },
-  logoButton: {
-    backgroundColor: "#fff",
-    color: "#1976d2",
-    padding: "10px 20px",
-    fontSize: "2rem",
-    outline: "none",
-    boxShadow: "none",
-    fontWeight: "bold",
-    textTransform: "none",
-    "&:hover": {
-      backgroundColor: "#fff",
-      color: "#1976d2",
-      outline: "none",
-      boxShadow: "none",
+    footerLink: {
+      color: "#000",
+      textDecoration: "none",
+      marginBottom: "5px",
+      "&:hover": {
+        textDecoration: "underline",
+      },
     },
-    "&:focus": {
-      outline: "none",
-      boxShadow: "none",
+    logoButton: {
+      backgroundColor: "transparent !important",
+      color: "#1976d2 !important",
+      padding: "10px 20px !important",
+      fontSize: "2rem !important",
+      outline: "none !important",
+      boxShadow: "none !important",
+      fontWeight: "bold !important",
+      display: "flex !important",
+      alignItems: "center !important",
+      minWidth: "fit-content !important",
+      "& img": {
+        width: "75px !important",
+        height: "60px !important",
+        marginBottom: "10px !important",
+      },
     },
-    "&:active": {
-      boxShadow: "none",
+    buttonContainer: {
+      display: "flex",
+      justifyContent: "space-between",
+      width: "400px",
+      flexWrap: "wrap",
     },
-  },
-  buttonContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-    width: "400px",
-    flexWrap: "wrap",
-  },
-  mainImage: {
-    marginTop: "100px",
-    maxWidth: "50%",
-    height: "auto",
-  },
-  imageGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
-    gap: "20px",
-    maxWidth: "100%",
-    paddingTop: "60px",
-    paddingBottom: "20px",
-    "@media (max-width: 1024px)": {
-      gridTemplateColumns: "repeat(2, 1fr)",
-    },
-    "@media (max-width: 600px)": {
-      gridTemplateColumns: "1fr",
-    },
-  },
-  gridImage: {
-    height: "80px",
-    width: "auto",
-    padding: "10px",
-  },
-  responsiveImage: {
-    backgroundColor: "#FFE7BB",
-    padding: "20px",
-    borderRadius: "10px",
-    width: "100%",
-    "& img": {
-      width: "100%",
+    mainImage: {
+      marginTop: "100px",
+      maxWidth: "50%",
       height: "auto",
-      maxHeight: "700px",
-      minHeight: "500px",
-      borderRadius: "10px",
-      objectFit: "contain",
-      "@media (max-width: 1200px)": {
-        maxHeight: "500px",
-        minHeight: "350px",
+    },
+    imageGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(5, 1fr)",
+      gap: "20px",
+      maxWidth: "100%",
+      paddingTop: "60px",
+      paddingBottom: "20px",
+      "@media (max-width: 1024px)": {
+        gridTemplateColumns: "repeat(2, 1fr)",
       },
-      "@media (max-width: 700px)": {
-        maxHeight: "300px",
-        minHeight: "200px",
+      "@media (max-width: 600px)": {
+        gridTemplateColumns: "1fr",
       },
     },
-    "@media (max-width: 1400px)": {
+    gridImage: {
+      height: "80px",
+      width: "auto",
+      padding: "10px",
+    },
+    responsiveImage: {
+      backgroundColor: "#FFE7BB",
       padding: "20px",
+      borderRadius: "10px",
+      width: "100%",
+      "& img": {
+        width: "100%",
+        height: "auto",
+        maxHeight: "700px",
+        minHeight: "500px",
+        borderRadius: "10px",
+        objectFit: "contain",
+        "@media (max-width: 1200px)": {
+          maxHeight: "500px",
+          minHeight: "350px",
+        },
+        "@media (max-width: 700px)": {
+          maxHeight: "300px",
+          minHeight: "200px",
+        },
+      },
+      "@media (max-width: 1400px)": {
+        padding: "20px",
+      },
     },
-  },
-}));
+  }),
+);
 
 const LandingPage = () => {
   const classes = useStyles();
@@ -511,6 +510,7 @@ const LandingPage = () => {
         <div className={classes.footerColumn}>
           <Button
             className={classes.logoButton}
+            style={{ textTransform: "none" }}
             variant="contained"
             startIcon={
               <img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />
