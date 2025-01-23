@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.7.0
+
+### Minor Changes
+
+- [#158](https://github.com/caravan-bitcoin/caravan/pull/158) [`2a2e674`](https://github.com/caravan-bitcoin/caravan/commit/2a2e6748694301cf83806b173cd2dbea365a3089) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2.toV0 method added
+
 ## 1.6.0
 
 ### Minor Changes
