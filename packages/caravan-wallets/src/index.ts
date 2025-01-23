@@ -440,6 +440,7 @@ export function SignMultisigTransaction({
         bip32Paths,
         psbt,
         keyDetails,
+        addressType: walletConfig.addressType,
         returnSignatureArray,
       });
     default:

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- [#163](https://github.com/caravan-bitcoin/caravan/pull/163) [`205ced7`](https://github.com/caravan-bitcoin/caravan/commit/205ced73dc1dfa1d10f28e18371dbb70d4dcdf5d) Thanks [@kimlwh](https://github.com/kimlwh)! - bump @trezor/connect-web from 9.1.12 to 9.4.7
+
+## 0.4.5
+
+### Patch Changes
+
+- [#159](https://github.com/caravan-bitcoin/caravan/pull/159) [`3e4b783`](https://github.com/caravan-bitcoin/caravan/commit/3e4b7837242a3f01a023b7d01fdec83af3d47df6) Thanks [@chadchapnick](https://github.com/chadchapnick)! - include addressType for accurate PSBT translation in SignMultisigTransaction
+
 ## 0.4.4
 
 ### Patch Changes

@@ -157,6 +157,7 @@ class CreateWallet extends React.Component {
             "hermit",
             "xpub",
             "text",
+            "sparrow",
             undefined,
           ].includes(method)
         ) {
