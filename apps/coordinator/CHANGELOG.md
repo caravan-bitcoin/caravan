@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.1
+
+### Patch Changes
+
+- [#174](https://github.com/caravan-bitcoin/caravan/pull/174) [`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375) Thanks [@bucko13](https://github.com/bucko13)! - fix dependencies for caravan-psbt on caravan-bitcoin
+
+- Updated dependencies [[`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375)]:
+  - @caravan/psbt@1.7.1
+
 ## 1.5.0
 
 ### Minor Changes

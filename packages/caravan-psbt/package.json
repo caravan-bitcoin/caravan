@@ -1,6 +1,6 @@
 {
   "name": "@caravan/psbt",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "typescript library for working with PSBTs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
