@@ -7,7 +7,6 @@ import {
   autoLoadPSBT,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
-import { updateBlockchainClient } from "./clientActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
 
@@ -44,90 +43,6 @@ export const SET_BALANCE_ERROR = "SET_BALANCE_ERROR";
 export const SPEND_STEP_CREATE = 0;
 export const SPEND_STEP_PREVIEW = 1;
 export const SPEND_STEP_SIGN = 2;
-
-export const SET_TRANSACTIONS = "SET_TRANSACTIONS";
-export const SET_TRANSACTIONS_LOADING = "SET_TRANSACTIONS_LOADING";
-export const SET_TRANSACTIONS_ERROR = "SET_TRANSACTIONS_ERROR";
-export const CLEAR_TRANSACTIONS = "CLEAR_TRANSACTIONS";
-export const UPDATE_TRANSACTION = "UPDATE_TRANSACTION";
-
-export const setTransactions = (transactions) => ({
-  type: SET_TRANSACTIONS,
-  payload: transactions,
-});
-
-export const setTransactionsLoading = (isLoading) => ({
-  type: SET_TRANSACTIONS_LOADING,
-  payload: isLoading,
-});
-
-export const setTransactionsError = (error) => ({
-  type: SET_TRANSACTIONS_ERROR,
-  payload: error,
-});
-
-export const clearTransactions = () => ({
-  type: CLEAR_TRANSACTIONS,
-});
-
-export const updateTransaction = (txid, update) => ({
-  type: UPDATE_TRANSACTION,
-  payload: { txid, update },
-});
-
-export const fetchTransactions = () => {
-  return async (dispatch, getState) => {
-    dispatch(setTransactionsLoading(true));
-
-    try {
-      const state = getState();
-      const { deposits, change } = state.wallet;
-
-      const blockchainClient = await dispatch(updateBlockchainClient());
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
-      // Get unique transaction IDs from UTXOs
-      const txids = new Set();
-      [
-        ...Object.values(deposits.nodes),
-        ...Object.values(change.nodes),
-      ].forEach((node) => {
-        node.utxos.forEach((utxo) => {
-          txids.add(utxo.txid);
-        });
-      });
-
-      // Fetch details for each transaction
-      const txPromises = Array.from(txids).map(async (txid) => {
-        try {
-          const txDetails = await blockchainClient.getTransaction(txid);
-          return {
-            ...txDetails,
-            confirmed: txDetails.status.confirmed,
-            timestamp: txDetails.status.block_time,
-          };
-        } catch (err) {
-          console.error(`Error fetching details for tx ${txid}:`, err);
-          return null;
-        }
-      });
-
-      const transactions = (await Promise.all(txPromises)).filter(
-        (tx) => tx !== null,
-      );
-
-      dispatch(setTransactions(transactions));
-      dispatch(setTransactionsError(null));
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-      dispatch(setTransactionsError(error.message));
-    } finally {
-      dispatch(setTransactionsLoading(false));
-    }
-  };
-};
 
 export function choosePerformSpend() {
   return {
