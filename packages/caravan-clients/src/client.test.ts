@@ -145,12 +145,12 @@ describe("BlockchainClient", () => {
   describe("broadcastTransaction", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API
-      const mockResponse = { success: true };
+      const mockResponse = { result: "txid", id: 0 };
       const mockBitcoindSendRawTransaction = jest.spyOn(
         bitcoind,
         "bitcoindSendRawTransaction",
       );
-      mockBitcoindSendRawTransaction.mockResolvedValue(mockResponse);
+      mockBitcoindSendRawTransaction.mockResolvedValue(mockResponse.result);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
@@ -830,7 +830,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -856,7 +856,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -891,7 +891,7 @@ describe("BlockchainClient", () => {
 
     it("calls bitcoindImportDescriptors with descriptors to import", async () => {
       const mockImportDescriptors = jest.spyOn(wallet, "bitcoindWalletInfo");
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -934,9 +934,10 @@ describe("BlockchainClient", () => {
         },
       ];
       const mockBitcoindListTransaction = jest.spyOn(bitcoind, "callBitcoind");
-      mockBitcoindListTransaction.mockResolvedValue(
-        mockResponseListTransaction,
-      );
+      mockBitcoindListTransaction.mockResolvedValue({
+        result: mockResponseListTransaction,
+        id: 0,
+      });
 
       const mockBitcoindRawTxData = {
         txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
