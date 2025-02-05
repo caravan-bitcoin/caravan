@@ -111,6 +111,30 @@ export interface TransactionDetails {
   };
 }
 
+export interface ListTransactionsItem {
+  involvesWatchonly?: boolean; // Only present if imported addresses were involved
+  address: string; // The bitcoin address of the transaction
+  category: "send" | "receive" | "generate" | "immature" | "orphan"; // The transaction category
+  amount: number; // The amount in BTC
+  label?: string; // Optional comment for the address/transaction
+  vout: number; // The vout value
+  fee?: number; // Only available for 'send' category
+  confirmations: number; // Number of confirmations, can be negative
+  generated?: boolean; // Only present if transaction only input is coinbase
+  trusted?: boolean; // Only present if we consider transaction to be trusted
+  blockhash: string; // The block hash containing the transaction
+  blockheight?: number; // The block height containing the transaction
+  blockindex: number; // The index of the transaction in the block
+  blocktime: number; // Block time in UNIX epoch time
+  txid: string; // The transaction id
+  walletconflicts: string[]; // Conflicting transaction ids
+  time: number; // Transaction time in UNIX epoch time
+  timereceived: number; // Time received in UNIX epoch time
+  comment?: string; // Optional comment associated with the transaction
+  "bip125-replaceable": "yes" | "no" | "unknown"; // Replace-by-fee status
+  abandoned?: boolean; // Only available for 'send' category
+}
+
 // Used in bitcoind.ts
 
 /**

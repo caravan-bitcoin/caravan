@@ -25,6 +25,7 @@ import {
   UTXO,
   TransactionDetails,
   RawTransactionData,
+  ListTransactionsItem,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -215,7 +216,7 @@ export class BlockchainClient extends ClientBase {
   public async getAddressTransactions(address: string): Promise<Transaction[]> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        const data = await callBitcoind(
+        const data = await callBitcoind<ListTransactionsItem[]>(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "listtransactions",
@@ -223,16 +224,20 @@ export class BlockchainClient extends ClientBase {
         );
 
         const txs: Transaction[] = [];
-        for (const tx of data) {
+        for (const tx of data.result) {
           if (tx.address === address) {
-            const rawTxData = await bitcoindRawTxData(tx.txid);
+            const rawTxData = await bitcoindRawTxData(
+              this.bitcoindParams.url,
+              this.bitcoindParams.auth,
+              tx.txid,
+            );
             const transaction: Transaction = {
               txid: tx.txid,
               vin: [],
               vout: [],
               size: rawTxData.size,
               weight: rawTxData.weight,
-              fee: tx.fee,
+              fee: tx.fee ?? 0,
               isSend: tx.category === "send" ? true : false,
               amount: tx.amount,
               block_time: tx.blocktime,
