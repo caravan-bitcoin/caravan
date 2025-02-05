@@ -110,3 +110,89 @@ export interface TransactionDetails {
     blockTime?: number;
   };
 }
+
+// Used in bitcoind.ts
+
+/**
+ * Interface for the RPC request parameters
+ */
+export interface RPCRequest {
+  jsonrpc: string;
+  id: number;
+  method: string;
+  params: unknown[]; // using unknown instead of any beacuse forces us to check the type before using it, while any allows unsafe operations without warnings
+}
+
+/**
+ * Interface for RPC response structure
+ */
+export interface RPCResponse<T = unknown> {
+  result: T;
+  error?: {
+    code: number;
+    message: string;
+  };
+  id: number;
+}
+
+export interface BitcoindParams {
+  url: string;
+  auth: {
+    username: string;
+    password: string;
+  };
+  walletName?: string;
+}
+
+/**
+ * Interface for unspent transaction output details
+ */
+export interface UnspentOutput {
+  confirmed: boolean;
+  txid: string;
+  index: number;
+  amount: string;
+  amountSats: string;
+  transactionHex: string;
+  time: number;
+}
+
+export interface ImportDescriptor {
+  scriptPubKey: {
+    address: string;
+  };
+  label?: string;
+  timestamp: number;
+}
+
+export interface ListUnspentResponse {
+  txid: string;
+  vout: number;
+  address: string;
+  label?: string;
+  scriptPubKey: string;
+  amount: number;
+  confirmations: number;
+  spendable: boolean;
+  solvable: boolean;
+  safe: boolean;
+}
+
+export interface TransactionResponse {
+  amount: number;
+  fee: number;
+  confirmations: number;
+  blockhash: string;
+  blockindex: number;
+  blocktime: number;
+  txid: string;
+  time: number;
+  timereceived: number;
+  hex: string;
+}
+
+export interface ImportMultiResponse {
+  success: boolean;
+  warnings?: string[];
+  error?: string;
+}
