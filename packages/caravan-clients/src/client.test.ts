@@ -145,12 +145,13 @@ describe("BlockchainClient", () => {
   describe("broadcastTransaction", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API
-      const mockResponse = { result: "txid", id: 0 };
+      const mockResponse =
+        "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d";
       const mockBitcoindSendRawTransaction = jest.spyOn(
         bitcoind,
         "bitcoindSendRawTransaction",
       );
-      mockBitcoindSendRawTransaction.mockResolvedValue(mockResponse.result);
+      mockBitcoindSendRawTransaction.mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
@@ -830,7 +831,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -856,7 +857,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -891,7 +892,7 @@ describe("BlockchainClient", () => {
 
     it("calls bitcoindImportDescriptors with descriptors to import", async () => {
       const mockImportDescriptors = jest.spyOn(wallet, "bitcoindWalletInfo");
-      mockImportDescriptors.mockResolvedValue({ result: {}, id: 0 });
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -907,37 +908,40 @@ describe("BlockchainClient", () => {
   describe("getAddressTransactions", () => {
     it("should get the all the transactions for a given address in PRIVATE network MAINNET", async () => {
       // Mock the response from the API
-      const mockResponseListTransaction = [
-        {
-          address:
-            "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
-          parent_descs: [
-            "wsh(sortedmulti(1,tpubDFnYXDztf7GxeGVpPsgYaqbfE6mCsvVzCGKhtafJU3pbF8r8cuGQgp81puJcjuBdsMhk1oUHdhNbsrPcn8SHjktJ45pzJNhAd1BY3jRdzvj/0/*,tpubDDwMB2bTZPY5Usnyqn7PN1cYmNWNghRxtY968LCA2DRr4HM93JqkLd5uEHXQb2rRLjHrkccguYRxyDkQi71mBuZ7XAfLH29918Gu9vKVmhy/0/*))#dw99d0sw",
-          ],
-          category: "receive",
-          amount: 15.0,
-          label: "",
-          vout: 0,
-          confirmations: 22,
-          blockhash:
-            "1ab9eed7ff3b824dfdee22560e8fc826f2bac0ca835c992b8659b1c834721ffa",
-          blockheight: 1181,
-          blockindex: 1,
-          blocktime: 1718291897,
-          txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
-          wtxid:
-            "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
-          walletconflicts: [],
-          time: 1718291888,
-          timereceived: 1718291888,
-          "bip125-replaceable": "no",
-        },
-      ];
-      const mockBitcoindListTransaction = jest.spyOn(bitcoind, "callBitcoind");
-      mockBitcoindListTransaction.mockResolvedValue({
-        result: mockResponseListTransaction,
+      const mockResponseListTransaction = {
+        result: [
+          {
+            address:
+              "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
+            parent_descs: [
+              "wsh(sortedmulti(1,tpubDFnYXDztf7GxeGVpPsgYaqbfE6mCsvVzCGKhtafJU3pbF8r8cuGQgp81puJcjuBdsMhk1oUHdhNbsrPcn8SHjktJ45pzJNhAd1BY3jRdzvj/0/*,tpubDDwMB2bTZPY5Usnyqn7PN1cYmNWNghRxtY968LCA2DRr4HM93JqkLd5uEHXQb2rRLjHrkccguYRxyDkQi71mBuZ7XAfLH29918Gu9vKVmhy/0/*))#dw99d0sw",
+            ],
+            category: "receive",
+            amount: 15.0,
+            label: "",
+            vout: 0,
+            confirmations: 22,
+            blockhash:
+              "1ab9eed7ff3b824dfdee22560e8fc826f2bac0ca835c992b8659b1c834721ffa",
+            blockheight: 1181,
+            blockindex: 1,
+            blocktime: 1718291897,
+            txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
+            wtxid:
+              "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
+            walletconflicts: [],
+            time: 1718291888,
+            timereceived: 1718291888,
+            "bip125-replaceable": "no",
+          },
+        ],
         id: 0,
-      });
+      };
+
+      const mockBitcoindListTransaction = jest.spyOn(bitcoind, "callBitcoind");
+      mockBitcoindListTransaction.mockResolvedValue(
+        mockResponseListTransaction,
+      );
 
       const mockBitcoindRawTxData = {
         txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",

@@ -26,6 +26,7 @@ import {
   TransactionDetails,
   RawTransactionData,
   ListTransactionsItem,
+  TransactionResponse,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -77,11 +78,11 @@ export function normalizeTransactionData(
     size: txData.size,
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
-    status: txData.status || {
-      confirmed: (txData.confirmations ?? 0) > 0,
-      blockHeight: undefined,
-      blockHash: txData.blockhash,
-      blockTime: txData.blocktime,
+    status: {
+      confirmed: txData.status?.confirmed ?? txData.confirmations! > 0,
+      blockHeight: txData.status?.block_height ?? undefined,
+      blockHash: txData.status?.block_hash ?? txData.blockhash,
+      blockTime: txData.status?.block_time ?? txData.blocktime,
     },
   };
 }
@@ -237,7 +238,7 @@ export class BlockchainClient extends ClientBase {
               vout: [],
               size: rawTxData.size,
               weight: rawTxData.weight,
-              fee: tx.fee ?? 0,
+              fee: tx.fee!,
               isSend: tx.category === "send" ? true : false,
               amount: tx.amount,
               block_time: tx.blocktime,
@@ -493,7 +494,7 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind(
+        return await callBitcoind<TransactionResponse>(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "gettransaction",

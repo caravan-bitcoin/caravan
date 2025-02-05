@@ -140,6 +140,20 @@ export interface ListTransactionsItem {
   abandoned?: boolean; // Only available for 'send' category
 }
 
+export interface BitcoindWalletParams<T> {
+  baseUrl: string; // Base URL of the Bitcoin node
+  walletName?: string; // Optional wallet name for multi-wallet setups
+  auth: {
+    // Auth credentials for the node
+    username: string;
+    password: string;
+  };
+  method: string; // RPC method to call
+  params?: unknown[]; // Support both array and object params
+
+  responseType?: T;
+}
+
 // Used in bitcoind.ts
 
 /**
