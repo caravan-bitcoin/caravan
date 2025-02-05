@@ -83,7 +83,12 @@ export interface RawTransactionData {
   size: number;
   weight: number;
   fee: number;
-  status: RawTxStatus;
+  status?: RawTxStatus; // Optional for private node
+  // Additional fields for private node
+  confirmations?: number;
+  blockhash?: string;
+  blocktime?: number;
+  hex?: string;
 }
 
 export interface TransactionDetails {

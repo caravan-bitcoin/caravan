@@ -77,11 +77,11 @@ export function normalizeTransactionData(
     size: txData.size,
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
-    status: {
-      confirmed: txData.status.confirmed,
-      blockHeight: txData.status.block_height,
-      blockHash: txData.status.block_hash,
-      blockTime: txData.status.block_time,
+    status: txData.status || {
+      confirmed: (txData.confirmations ?? 0) > 0,
+      blockHeight: undefined,
+      blockHash: txData.blockhash,
+      blockTime: txData.blocktime,
     },
   };
 }
