@@ -25,6 +25,8 @@ import {
   UTXO,
   TransactionDetails,
   RawTransactionData,
+  ListTransactionsItem,
+  TransactionResponse,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -43,6 +45,47 @@ export enum ClientType {
 const delay = () => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
+
+/**
+ * Normalizes transaction data from different sources (private node, blockstream, mempool)
+ * into a consistent format for use throughout the application.
+ *
+ * @param txData - Raw transaction data from various sources
+ * @param clientType - The type of client that provided the data (private, blockstream, mempool)
+ * @returns Normalized transaction details in a consistent format
+ */
+export function normalizeTransactionData(
+  txData: RawTransactionData,
+  clientType: ClientType,
+): TransactionDetails {
+  return {
+    txid: txData.txid,
+    version: txData.version,
+    locktime: txData.locktime,
+    vin: txData.vin.map((input: any) => ({
+      txid: input.txid,
+      vout: input.vout,
+      sequence: input.sequence,
+    })),
+    vout: txData.vout.map((output: any) => ({
+      value:
+        clientType === ClientType.PRIVATE
+          ? output.value
+          : satoshisToBitcoins(output.value),
+      scriptPubkey: output.scriptpubkey,
+      scriptPubkeyAddress: output.scriptpubkey_address,
+    })),
+    size: txData.size,
+    weight: txData.weight,
+    fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
+    status: {
+      confirmed: txData.status?.confirmed ?? txData.confirmations! > 0,
+      blockHeight: txData.status?.block_height ?? undefined,
+      blockHash: txData.status?.block_hash ?? txData.blockhash,
+      blockTime: txData.status?.block_time ?? txData.blocktime,
+    },
+  };
+}
 
 export class ClientBase {
   private readonly throttled: boolean;
@@ -174,7 +217,7 @@ export class BlockchainClient extends ClientBase {
   public async getAddressTransactions(address: string): Promise<Transaction[]> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        const data = await callBitcoind(
+        const data = await callBitcoind<ListTransactionsItem[]>(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "listtransactions",
@@ -182,16 +225,20 @@ export class BlockchainClient extends ClientBase {
         );
 
         const txs: Transaction[] = [];
-        for (const tx of data) {
+        for (const tx of data.result) {
           if (tx.address === address) {
-            const rawTxData = await bitcoindRawTxData(tx.txid);
+            const rawTxData = await bitcoindRawTxData(
+              this.bitcoindParams.url,
+              this.bitcoindParams.auth,
+              tx.txid,
+            );
             const transaction: Transaction = {
               txid: tx.txid,
               vin: [],
               vout: [],
               size: rawTxData.size,
               weight: rawTxData.weight,
-              fee: tx.fee,
+              fee: tx.fee!,
               isSend: tx.category === "send" ? true : false,
               amount: tx.amount,
               block_time: tx.blocktime,
@@ -447,7 +494,7 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind(
+        return await callBitcoind<TransactionResponse>(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "gettransaction",
@@ -480,7 +527,7 @@ export class BlockchainClient extends ClientBase {
         throw new Error("Invalid client type");
       }
 
-      return this.normalizeTransactionData(txData);
+      return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
     }
@@ -517,37 +564,5 @@ export class BlockchainClient extends ClientBase {
     }
 
     return await bitcoindWalletInfo({ ...this.bitcoindParams });
-  }
-
-  private normalizeTransactionData(
-    txData: RawTransactionData,
-  ): TransactionDetails {
-    return {
-      txid: txData.txid,
-      version: txData.version,
-      locktime: txData.locktime,
-      vin: txData.vin.map((input: any) => ({
-        txid: input.txid,
-        vout: input.vout,
-        sequence: input.sequence,
-      })),
-      vout: txData.vout.map((output: any) => ({
-        value:
-          this.type === ClientType.PRIVATE
-            ? output.value
-            : satoshisToBitcoins(output.value),
-        scriptpubkey: output.scriptpubkey,
-        scriptpubkey_address: output.scriptpubkey_address,
-      })),
-      size: txData.size,
-      weight: txData.weight,
-      fee: this.type === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
-      status: {
-        confirmed: txData.status.confirmed,
-        block_height: txData.status.block_height,
-        block_hash: txData.status.block_hash,
-        block_time: txData.status.block_time,
-      },
-    };
   }
 }
