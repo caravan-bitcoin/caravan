@@ -26,8 +26,8 @@ interface Transaction {
   weight: number;
   status: {
     confirmed: boolean;
-    block_time?: number;
-    block_height?: number;
+    blockTime?: number;
+    blockHeight?: number;
   };
   size: number;
   fee: number;
@@ -58,7 +58,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>("block_time");
+  const [sortBy, setSortBy] = useState<string>("blockTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Fetch transactions
@@ -95,7 +95,6 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
           }
         }),
       );
-
       setTransactions(txDetails.filter((tx): tx is Transaction => tx !== null));
       setError(null);
     } catch (err) {
@@ -142,9 +141,8 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         // Handle different sorting properties
         let comparison = 0;
         switch (sortBy) {
-          case "block_time":
-            comparison =
-              (a.status.block_time || 0) - (b.status.block_time || 0);
+          case "blockTime":
+            comparison = (a.status.blockTime || 0) - (b.status.blockTime || 0);
             break;
           case "size":
             comparison = a.size - b.size;

@@ -32,8 +32,8 @@ interface Transaction {
   txid: string;
   status: {
     confirmed: boolean;
-    block_time?: number;
-    block_height?: number;
+    blockTime?: number;
+    blockHeight?: number;
   };
   size: number;
   fee: number;
@@ -48,7 +48,7 @@ const formatRelativeTime = (timestamp?: number): string => {
 // Column definitions with sorting configuration
 const columns = [
   { id: "txid", label: "Transaction ID", sortable: false },
-  { id: "block_time", label: "Time", sortable: true },
+  { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "status", label: "Status", sortable: false },
@@ -57,7 +57,9 @@ const columns = [
 
 // FeeDisplay component to display fees display in both sats and BTC
 const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
-  if (!feeInSats) return <Typography color="textSecondary">N/A</Typography>;
+  if (feeInSats === null || feeInSats === undefined) {
+    return <Typography color="textSecondary">N/A</Typography>;
+  }
 
   const feeInBTC = satoshisToBitcoins(feeInSats.toString());
 
@@ -138,7 +140,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           />
         </Tooltip>
       </TableCell>
-      <TableCell>{formatRelativeTime(tx.status.block_time)}</TableCell>
+      <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
       <TableCell>{tx.size}</TableCell>
       <TableCell>
         <FeeDisplay feeInSats={tx.fee} />
