@@ -281,3 +281,31 @@ export interface FormattedUTXO {
   transactionHex: string;
   time: number;
 }
+
+// Used in blockchain.ts
+export const BLOCK_EXPLORER = "public" as const;
+export const BITCOIND = "private" as const;
+
+export type ClientType = typeof BLOCK_EXPLORER | typeof BITCOIND;
+
+/**
+ * Interface for client configuration
+ */
+export interface ClientConfig {
+  type: ClientType;
+  url?: string;
+  username?: string;
+  password?: string;
+  walletName?: string;
+}
+
+/**
+ * Interface for UTXO updates response
+ */
+export interface UTXOUpdates {
+  utxos: UTXO[];
+  balanceSats: BigNumber;
+  fetchedUTXOs: boolean;
+  fetchUTXOsError: string;
+  addressKnown?: boolean;
+}
