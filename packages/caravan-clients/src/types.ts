@@ -1,3 +1,5 @@
+import BigNumber from "bignumber.js";
+
 export interface UTXO {
   txid: string;
   vout: number;
@@ -238,4 +240,44 @@ export interface ImportMultiResponse {
   success: boolean;
   warnings?: string[];
   error?: string;
+}
+
+// Used in block_explorer.ts
+
+/**
+ * Interface for the block explorer API response format for UTXOs
+ */
+export interface BlockExplorerUTXOResponse {
+  txid: string;
+  vout: number;
+  value: number;
+  status: {
+    confirmed: boolean;
+    block_time: number;
+  };
+}
+
+/**
+ * Interface for the block explorer API response for address data
+ */
+export interface BlockExplorerAddressResponse {
+  chain_stats: {
+    funded_txo_count: number;
+  };
+  mempool_stats: {
+    funded_txo_count: number;
+  };
+}
+
+/**
+ * Interface for formatted UTXO data
+ */
+export interface FormattedUTXO {
+  confirmed: boolean;
+  txid: string;
+  index: number;
+  amount: string;
+  amountSats: BigNumber;
+  transactionHex: string;
+  time: number;
 }
