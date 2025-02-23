@@ -1,8 +1,20 @@
-import axios from "axios";
+import axios, { AxiosBasicCredentials } from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import {
+  RPCResponse,
+  ListUnspentResponse,
+  TransactionResponse,
+  ImportMultiResponse,
+  ImportDescriptor,
+} from "./types";
 
-export async function callBitcoind(url, auth, method, params) {
+export async function callBitcoind<T>(
+  url: string,
+  auth: AxiosBasicCredentials,
+  method: string,
+  params: unknown[] = [],
+): Promise<RPCResponse<T>> {
   if (!params) params = [];
   // FIXME
   // eslint-disable-next-line no-async-promise-executor
@@ -58,15 +70,22 @@ export function bitcoindParams(client) {
 export async function bitcoindListUnspent({ url, auth, address, addresses }) {
   try {
     const addressParam = addresses || [address];
-    const resp = await callBitcoind(url, auth, "listunspent", [
-      0,
-      9999999,
-      addressParam,
-    ]);
-    const promises = [];
-    resp.result.forEach((utxo) => {
-      promises.push(callBitcoind(url, auth, "gettransaction", [utxo.txid]));
-    });
+
+    // Get the list of unspent outputs
+    const resp = await callBitcoind<ListUnspentResponse[]>(
+      url,
+      auth,
+      "listunspent",
+      [0, 9999999, addressParam],
+    );
+
+    // Now We'll get transaction details for each UTXO
+    const promises = resp.result.map((utxo) =>
+      callBitcoind<TransactionResponse>(url, auth, "gettransaction", [
+        utxo.txid,
+      ]),
+    );
+
     const previousTransactions = await Promise.all(promises);
     return resp.result.map((utxo, mapindex) => {
       const amount = new BigNumber(utxo.amount);
@@ -75,21 +94,24 @@ export async function bitcoindListUnspent({ url, auth, address, addresses }) {
         txid: utxo.txid,
         index: utxo.vout,
         amount: amount.toFixed(8),
-        amountSats: bitcoinsToSatoshis(amount),
+        amountSats: bitcoinsToSatoshis(amount.toString()),
         transactionHex: previousTransactions[mapindex].result.hex,
         time: previousTransactions[mapindex].result.blocktime,
       };
     });
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error("There was a problem:", e.message);
+    console.error(
+      "There was a problem:",
+      e instanceof Error ? e.message : "Unknown Error",
+    );
     throw e;
   }
 }
 
 export async function bitcoindGetAddressStatus({ url, auth, address }) {
   try {
-    const resp = await callBitcoind(url, auth, "getreceivedbyaddress", [
+    const resp = await callBitcoind<number>(url, auth, "getreceivedbyaddress", [
       address,
     ]);
     if (typeof resp.result === "undefined") {
@@ -104,30 +126,49 @@ export async function bitcoindGetAddressStatus({ url, auth, address }) {
       console.warn(
         `Address ${address} not found in bitcoind's wallet. Query failed.`,
       );
-    else console.error(e.message); // eslint-disable-line no-console
+    else console.error(e instanceof Error ? e.message : "Unknown Error"); // eslint-disable-line no-console
     return e;
   }
 }
 
 export async function bitcoindEstimateSmartFee({ url, auth, numBlocks = 2 }) {
-  const resp = await callBitcoind(url, auth, "estimatesmartfee", [numBlocks]);
+  const resp = await callBitcoind<{ feerate: number }>(
+    url,
+    auth,
+    "estimatesmartfee",
+    [numBlocks],
+  );
   const feeRate = resp.result.feerate;
   return Math.ceil(feeRate * 100000);
 }
 
 export async function bitcoindSendRawTransaction({ url, auth, hex }) {
   try {
-    const resp = await callBitcoind(url, auth, "sendrawtransaction", [hex]);
+    const resp = await callBitcoind<string>(url, auth, "sendrawtransaction", [
+      hex,
+    ]);
     return resp.result;
-  } catch (e) {
+  } catch (e: any) {
     // eslint-disable-next-line no-console
     console.log("send tx error", e);
     throw (e.response && e.response.data.error.message) || e;
   }
 }
 
-export function bitcoindImportMulti({ url, auth, addresses, label, rescan }) {
-  const imports = addresses.map((address) => {
+export function bitcoindImportMulti({
+  url,
+  auth,
+  addresses,
+  label,
+  rescan,
+}: {
+  url: string;
+  auth: AxiosBasicCredentials;
+  addresses: string[];
+  label?: string;
+  rescan: boolean;
+}): Promise<RPCResponse<ImportMultiResponse[]>> {
+  const imports: ImportDescriptor[] = addresses.map((address) => {
     return {
       scriptPubKey: {
         address,
@@ -138,10 +179,24 @@ export function bitcoindImportMulti({ url, auth, addresses, label, rescan }) {
   });
   const params = [url, auth, "importmulti", [imports, { rescan }]];
   if (rescan) {
-    callBitcoind(...params); // TODO: what to do on catch?
-    return new Promise((resolve) => resolve({ result: [] }));
+    // Fire and forget for rescan operations
+    void callBitcoind<ImportMultiResponse[]>(
+      url,
+      auth,
+      "importmulti",
+      params,
+    ).catch((error) => {
+      console.warn("Error during import rescan:", error);
+    });
+
+    // Return immediately for rescan operations
+    return Promise.resolve({
+      result: [],
+      id: 0,
+    });
   }
-  return callBitcoind(...params);
+  // For non-rescan operations, wait for the result
+  return callBitcoind<ImportMultiResponse[]>(url, auth, "importmulti", params);
 }
 
 export async function bitcoindRawTxData(url, auth, txid) {
@@ -152,6 +207,8 @@ export async function bitcoindRawTxData(url, auth, txid) {
     ]);
     return response.result;
   } catch (error) {
-    throw new Error(`Failed to get raw transaction data : ${error.message}`);
+    throw new Error(
+      `Failed to get raw transaction data :  ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
