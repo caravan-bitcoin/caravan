@@ -7,6 +7,7 @@ import {
   TransactionResponse,
   ImportMultiResponse,
   ImportDescriptor,
+  RPCRequest,
 } from "./types";
 
 export async function callBitcoind<T>(
@@ -16,26 +17,33 @@ export async function callBitcoind<T>(
   params: unknown[] = [],
 ): Promise<RPCResponse<T>> {
   if (!params) params = [];
-  // FIXME
-  // eslint-disable-next-line no-async-promise-executor
-  return new Promise(async (resolve, reject) => {
-    axios(url, {
+
+  // Build our RPC request object
+  const rpcRequest: RPCRequest = {
+    jsonrpc: "2.0",
+    id: 0, // We use a static ID since we're not batching requests
+    method: `${method}`,
+    params,
+  };
+
+  try {
+    const response = await axios(url, {
       method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
       auth,
-      data: {
-        jsonrpc: "2.0",
-        id: 0,
-        method: `${method}`,
-        params,
-      },
-    })
-      .then((resp) => resolve(resp.data))
-      .catch(reject);
-  });
+      data: rpcRequest,
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error occurred during RPC call");
+  }
 }
 
 /**
