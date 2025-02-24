@@ -8,6 +8,7 @@ import {
   ImportMultiResponse,
   ImportDescriptor,
   RPCRequest,
+  BitcoindParams,
 } from "./types";
 
 /**
@@ -73,10 +74,27 @@ export function isWalletAddressNotFoundError(e) {
   );
 }
 
-export function bitcoindParams(client) {
+/**
+ * Extracts standard bitcoind connection parameters from a client config
+ *
+ * This helper function pulls out the common parameters we need for most
+ * bitcoind RPC calls.
+ *
+ * @param client - The client configuration object
+ * @returns Object containing url, auth credentials, and optional wallet name
+ */
+export function bitcoindParams(client: {
+  url: string;
+  username: string;
+  password: string;
+  walletName?: string;
+}): BitcoindParams {
   const { url, username, password, walletName } = client;
-  const auth = { username, password };
-  return { url, auth, walletName };
+  return {
+    url,
+    auth: { username, password },
+    walletName,
+  };
 }
 
 /**
