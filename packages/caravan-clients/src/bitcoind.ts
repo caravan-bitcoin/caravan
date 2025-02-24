@@ -158,7 +158,23 @@ export async function bitcoindListUnspent({
   }
 }
 
-export async function bitcoindGetAddressStatus({ url, auth, address }) {
+/**
+ * Checks if an address has been used (received any funds)
+ *
+ * This is helpful for address management and wallet scanning.
+ *
+ * @param options - Connection details and address to check
+ * @returns Status object indicating if address was used
+ */
+export async function bitcoindGetAddressStatus({
+  url,
+  auth,
+  address,
+}: {
+  url: string;
+  auth: AxiosBasicCredentials;
+  address: string;
+}): Promise<{ used: boolean } | Error> {
   try {
     const resp = await callBitcoind<number>(url, auth, "getreceivedbyaddress", [
       address,
@@ -176,7 +192,7 @@ export async function bitcoindGetAddressStatus({ url, auth, address }) {
         `Address ${address} not found in bitcoind's wallet. Query failed.`,
       );
     else console.error(e instanceof Error ? e.message : "Unknown Error"); // eslint-disable-line no-console
-    return e;
+    return e instanceof Error ? e : new Error("Unknown error");
   }
 }
 
