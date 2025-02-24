@@ -224,7 +224,24 @@ export async function bitcoindEstimateSmartFee({
   return Math.ceil(feeRate * 100000);
 }
 
-export async function bitcoindSendRawTransaction({ url, auth, hex }) {
+/**
+ * Broadcasts a raw transaction to the Bitcoin network
+ *
+ * This is the final step in sending a transaction - it submits our signed
+ * transaction to the network for inclusion in a block.
+ *
+ * @param options - Connection details and raw transaction hex
+ * @returns Transaction ID of the broadcast transaction
+ */
+export async function bitcoindSendRawTransaction({
+  url,
+  auth,
+  hex,
+}: {
+  url: string;
+  auth: AxiosBasicCredentials;
+  hex: string;
+}): Promise<string> {
   try {
     const resp = await callBitcoind<string>(url, auth, "sendrawtransaction", [
       hex,
