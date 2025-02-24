@@ -10,6 +10,18 @@ import {
   RPCRequest,
 } from "./types";
 
+/**
+ * Makes a JSON-RPC call to a Bitcoin node
+ *
+ * This is our main workhorse for talking to bitcoind. It handles authentication
+ * and formats requests in the way bitcoind expects them.
+ *
+ * @param url - The URL of the Bitcoin node
+ * @param auth - Basic auth credentials
+ * @param method - The RPC method to call
+ * @param params - Parameters for the RPC method (optional)
+ * @returns Promise resolving to the RPC response
+ */
 export async function callBitcoind<T>(
   url: string,
   auth: AxiosBasicCredentials,
