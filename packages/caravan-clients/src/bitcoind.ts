@@ -196,7 +196,24 @@ export async function bitcoindGetAddressStatus({
   }
 }
 
-export async function bitcoindEstimateSmartFee({ url, auth, numBlocks = 2 }) {
+/**
+ * Estimates the appropriate fee rate for a transaction
+ *
+ * Uses bitcoind's smart fee estimation algorithm to suggest an appropriate
+ * fee rate based on recent network activity and desired confirmation time.
+ *
+ * @param options - Connection details and number of blocks target
+ * @returns Estimated fee rate in satoshis per byte
+ */
+export async function bitcoindEstimateSmartFee({
+  url,
+  auth,
+  numBlocks = 2, // Default to targeting inclusion within 2 blocks
+}: {
+  url: string;
+  auth: AxiosBasicCredentials;
+  numBlocks?: number;
+}): Promise<number> {
   const resp = await callBitcoind<{ feerate: number }>(
     url,
     auth,
