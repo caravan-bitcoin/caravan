@@ -9,6 +9,7 @@ import {
   ImportDescriptor,
   RPCRequest,
   BitcoindParams,
+  UnspentOutput,
 } from "./types";
 
 /**
@@ -105,7 +106,17 @@ export function bitcoindParams(client: {
  * @param {string} options.address - The address from which to obtain the information
  * @returns {UTXO} object for signing transaction inputs
  */
-export async function bitcoindListUnspent({ url, auth, address, addresses }) {
+export async function bitcoindListUnspent({
+  url,
+  auth,
+  address,
+  addresses,
+}: {
+  url: string;
+  auth: AxiosBasicCredentials;
+  address?: string;
+  addresses?: string[];
+}): Promise<UnspentOutput[]> {
   try {
     const addressParam = addresses || [address];
 
