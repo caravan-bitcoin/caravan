@@ -254,6 +254,17 @@ export async function bitcoindSendRawTransaction({
   }
 }
 
+/**
+ * Imports multiple addresses into the wallet
+ *
+ * @param options - Import configuration
+ * @param options.url - Bitcoin node URL
+ * @param options.auth - Authentication credentials
+ * @param options.addresses - List of addresses to import
+ * @param options.label - Optional label for the addresses
+ * @param options.rescan - Whether to rescan the blockchain for these addresses
+ * @returns Promise resolving to import results
+ */
 export function bitcoindImportMulti({
   url,
   auth,
@@ -298,7 +309,20 @@ export function bitcoindImportMulti({
   return callBitcoind<ImportMultiResponse[]>(url, auth, "importmulti", params);
 }
 
-export async function bitcoindRawTxData(url, auth, txid) {
+/**
+ * Gets detailed information about a specific transaction
+ *
+ * @param url - Bitcoin node URL
+ * @param auth - Authentication credentials
+ * @param txid - Transaction ID to look up
+ * @returns Detailed transaction data
+ */
+export async function bitcoindRawTxData(
+  url: string,
+  auth: AxiosBasicCredentials,
+  txid: string,
+): Promise<any> {
+  // TODO: Add proper type for transaction data
   try {
     const response = await callBitcoind(url, auth, "getrawtransaction", [
       txid,
