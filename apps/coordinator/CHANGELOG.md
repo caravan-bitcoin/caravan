@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.2
+
+### Patch Changes
+
+- [#183](https://github.com/caravan-bitcoin/caravan/pull/183) [`4402ea1`](https://github.com/caravan-bitcoin/caravan/commit/4402ea13c9b2328c21f35f4164c4f207b20e7d1e) Thanks [@bucko13](https://github.com/bucko13)! - bump trezor connect dependency
+
+- Updated dependencies [[`4402ea1`](https://github.com/caravan-bitcoin/caravan/commit/4402ea13c9b2328c21f35f4164c4f207b20e7d1e)]:
+  - @caravan/wallets@0.5.1
+
 ## 1.5.1
 
 ### Patch Changes
