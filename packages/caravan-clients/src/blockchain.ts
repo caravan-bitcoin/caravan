@@ -32,16 +32,16 @@ function isBitcoindClient(
 
 /**
  * Internal function to fetch unsorted UTXOs from either block explorer or bitcoind
- * @param address - Bitcoin address to fetch UTXOs for
- * @param network - Bitcoin network (mainnet, testnet, etc)
- * @param client - Client configuration
- * @returns Promise resolving to array of unsorted UTXOs
+ * @param {string} address - Bitcoin address to fetch UTXOs for
+ * @param {Network} network - Bitcoin network (mainnet, testnet, etc)
+ * @param {ClientConfig} client - Client configuration
+ * @returns {Promise<any[]>} Promise resolving to array of unsorted UTXOs
  */
 function fetchAddressUTXOsUnsorted(
   address: string,
   network: Network,
   client: ClientConfig,
-) {
+): Promise<any[]> {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerGetAddresesUTXOs(address, network);
   }
@@ -60,14 +60,19 @@ function fetchAddressUTXOsUnsorted(
  * Fetch utxos for an address, calculate total balances
  * and return an object describing the addresses state
  * @param {string} address
- * @param {string} network
- * @param {object} client
- * @returns {object} slice object with information gathered for that address
+ * @param {Network} network
+ * @param {ClientConfig}} client
+ * @returns {Promise<UTXOUpdates> } slice object with information gathered for that address
  */
-export async function fetchAddressUTXOs(address, network, client) {
-  let unsortedUTXOs;
+export async function fetchAddressUTXOs(
+  address: string,
+  network: Network,
+  client: ClientConfig,
+): Promise<UTXOUpdates> {
+  let unsortedUTXOs: any[] | undefined;
 
-  let updates: any = {
+  // Initialize updates object with default values
+  let updates: UTXOUpdates = {
     utxos: [],
     balanceSats: BigNumber(0),
     fetchedUTXOs: false,
@@ -75,7 +80,7 @@ export async function fetchAddressUTXOs(address, network, client) {
   };
   try {
     unsortedUTXOs = await fetchAddressUTXOsUnsorted(address, network, client);
-  } catch (e: any) {
+  } catch (e) {
     if (client.type === "private" && isWalletAddressNotFoundError(e)) {
       updates = {
         utxos: [],
@@ -85,7 +90,10 @@ export async function fetchAddressUTXOs(address, network, client) {
         fetchUTXOsError: "",
       };
     } else {
-      updates = { fetchUTXOsError: e.toString() };
+      updates = {
+        ...updates,
+        fetchUTXOsError: e instanceof Error ? e.toString() : "Unknown error",
+      };
     }
   }
 
