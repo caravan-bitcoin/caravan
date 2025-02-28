@@ -120,10 +120,26 @@ export async function fetchAddressUTXOs(
   };
 }
 
-export function getAddressStatus(address, network, client) {
+/**
+ * Get status information for a Bitcoin address
+ * @param {string} address - Bitcoin address to check
+ * @param {Network} network - Bitcoin network (mainnet, testnet, etc)
+ * @param {ClientConfig} client - Client configuration
+ * @returns Promise resolving to address status
+ */
+export function getAddressStatus(
+  address: string,
+  network: Network,
+  client: ClientConfig,
+) {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerGetAddressStatus(address, network);
   }
+
+  if (!isBitcoindClient(client)) {
+    throw new Error("Invalid bitcoind client configuration");
+  }
+
   return bitcoindGetAddressStatus({
     ...bitcoindParams(client),
     ...{ address },
