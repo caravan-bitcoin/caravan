@@ -65,15 +65,26 @@ export async function blockExplorerGetAddresesUTXOs(
   }
 }
 
-export async function blockExplorerGetAddressStatus(address, network) {
+/**
+ * Check if an address has been used by querying a block explorer API
+ * @param {string} address - The address to check
+ * @param {string} network - The network to check on (mainnet|testnet)
+ * @returns {Promise<{used: boolean}>} Object with used status
+ */
+export async function blockExplorerGetAddressStatus(
+  address: string,
+  network: Network,
+): Promise<{ used: boolean }> {
   try {
     // FIXME: delay hack to prevent throttling
     await delay();
 
-    const addressesult = await axios.get(
+    const addressResult = await axios.get<BlockExplorerAddressResponse>(
       blockExplorerAPIURL(`/address/${address}`, network),
     );
-    const addressData = addressesult.data;
+
+    const addressData = addressResult.data;
+
     return {
       used:
         addressData.chain_stats.funded_txo_count > 0 ||
