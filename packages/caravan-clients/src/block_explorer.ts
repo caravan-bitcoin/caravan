@@ -1,24 +1,43 @@
 import axios from "axios";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins, blockExplorerAPIURL } from "@caravan/bitcoin";
+import {
+  satoshisToBitcoins,
+  blockExplorerAPIURL,
+  Network,
+} from "@caravan/bitcoin";
+import {
+  BlockExplorerUTXOResponse,
+  BlockExplorerAddressResponse,
+  FormattedUTXO,
+} from "./types";
 
 // FIXME: hack
-const delay = () => {
+/**
+ * Delay helper function to prevent API throttling
+ * @returns {Promise<void>} A promise that resolves after a delay
+ * @private
+ */
+const delay = (): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
 
 /**
  * Fetch information for signing transactions from block explorer API
  * @param {string} address - The address from which to obtain the information
- * @param {string} network - The network for the transaction to sign (mainnet|testnet)
- * @returns {multisig.UTXO} object for signing transaction inputs
+ * @param {Network} network - The network for the transaction to sign (mainnet|testnet)
+ * @returns {Promise<FormattedUTXO[]>}} object for signing transaction inputs
  */
-export async function blockExplorerGetAddresesUTXOs(address, network) {
+export async function blockExplorerGetAddresesUTXOs(
+  address: string,
+  network: Network,
+): Promise<FormattedUTXO[]> {
   try {
-    const utxosResult = await axios.get(
+    const utxosResult = await axios.get<BlockExplorerUTXOResponse[]>(
       blockExplorerAPIURL(`/address/${address}/utxo`, network),
     );
+
     const utxos = utxosResult.data;
+
     return await Promise.all(
       utxos.map(async (utxo) => {
         // FIXME: inefficient, need to cache here by utxo.txid
