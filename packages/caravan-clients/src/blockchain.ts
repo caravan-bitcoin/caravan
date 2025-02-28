@@ -146,10 +146,24 @@ export function getAddressStatus(
   });
 }
 
-export function fetchFeeEstimate(network, client) {
+/**
+ * Get fee estimate for transaction
+ * @param {Network} network - Bitcoin network (mainnet, testnet, etc)
+ * @param {ClientConfig} client - Client configuration
+ * @returns {Promise<number>} Promise resolving to fee estimate in satoshis/vbyte
+ */
+export function fetchFeeEstimate(
+  network: Network,
+  client: ClientConfig,
+): Promise<number> {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerGetFeeEstimate(network);
   }
+
+  if (!isBitcoindClient(client)) {
+    throw new Error("Invalid bitcoind client configuration");
+  }
+
   return bitcoindEstimateSmartFee({
     ...bitcoindParams(client),
     ...{ numBlocks: 1 },
