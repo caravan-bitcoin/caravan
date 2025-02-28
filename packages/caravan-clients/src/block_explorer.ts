@@ -1,173 +1,94 @@
 import axios from "axios";
 import BigNumber from "bignumber.js";
-import {
-  satoshisToBitcoins,
-  blockExplorerAPIURL,
-  Network,
-} from "@caravan/bitcoin";
-import {
-  BlockExplorerUTXOResponse,
-  BlockExplorerAddressResponse,
-  FormattedUTXO,
-} from "./types";
+import { satoshisToBitcoins, blockExplorerAPIURL } from "@caravan/bitcoin";
 
-/**
- * Configuration for rate limiting API requests
- */
-const RATE_LIMIT_CONFIG = {
-  /**
-   * Delay in milliseconds between API requests to prevent rate limiting
-   * This is a reasonable default based on common API rate limits
-   * Can be adjusted based on specific API requirements
-   */
-  REQUEST_DELAY: 500,
-} as const;
-
-/**
- * Interface for address status response
- */
-interface AddressStatusResponse {
-  used: boolean;
-}
-
-/**
- * Creates a delay between API requests to prevent rate limiting
- * Uses a more predictable setTimeout with Promise approach
- * @returns Promise that resolves after the configured delay
- */
-const throttleRequest = () =>
-  new Promise<void>((resolve) =>
-    setTimeout(resolve, RATE_LIMIT_CONFIG.REQUEST_DELAY),
-  );
+// FIXME: hack
+const delay = () => {
+  return new Promise((resolve) => setTimeout(resolve, 500));
+};
 
 /**
  * Fetch information for signing transactions from block explorer API
  * @param {string} address - The address from which to obtain the information
- * @param {Network} network - The network for the transaction to sign (mainnet|testnet)
+ * @param {string} network - The network for the transaction to sign (mainnet|testnet)
  * @returns {multisig.UTXO} object for signing transaction inputs
- * @throws Will throw if the API request fails or if data is invalid
  */
-export async function blockExplorerGetAddresesUTXOs(
-  address: string,
-  network: Network,
-): Promise<FormattedUTXO[]> {
+export async function blockExplorerGetAddresesUTXOs(address, network) {
   try {
-    // Fetch initial UTXO data
-    const utxosResult = await axios.get<BlockExplorerUTXOResponse[]>(
-      blockExplorerAPIURL(`/address/${address}/utxo`, network),
+    const utxosResult = await axios.get(
+      blockExplorerAPIURL(`/address/${address}/utxo`, network)
     );
     const utxos = utxosResult.data;
-
-    // Process each UTXO with proper throttling
     return await Promise.all(
       utxos.map(async (utxo) => {
-        // Add delay to prevent rate limiting
-        await throttleRequest();
+        // FIXME: inefficient, need to cache here by utxo.txid
+        // FIXME: delay hack to prevent throttling
+        await delay();
 
-        // Fetch transaction details
-        const transactionResult = await axios.get<string>(
-          blockExplorerAPIURL(`/tx/${utxo.txid}/hex`, network),
+        const transactionResult = await axios.get(
+          blockExplorerAPIURL(`/tx/${utxo.txid}/hex`, network)
         );
-
+        const transactionHex = transactionResult.data;
         const amount = new BigNumber(utxo.value);
-
         return {
           confirmed: utxo.status.confirmed,
           txid: utxo.txid,
           index: utxo.vout,
-          amount: satoshisToBitcoins(amount.toString()),
+          amount: satoshisToBitcoins(amount),
           amountSats: amount,
-          transactionHex: transactionResult.data,
+          transactionHex,
           time: utxo.status.block_time,
         };
-      }),
+      })
     );
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw error.response?.data || error;
-    }
-    throw error;
+  } catch (e) {
+    throw (e.response && e.response.data) || e;
   }
 }
 
-/**
- * Checks if a given address has been used (received any transactions)
- * @param address - The Bitcoin address to check
- * @param network - The Bitcoin network to use (mainnet|testnet)
- * @returns Promise resolving to an object containing the address usage status
- * @throws Will throw if the API request fails
- */
-export async function blockExplorerGetAddressStatus(
-  address: string,
-  network: Network,
-): Promise<AddressStatusResponse> {
+export async function blockExplorerGetAddressStatus(address, network) {
   try {
-    await throttleRequest();
+    // FIXME: delay hack to prevent throttling
+    await delay();
 
-    const addressResult = await axios.get<BlockExplorerAddressResponse>(
-      blockExplorerAPIURL(`/address/${address}`, network),
+    const addressesult = await axios.get(
+      blockExplorerAPIURL(`/address/${address}`, network)
     );
-    const addressData = addressResult.data;
-
+    const addressData = addressesult.data;
     return {
       used:
         addressData.chain_stats.funded_txo_count > 0 ||
         addressData.mempool_stats.funded_txo_count > 0,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw error.response?.data || error;
-    }
-    throw error;
+  } catch (e) {
+    throw (e.response && e.response.data) || e;
   }
 }
 
-/**
- * Fetches the estimated fee rate for transactions
- * @param network - The Bitcoin network to use (mainnet|testnet)
- * @returns Promise resolving to the estimated fee rate in satoshis/vbyte
- * @throws Will throw if the API request fails
- */
-export async function blockExplorerGetFeeEstimate(
-  network: Network,
-): Promise<number> {
+export async function blockExplorerGetFeeEstimate(network) {
   try {
-    const feeEstimatesResult = await axios.get<Record<string, number>>(
-      blockExplorerAPIURL("/fee-estimates", network),
+    const feeEstimatesResult = await axios.get(
+      blockExplorerAPIURL("/fee-estimates", network)
     );
-
-    // We use the 2-block target fee estimate
-    return Math.ceil(feeEstimatesResult.data[2]);
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw error.response?.data || error;
-    }
-    throw error;
+    const feeEstimates = feeEstimatesResult.data;
+    return Math.ceil(feeEstimates[2]);
+  } catch (e) {
+    throw (e.response && e.response.data) || e;
   }
 }
 
-/**
- * Broadcasts a raw transaction to the Bitcoin network
- * @param transactionHex - The raw transaction in hexadecimal format
- * @param network - The Bitcoin network to use (mainnet|testnet)
- * @returns Promise resolving to the transaction ID if successful
- * @throws Will throw if the broadcast fails or if the transaction is invalid
- */
 export async function blockExplorerBroadcastTransaction(
-  transactionHex: string,
-  network: Network,
-): Promise<string> {
+  transactionHex,
+  network
+) {
   try {
-    const broadcastResult = await axios.post<string>(
+    const broadcastResult = await axios.post(
       blockExplorerAPIURL("/tx", network),
-      transactionHex,
+      transactionHex
     );
     return broadcastResult.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw error.response?.data || error;
-    }
-    throw error;
+  } catch (e) {
+    throw (e.response && e.response.data) || e;
   }
 }
 
