@@ -1,4 +1,4 @@
-import { sortInputs } from "@caravan/bitcoin";
+import { Network, sortInputs } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
   blockExplorerGetAddresesUTXOs,
@@ -14,13 +14,42 @@ import {
   isWalletAddressNotFoundError,
 } from "./bitcoind";
 
-export const BLOCK_EXPLORER = "public";
-export const BITCOIND = "private";
+import { BLOCK_EXPLORER, BITCOIND, ClientConfig, UTXOUpdates } from "./types";
 
-function fetchAddressUTXOsUnsorted(address, network, client) {
+/**
+ * Type guard to check if client has required bitcoind parameters
+ */
+function isBitcoindClient(
+  client: ClientConfig,
+): client is Required<Omit<ClientConfig, "walletName">> {
+  return (
+    client.type === BITCOIND &&
+    typeof client.url === "string" &&
+    typeof client.username === "string" &&
+    typeof client.password === "string"
+  );
+}
+
+/**
+ * Internal function to fetch unsorted UTXOs from either block explorer or bitcoind
+ * @param address - Bitcoin address to fetch UTXOs for
+ * @param network - Bitcoin network (mainnet, testnet, etc)
+ * @param client - Client configuration
+ * @returns Promise resolving to array of unsorted UTXOs
+ */
+function fetchAddressUTXOsUnsorted(
+  address: string,
+  network: Network,
+  client: ClientConfig,
+) {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerGetAddresesUTXOs(address, network);
   }
+
+  if (!isBitcoindClient(client)) {
+    throw new Error("Invalid bitcoind client configuration");
+  }
+
   return bitcoindListUnspent({
     ...bitcoindParams(client),
     ...{ address },
