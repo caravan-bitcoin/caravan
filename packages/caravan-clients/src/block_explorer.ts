@@ -68,7 +68,7 @@ export async function blockExplorerGetAddresesUTXOs(
 /**
  * Check if an address has been used by querying a block explorer API
  * @param {string} address - The address to check
- * @param {string} network - The network to check on (mainnet|testnet)
+ * @param {Network} network - The network to check on (mainnet|testnet)
  * @returns {Promise<{used: boolean}>} Object with used status
  */
 export async function blockExplorerGetAddressStatus(
@@ -97,7 +97,7 @@ export async function blockExplorerGetAddressStatus(
 
 /**
  * Fetch fee estimates from a block explorer API
- * @param {string} network - The network to get fee estimates for (mainnet|testnet)
+ * @param {Network} network - The network to get fee estimates for (mainnet|testnet)
  * @returns {Promise<number>} The estimated fee rate in satoshis per byte
  */
 export async function blockExplorerGetFeeEstimate(
@@ -117,10 +117,16 @@ export async function blockExplorerGetFeeEstimate(
   }
 }
 
+/**
+ * Broadcast a raw transaction to the network via a block explorer API
+ * @param {string} transactionHex - The hexadecimal string of the transaction to broadcast
+ * @param {Network} network - The network to broadcast to (mainnet|testnet)
+ * @returns {Promise<string>} The transaction ID of the broadcast transaction
+ */
 export async function blockExplorerBroadcastTransaction(
-  transactionHex,
-  network,
-) {
+  transactionHex: string,
+  network: Network,
+): Promise<string> {
   try {
     const broadcastResult = await axios.post(
       blockExplorerAPIURL("/tx", network),
