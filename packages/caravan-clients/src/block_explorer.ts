@@ -16,7 +16,7 @@ const delay = () => {
 export async function blockExplorerGetAddresesUTXOs(address, network) {
   try {
     const utxosResult = await axios.get(
-      blockExplorerAPIURL(`/address/${address}/utxo`, network)
+      blockExplorerAPIURL(`/address/${address}/utxo`, network),
     );
     const utxos = utxosResult.data;
     return await Promise.all(
@@ -26,7 +26,7 @@ export async function blockExplorerGetAddresesUTXOs(address, network) {
         await delay();
 
         const transactionResult = await axios.get(
-          blockExplorerAPIURL(`/tx/${utxo.txid}/hex`, network)
+          blockExplorerAPIURL(`/tx/${utxo.txid}/hex`, network),
         );
         const transactionHex = transactionResult.data;
         const amount = new BigNumber(utxo.value);
@@ -34,14 +34,14 @@ export async function blockExplorerGetAddresesUTXOs(address, network) {
           confirmed: utxo.status.confirmed,
           txid: utxo.txid,
           index: utxo.vout,
-          amount: satoshisToBitcoins(amount),
+          amount: satoshisToBitcoins(amount.toString()),
           amountSats: amount,
           transactionHex,
           time: utxo.status.block_time,
         };
-      })
+      }),
     );
-  } catch (e) {
+  } catch (e: any) {
     throw (e.response && e.response.data) || e;
   }
 }
@@ -52,7 +52,7 @@ export async function blockExplorerGetAddressStatus(address, network) {
     await delay();
 
     const addressesult = await axios.get(
-      blockExplorerAPIURL(`/address/${address}`, network)
+      blockExplorerAPIURL(`/address/${address}`, network),
     );
     const addressData = addressesult.data;
     return {
@@ -60,7 +60,7 @@ export async function blockExplorerGetAddressStatus(address, network) {
         addressData.chain_stats.funded_txo_count > 0 ||
         addressData.mempool_stats.funded_txo_count > 0,
     };
-  } catch (e) {
+  } catch (e: any) {
     throw (e.response && e.response.data) || e;
   }
 }
@@ -68,26 +68,26 @@ export async function blockExplorerGetAddressStatus(address, network) {
 export async function blockExplorerGetFeeEstimate(network) {
   try {
     const feeEstimatesResult = await axios.get(
-      blockExplorerAPIURL("/fee-estimates", network)
+      blockExplorerAPIURL("/fee-estimates", network),
     );
     const feeEstimates = feeEstimatesResult.data;
     return Math.ceil(feeEstimates[2]);
-  } catch (e) {
+  } catch (e: any) {
     throw (e.response && e.response.data) || e;
   }
 }
 
 export async function blockExplorerBroadcastTransaction(
   transactionHex,
-  network
+  network,
 ) {
   try {
     const broadcastResult = await axios.post(
       blockExplorerAPIURL("/tx", network),
-      transactionHex
+      transactionHex,
     );
     return broadcastResult.data;
-  } catch (e) {
+  } catch (e: any) {
     throw (e.response && e.response.data) || e;
   }
 }
