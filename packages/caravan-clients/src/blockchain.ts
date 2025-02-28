@@ -170,10 +170,26 @@ export function fetchFeeEstimate(
   });
 }
 
-export function broadcastTransaction(transactionHex, network, client) {
+/**
+ * Broadcast a raw transaction to the Bitcoin network
+ * @param {string} transactionHex - Raw transaction in hexadecimal format
+ * @param {Network} network - Bitcoin network (mainnet, testnet, etc)
+ * @param {ClientConfig} client - Client configuration
+ * @returns {Promise<string>} Promise resolving to transaction ID if successful
+ */
+export function broadcastTransaction(
+  transactionHex: string,
+  network: Network,
+  client: ClientConfig,
+): Promise<string> {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerBroadcastTransaction(transactionHex, network);
   }
+
+  if (!isBitcoindClient(client)) {
+    throw new Error("Invalid bitcoind client configuration");
+  }
+
   return bitcoindSendRawTransaction({
     ...bitcoindParams(client),
     ...{ hex: transactionHex },
