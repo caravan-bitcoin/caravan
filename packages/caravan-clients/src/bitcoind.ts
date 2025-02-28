@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/*
+TODO: cleanup the no explicit any. added to quickly type error catches
+*/
 import axios, { AxiosBasicCredentials } from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";

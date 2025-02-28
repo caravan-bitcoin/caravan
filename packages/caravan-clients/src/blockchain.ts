@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/*
+TODO: cleanup the no explicit any. added to quickly type error catches
+*/
 import { Network, sortInputs } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
