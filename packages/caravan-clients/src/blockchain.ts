@@ -6,14 +6,13 @@ import {
   blockExplorerBroadcastTransaction,
   blockExplorerGetAddressStatus,
 } from "./block_explorer";
+import { bitcoindListUnspent, bitcoindGetAddressStatus } from "./wallet";
 import {
-  bitcoindListUnspent,
   bitcoindEstimateSmartFee,
   bitcoindSendRawTransaction,
   bitcoindParams,
-  bitcoindGetAddressStatus,
   isWalletAddressNotFoundError,
-} from "./wallet";
+} from "./bitcoind";
 
 export const BLOCK_EXPLORER = "public";
 export const BITCOIND = "private";
@@ -39,7 +38,7 @@ function fetchAddressUTXOsUnsorted(address, network, client) {
 export async function fetchAddressUTXOs(address, network, client) {
   let unsortedUTXOs;
 
-  let updates = {
+  let updates: any = {
     utxos: [],
     balanceSats: BigNumber(0),
     fetchedUTXOs: false,
@@ -47,7 +46,7 @@ export async function fetchAddressUTXOs(address, network, client) {
   };
   try {
     unsortedUTXOs = await fetchAddressUTXOsUnsorted(address, network, client);
-  } catch (e) {
+  } catch (e: any) {
     if (client.type === "private" && isWalletAddressNotFoundError(e)) {
       updates = {
         utxos: [],
@@ -72,7 +71,7 @@ export async function fetchAddressUTXOs(address, network, client) {
     .map((utxo) => utxo.amountSats)
     .reduce(
       (accumulator, currentValue) => accumulator.plus(currentValue),
-      new BigNumber(0)
+      new BigNumber(0),
     );
 
   return {
