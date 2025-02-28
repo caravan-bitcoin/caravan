@@ -95,12 +95,22 @@ export async function blockExplorerGetAddressStatus(
   }
 }
 
-export async function blockExplorerGetFeeEstimate(network) {
+/**
+ * Fetch fee estimates from a block explorer API
+ * @param {string} network - The network to get fee estimates for (mainnet|testnet)
+ * @returns {Promise<number>} The estimated fee rate in satoshis per byte
+ */
+export async function blockExplorerGetFeeEstimate(
+  network: Network,
+): Promise<number> {
   try {
-    const feeEstimatesResult = await axios.get(
+    const feeEstimatesResult = await axios.get<Record<Network, number>>(
       blockExplorerAPIURL("/fee-estimates", network),
     );
+
     const feeEstimates = feeEstimatesResult.data;
+
+    // Return fee estimate for 2 blocks confirmation
     return Math.ceil(feeEstimates[2]);
   } catch (e: any) {
     throw (e.response && e.response.data) || e;
