@@ -1,4 +1,5 @@
-FROM node:20-buster-slim AS base
+# Caravan coordinator app do
+FROM --platform=$BUILDPLATFORM node:20-buster-slim AS base
 
 # Install all OS dependencies
 FROM base AS builder
