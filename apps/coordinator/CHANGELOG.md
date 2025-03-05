@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.3
+
+### Patch Changes
+
+- [#185](https://github.com/caravan-bitcoin/caravan/pull/185) [`a20a0dc`](https://github.com/caravan-bitcoin/caravan/commit/a20a0dc5d1f0b4cd7edbeb27842a6e9fb4a178bf) Thanks [@robertshuford](https://github.com/robertshuford)! - Add better multi-platform support for coordinator Dockerfile
+
+- Updated dependencies [[`c220696`](https://github.com/caravan-bitcoin/caravan/commit/c220696fa16c9663995835a96a5a56c88977cc8e)]:
+  - @caravan/clients@0.3.0
+
 ## 1.5.2
 
 ### Patch Changes
