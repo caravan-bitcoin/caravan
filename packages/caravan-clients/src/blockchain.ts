@@ -9,7 +9,7 @@ import {
   blockExplorerGetFeeEstimate,
   blockExplorerBroadcastTransaction,
   blockExplorerGetAddressStatus,
-} from "./block_explorer";
+} from "./blockExplorer";
 import { bitcoindListUnspent, bitcoindGetAddressStatus } from "./wallet";
 import {
   bitcoindEstimateSmartFee,
