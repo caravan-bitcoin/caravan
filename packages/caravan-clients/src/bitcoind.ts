@@ -14,6 +14,7 @@ import {
   RPCRequest,
   BitcoindParams,
   UnspentOutput,
+  BaseBitcoindArgs,
 } from "./types";
 
 /**
@@ -115,9 +116,7 @@ export async function bitcoindListUnspent({
   auth,
   address,
   addresses,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   address?: string;
   addresses?: string[];
 }): Promise<UnspentOutput[]> {
@@ -174,9 +173,7 @@ export async function bitcoindGetAddressStatus({
   url,
   auth,
   address,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   address: string;
 }): Promise<{ used: boolean } | Error> {
   try {
@@ -213,9 +210,7 @@ export async function bitcoindEstimateSmartFee({
   url,
   auth,
   numBlocks = 2, // Default to targeting inclusion within 2 blocks
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   numBlocks?: number;
 }): Promise<number> {
   const resp = await callBitcoind<{ feerate: number }>(
@@ -241,9 +236,7 @@ export async function bitcoindSendRawTransaction({
   url,
   auth,
   hex,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   hex: string;
 }): Promise<string> {
   try {
@@ -275,9 +268,7 @@ export function bitcoindImportMulti({
   addresses,
   label,
   rescan,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   addresses: string[];
   label?: string;
   rescan: boolean;

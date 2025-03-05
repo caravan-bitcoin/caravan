@@ -1,4 +1,5 @@
 import BigNumber from "bignumber.js";
+import { AxiosBasicCredentials } from "axios";
 
 export interface UTXO {
   txid: string;
@@ -178,6 +179,11 @@ export interface RPCResponse<T = unknown> {
     message: string;
   };
   id: number;
+}
+
+export interface BaseBitcoindArgs {
+  url: string;
+  auth: AxiosBasicCredentials;
 }
 
 export interface BitcoindParams {
