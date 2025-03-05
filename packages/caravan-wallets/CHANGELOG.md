@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- [#183](https://github.com/caravan-bitcoin/caravan/pull/183) [`4402ea1`](https://github.com/caravan-bitcoin/caravan/commit/4402ea13c9b2328c21f35f4164c4f207b20e7d1e) Thanks [@bucko13](https://github.com/bucko13)! - bump trezor connect dependency
+
+## 0.5.0
+
+### Minor Changes
+
+- [#163](https://github.com/caravan-bitcoin/caravan/pull/163) [`205ced7`](https://github.com/caravan-bitcoin/caravan/commit/205ced73dc1dfa1d10f28e18371dbb70d4dcdf5d) Thanks [@kimlwh](https://github.com/kimlwh)! - bump @trezor/connect-web from 9.1.12 to 9.4.7
+
 ## 0.4.5
 
 ### Patch Changes
