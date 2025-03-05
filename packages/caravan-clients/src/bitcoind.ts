@@ -312,11 +312,13 @@ export function bitcoindImportMulti({
  * @param txid - Transaction ID to look up
  * @returns Detailed transaction data
  */
-export async function bitcoindRawTxData(
-  url: string,
-  auth: AxiosBasicCredentials,
-  txid: string,
-): Promise<any> {
+export async function bitcoindRawTxData({
+  url,
+  auth,
+  txid,
+}: BaseBitcoindArgs & {
+  txid: string;
+}): Promise<any> {
   // TODO: Add proper type for transaction data
   try {
     const response = await callBitcoind(url, auth, "getrawtransaction", [

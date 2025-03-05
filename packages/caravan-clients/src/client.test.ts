@@ -1262,11 +1262,11 @@ describe("BlockchainClient", () => {
 
           const result = await client.getTransaction(mockTxid);
 
-          expect(mockBitcoindRawTxData).toHaveBeenCalledWith(
-            client.bitcoindParams.url,
-            client.bitcoindParams.auth,
-            mockTxid,
-          );
+          expect(mockBitcoindRawTxData).toHaveBeenCalledWith({
+            url: client.bitcoindParams.url,
+            auth: client.bitcoindParams.auth,
+            txid: mockTxid,
+          });
           expect(result).toEqual(expectedTransactionDetails);
         });
       });

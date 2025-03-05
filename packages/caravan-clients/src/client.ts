@@ -227,11 +227,11 @@ export class BlockchainClient extends ClientBase {
         const txs: Transaction[] = [];
         for (const tx of data.result) {
           if (tx.address === address) {
-            const rawTxData = await bitcoindRawTxData(
-              this.bitcoindParams.url,
-              this.bitcoindParams.auth,
-              tx.txid,
-            );
+            const rawTxData = await bitcoindRawTxData({
+              url: this.bitcoindParams.url,
+              auth: this.bitcoindParams.auth,
+              txid: tx.txid,
+            });
             const transaction: Transaction = {
               txid: tx.txid,
               vin: [],
@@ -512,11 +512,11 @@ export class BlockchainClient extends ClientBase {
       let txData: RawTransactionData;
 
       if (this.type === ClientType.PRIVATE) {
-        const response = await bitcoindRawTxData(
-          this.bitcoindParams.url,
-          this.bitcoindParams.auth,
+        const response = await bitcoindRawTxData({
+          url: this.bitcoindParams.url,
+          auth: this.bitcoindParams.auth,
           txid,
-        );
+        });
         txData = response.result;
       } else if (
         this.type === ClientType.BLOCKSTREAM ||
