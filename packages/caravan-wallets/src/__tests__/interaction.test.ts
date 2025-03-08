@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import {
   UNSUPPORTED,
@@ -13,7 +11,9 @@ import {
   DirectKeystoreInteraction,
   UnsupportedInteraction,
   IndirectKeystoreInteraction,
-} from "./interaction";
+} from "../interaction";
+
+import { describe, it, expect } from "vitest";
 
 describe("KeystoreInteraction", () => {
   class TestKeystoreInteraction extends KeystoreInteraction {
