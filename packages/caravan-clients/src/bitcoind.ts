@@ -1,15 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/*
+TODO: cleanup the no explicit any. added to quickly type error catches
+*/
 import axios, { AxiosBasicCredentials } from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import {
-  RPCRequest,
   RPCResponse,
-  BitcoindParams,
-  UnspentOutput,
-  ImportDescriptor,
-  ImportMultiResponse,
   ListUnspentResponse,
   TransactionResponse,
+  ImportMultiResponse,
+  ImportDescriptor,
+  RPCRequest,
+  BitcoindParams,
+  UnspentOutput,
+  BaseBitcoindArgs,
 } from "./types";
 
 /**
@@ -30,11 +35,13 @@ export async function callBitcoind<T>(
   method: string,
   params: unknown[] = [],
 ): Promise<RPCResponse<T>> {
+  if (!params) params = [];
+
   // Build our RPC request object
   const rpcRequest: RPCRequest = {
     jsonrpc: "2.0",
     id: 0, // We use a static ID since we're not batching requests
-    method,
+    method: `${method}`,
     params,
   };
 
@@ -51,31 +58,26 @@ export async function callBitcoind<T>(
 
     return response.data;
   } catch (error) {
-    // Properly type our error before throwing it
     if (error instanceof Error) {
       throw error;
     }
-    // If it's not an Error instance, wrap it in one
     throw new Error("Unknown error occurred during RPC call");
   }
 }
 
 /**
- * Checks if an error from bitcoind indicates an address wasn't found in the wallet
- *
- * This is useful for client-side error handling, especially when dealing with
- * watch-only wallets or addresses that might not be imported.
- *
- * @param error - The error object to check
- * @returns true if the error indicates address not found in wallet
+ * check if error from bitcoind is address not found in wallet
+ * this allows client side interpretation of the error
+ * @param {Error} e - the error object to check
+ * @returns {boolean} true if the desired error
  */
-export function isWalletAddressNotFoundError(error: unknown): boolean {
-  if (error && typeof error === "object" && "response" in error) {
-    const response = error.response as { data?: { error?: { code: number } } };
-
-    return response?.data?.error?.code === -4; // Bitcoin Core's code for address not found
-  }
-  return false;
+export function isWalletAddressNotFoundError(e) {
+  return (
+    e.response &&
+    e.response.data &&
+    e.response.data.error &&
+    e.response.data.error.code === -4
+  );
 }
 
 /**
@@ -102,12 +104,7 @@ export function bitcoindParams(client: {
 }
 
 /**
- * Fetches unspent outputs (UTXOs) for an address or set of addresses
- *
- * This is crucial for building transactions - it tells us what coins we can spend.
- * It handles both confirmed and unconfirmed UTXOs, and includes all the data
- * needed to create a transaction.
- *
+ * Fetch unspent outputs for a single or set of addresses
  * @param {Object} options - what is needed to communicate with the RPC
  * @param {string} options.url - where to connect
  * @param {AxiosBasicCredentials} options.auth - username and password
@@ -119,9 +116,7 @@ export async function bitcoindListUnspent({
   auth,
   address,
   addresses,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   address?: string;
   addresses?: string[];
 }): Promise<UnspentOutput[]> {
@@ -137,14 +132,13 @@ export async function bitcoindListUnspent({
     );
 
     // Now We'll get transaction details for each UTXO
-    const txPromises = resp.result.map((utxo) =>
+    const promises = resp.result.map((utxo) =>
       callBitcoind<TransactionResponse>(url, auth, "gettransaction", [
         utxo.txid,
       ]),
     );
 
-    const previousTransactions = await Promise.all(txPromises);
-
+    const previousTransactions = await Promise.all(promises);
     return resp.result.map((utxo, mapindex) => {
       const amount = new BigNumber(utxo.amount);
       return {
@@ -157,12 +151,13 @@ export async function bitcoindListUnspent({
         time: previousTransactions[mapindex].result.blocktime,
       };
     });
-  } catch (error) {
+  } catch (e) {
+    // eslint-disable-next-line no-console
     console.error(
-      "Problem fetching UTXOs:",
-      error instanceof Error ? error.message : "Unknown error",
+      "There was a problem:",
+      e instanceof Error ? e.message : "Unknown Error",
     );
-    throw error;
+    throw e;
   }
 }
 
@@ -178,9 +173,7 @@ export async function bitcoindGetAddressStatus({
   url,
   auth,
   address,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   address: string;
 }): Promise<{ used: boolean } | Error> {
   try {
@@ -193,16 +186,14 @@ export async function bitcoindGetAddressStatus({
     return {
       used: resp.result > 0,
     };
-  } catch (error) {
-    // Handle different error cases appropriately
-    if (isWalletAddressNotFoundError(error)) {
+  } catch (e) {
+    if (isWalletAddressNotFoundError(e))
+      // eslint-disable-next-line no-console
       console.warn(
         `Address ${address} not found in bitcoind's wallet. Query failed.`,
       );
-    } else if (error instanceof Error) {
-      console.error(error.message);
-    }
-    return error instanceof Error ? error : new Error("Unknown error");
+    else console.error(e instanceof Error ? e.message : "Unknown Error"); // eslint-disable-line no-console
+    return e instanceof Error ? e : new Error("Unknown error");
   }
 }
 
@@ -219,9 +210,7 @@ export async function bitcoindEstimateSmartFee({
   url,
   auth,
   numBlocks = 2, // Default to targeting inclusion within 2 blocks
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   numBlocks?: number;
 }): Promise<number> {
   const resp = await callBitcoind<{ feerate: number }>(
@@ -230,7 +219,8 @@ export async function bitcoindEstimateSmartFee({
     "estimatesmartfee",
     [numBlocks],
   );
-  return Math.ceil(resp.result.feerate * 100000); // Convert to sats/byte and round up
+  const feeRate = resp.result.feerate;
+  return Math.ceil(feeRate * 100000);
 }
 
 /**
@@ -246,9 +236,7 @@ export async function bitcoindSendRawTransaction({
   url,
   auth,
   hex,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   hex: string;
 }): Promise<string> {
   try {
@@ -256,15 +244,10 @@ export async function bitcoindSendRawTransaction({
       hex,
     ]);
     return resp.result;
-  } catch (error) {
-    console.log("Error broadcasting transaction:", error);
-    if (error && typeof error === "object" && "response" in error) {
-      const response = error.response as {
-        data?: { error?: { message: string } };
-      };
-      throw response?.data?.error?.message || error;
-    }
-    throw error;
+  } catch (e: any) {
+    // eslint-disable-next-line no-console
+    console.log("send tx error", e);
+    throw (e.response && e.response.data.error.message) || e;
   }
 }
 
@@ -279,29 +262,27 @@ export async function bitcoindSendRawTransaction({
  * @param options.rescan - Whether to rescan the blockchain for these addresses
  * @returns Promise resolving to import results
  */
-export async function bitcoindImportMulti({
+export function bitcoindImportMulti({
   url,
   auth,
   addresses,
   label,
   rescan,
-}: {
-  url: string;
-  auth: AxiosBasicCredentials;
+}: BaseBitcoindArgs & {
   addresses: string[];
   label?: string;
   rescan: boolean;
 }): Promise<RPCResponse<ImportMultiResponse[]>> {
-  const imports: ImportDescriptor[] = addresses.map((address) => ({
-    scriptPubKey: {
-      address,
-    },
-    label,
-    timestamp: 0, // TODO: Consider making this configurable for better history management
-  }));
-
-  const params = [imports, { rescan }];
-
+  const imports: ImportDescriptor[] = addresses.map((address) => {
+    return {
+      scriptPubKey: {
+        address,
+      },
+      label,
+      timestamp: 0, // TODO: better option to ensure address history is picked up?
+    };
+  });
+  const params = [url, auth, "importmulti", [imports, { rescan }]];
   if (rescan) {
     // Fire and forget for rescan operations
     void callBitcoind<ImportMultiResponse[]>(
@@ -319,7 +300,6 @@ export async function bitcoindImportMulti({
       id: 0,
     });
   }
-
   // For non-rescan operations, wait for the result
   return callBitcoind<ImportMultiResponse[]>(url, auth, "importmulti", params);
 }
@@ -332,21 +312,23 @@ export async function bitcoindImportMulti({
  * @param txid - Transaction ID to look up
  * @returns Detailed transaction data
  */
-export async function bitcoindRawTxData(
-  url: string,
-  auth: AxiosBasicCredentials,
-  txid: string,
-): Promise<any> {
+export async function bitcoindRawTxData({
+  url,
+  auth,
+  txid,
+}: BaseBitcoindArgs & {
+  txid: string;
+}): Promise<any> {
   // TODO: Add proper type for transaction data
   try {
     const response = await callBitcoind(url, auth, "getrawtransaction", [
       txid,
       true,
     ]);
-    return response;
+    return response.result;
   } catch (error) {
     throw new Error(
-      `Failed to get raw transaction data: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to get raw transaction data :  ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
