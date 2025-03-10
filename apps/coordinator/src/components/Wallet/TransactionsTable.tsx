@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,8 @@ import {
   Box,
   Tooltip,
   Typography,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
@@ -95,6 +97,8 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   network,
   onClickTransaction,
 }) => {
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+
   // Handler for sorting
   const createSortHandler = (property: keyof Transaction) => () => {
     onSort(property);
@@ -125,18 +129,25 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 
   // Rendering a single transaction row
   const renderTransactionRow = (tx: Transaction) => (
-    <TableRow
-      key={tx.txid}
-      hover
-      onClick={() => onClickTransaction?.(tx.txid)}
-      style={{ cursor: onClickTransaction ? "pointer" : "default" }}
-    >
+    <TableRow>
       <TableCell>
         <Tooltip title={tx.txid}>
           <Chip
             label={`${tx.txid.substring(0, 8)}...`}
             variant="outlined"
             size="small"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent row click from firing
+              navigator.clipboard
+                .writeText(tx.txid)
+                .then(() => {
+                  setSnackbarOpen(true);
+                })
+                .catch((err) => {
+                  console.error("Could not copy text: ", err);
+                });
+            }}
+            style={{ cursor: "pointer" }}
           />
         </Tooltip>
       </TableCell>
@@ -172,21 +183,36 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   );
 
   return (
-    <TableContainer component={Paper}>
-      <Table size="small">
-        {renderTableHeader()}
-        <TableBody>
-          {transactions.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={columns.length} align="center">
-                No transactions found
-              </TableCell>
-            </TableRow>
-          ) : (
-            transactions.map(renderTransactionRow)
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <>
+      <TableContainer component={Paper}>
+        <Table size="small">
+          {renderTableHeader()}
+          <TableBody>
+            {transactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} align="center">
+                  No transactions found
+                </TableCell>
+              </TableRow>
+            ) : (
+              transactions.map(renderTransactionRow)
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Transaction ID copied to clipboard
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
