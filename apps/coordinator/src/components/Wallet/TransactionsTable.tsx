@@ -27,7 +27,7 @@ interface TransactionTableProps {
   onClickTransaction?: (txid: string) => void;
 }
 
-// How are Transaction should look like
+// How our Transaction should look like
 interface Transaction {
   txid: string;
   status: {
