@@ -49,6 +49,7 @@ interface TransactionsTabProps {
   };
   client: {
     type: string;
+    blockchainClient?: BlockchainClient;
   };
 }
 
@@ -143,8 +144,34 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         );
         if (!confirmed) return;
       }
+      // Determine which block explorer to use based on the blockchain client type
+      let explorerUrl;
 
-      window.open(blockExplorerTransactionURL(txid, network), "_blank");
+      if (client.blockchainClient && client.blockchainClient.type) {
+        const clientType = client.blockchainClient.type;
+
+        switch (clientType) {
+          case "mempool":
+            // Use mempool.space explorer
+            explorerUrl = `https://${network === "mainnet" ? "" : "testnet."}mempool.space/tx/${txid}`;
+            break;
+
+          case "blockstream":
+            // Use blockstream.info explorer
+            explorerUrl = `https://blockstream.info/${network === "mainnet" ? "" : "testnet/"}tx/${txid}`;
+            break;
+
+          default:
+            // Fall back to the default explorer
+            explorerUrl = blockExplorerTransactionURL(txid, network);
+        }
+      } else {
+        // If no blockchain client specified, use default
+        explorerUrl = blockExplorerTransactionURL(txid, network);
+      }
+
+      window.open(explorerUrl, "_blank");
+      window.open(explorerUrl, "_blank");
     },
     [network, client],
   );
