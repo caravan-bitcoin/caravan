@@ -8,6 +8,7 @@ import {
   Network,
   networkData,
   P2SH,
+  P2WSH,
   signatureNoSighashType,
 } from "@caravan/bitcoin";
 import { Psbt, Transaction } from "bitcoinjs-lib-v6";
@@ -106,10 +107,11 @@ const psbtInputFormatter = (
 ) => {
   const tx = Transaction.fromHex(input.transactionHex);
   const inputData: any = { ...input };
+  const nonWitnessUtxo = tx.toBuffer();
   if (addressType === P2SH) {
-    const nonWitnessUtxo = tx.toBuffer();
     inputData.nonWitnessUtxo = nonWitnessUtxo;
   } else {
+    inputData.nonWitnessUtxo = nonWitnessUtxo;
     inputData.witnessUtxo = tx.outs[input.index];
   }
 
@@ -287,12 +289,6 @@ export function translatePSBT(
   psbt: string,
   signingKeyDetails,
 ) {
-  if (addressType !== P2SH) {
-    throw new Error(
-      "Unsupported addressType -- only P2SH is supported right now",
-    );
-  }
-
   const localPSBT = autoLoadPSBT(psbt, { network: networkData(network) });
 
   if (localPSBT === null) return null;
@@ -332,14 +328,20 @@ export function translatePSBT(
 function getUnchainedInputsFromPSBT(network, addressType, psbt) {
   return psbt.txInputs.map((input, index) => {
     const dataInput = psbt.data.inputs[index];
+    const spendingScript = dataInput.witnessScript || dataInput.redeemScript;
 
-    // FIXME - this is where we're currently only handling P2SH correctly
+    if (!dataInput?.nonWitnessUtxo && addressType === P2WSH) {
+      // https://blog.trezor.io/details-of-firmware-updates-for-trezor-one-version-1-9-1-and-trezor-model-t-version-2-3-1-1eba8f60f2dd
+      throw new Error(`Non-witness UTXO now required for P2WSH
+inputs to protect against large fee attack`);
+    }
+
     const fundingTxHex = dataInput.nonWitnessUtxo.toString("hex");
     const fundingTx = Transaction.fromHex(fundingTxHex);
     const multisig = generateMultisigFromHex(
       network,
       addressType,
-      dataInput.redeemScript.toString("hex"),
+      spendingScript.toString("hex"),
     );
 
     return {

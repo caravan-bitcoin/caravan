@@ -10,6 +10,7 @@ import {
   bitcoindSendRawTransaction,
   isWalletAddressNotFoundError,
   callBitcoind,
+  bitcoindRawTxData,
 } from "./bitcoind";
 import {
   bitcoindGetAddressStatus,
@@ -18,6 +19,15 @@ import {
   bitcoindWalletInfo,
 } from "./wallet";
 import BigNumber from "bignumber.js";
+import {
+  FeeRatePercentile,
+  Transaction,
+  UTXO,
+  TransactionDetails,
+  RawTransactionData,
+  ListTransactionsItem,
+  TransactionResponse,
+} from "./types";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -26,24 +36,56 @@ export class BlockchainClientError extends Error {
   }
 }
 
-export interface UTXO {
-  txid: string;
-  vout: number;
-  value: number;
-  status: {
-    confirmed: boolean;
-    block_time: number;
-  };
-}
-
 export enum ClientType {
   PRIVATE = "private",
   BLOCKSTREAM = "blockstream",
   MEMPOOL = "mempool",
 }
+
 const delay = () => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
+
+/**
+ * Normalizes transaction data from different sources (private node, blockstream, mempool)
+ * into a consistent format for use throughout the application.
+ *
+ * @param txData - Raw transaction data from various sources
+ * @param clientType - The type of client that provided the data (private, blockstream, mempool)
+ * @returns Normalized transaction details in a consistent format
+ */
+export function normalizeTransactionData(
+  txData: RawTransactionData,
+  clientType: ClientType,
+): TransactionDetails {
+  return {
+    txid: txData.txid,
+    version: txData.version,
+    locktime: txData.locktime,
+    vin: txData.vin.map((input: any) => ({
+      txid: input.txid,
+      vout: input.vout,
+      sequence: input.sequence,
+    })),
+    vout: txData.vout.map((output: any) => ({
+      value:
+        clientType === ClientType.PRIVATE
+          ? output.value
+          : satoshisToBitcoins(output.value),
+      scriptPubkey: output.scriptpubkey,
+      scriptPubkeyAddress: output.scriptpubkey_address,
+    })),
+    size: txData.size,
+    weight: txData.weight,
+    fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
+    status: {
+      confirmed: txData.status?.confirmed ?? txData.confirmations! > 0,
+      blockHeight: txData.status?.block_height ?? undefined,
+      blockHash: txData.status?.block_hash ?? txData.blockhash,
+      blockTime: txData.status?.block_time ?? txData.blocktime,
+    },
+  };
+}
 
 export class ClientBase {
   private readonly throttled: boolean;
@@ -168,6 +210,102 @@ export class BlockchainClient extends ClientBase {
     } catch (error: any) {
       throw new Error(
         `Failed to get UTXOs for address ${address}: ${error.message}`,
+      );
+    }
+  }
+
+  public async getAddressTransactions(address: string): Promise<Transaction[]> {
+    try {
+      if (this.type === ClientType.PRIVATE) {
+        const data = await callBitcoind<ListTransactionsItem[]>(
+          this.bitcoindParams.url,
+          this.bitcoindParams.auth,
+          "listtransactions",
+          [this.bitcoindParams.walletName],
+        );
+
+        const txs: Transaction[] = [];
+        for (const tx of data.result) {
+          if (tx.address === address) {
+            const rawTxData = await bitcoindRawTxData({
+              url: this.bitcoindParams.url,
+              auth: this.bitcoindParams.auth,
+              txid: tx.txid,
+            });
+            const transaction: Transaction = {
+              txid: tx.txid,
+              vin: [],
+              vout: [],
+              size: rawTxData.size,
+              weight: rawTxData.weight,
+              fee: tx.fee!,
+              isSend: tx.category === "send" ? true : false,
+              amount: tx.amount,
+              block_time: tx.blocktime,
+            };
+            for (const input of rawTxData.vin) {
+              transaction.vin.push({
+                prevTxId: input.txid,
+                vout: input.vout,
+                sequence: input.sequence,
+              });
+            }
+            for (const output of rawTxData.vout) {
+              transaction.vout.push({
+                scriptPubkeyHex: output.scriptPubKey.hex,
+                scriptPubkeyAddress: output.scriptPubKey.address,
+                value: output.value,
+              });
+            }
+            txs.push(transaction);
+          }
+        }
+        return txs;
+      }
+
+      // For Mempool and Blockstream
+      const data = await this.Get(`/address/${address}/txs`);
+      const txs: Transaction[] = [];
+      for (const tx of data.txs) {
+        const transaction: Transaction = {
+          txid: tx.txid,
+          vin: [],
+          vout: [],
+          size: tx.size,
+          weight: tx.weight,
+          fee: tx.fee,
+          isSend: false,
+          amount: 0,
+          block_time: tx.status.block_time,
+        };
+
+        for (const input of tx.vin) {
+          if (input.prevout.scriptpubkey_address === address) {
+            transaction.isSend = true;
+          }
+          transaction.vin.push({
+            prevTxId: input.txid,
+            vout: input.vout,
+            sequence: input.sequence,
+          });
+        }
+
+        let total_amount = 0;
+        for (const output of tx.vout) {
+          total_amount += output.value;
+          transaction.vout.push({
+            scriptPubkeyHex: output.scriptpubkey,
+            scriptPubkeyAddress: output.scriptpubkey_address,
+            value: output.value,
+          });
+        }
+        transaction.amount = total_amount;
+        txs.push(transaction);
+      }
+      return txs;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to get transactions for address ${address}: ${error.message}`,
       );
     }
   }
@@ -315,10 +453,48 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+  public async getBlockFeeRatePercentileHistory(): Promise<
+    FeeRatePercentile[]
+  > {
+    try {
+      if (
+        this.type === ClientType.PRIVATE ||
+        this.type === ClientType.BLOCKSTREAM
+      ) {
+        throw new Error(
+          "Not supported for private clients and blockstream. Currently only supported for mempool",
+        );
+      }
+
+      const data = await this.Get(`/v1/mining/blocks/fee-rates/all`);
+
+      const feeRatePercentileBlocks: FeeRatePercentile[] = [];
+      for (const block of data) {
+        const feeRatePercentile: FeeRatePercentile = {
+          avgHeight: block?.avgHeight,
+          timestamp: block?.timestamp,
+          avgFee_0: block?.avgFee_0,
+          avgFee_10: block?.avgFee_10,
+          avgFee_25: block?.avgFee_25,
+          avgFee_50: block?.avgFee_50,
+          avgFee_75: block?.avgFee_75,
+          avgFee_90: block?.avgFee_90,
+          avgFee_100: block?.avgFee_100,
+        };
+        feeRatePercentileBlocks.push(feeRatePercentile);
+      }
+      return feeRatePercentileBlocks;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to get feerate percentile block: ${error.message}`,
+      );
+    }
+  }
+
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind(
+        return await callBitcoind<TransactionResponse>(
           this.bitcoindParams.url,
           this.bitcoindParams.auth,
           "gettransaction",
@@ -326,6 +502,32 @@ export class BlockchainClient extends ClientBase {
         );
       }
       return await this.Get(`/tx/${txid}/hex`);
+    } catch (error: any) {
+      throw new Error(`Failed to get transaction: ${error.message}`);
+    }
+  }
+
+  public async getTransaction(txid: string): Promise<TransactionDetails> {
+    try {
+      let txData: RawTransactionData;
+
+      if (this.type === ClientType.PRIVATE) {
+        const response = await bitcoindRawTxData({
+          url: this.bitcoindParams.url,
+          auth: this.bitcoindParams.auth,
+          txid,
+        });
+        txData = response.result;
+      } else if (
+        this.type === ClientType.BLOCKSTREAM ||
+        this.type === ClientType.MEMPOOL
+      ) {
+        txData = await this.Get(`/tx/${txid}`);
+      } else {
+        throw new Error("Invalid client type");
+      }
+
+      return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
     }

@@ -1,5 +1,50 @@
 # @caravan/psbt
 
+## 1.8.0
+
+### Minor Changes
+
+- [#188](https://github.com/caravan-bitcoin/caravan/pull/188) [`941235e`](https://github.com/caravan-bitcoin/caravan/commit/941235e4c9cfff5e33dbb676a079a71d6a6eaee6) Thanks [@Shadouts](https://github.com/Shadouts)! - allowTxnVersion1 option added to PsbtV2 constructor.
+
+## 1.7.1
+
+### Patch Changes
+
+- [#174](https://github.com/caravan-bitcoin/caravan/pull/174) [`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375) Thanks [@bucko13](https://github.com/bucko13)! - fix dependencies for caravan-psbt on caravan-bitcoin
+
+## 1.7.0
+
+### Minor Changes
+
+- [#158](https://github.com/caravan-bitcoin/caravan/pull/158) [`2a2e674`](https://github.com/caravan-bitcoin/caravan/commit/2a2e6748694301cf83806b173cd2dbea365a3089) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2.toV0 method added
+
+## 1.6.0
+
+### Minor Changes
+
+- [#147](https://github.com/caravan-bitcoin/caravan/pull/147) [`0a73b09`](https://github.com/caravan-bitcoin/caravan/commit/0a73b094984fd59c7564eda0fa31eb8f05b96927) Thanks [@bucko13](https://github.com/bucko13)! - Adds support for translatePSBT for segwit PSBTs. This enables loading tx data directly from a psbt for ledger and trezor
+
+## 1.5.0
+
+### Minor Changes
+
+- [#114](https://github.com/caravan-bitcoin/caravan/pull/114) [`8d79fc6`](https://github.com/caravan-bitcoin/caravan/commit/8d79fc6cfbd63bee37f076c4396a94d30e412e6f) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Added methods to handle sequence numbers within PSBTs for better RBF (Replace-By-Fee) support:
+
+## 1.4.3
+
+### Patch Changes
+
+- [#124](https://github.com/caravan-bitcoin/caravan/pull/124) [`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d) Thanks [@chadchapnick](https://github.com/chadchapnick)! - SegWit PSBT fixes: include non witness utxo for inputs and witness script for outputs
+
+- Updated dependencies [[`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d)]:
+  - @caravan/bitcoin@0.3.1
+
+## 1.4.2
+
+### Patch Changes
+
+- [#120](https://github.com/caravan-bitcoin/caravan/pull/120) [`d8078d8`](https://github.com/caravan-bitcoin/caravan/commit/d8078d80cdbf7d2ebd131e6f9253572a6a133d34) Thanks [@chadchapnick](https://github.com/chadchapnick)! - Restore multisig support for indirect keystore interactions
+
 ## 1.4.1
 
 ### Patch Changes

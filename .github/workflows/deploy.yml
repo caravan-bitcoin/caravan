@@ -28,7 +28,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # the deploy action can't find the build directory if it's in the
       # sub directory of the monorepo, even if we reference it correctly
