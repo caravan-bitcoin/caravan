@@ -24,19 +24,26 @@ import { bufferize } from "../functions";
  * BIP-defined keytypes. Very few setters and modifier methods exist. As they
  * are added, they should enforce implied and documented rules and limitations.
  *
- * Defining BIPs:
- * https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+ * allowTxnVersion1: A Note
+ * A psbtv2 must have its transaction version GTE 2 to be bip370 compliant. If
+ * this class is instantiated with allowTxnVersion1 set to `true`, then a psbtv2
+ * which has had its txn version forceably set to 1 (for example with
+ * PsbtV2.dangerouslySetGlobalTxVersion1) can be instantiated. This has,
+ * possibly dangerous implications concerning how the locktime might be
+ * interpreted.
+ *
+ * Defining BIPs: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki
  */
 export class PsbtV2 extends PsbtV2Maps {
-  constructor(psbt?: Buffer | string) {
+  constructor(psbt?: Buffer | string, allowTxnVersion1 = false) {
     super(psbt);
 
     if (!psbt) {
       this.create();
     }
 
-    this.validate();
+    this.validate(allowTxnVersion1);
   }
 
   /**
@@ -747,14 +754,15 @@ export class PsbtV2 extends PsbtV2Maps {
    * constructed with a psbt, this method acts outside of the Creator role to
    * validate the current state of the psbt.
    */
-  private validate() {
+  private validate(allowTxnVersion1: boolean) {
     if (this.PSBT_GLOBAL_VERSION < 2) {
       throw Error("PsbtV2 has a version field set less than 2");
     }
-    if (this.PSBT_GLOBAL_TX_VERSION < 2) {
+    if (!allowTxnVersion1 && this.PSBT_GLOBAL_TX_VERSION < 2) {
       throw Error("PsbtV2 has a tx version field set less than 2");
+    } else if (allowTxnVersion1 && this.PSBT_GLOBAL_TX_VERSION < 2) {
+      console.warn("Dangerously setting PsbtV2.PSBT_GLOBAL_TX_VERSION to 1!");
     }
-
     for (const prevInTxid of this.PSBT_IN_PREVIOUS_TXID) {
       if (!prevInTxid) {
         throw Error("PsbtV2 input is missing PSBT_IN_PREVIOUS_TXID");
@@ -766,7 +774,7 @@ export class PsbtV2 extends PsbtV2Maps {
       }
     }
     for (const amount of this.PSBT_OUT_AMOUNT) {
-      if (!amount) {
+      if (amount === undefined || amount === null) {
         throw Error("PsbtV2 input is missing PSBT_OUT_AMOUNT");
       }
     }
