@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.3.0
+
+### Minor Changes
+
+- [#134](https://github.com/caravan-bitcoin/caravan/pull/134) [`c220696`](https://github.com/caravan-bitcoin/caravan/commit/c220696fa16c9663995835a96a5a56c88977cc8e) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add getTransaction method to BlockchainClient and migrate files (blockchain.js, block_explorer.ts,bitcoind.js) to TypeScript
+
 ## 0.2.0
 
 ### Minor Changes

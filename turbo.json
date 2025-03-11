@@ -10,7 +10,11 @@
         "build/**"
       ]
     },
-    "lint": {},
+    "lint": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "test": {
       "dependsOn": [
         "^build",

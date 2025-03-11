@@ -1,5 +1,23 @@
 # @caravan/psbt
 
+## 1.8.0
+
+### Minor Changes
+
+- [#188](https://github.com/caravan-bitcoin/caravan/pull/188) [`941235e`](https://github.com/caravan-bitcoin/caravan/commit/941235e4c9cfff5e33dbb676a079a71d6a6eaee6) Thanks [@Shadouts](https://github.com/Shadouts)! - allowTxnVersion1 option added to PsbtV2 constructor.
+
+## 1.7.1
+
+### Patch Changes
+
+- [#174](https://github.com/caravan-bitcoin/caravan/pull/174) [`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375) Thanks [@bucko13](https://github.com/bucko13)! - fix dependencies for caravan-psbt on caravan-bitcoin
+
+## 1.7.0
+
+### Minor Changes
+
+- [#158](https://github.com/caravan-bitcoin/caravan/pull/158) [`2a2e674`](https://github.com/caravan-bitcoin/caravan/commit/2a2e6748694301cf83806b173cd2dbea365a3089) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2.toV0 method added
+
 ## 1.6.0
 
 ### Minor Changes

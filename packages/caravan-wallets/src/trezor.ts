@@ -132,7 +132,8 @@ try {
   TrezorConnect.init({
     connectSrc: TREZOR_DEV
       ? TREZOR_CONNECT_URL
-      : "https://connect.trezor.io/9.1.9/", // pinning to this connect version to avoid backwards incompatible changes
+      : "https://connect.trezor.io/9.5.0/", // pinning to this connect version to avoid backwards incompatible changes
+    coreMode: "auto", // default value still required to enable WebUSB support
     lazyLoad: true, // this param prevents iframe injection until a TrezorConnect.method is called
     manifest: {
       email: "help@unchained.com",
