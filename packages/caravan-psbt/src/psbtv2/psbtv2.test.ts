@@ -866,6 +866,18 @@ describe("PsbtV2", () => {
     },
   );
 
+  test.each(BIP_174_VECTORS_VALID_PSBT)(
+    "Can instantiate from a serialized psbtv2 which has had its transaction version forceably set to 1. $case",
+    (vect) => {
+      const psbt = PsbtV2.FromV0(vect.base64, true);
+      const serialized = psbt.serialize();
+      expect(() => new PsbtV2(serialized, true)).not.toThrow();
+      if (psbt.PSBT_GLOBAL_TX_VERSION === 1) {
+        expect(() => new PsbtV2(serialized)).toThrow();
+      }
+    },
+  );
+
   it("Returns all PSBTv2 specific fields", () => {
     // Required fields are validated by the instance test. Here, just check
     // optionals.
