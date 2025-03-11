@@ -1,9 +1,10 @@
-import { validateAddress } from "../addresses";
+import { validateAddress, getAddressType } from "../addresses";
 import * as multisig from "../multisig";
 import { Network } from "../networks";
 
 const P2PKH = "P2PKH";
 const P2TR = "P2TR";
+const P2WSH = "P2WSH";
 
 const ADDRESSES = {};
 ADDRESSES[Network.MAINNET] = {};
@@ -102,6 +103,56 @@ describe("addresses", () => {
           });
         });
       });
+    });
+  });
+
+  describe("getAddressType", () => {
+    it("correctly identifies P2SH addresses", () => {
+      ADDRESSES[Network.MAINNET][P2PKH].forEach((address) => {
+        expect(getAddressType(address, Network.MAINNET)).toBe(P2PKH);
+      });
+      ADDRESSES[Network.TESTNET][P2PKH].forEach((address) => {
+        expect(getAddressType(address, Network.TESTNET)).toBe("P2PKH");
+      });
+      ADDRESSES[Network.REGTEST][P2PKH].forEach((address) => {
+        expect(getAddressType(address, Network.REGTEST)).toBe(P2PKH);
+      });
+    });
+
+    it("correctly identifies P2WSH addresses", () => {
+      ADDRESSES[Network.MAINNET][(multisig as any).P2WSH].forEach((address) => {
+        expect(getAddressType(address, Network.MAINNET)).toBe(P2WSH);
+      });
+      ADDRESSES[Network.TESTNET][(multisig as any).P2WSH].forEach((address) => {
+        expect(getAddressType(address, Network.TESTNET)).toBe(P2WSH);
+      });
+      ADDRESSES[Network.REGTEST][(multisig as any).P2WSH].forEach((address) => {
+        expect(getAddressType(address, Network.REGTEST)).toBe(P2WSH);
+      });
+    });
+
+    it("correctly identifies P2TR addresses", () => {
+      ADDRESSES[Network.MAINNET][P2TR].forEach((address) => {
+        expect(getAddressType(address, Network.MAINNET)).toBe(P2TR);
+      });
+      ADDRESSES[Network.TESTNET][P2TR].forEach((address) => {
+        expect(getAddressType(address, Network.TESTNET)).toBe(P2TR);
+      });
+      ADDRESSES[Network.REGTEST][P2TR].forEach((address) => {
+        expect(getAddressType(address, Network.REGTEST)).toBe(P2TR);
+      });
+    });
+
+    it("returns UNKNOWN for unrecognized addresses", () => {
+      expect(getAddressType("unknownaddress1", Network.MAINNET)).toBe(
+        "UNKNOWN",
+      );
+      expect(getAddressType("unknownaddress2", Network.TESTNET)).toBe(
+        "UNKNOWN",
+      );
+      expect(getAddressType("unknownaddress3", Network.REGTEST)).toBe(
+        "UNKNOWN",
+      );
     });
   });
 });

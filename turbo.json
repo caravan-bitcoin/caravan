@@ -10,7 +10,11 @@
         "build/**"
       ]
     },
-    "lint": {},
+    "lint": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "test": {
       "dependsOn": [
         "^build",
@@ -23,9 +27,14 @@
     "test:watch": {
       "dependsOn": [
         "^build"
-      ]
+      ],
+      "cache": false,
+      "persistent": true
     },
     "dev": {
+     "dependsOn": [
+        "^build"
+      ],
       "cache": false,
       "persistent": true
     },

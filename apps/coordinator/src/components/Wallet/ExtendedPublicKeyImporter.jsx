@@ -7,8 +7,9 @@ import {
   convertExtendedPublicKey,
   validateExtendedPublicKey,
   Network,
+  P2SH,
 } from "@caravan/bitcoin";
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -68,7 +69,7 @@ class ExtendedPublicKeyImporter extends React.Component {
   };
 
   renderImport = () => {
-    const { extendedPublicKeyImporter, number } = this.props;
+    const { extendedPublicKeyImporter, number, addressType } = this.props;
     const { disableChangeMethod } = this.state;
     return (
       <div>
@@ -82,6 +83,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             variant="standard"
             onChange={this.handleMethodChange}
           >
+            {addressType != P2SH && <MenuItem value={BITBOX}>BitBox</MenuItem>}
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={COLDCARD}>Coldcard</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
@@ -89,7 +91,9 @@ class ExtendedPublicKeyImporter extends React.Component {
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
-        <FormControl>{this.renderImportByMethod()}</FormControl>
+        <FormControl style={{ width: "100%" }}>
+          {this.renderImportByMethod()}
+        </FormControl>
       </div>
     );
   };
@@ -103,7 +107,7 @@ class ExtendedPublicKeyImporter extends React.Component {
     } = this.props;
     const { method } = extendedPublicKeyImporter;
 
-    if (method === TREZOR || method === LEDGER) {
+    if (method === BITBOX || method === TREZOR || method === LEDGER) {
       return (
         <DirectExtendedPublicKeyImporter
           extendedPublicKeyImporter={extendedPublicKeyImporter}

@@ -75,7 +75,11 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
     bip32Path: string;
   }) {
     super();
-    if ([Network.MAINNET, Network.TESTNET].find((net) => net === network)) {
+    if (
+      [Network.MAINNET, Network.TESTNET, Network.REGTEST].find(
+        (net) => net === network
+      )
+    ) {
       this.network = network;
     } else {
       throw new Error("Unknown network.");
@@ -431,7 +435,6 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
           inputs: inputs.map(convertLegacyInput),
           outputs: outputs.map(convertLegacyOutput),
         });
-        console.log("HELLLO??", this.psbt);
       } catch (e) {
         console.error("Error building PSBT", e);
         throw new Error(

@@ -67,6 +67,13 @@ export enum KeyType {
 }
 
 /**
+ * Keys which are required on a PsbtV0 but which are not compatible with PsbtV2.
+ */
+export enum V0KeyTypes {
+  PSBT_GLOBAL_UNSIGNED_TX = "00",
+}
+
+/**
  * Provided to friendly-format the `PSBT_GLOBAL_TX_MODIFIABLE` bitmask from
  * `PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE` which returns
  * `PsbtGlobalTxModifiableBits[]`.
