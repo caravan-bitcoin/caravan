@@ -12,11 +12,7 @@ import {
 } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
 import { BlockchainClient } from "@caravan/clients";
-import {
-  blockExplorerTransactionURL,
-  Network,
-  bitcoinsToSatoshis,
-} from "@caravan/bitcoin";
+import { blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
 import { updateBlockchainClient } from "../../actions/clientActions";
 import { TransactionTable } from "./TransactionsTable";
 
@@ -35,7 +31,6 @@ interface Transaction {
   };
   size: number;
   fee: number;
-  value: number;
 }
 
 interface TransactionsTabProps {
@@ -94,17 +89,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         Array.from(txids).map(async (txid) => {
           try {
             const tx = await blockchainClient.getTransaction(txid);
-            // Calculate and add the transaction value
-            let value = 0;
-            if (tx.vout && Array.isArray(tx.vout)) {
-              value = tx.vout.reduce((sum, output) => {
-                return (
-                  sum +
-                  (output.value ? Number(bitcoinsToSatoshis(output.value)) : 0)
-                );
-              }, 0);
-            }
-            return { ...tx, value };
+            return tx;
           } catch (err) {
             console.error(`Error fetching tx ${txid}:`, err);
             return null;
@@ -191,9 +176,6 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
             break;
           case "fee":
             comparison = (a.fee || 0) - (b.fee || 0);
-            break;
-          case "value":
-            comparison = (a.value || 0) - (b.value || 0);
             break;
           default:
             return 0;
