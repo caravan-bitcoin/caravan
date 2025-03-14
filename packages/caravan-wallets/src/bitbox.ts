@@ -165,7 +165,7 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
   </head>
   <body>
     <h1 style="text-align:center;">BitBox02 pairing code</h1>
-    <div id="code" style="white-space:pre;font-family:monospace,monospace;text-align:center;font-size:large;">${pairingCode}</div>
+    <div id="code" style="white-space:pre;font-family:monospace,monospace;text-align:center;font-size:large;"></div>
   </body>
 </html>
 `;
@@ -177,6 +177,11 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
     if (popup) {
       popup.document.write(htmlContent);
       popup.document.close();
+      const codeElement = popup.document.getElementById('code');
+      if (codeElement) {
+        const textNode = popup.document.createTextNode(pairingCode);
+        codeElement.appendChild(textNode);
+      }
       return () => {
         popup.close();
       };
