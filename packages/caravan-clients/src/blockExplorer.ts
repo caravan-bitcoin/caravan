@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-TODO: cleanup the no explicit any. added to quickly type error catches
-*/
 import axios from "axios";
 import BigNumber from "bignumber.js";
 import {
@@ -64,8 +60,12 @@ export async function blockExplorerGetAddresesUTXOs(
         };
       }),
     );
-  } catch (e: any) {
-    throw (e.response && e.response.data) || e;
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response) {
+      throw e.response.data;
+    } else {
+      throw e;
+    }
   }
 }
 
@@ -94,8 +94,12 @@ export async function blockExplorerGetAddressStatus(
         addressData.chain_stats.funded_txo_count > 0 ||
         addressData.mempool_stats.funded_txo_count > 0,
     };
-  } catch (e: any) {
-    throw (e.response && e.response.data) || e;
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response) {
+      throw e.response.data;
+    } else {
+      throw e;
+    }
   }
 }
 
@@ -116,8 +120,12 @@ export async function blockExplorerGetFeeEstimate(
 
     // Return fee estimate for 2 blocks confirmation
     return Math.ceil(feeEstimates[2]);
-  } catch (e: any) {
-    throw (e.response && e.response.data) || e;
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response) {
+      throw e.response.data;
+    } else {
+      throw e;
+    }
   }
 }
 
@@ -137,8 +145,12 @@ export async function blockExplorerBroadcastTransaction(
       transactionHex,
     );
     return broadcastResult.data;
-  } catch (e: any) {
-    throw (e.response && e.response.data) || e;
+  } catch (e: unknown) {
+    if (axios.isAxiosError(e) && e.response) {
+      throw e.response.data;
+    } else {
+      throw e;
+    }
   }
 }
 

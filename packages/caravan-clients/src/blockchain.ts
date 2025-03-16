@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-TODO: cleanup the no explicit any. added to quickly type error catches
-*/
 import { Network, sortInputs } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
@@ -18,8 +14,10 @@ import {
   isWalletAddressNotFoundError,
 } from "./bitcoind";
 
-import { BLOCK_EXPLORER, BITCOIND, ClientConfig, UTXOUpdates } from "./types";
+import { ClientConfig, ClientType, UTXOUpdates } from "./types";
 
+const BITCOIND = ClientType.BITCOIND; // "private"
+const BLOCK_EXPLORER = ClientType.BLOCK_EXPLORER; // "public"
 /**
  * Type guard to check if client has required bitcoind parameters
  */
@@ -45,7 +43,7 @@ function fetchAddressUTXOsUnsorted(
   address: string,
   network: Network,
   client: ClientConfig,
-): Promise<any[]> {
+): Promise<unknown[]> {
   if (client.type === BLOCK_EXPLORER) {
     return blockExplorerGetAddresesUTXOs(address, network);
   }
@@ -73,7 +71,7 @@ export async function fetchAddressUTXOs(
   network: Network,
   client: ClientConfig,
 ): Promise<UTXOUpdates> {
-  let unsortedUTXOs: any[] | undefined;
+  let unsortedUTXOs: unknown[] | undefined;
 
   // Initialize updates object with default values
   let updates: UTXOUpdates = {

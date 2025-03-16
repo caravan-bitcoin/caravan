@@ -1,0 +1,17 @@
+// tsup.config.ts
+import { defineConfig } from "tsup";
+import { polyfillNode } from "esbuild-plugin-polyfill-node";
+var tsup_config_default = defineConfig({
+  esbuildPlugins: [
+    polyfillNode({
+      polyfills: {
+        fs: true,
+        crypto: true
+      }
+    })
+  ]
+});
+export {
+  tsup_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidHN1cC5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9faW5qZWN0ZWRfZmlsZW5hbWVfXyA9IFwiL2hvbWUvbWF6L2Rldi9zb2IvY2FyYXZhbi9wYWNrYWdlcy9jYXJhdmFuLXBzYnQvdHN1cC5jb25maWcudHNcIjtjb25zdCBfX2luamVjdGVkX2Rpcm5hbWVfXyA9IFwiL2hvbWUvbWF6L2Rldi9zb2IvY2FyYXZhbi9wYWNrYWdlcy9jYXJhdmFuLXBzYnRcIjtjb25zdCBfX2luamVjdGVkX2ltcG9ydF9tZXRhX3VybF9fID0gXCJmaWxlOi8vL2hvbWUvbWF6L2Rldi9zb2IvY2FyYXZhbi9wYWNrYWdlcy9jYXJhdmFuLXBzYnQvdHN1cC5jb25maWcudHNcIjtpbXBvcnQgeyBkZWZpbmVDb25maWcgfSBmcm9tIFwidHN1cFwiO1xuaW1wb3J0IHsgcG9seWZpbGxOb2RlIH0gZnJvbSBcImVzYnVpbGQtcGx1Z2luLXBvbHlmaWxsLW5vZGVcIjtcblxuZXhwb3J0IGRlZmF1bHQgZGVmaW5lQ29uZmlnKHtcbiAgZXNidWlsZFBsdWdpbnM6IFtcbiAgICBwb2x5ZmlsbE5vZGUoe1xuICAgICAgcG9seWZpbGxzOiB7XG4gICAgICAgIGZzOiB0cnVlLFxuICAgICAgICBjcnlwdG86IHRydWUsXG4gICAgICB9LFxuICAgIH0pLFxuICBdLFxufSk7XG4iXSwKICAibWFwcGluZ3MiOiAiO0FBQTJSLFNBQVMsb0JBQW9CO0FBQ3hULFNBQVMsb0JBQW9CO0FBRTdCLElBQU8sc0JBQVEsYUFBYTtBQUFBLEVBQzFCLGdCQUFnQjtBQUFBLElBQ2QsYUFBYTtBQUFBLE1BQ1gsV0FBVztBQUFBLFFBQ1QsSUFBSTtBQUFBLFFBQ0osUUFBUTtBQUFBLE1BQ1Y7QUFBQSxJQUNGLENBQUM7QUFBQSxFQUNIO0FBQ0YsQ0FBQzsiLAogICJuYW1lcyI6IFtdCn0K

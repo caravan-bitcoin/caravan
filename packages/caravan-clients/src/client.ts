@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-TODO: cleanup the no explicit any. added to quickly type error catches
-*/
 import axios, { Method } from "axios";
 import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
 import {
@@ -27,6 +23,8 @@ import {
   RawTransactionData,
   ListTransactionsItem,
   TransactionResponse,
+  BitcoindParams,
+  ClientType,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -34,12 +32,6 @@ export class BlockchainClientError extends Error {
     super(message);
     this.name = "BlockchainClientError";
   }
-}
-
-export enum ClientType {
-  PRIVATE = "private",
-  BLOCKSTREAM = "blockstream",
-  MEMPOOL = "mempool",
 }
 
 const delay = () => {
@@ -62,19 +54,28 @@ export function normalizeTransactionData(
     txid: txData.txid,
     version: txData.version,
     locktime: txData.locktime,
-    vin: txData.vin.map((input: any) => ({
-      txid: input.txid,
-      vout: input.vout,
-      sequence: input.sequence,
-    })),
-    vout: txData.vout.map((output: any) => ({
-      value:
-        clientType === ClientType.PRIVATE
-          ? output.value
-          : satoshisToBitcoins(output.value),
-      scriptPubkey: output.scriptpubkey,
-      scriptPubkeyAddress: output.scriptpubkey_address,
-    })),
+    vin: txData.vin.map(
+      (input: { txid: string; vout: number; sequence: number }) => ({
+        txid: input.txid,
+        vout: input.vout,
+        sequence: input.sequence,
+      }),
+    ),
+    vout: txData.vout.map(
+      (output: {
+        value: number;
+        scriptpubkey: string;
+        scriptpubkey_address?: string;
+      }) => ({
+        value: Number(
+          clientType === ClientType.PRIVATE
+            ? output.value
+            : satoshisToBitcoins(output.value),
+        ),
+        scriptPubkey: output.scriptpubkey,
+        scriptPubkeyAddress: output.scriptpubkey_address || "",
+      }),
+    ),
     size: txData.size,
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
@@ -88,7 +89,7 @@ export function normalizeTransactionData(
 }
 
 export class ClientBase {
-  private readonly throttled: boolean;
+  protected readonly throttled: boolean;
   public readonly host: string;
 
   constructor(throttled: boolean, host: string) {
@@ -102,7 +103,7 @@ export class ClientBase {
     }
   }
 
-  private async Request(method: Method, path: string, data?: any) {
+  private async Request(method: Method, path: string, data?: unknown) {
     await this.throttle();
     try {
       const response = await axios.request({
@@ -113,8 +114,12 @@ export class ClientBase {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       return response.data;
-    } catch (e: any) {
-      throw (e.response && e.response.data) || e;
+    } catch (e: unknown) {
+      if (axios.isAxiosError(e) && e.response) {
+        throw e.response.data;
+      } else {
+        throw e;
+      }
     }
   }
 
@@ -122,32 +127,9 @@ export class ClientBase {
     return this.Request("GET", path);
   }
 
-  public async Post(path: string, data?: any) {
+  public async Post(path: string, data?: unknown) {
     return this.Request("POST", path, data);
   }
-}
-
-export interface BitcoindClientConfig {
-  url: string;
-  username: string;
-  password: string;
-  walletName?: string;
-}
-
-export interface BitcoindParams {
-  url: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  walletName?: string;
-}
-
-export interface BlockchainClientParams {
-  type: ClientType;
-  network?: Network;
-  throttled?: boolean;
-  client?: BitcoindClientConfig;
 }
 
 export class BlockchainClient extends ClientBase {
@@ -165,8 +147,17 @@ export class BlockchainClient extends ClientBase {
       password: "",
       walletName: "",
     },
-  }: BlockchainClientParams) {
-    // regtest not supported by public explorers
+  }: {
+    type: ClientType;
+    network?: Network;
+    throttled?: boolean;
+    client?: {
+      url: string;
+      username: string;
+      password: string;
+      walletName: string;
+    };
+  }) {
     if (
       type !== ClientType.PRIVATE &&
       network !== Network.MAINNET &&
@@ -198,7 +189,7 @@ export class BlockchainClient extends ClientBase {
     this.bitcoindParams = bitcoindParams(client);
   }
 
-  public async getAddressUtxos(address: string): Promise<any> {
+  public async getAddressUtxos(address: string): Promise<unknown> {
     try {
       if (this.type === ClientType.PRIVATE) {
         return bitcoindListUnspent({
@@ -207,9 +198,9 @@ export class BlockchainClient extends ClientBase {
         });
       }
       return await this.Get(`/address/${address}/utxo`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(
-        `Failed to get UTXOs for address ${address}: ${error.message}`,
+        `Failed to get UTXOs for address ${address}: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
@@ -303,14 +294,14 @@ export class BlockchainClient extends ClientBase {
         txs.push(transaction);
       }
       return txs;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(
-        `Failed to get transactions for address ${address}: ${error.message}`,
+        `Failed to get transactions for address ${address}: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
 
-  public async broadcastTransaction(rawTx: string): Promise<any> {
+  public async broadcastTransaction(rawTx: string): Promise<unknown> {
     try {
       if (this.type === ClientType.PRIVATE) {
         return bitcoindSendRawTransaction({
@@ -319,12 +310,16 @@ export class BlockchainClient extends ClientBase {
         });
       }
       return await this.Post(`/tx`, rawTx);
-    } catch (error: any) {
-      throw new Error(`Failed to broadcast transaction: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to broadcast transaction: ${error.message}`);
+      } else {
+        throw new Error("Failed to broadcast transaction: Unknown error");
+      }
     }
   }
 
-  public async formatUtxo(utxo: UTXO): Promise<any> {
+  public async formatUtxo(utxo: UTXO): Promise<unknown> {
     const transactionHex = await this.getTransactionHex(utxo.txid);
     const amount = new BigNumber(utxo.value);
     return {
@@ -338,8 +333,8 @@ export class BlockchainClient extends ClientBase {
     };
   }
 
-  public async fetchAddressUtxos(address: string): Promise<any> {
-    let unsortedUTXOs;
+  public async fetchAddressUtxos(address: string): Promise<unknown> {
+    let unsortedUTXOs: unknown[] = [];
 
     let updates = {
       utxos: [],
@@ -360,7 +355,7 @@ export class BlockchainClient extends ClientBase {
           utxos.map(async (utxo) => await this.formatUtxo(utxo)),
         );
       }
-    } catch (error: Error | any) {
+    } catch (error: Error | unknown) {
       if (this.type === "private" && isWalletAddressNotFoundError(error)) {
         updates = {
           utxos: [],
@@ -370,7 +365,11 @@ export class BlockchainClient extends ClientBase {
           fetchUTXOsError: "",
         };
       } else {
-        updates = { ...updates, fetchUTXOsError: error.toString() };
+        updates = {
+          ...updates,
+          fetchUTXOsError:
+            error instanceof Error ? error.toString() : "Unknown error",
+        };
       }
     }
     // if no utxos then return updates object as is
@@ -401,7 +400,7 @@ export class BlockchainClient extends ClientBase {
     };
   }
 
-  public async getAddressStatus(address: string): Promise<any> {
+  public async getAddressStatus(address: string): Promise<unknown> {
     try {
       if (this.type === ClientType.PRIVATE) {
         return await bitcoindGetAddressStatus({
@@ -415,14 +414,14 @@ export class BlockchainClient extends ClientBase {
           addressData.chain_stats.funded_txo_count > 0 ||
           addressData.mempool_stats.funded_txo_count > 0,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(
-        `Failed to get status for address ${address}: ${error.message}`,
+        `Failed to get status for address ${address}: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
 
-  public async getFeeEstimate(blocks: number = 3): Promise<any> {
+  public async getFeeEstimate(blocks: number = 3): Promise<unknown> {
     let fees;
     try {
       switch (this.type) {
@@ -448,8 +447,12 @@ export class BlockchainClient extends ClientBase {
         default:
           throw new Error("Invalid client type");
       }
-    } catch (error: any) {
-      throw new Error(`Failed to get fee estimate: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get fee estimate: ${error.message}`);
+      } else {
+        throw new Error("Failed to get fee estimate: Unknown error");
+      }
     }
   }
 
@@ -484,14 +487,14 @@ export class BlockchainClient extends ClientBase {
         feeRatePercentileBlocks.push(feeRatePercentile);
       }
       return feeRatePercentileBlocks;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(
-        `Failed to get feerate percentile block: ${error.message}`,
+        `Failed to get feerate percentile block: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
 
-  public async getTransactionHex(txid: string): Promise<any> {
+  public async getTransactionHex(txid: string): Promise<unknown> {
     try {
       if (this.type === ClientType.PRIVATE) {
         return await callBitcoind<TransactionResponse>(
@@ -502,8 +505,10 @@ export class BlockchainClient extends ClientBase {
         );
       }
       return await this.Get(`/tx/${txid}/hex`);
-    } catch (error: any) {
-      throw new Error(`Failed to get transaction: ${error.message}`);
+    } catch (error: unknown) {
+      throw new Error(
+        `Failed to get transaction: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -528,8 +533,12 @@ export class BlockchainClient extends ClientBase {
       }
 
       return normalizeTransactionData(txData, this.type);
-    } catch (error: any) {
-      throw new Error(`Failed to get transaction: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get transaction: ${error.message}`);
+      } else {
+        throw new Error("Failed to get transaction: Unknown error");
+      }
     }
   }
 

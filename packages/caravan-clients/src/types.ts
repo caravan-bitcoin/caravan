@@ -288,11 +288,16 @@ export interface FormattedUTXO {
   time: number;
 }
 
-// Used in blockchain.ts
-export const BLOCK_EXPLORER = "public" as const;
-export const BITCOIND = "private" as const;
-
-export type ClientType = typeof BLOCK_EXPLORER | typeof BITCOIND;
+/**
+ * Client Type Enum
+ */
+export enum ClientType {
+  BLOCK_EXPLORER = "public",
+  BITCOIND = "private",
+  MEMPOOL = "mempool",
+  PRIVATE = "PRIVATE",
+  BLOCKSTREAM = "BLOCKSTREAM",
+}
 
 /**
  * Interface for client configuration
@@ -305,9 +310,6 @@ export interface ClientConfig {
   walletName?: string;
 }
 
-/**
- * Interface for UTXO updates response
- */
 export interface UTXOUpdates {
   utxos: UTXO[];
   balanceSats: BigNumber;
