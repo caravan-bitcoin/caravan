@@ -230,6 +230,11 @@ export interface ListUnspentResponse {
 }
 
 export interface TransactionResponse {
+  result: RawTransactionData;
+  vout: any;
+  vin: any;
+  weight: number;
+  size: number;
   amount: number;
   fee: number;
   confirmations: number;

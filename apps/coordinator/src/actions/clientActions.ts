@@ -86,7 +86,10 @@ export const setBlockchainClient = () => {
 
     const clientType = getClientType(client);
     const newClient = new BlockchainClient({
-      client,
+      client: {
+        ...client,
+        walletName: client.walletName ?? "", // Default to an empty string
+      },
       type: clientType,
       network,
       throttled: client.type === ClientType.BLOCKSTREAM,
