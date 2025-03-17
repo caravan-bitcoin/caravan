@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-TODO: cleanup the no explicit any. added to quickly type error catches
-*/
 import axios, { AxiosBasicCredentials } from "axios";
 import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
@@ -244,10 +240,15 @@ export async function bitcoindSendRawTransaction({
       hex,
     ]);
     return resp.result;
-  } catch (e: any) {
-    // eslint-disable-next-line no-console
+  } catch (e) {
     console.log("send tx error", e);
-    throw (e.response && e.response.data.error.message) || e;
+    if (e instanceof Error) {
+      if (axios.isAxiosError(e) && e.response) {
+        throw e.response.data.error.message;
+      }
+      throw e;
+    }
+    throw e;
   }
 }
 
@@ -318,14 +319,13 @@ export async function bitcoindRawTxData({
   txid,
 }: BaseBitcoindArgs & {
   txid: string;
-}): Promise<any> {
-  // TODO: Add proper type for transaction data
+}): Promise<TransactionResponse> {
   try {
     const response = await callBitcoind(url, auth, "getrawtransaction", [
       txid,
       true,
     ]);
-    return response.result;
+    return response.result as TransactionResponse;
   } catch (error) {
     throw new Error(
       `Failed to get raw transaction data :  ${error instanceof Error ? error.message : "Unknown error"}`,

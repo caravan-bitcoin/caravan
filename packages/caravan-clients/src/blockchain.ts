@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/*
-TODO: cleanup the no explicit any. added to quickly type error catches
-*/
 import { Network, sortInputs } from "@caravan/bitcoin";
 import BigNumber from "bignumber.js";
 import {
@@ -45,19 +41,31 @@ function fetchAddressUTXOsUnsorted(
   address: string,
   network: Network,
   client: ClientConfig,
-): Promise<any[]> {
+): Promise<{ txid: string; vout: number; amountSats: BigNumber }[]> {
   if (client.type === BLOCK_EXPLORER) {
-    return blockExplorerGetAddresesUTXOs(address, network);
+    return blockExplorerGetAddresesUTXOs(address, network).then((utxos) =>
+      utxos.map((utxo) => ({
+        txid: utxo.txid,
+        vout: utxo.vout ?? 0, // Ensure vout is included
+        amountSats: new BigNumber(utxo.amountSats),
+      })),
+    );
   }
 
-  if (!isBitcoindClient(client)) {
-    throw new Error("Invalid bitcoind client configuration");
+  if (isBitcoindClient(client)) {
+    return bitcoindListUnspent({
+      ...bitcoindParams(client),
+      ...{ address },
+    }).then((utxos) =>
+      utxos.map((utxo) => ({
+        txid: utxo.txid,
+        vout: utxo.vout,
+        amountSats: new BigNumber(utxo.amountSats),
+      })),
+    );
   }
 
-  return bitcoindListUnspent({
-    ...bitcoindParams(client),
-    ...{ address },
-  });
+  throw new Error("Invalid bitcoind client configuration");
 }
 
 /**
@@ -73,7 +81,7 @@ export async function fetchAddressUTXOs(
   network: Network,
   client: ClientConfig,
 ): Promise<UTXOUpdates> {
-  let unsortedUTXOs: any[] | undefined;
+  let unsortedUTXOs: { amountSats: BigNumber }[] | undefined;
 
   // Initialize updates object with default values
   let updates: UTXOUpdates = {
@@ -109,9 +117,12 @@ export async function fetchAddressUTXOs(
 
   // calculate the total balance from all utxos
   const balanceSats = utxos
-    .map((utxo) => utxo.amountSats)
+    .map((utxo: { amountSats: BigNumber }) => utxo.amountSats)
     .reduce(
-      (accumulator, currentValue) => accumulator.plus(currentValue),
+      (
+        accumulator: { plus: (arg0: BigNumber) => BigNumber },
+        currentValue: BigNumber,
+      ) => accumulator.plus(currentValue),
       new BigNumber(0),
     );
 
