@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.3.1
+
+### Patch Changes
+
+- [#196](https://github.com/caravan-bitcoin/caravan/pull/196) [`509436c`](https://github.com/caravan-bitcoin/caravan/commit/509436cf299ee83de481557928eb8638b20ec62e) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - fix: Private node transaction RPC call by aligning client.getTransaction method implementation with bitcoindRawTxData response
+
 ## 0.3.0
 
 ### Minor Changes
