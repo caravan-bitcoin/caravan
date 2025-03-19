@@ -23,6 +23,15 @@ export class PrivacyMetrics extends WalletMetrics {
       - Consolidation (more than 1 input, 1 output)
       - CoinJoin or Mixing (more than 1 input, more than 1 output)
   */
+
+  /**
+   * Computes the topology score for a given transaction.
+   * @param {Transaction} transaction - The transaction to evaluate.
+   * @returns {number} Privacy score based on transaction topology.
+   * @see docs/health-metrics.md#topology-score
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
+
   getTopologyScore(transaction: Transaction): number {
     const numberOfInputs: number = transaction.vin.length;
     const numberOfOutputs: number = transaction.vout.length;
@@ -31,10 +40,7 @@ export class PrivacyMetrics extends WalletMetrics {
       numberOfInputs,
       numberOfOutputs,
     );
-    const score: number = getSpendTypeScore(
-      numberOfInputs,
-      numberOfOutputs,
-    );
+    const score: number = getSpendTypeScore(numberOfInputs, numberOfOutputs);
 
     if (spendType === SpendType.Consolidation) {
       return score;
@@ -67,6 +73,13 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : (0.45, 0.6]
     -> Very Good : (0.6, 0.75)
   */
+
+  /**
+   * Computes the mean topology privacy score (MTPS) for the wallet.
+   * @returns {number} Mean topology score across transactions.
+   * @see docs/health-metrics.md#mean-topology-privacy-score-mtps
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
   getMeanTopologyScore(): number {
     let privacyScore = 0;
     const transactions = this.transactions;
@@ -95,6 +108,13 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : [0.2, 0.4)
     -> Very Good : [0 ,0.2) 
   */
+
+  /**
+   * Calculates the Address Reuse Factor (ARF).
+   * @returns {number} A metric measuring the proportion of reused addresses.
+   * @see docs/health-metrics.md#3️⃣-address-reuse-factor-arf
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
   addressReuseFactor(): number {
     let reusedAmount: number = 0;
     let totalAmount: number = 0;
@@ -134,6 +154,14 @@ export class PrivacyMetrics extends WalletMetrics {
       -> Very Good : [0.5 ,1] 
 
   */
+  /**
+   * Calculates the Address Type Factor (ATF) based on the variety of address types used.
+   * @param {MultisigAddressType} walletAddressType - The type of addresses used in the wallet.
+   * @param {Network} network - The Bitcoin network.
+   * @returns {number} The address type factor score.
+   * @see docs/health-metrics.md#4️⃣-address-type-factor-atf
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
   addressTypeFactor(
     walletAddressType: MultisigAddressType,
     network: Network,
@@ -185,6 +213,12 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : [0.6, 0.8)
     -> Very Good : [0.8 ,1] 
   */
+  /**
+   * Computes the UTXO Spread Factor based on the distribution of UTXO values.
+   * @returns {number} A measure of UTXO value dispersion.
+   * @see docs/health-metrics.md#5️⃣-utxo-spread-factor
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
   utxoSpreadFactor(): number {
     const amounts: number[] = [];
     const utxos = this.utxos;
@@ -223,6 +257,12 @@ export class PrivacyMetrics extends WalletMetrics {
     -> Good : (0, 0.075]
     -> Very Good : (0.075, 0.15]
   */
+  /**
+   * Computes the UTXO Value Dispersion Factor (UVDF).
+   * @returns {number} A metric combining UTXO spread and UTXO mass.
+   * @see docs/health-metrics.md#6️⃣-utxo-value-dispersion-factor-uvdf
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
   utxoValueDispersionFactor(): number {
     const UMF: number = this.utxoMassFactor();
     const USF: number = this.utxoSpreadFactor();
@@ -240,9 +280,17 @@ export class PrivacyMetrics extends WalletMetrics {
     Calculation :
       The weighted privacy score is calculated by 
         WPS = (MTPS * (1 - 0.5 * ARF) + 0.1 * (1 - ARF)) * (1 - ATF) + 0.1 * UVDF
-
-
   */
+
+  /**
+   * Computes the Weighted Privacy Score (WPS) for the wallet.
+   * @param {MultisigAddressType} walletAddressType - The wallet's address type.
+   * @param {Network} network - The Bitcoin network.
+   * @returns {number} A weighted score representing overall privacy health.
+   * @see docs/health-metrics.md#7️⃣-weighted-privacy-score-wps
+   * @see https://GITHUB_REPO_URL/blob/main/package/caravan-health/src/privacy.ts#LXX
+   */
+
   getWalletPrivacyScore(
     walletAddressType: MultisigAddressType,
     network: Network,
