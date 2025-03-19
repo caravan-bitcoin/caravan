@@ -4,7 +4,7 @@ import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
 
 export class BitcoindWalletClientError extends Error {
-  constructor(message) {
+  constructor(message: string | undefined) {
     super(message);
     this.name = "BitcoindWalletClientError";
   }
@@ -18,7 +18,7 @@ export interface BitcoindWalletParams {
     password: string;
   };
   method: string;
-  params?: any[] | Record<string, any>;
+  params?: unknown[] | Record<string, unknown>;
 }
 
 export function callBitcoindWallet({
@@ -32,7 +32,7 @@ export function callBitcoindWallet({
 
   if (walletName)
     url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
-  //@ts-expect-error Will Fix this
+  // @ts-expect-error Will Fix this
   return callBitcoind(url.toString(), auth, method, params);
 }
 
@@ -111,7 +111,7 @@ export async function bitcoindGetAddressStatus({
   address,
 }: BaseBitcoindParams & { address: string }) {
   try {
-    const resp: any = await callBitcoindWallet({
+    const resp = await callBitcoindWallet({
       baseUrl: url,
       walletName,
       auth,
@@ -124,7 +124,7 @@ export async function bitcoindGetAddressStatus({
       );
     }
     return {
-      used: resp?.result > 0,
+      used: typeof resp?.result === "number" && resp.result > 0,
     };
   } catch (e) {
     const error = e as Error;
@@ -163,6 +163,9 @@ export async function bitcoindListUnspent({
   addresses?: string[];
 }): Promise<
   {
+    vout: number;
+    block_height: number;
+    block_hash: number;
     txid: string;
     amount: string;
     amountSats: string;
@@ -184,7 +187,7 @@ export async function bitcoindListUnspent({
       method: "listunspent",
       params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
     });
-    const promises: Promise<any>[] = [];
+    const promises: Promise<unknown>[] = [];
 
     resp.result.forEach((utxo) => {
       promises.push(
@@ -206,8 +209,19 @@ export async function bitcoindListUnspent({
         index: utxo.vout,
         amount: amount.toFixed(8),
         amountSats: bitcoinsToSatoshis(amount.toString()),
-        transactionHex: previousTransactions[mapindex].result.hex,
-        time: previousTransactions[mapindex].result.blocktime,
+        transactionHex: (
+          previousTransactions[mapindex] as { result: { hex: string } }
+        ).result.hex,
+        time: (
+          previousTransactions[mapindex] as { result: { blocktime: string } }
+        ).result.blocktime,
+        vout: utxo.vout,
+        block_height: (
+          previousTransactions[mapindex] as { result: { blockheight: number } }
+        ).result.blockheight,
+        block_hash: (
+          previousTransactions[mapindex] as { result: { blockhash: number } }
+        ).result.blockhash,
       };
     });
   } catch (e) {
