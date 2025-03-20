@@ -19,27 +19,7 @@ import {
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
-
-interface TransactionTableProps {
-  transactions: Transaction[];
-  onSort: (property: keyof Transaction) => void;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
-  network?: string;
-  onClickTransaction?: (txid: string) => void;
-}
-
-// How our Transaction should look like
-interface Transaction {
-  txid: string;
-  status: {
-    confirmed: boolean;
-    blockTime?: number;
-    blockHeight?: number;
-  };
-  size: number;
-  fee: number;
-}
+import { TransactionT, TransactionTableProps } from "./types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -94,7 +74,7 @@ const TransactionTableHeader: React.FC<{
   columns: Array<{ id: string; label: string; sortable: boolean }>;
   sortBy: string;
   sortDirection: "asc" | "desc";
-  onSort: (property: keyof Transaction) => void;
+  onSort: (property: keyof TransactionT) => void;
 }> = ({ columns, sortBy, sortDirection, onSort }) => (
   <TableHead>
     <TableRow>
@@ -104,7 +84,7 @@ const TransactionTableHeader: React.FC<{
             <TableSortLabel
               active={sortBy === column.id}
               direction={sortDirection}
-              onClick={() => onSort(column.id as keyof Transaction)}
+              onClick={() => onSort(column.id as keyof TransactionT)}
             >
               {column.label}
             </TableSortLabel>
@@ -119,7 +99,7 @@ const TransactionTableHeader: React.FC<{
 
 // A single transaction row
 const TransactionTableRow: React.FC<{
-  tx: Transaction;
+  tx: TransactionT;
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onCopySuccess: () => void;

@@ -16,7 +16,7 @@ import { setRequiredSigners as setRequiredSignersAction } from "../../actions/tr
 import { MAX_FETCH_UTXOS_ERRORS, MAX_TRAILING_EMPTY_NODES } from "./constants";
 import WalletDeposit from "./WalletDeposit";
 import WalletSpend from "./WalletSpend";
-import TransactionsTab from "./TransactionsTab";
+import TransactionsTab from "./TransactionsTab/index";
 import { SlicesTableContainer } from "../Slices";
 
 class WalletControl extends React.Component {
