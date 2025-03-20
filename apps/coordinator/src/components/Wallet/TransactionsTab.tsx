@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { connect } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   Box,
   Typography,
@@ -16,8 +16,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
-import { BlockchainClient } from "@caravan/clients";
-import { blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
+import { blockExplorerTransactionURL } from "@caravan/bitcoin";
 import { TransactionTable } from "./TransactionsTable";
 import { useGetClient } from "../../hooks/client";
 
@@ -43,26 +42,7 @@ interface Transaction {
   fee: number;
 }
 
-interface TransactionsTabProps {
-  network: Network;
-  deposits: {
-    nodes: Record<string, any>;
-  };
-  change: {
-    nodes: Record<string, any>;
-  };
-  client: {
-    type: string;
-    blockchainClient?: BlockchainClient;
-  };
-}
-
-const TransactionsTab: React.FC<TransactionsTabProps> = ({
-  network,
-  deposits,
-  change,
-  client,
-}) => {
+const TransactionsTab: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +50,12 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   const [sortBy, setSortBy] = useState<string>("blockTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [mounted, setMounted] = useState(true);
+
+  // Use selectors to get state from Redux store
+  const network = useSelector((state: any) => state.settings.network);
+  const deposits = useSelector((state: any) => state.wallet.deposits);
+  const change = useSelector((state: any) => state.wallet.change);
+  const client = useSelector((state: any) => state.client);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -108,9 +94,17 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         ...Object.values(deposits.nodes),
         ...Object.values(change.nodes),
       ].forEach((node) => {
-        node.utxos.forEach((utxo: { txid: string }) => {
-          txids.add(utxo.txid);
-        });
+        // Add type guard to check if node has utxos property
+        if (
+          node &&
+          typeof node === "object" &&
+          "utxos" in node &&
+          Array.isArray(node.utxos)
+        ) {
+          node.utxos.forEach((utxo: { txid: string }) => {
+            txids.add(utxo.txid);
+          });
+        }
       });
 
       // Fetch transaction details in parallel
@@ -355,11 +349,4 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   );
 };
 
-const mapStateToProps = (state: any) => ({
-  network: state.settings.network,
-  deposits: state.wallet.deposits,
-  change: state.wallet.change,
-  client: state.client,
-});
-
-export default connect(mapStateToProps)(TransactionsTab);
+export default TransactionsTab;
