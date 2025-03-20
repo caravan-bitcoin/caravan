@@ -89,6 +89,94 @@ const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
   );
 };
 
+// Table header with sort labels
+const TransactionTableHeader: React.FC<{
+  columns: Array<{ id: string; label: string; sortable: boolean }>;
+  sortBy: string;
+  sortDirection: "asc" | "desc";
+  onSort: (property: keyof Transaction) => void;
+}> = ({ columns, sortBy, sortDirection, onSort }) => (
+  <TableHead>
+    <TableRow>
+      {columns.map((column) => (
+        <TableCell key={column.id}>
+          {column.sortable ? (
+            <TableSortLabel
+              active={sortBy === column.id}
+              direction={sortDirection}
+              onClick={() => onSort(column.id as keyof Transaction)}
+            >
+              {column.label}
+            </TableSortLabel>
+          ) : (
+            column.label
+          )}
+        </TableCell>
+      ))}
+    </TableRow>
+  </TableHead>
+);
+
+// A single transaction row
+const TransactionTableRow: React.FC<{
+  tx: Transaction;
+  network?: string;
+  onClickTransaction?: (txid: string) => void;
+  onCopySuccess: () => void;
+}> = ({ tx, network, onClickTransaction, onCopySuccess }) => (
+  <TableRow>
+    <TableCell>
+      <Tooltip title={tx.txid}>
+        <Chip
+          label={`${tx.txid.substring(0, 8)}...`}
+          variant="outlined"
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent row click from firing
+            navigator.clipboard
+              .writeText(tx.txid)
+              .then(() => {
+                onCopySuccess();
+              })
+              .catch((err) => {
+                console.error("Could not copy text: ", err);
+              });
+          }}
+          style={{ cursor: "pointer" }}
+        />
+      </Tooltip>
+    </TableCell>
+    <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
+    <TableCell>{tx.size}</TableCell>
+    <TableCell>
+      <FeeDisplay feeInSats={tx.fee} />
+    </TableCell>
+    <TableCell>
+      <Chip
+        label={tx.status.confirmed ? "Confirmed" : "Pending"}
+        color={tx.status.confirmed ? "success" : "warning"}
+        size="small"
+      />
+    </TableCell>
+    <TableCell>
+      {network && (
+        <Tooltip title="View in your preferred block explorer">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Let parent handle block explorer navigation
+              onClickTransaction?.(tx.txid);
+            }}
+          >
+            <OpenInNew fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+    </TableCell>
+  </TableRow>
+);
+
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   transactions,
   onSort,
@@ -99,94 +187,16 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  // Handler for sorting
-  const createSortHandler = (property: keyof Transaction) => () => {
-    onSort(property);
-  };
-
-  // Render table header with sort labels
-  const renderTableHeader = () => (
-    <TableHead>
-      <TableRow>
-        {columns.map((column) => (
-          <TableCell key={column.id}>
-            {column.sortable ? (
-              <TableSortLabel
-                active={sortBy === column.id}
-                direction={sortDirection}
-                onClick={createSortHandler(column.id as keyof Transaction)}
-              >
-                {column.label}
-              </TableSortLabel>
-            ) : (
-              column.label
-            )}
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
-  );
-
-  // Rendering a single transaction row
-  const renderTransactionRow = (tx: Transaction) => (
-    <TableRow>
-      <TableCell>
-        <Tooltip title={tx.txid}>
-          <Chip
-            label={`${tx.txid.substring(0, 8)}...`}
-            variant="outlined"
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent row click from firing
-              navigator.clipboard
-                .writeText(tx.txid)
-                .then(() => {
-                  setSnackbarOpen(true);
-                })
-                .catch((err) => {
-                  console.error("Could not copy text: ", err);
-                });
-            }}
-            style={{ cursor: "pointer" }}
-          />
-        </Tooltip>
-      </TableCell>
-      <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
-      <TableCell>{tx.size}</TableCell>
-      <TableCell>
-        <FeeDisplay feeInSats={tx.fee} />
-      </TableCell>
-      <TableCell>
-        <Chip
-          label={tx.status.confirmed ? "Confirmed" : "Pending"}
-          color={tx.status.confirmed ? "success" : "warning"}
-          size="small"
-        />
-      </TableCell>
-      <TableCell>
-        {network && (
-          <Tooltip title="View in your preferred block explorer">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Let parent handle block explorer navigation
-                onClickTransaction?.(tx.txid);
-              }}
-            >
-              <OpenInNew fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
-      </TableCell>
-    </TableRow>
-  );
-
   return (
     <>
       <TableContainer component={Paper}>
         <Table size="small">
-          {renderTableHeader()}
+          <TransactionTableHeader
+            columns={columns}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={onSort}
+          />
           <TableBody>
             {transactions.length === 0 ? (
               <TableRow>
@@ -195,7 +205,15 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map(renderTransactionRow)
+              transactions.map((tx) => (
+                <TransactionTableRow
+                  key={tx.txid}
+                  tx={tx}
+                  network={network}
+                  onClickTransaction={onClickTransaction}
+                  onCopySuccess={() => setSnackbarOpen(true)}
+                />
+              ))
             )}
           </TableBody>
         </Table>
