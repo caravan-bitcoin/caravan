@@ -9,12 +9,22 @@ import {
   Tabs,
   Tab,
   Chip,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
 import { BlockchainClient } from "@caravan/clients";
 import { blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
 import { updateBlockchainClient } from "../../actions/clientActions";
 import { TransactionTable } from "./TransactionsTable";
+
+// As @mui/material does not export SelectChangeEvent
+type SelectChangeEvent<Value = string> =
+  | (Event & { target: { value: Value; name: string } })
+  | React.ChangeEvent<HTMLInputElement>;
 
 // How are Transaction should look like
 interface Transaction {
@@ -62,6 +72,10 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   const [sortBy, setSortBy] = useState<string>("blockTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
   // Fetch transactions
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
@@ -98,6 +112,8 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
       );
       setTransactions(txDetails.filter((tx): tx is Transaction => tx !== null));
       setError(null);
+
+      setPage(1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -194,6 +210,40 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
     transactions.filter((tx) => tx.status.confirmed),
   );
 
+  // ===== PAGINATION =====
+  // Get current page transactions
+  const getCurrentPageTransactions = useCallback(
+    (allTxs: Transaction[]) => {
+      const startIndex = (page - 1) * rowsPerPage;
+      return allTxs.slice(startIndex, startIndex + rowsPerPage);
+    },
+    [page, rowsPerPage],
+  );
+
+  // Calculate total pages
+  const totalTxs = tabValue === 0 ? pendingTxs.length : confirmedTxs.length;
+  const totalPages = Math.ceil(totalTxs / rowsPerPage);
+
+  // Handle page change
+  const handlePageChange = (
+    _event: React.ChangeEvent<unknown>,
+    newPage: number,
+  ) => {
+    setPage(newPage);
+  };
+
+  // Handle rows per page change
+  const handleRowsPerPageChange = (event: SelectChangeEvent) => {
+    setRowsPerPage(Number(event.target.value));
+    setPage(1); // Reset to first page when changing rows per page
+  };
+
+  // Get transactions for current page
+  const currentPageTxs =
+    tabValue === 0
+      ? getCurrentPageTransactions(pendingTxs)
+      : getCurrentPageTransactions(confirmedTxs);
+
   return (
     <div>
       <Box
@@ -245,14 +295,58 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
             <CircularProgress />
           </Box>
         ) : (
-          <TransactionTable
-            transactions={tabValue === 0 ? pendingTxs : confirmedTxs}
-            onSort={handleSort}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            network={network}
-            onClickTransaction={handleTransactionClick}
-          />
+          <>
+            <TransactionTable
+              transactions={currentPageTxs}
+              onSort={handleSort}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              network={network}
+              onClickTransaction={handleTransactionClick}
+            />
+            {/* Pagination controls */}
+            {totalTxs > 0 && (
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mt={2}
+                px={1}
+              >
+                <FormControl
+                  variant="outlined"
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                >
+                  <InputLabel id="rows-per-page-label">Rows</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label"
+                    value={rowsPerPage.toString()}
+                    onChange={handleRowsPerPageChange}
+                    label="Rows"
+                  >
+                    <MenuItem value="5">5</MenuItem>
+                    <MenuItem value="10">10</MenuItem>
+                    <MenuItem value="25">25</MenuItem>
+                    <MenuItem value="50">50</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Box display="flex" alignItems="center">
+                  <Typography variant="body2" color="textSecondary" mr={2}>
+                    {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, totalTxs)} of ${totalTxs}`}
+                  </Typography>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+              </Box>
+            )}
+          </>
         )}
       </Box>
     </div>
