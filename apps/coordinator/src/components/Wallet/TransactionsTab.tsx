@@ -18,8 +18,8 @@ import {
 import { Refresh } from "@mui/icons-material";
 import { BlockchainClient } from "@caravan/clients";
 import { blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
-import { updateBlockchainClient } from "../../actions/clientActions";
 import { TransactionTable } from "./TransactionsTable";
+import { useGetClient } from "../../hooks/client";
 
 // As @mui/material does not export SelectChangeEvent
 type SelectChangeEvent<Value = string> =
@@ -45,7 +45,6 @@ interface Transaction {
 
 interface TransactionsTabProps {
   network: Network;
-  getBlockchainClient: () => Promise<BlockchainClient>;
   deposits: {
     nodes: Record<string, any>;
   };
@@ -60,7 +59,6 @@ interface TransactionsTabProps {
 
 const TransactionsTab: React.FC<TransactionsTabProps> = ({
   network,
-  getBlockchainClient,
   deposits,
   change,
   client,
@@ -71,18 +69,35 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("blockTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [mounted, setMounted] = useState(true);
 
   // Pagination state
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
+  const blockchainClient = useGetClient();
+
+  // Helper function to fetch individual transaction details
+  const fetchTransactionDetails = async (txid: string) => {
+    try {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+      return await blockchainClient.getTransaction(txid);
+    } catch (err) {
+      console.error(`Error fetching tx ${txid}:`, err);
+      return null;
+    }
+  };
+
   // Fetch transactions
   const fetchTransactions = useCallback(async () => {
+    if (!mounted) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const blockchainClient = await getBlockchainClient();
       if (!blockchainClient) {
         throw new Error("No blockchain client available");
       }
@@ -99,31 +114,33 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
       });
 
       // Fetch transaction details in parallel
-      const txDetails = await Promise.all(
-        Array.from(txids).map(async (txid) => {
-          try {
-            const tx = await blockchainClient.getTransaction(txid);
-            return tx;
-          } catch (err) {
-            console.error(`Error fetching tx ${txid}:`, err);
-            return null;
-          }
-        }),
+      const txPromises = Array.from(txids).map((txid) =>
+        fetchTransactionDetails(txid),
       );
-      setTransactions(txDetails.filter((tx): tx is Transaction => tx !== null));
-      setError(null);
 
-      setPage(1);
+      const txDetails = await Promise.all(txPromises);
+
+      if (mounted) {
+        setTransactions(
+          txDetails.filter((tx): tx is Transaction => tx !== null),
+        );
+        setError(null);
+        setPage(1);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [getBlockchainClient, deposits.nodes, change.nodes]);
+  }, [blockchainClient, deposits.nodes, change.nodes]);
 
   // Initial loading
   useEffect(() => {
     fetchTransactions();
+
+    return () => {
+      setMounted(false);
+    };
   }, [fetchTransactions]);
 
   // Handle sorting
@@ -171,7 +188,6 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         explorerUrl = blockExplorerTransactionURL(txid, network);
       }
 
-      window.open(explorerUrl, "_blank");
       window.open(explorerUrl, "_blank");
     },
     [network, client],
@@ -360,8 +376,4 @@ const mapStateToProps = (state: any) => ({
   client: state.client,
 });
 
-const mapDispatchToProps = {
-  getBlockchainClient: updateBlockchainClient,
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(TransactionsTab);
+export default connect(mapStateToProps)(TransactionsTab);
