@@ -49,7 +49,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { MULTISIG_ROOT } from "./index";
+import { MULTISIG_ROOT } from "./type";
 
 /**
  * Constant defining Trezor interactions.
