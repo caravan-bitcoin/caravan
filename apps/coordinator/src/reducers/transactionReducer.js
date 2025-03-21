@@ -103,6 +103,12 @@ export const initialState = () => ({
   signingKeys: [0, 0], // default 2 required signers
   spendingStep: SPEND_STEP_CREATE,
   unsignedPSBT: "",
+  transactions: {
+    transactions: [],
+    isLoading: false, // Array to store actual transactions
+    error: null,
+    lastUpdated: null,
+  },
 });
 
 function updateInputs(state, action) {
