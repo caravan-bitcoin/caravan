@@ -913,11 +913,6 @@ describe("PsbtV2.isReadyForConstructor", () => {
     psbt = new PsbtV2();
   });
 
-  it("Returns not ready for Constructor when PSBT_GLOBAL_FALLBACK_LOCKTIME is not set", () => {
-    psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME = null;
-    expect(psbt.isReadyForConstructor).toBe(false);
-  });
-
   it("Returns not ready for Constructor when neither inputs or outputs are modifiable", () => {
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = [];
     expect(psbt.isReadyForConstructor).toBe(false);

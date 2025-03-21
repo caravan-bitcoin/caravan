@@ -490,13 +490,6 @@ export class PsbtV2 extends PsbtV2Maps {
    * set).
    */
   get isReadyForConstructor() {
-    // The Creator role (likely via the class constructor) must ensure at least
-    // the following value has been initialized. The psbt cannot be passed to
-    // the Constructor until it is set.
-    if (this.PSBT_GLOBAL_FALLBACK_LOCKTIME === null) {
-      return false;
-    }
-
     // At least inputs or outputs must still be modifiable.
     if (
       !this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS]) &&
