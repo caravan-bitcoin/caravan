@@ -7,7 +7,7 @@ import { useGetClient } from "../../../hooks/client";
 /**
  * Custom hook to manage transaction fetching and state
  */
-export const useTransactions = () => {
+export const useFetchTransactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

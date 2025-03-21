@@ -18,7 +18,7 @@ import {
 import { Refresh } from "@mui/icons-material";
 import { TransactionTable } from "./TransactionsTable";
 import {
-  useTransactions,
+  useFetchTransactions,
   useSortedTransactions,
   usePagination,
   useHandleExplorerLinkClick,
@@ -30,7 +30,7 @@ const TransactionsTab: React.FC = () => {
 
   // Use our custom hooks
   const { transactions, isLoading, error, fetchTransactions } =
-    useTransactions();
+    useFetchTransactions();
   const { sortBy, sortDirection, handleSort, pendingTxs, confirmedTxs } =
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleExplorerLinkClick();

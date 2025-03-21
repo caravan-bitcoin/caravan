@@ -1,3 +1,4 @@
+// TODO: This should come from the `clients` package
 // Types for the transaction data
 export interface Transaction {
   txid: string;

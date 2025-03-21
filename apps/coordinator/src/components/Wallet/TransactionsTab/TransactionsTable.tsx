@@ -37,7 +37,7 @@ const columns = [
   { id: "actions", label: "", sortable: false },
 ];
 
-// FeeDisplay component to display fees display in both sats and BTC
+// FeeDisplay component to display fees in both sats and BTC
 const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
   if (feeInSats === null || feeInSats === undefined) {
     return <Typography color="textSecondary">N/A</Typography>;
