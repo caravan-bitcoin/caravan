@@ -10,16 +10,24 @@ import {
   Paper,
   Chip,
   IconButton,
-  Box,
   Tooltip,
-  Typography,
   Alert,
   Snackbar,
 } from "@mui/material";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
 import { TransactionT, TransactionTableProps } from "./types";
+
+/**
+ * ⚠️ MAJOR TODO:
+ * ---------------------------------------------------------------
+ * Due to a discrepancy in fees not being supplied by the client's
+ * package for the private note, the "fees" column has been dropped.
+ * This will be included in a future update of the coordinator.
+ *
+ * That’s why the fee component code has been commented out.
+ * ---------------------------------------------------------------
+ */
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -32,42 +40,42 @@ const columns = [
   { id: "txid", label: "Transaction ID", sortable: false },
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
-  { id: "fee", label: "Fee (sats)", sortable: true },
+  // { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "status", label: "Status", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
 // FeeDisplay component to display fees in both sats and BTC
-const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
-  if (feeInSats === null || feeInSats === undefined) {
-    return <Typography color="textSecondary">N/A</Typography>;
-  }
+// const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
+//   if (feeInSats === null || feeInSats === undefined) {
+//     return <Typography color="textSecondary">N/A</Typography>;
+//   }
 
-  const feeInBTC = satoshisToBitcoins(feeInSats.toString());
+//   const feeInBTC = satoshisToBitcoins(feeInSats.toString());
 
-  return (
-    <Tooltip
-      title={
-        <Box>
-          <Typography variant="caption">
-            {`${feeInSats.toLocaleString()} sats`}
-          </Typography>
-          <br />
-          <Typography variant="caption">{`${feeInBTC} BTC`}</Typography>
-        </Box>
-      }
-    >
-      <Box>
-        <Typography variant="body2" color="textPrimary">
-          {feeInSats.toLocaleString()} sats
-        </Typography>
-        <Typography variant="caption" color="textSecondary">
-          {feeInBTC} BTC
-        </Typography>
-      </Box>
-    </Tooltip>
-  );
-};
+//   return (
+//     <Tooltip
+//       title={
+//         <Box>
+//           <Typography variant="caption">
+//             {`${feeInSats.toLocaleString()} sats`}
+//           </Typography>
+//           <br />
+//           <Typography variant="caption">{`${feeInBTC} BTC`}</Typography>
+//         </Box>
+//       }
+//     >
+//       <Box>
+//         <Typography variant="body2" color="textPrimary">
+//           {feeInSats.toLocaleString()} sats
+//         </Typography>
+//         <Typography variant="caption" color="textSecondary">
+//           {feeInBTC} BTC
+//         </Typography>
+//       </Box>
+//     </Tooltip>
+//   );
+// };
 
 // Table header with sort labels
 const TransactionTableHeader: React.FC<{
@@ -128,9 +136,9 @@ const TransactionTableRow: React.FC<{
     </TableCell>
     <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
     <TableCell>{tx.size}</TableCell>
-    <TableCell>
+    {/* <TableCell>
       <FeeDisplay feeInSats={tx.fee} />
-    </TableCell>
+    </TableCell> */}
     <TableCell>
       <Chip
         label={tx.status.confirmed ? "Confirmed" : "Pending"}
