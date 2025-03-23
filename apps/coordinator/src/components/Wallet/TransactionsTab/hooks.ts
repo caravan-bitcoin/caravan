@@ -44,24 +44,51 @@ export const useFetchTransactions = () => {
         throw new Error("No blockchain client available");
       }
 
-      // Get unique transaction IDs from UTXOs
+      // Set to store transaction IDs
       const txids = new Set<string>();
+
+      // As some addresses can belong to UTXO's that no longer belong to the wallet so we separate addresses with active UTXOs and spent UTXOs
+      const addressesWithActiveUTXOs = new Set<string>();
+      const addressesWithSpentUTXOs = new Set<string>();
+
+      // Track which transactions are from spent UTXOs
+      const spentTxids = new Set<string>();
+
+      //Now we process all nodes to categorize addresses
       [
         ...Object.values(deposits.nodes),
         ...Object.values(change.nodes),
-      ].forEach((node) => {
-        // Add type guard to check if node has utxos property
-        if (
-          node &&
-          typeof node === "object" &&
-          "utxos" in node &&
-          Array.isArray(node.utxos)
-        ) {
-          node.utxos.forEach((utxo: { txid: string }) => {
-            txids.add(utxo.txid);
-          });
+      ].forEach((node: any) => {
+        if (node && node.multisig && node.multisig.address) {
+          if (node.utxos && node.utxos.length > 0) {
+            // Address has active UTXOs
+            addressesWithActiveUTXOs.add(node.multisig.address);
+
+            // Add transaction IDs from active UTXOs
+            node.utxos.forEach((utxo: any) => {
+              if (utxo.txid) txids.add(utxo.txid);
+            });
+          } else if (node.addressUsed) {
+            // Address has been used but has no UTXOs (spent)
+            addressesWithSpentUTXOs.add(node.multisig.address);
+          }
         }
       });
+
+      // Only fetch transaction history for addresses with spent UTXOs
+      for (const address of addressesWithSpentUTXOs) {
+        try {
+          const txHistory =
+            await blockchainClient.getAddressTransactions(address);
+          txHistory.forEach((tx) => {
+            txids.add(tx.txid);
+            // Mark this transaction as coming from a spent UTXO needed to tag spent TX's in tableRow
+            spentTxids.add(tx.txid);
+          });
+        } catch (err) {
+          console.error(`Error fetching history for address ${address}:`, err);
+        }
+      }
 
       // Fetch transaction details in parallel
       const txPromises = Array.from(txids).map((txid) =>

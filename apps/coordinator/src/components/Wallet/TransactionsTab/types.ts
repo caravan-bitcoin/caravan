@@ -18,7 +18,7 @@ export interface Transaction {
 
 export interface TransactionTableProps {
   transactions: Transaction[];
-  onSort: (property: keyof Transaction) => void;
+  onSort: (property: keyof TransactionT) => void;
   sortBy: string;
   sortDirection: "asc" | "desc";
   network?: string;
@@ -35,6 +35,7 @@ export interface TransactionT {
   };
   size: number;
   fee: number;
+  isSpent?: boolean;
 }
 
 // For MUI's Select component
@@ -44,4 +45,4 @@ export type SelectChangeEvent<Value = string> =
 
 // Sorting parameters
 export type SortDirection = "asc" | "desc";
-export type SortBy = keyof Transaction | "blockTime";
+export type SortBy = keyof TransactionT | "blockTime";

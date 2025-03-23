@@ -13,7 +13,9 @@ import {
   Tooltip,
   Alert,
   Snackbar,
+  Box,
 } from "@mui/material";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
 import { TransactionT, TransactionTableProps } from "./types";
@@ -114,25 +116,43 @@ const TransactionTableRow: React.FC<{
 }> = ({ tx, network, onClickTransaction, onCopySuccess }) => (
   <TableRow>
     <TableCell>
-      <Tooltip title={tx.txid}>
-        <Chip
-          label={`${tx.txid.substring(0, 8)}...`}
-          variant="outlined"
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent row click from firing
-            navigator.clipboard
-              .writeText(tx.txid)
-              .then(() => {
-                onCopySuccess();
-              })
-              .catch((err) => {
-                console.error("Could not copy text: ", err);
-              });
-          }}
-          style={{ cursor: "pointer" }}
-        />
-      </Tooltip>
+      <Box display="flex" alignItems="center">
+        <Tooltip title={tx.txid}>
+          <Chip
+            label={`${tx.txid.substring(0, 8)}...`}
+            variant="outlined"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent row click from firing
+              navigator.clipboard
+                .writeText(tx.txid)
+                .then(() => {
+                  onCopySuccess();
+                })
+                .catch((err) => {
+                  console.error("Could not copy text: ", err);
+                });
+            }}
+            style={{ cursor: "pointer" }}
+          />
+        </Tooltip>
+        {tx.isSpent && (
+          <Tooltip title="This transaction created UTXOs that have been spent">
+            <Box display="flex" alignItems="center" ml={1}>
+              <Chip
+                label="Spent"
+                size="small"
+                color="default"
+                sx={{ fontSize: "0.7rem" }}
+              />
+              <HelpOutlineIcon
+                fontSize="small"
+                sx={{ fontSize: "0.9rem", ml: 0.5, color: "text.secondary" }}
+              />
+            </Box>
+          </Tooltip>
+        )}
+      </Box>
     </TableCell>
     <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
     <TableCell>{tx.size}</TableCell>
