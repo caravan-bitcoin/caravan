@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
 import {
   Box,
@@ -6,9 +6,6 @@ import {
   Tooltip,
   IconButton,
   CircularProgress,
-  Tabs,
-  Tab,
-  Chip,
   Pagination,
   FormControl,
   InputLabel,
@@ -24,20 +21,36 @@ import {
   useHandleExplorerLinkClick,
 } from "./hooks";
 
+/**
+ * TRANSACTIONS HISTORY LIMITATION
+ *
+ * Only pending transactions are shown in this implementation.
+ *
+ * The commented code reflects the changes done to comment out the Completed Transactions for now .
+ *
+ * Tracking confirmed/spent transactions is challenging because as UTXOs are spent,
+ * they disappear from the wallet state. In private clients, we need a different
+ * approach to track historical transactions since we can't collect transaction IDs
+ * directly from UTXO data that no longer exists in the wallet.
+ *
+ * This would require maintaining a separate transaction history database or querying
+ * all address histories, which has privacy implications.
+ */
+
 const TransactionsTab: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0);
+  // const [tabValue, setTabValue] = useState(0);
   const network = useSelector((state: any) => state.settings.network);
 
   // Use our custom hooks
   const { transactions, isLoading, error, fetchTransactions } =
     useFetchTransactions();
-  const { sortBy, sortDirection, handleSort, pendingTxs, confirmedTxs } =
+  const { sortBy, sortDirection, handleSort, pendingTxs } =
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleExplorerLinkClick();
 
   // Get the correct transaction list based on selected tab
-  const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
-
+  // const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
+  const currentTabTxs = pendingTxs;
   // Set up pagination for the current tab's transactions
   const {
     page,
@@ -59,7 +72,7 @@ const TransactionsTab: React.FC = () => {
         alignItems="center"
         mb={2}
       >
-        <Typography variant="h6">Transactions</Typography>
+        <Typography variant="h6">Pending Transactions</Typography>
         <Tooltip title="Refresh transactions">
           <IconButton onClick={fetchTransactions} disabled={isLoading}>
             <Refresh />
@@ -73,7 +86,7 @@ const TransactionsTab: React.FC = () => {
         </Typography>
       )}
 
-      <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)}>
+      {/* <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)}>
         <Tab
           label={
             <Box display="flex" alignItems="center" gap={1}>
@@ -94,7 +107,7 @@ const TransactionsTab: React.FC = () => {
             </Box>
           }
         />
-      </Tabs>
+      </Tabs> */}
 
       <Box mt={2}>
         {isLoading ? (
