@@ -61,7 +61,8 @@ class WalletControl extends React.Component {
       if (walletMode === WALLET_MODES.SPEND)
         return <WalletSpend addNode={addNode} updateNode={updateNode} />;
       if (walletMode === WALLET_MODES.VIEW) return <SlicesTableContainer />;
-      if (walletMode === WALLET_MODES.TRANSACTIONS) return <TransactionsTab />;
+      if (walletMode === WALLET_MODES.TRANSACTIONS)
+        return <TransactionsTab refreshWallet={this.props.refreshNodes} />;
     }
     const progress = this.progress();
     return [
@@ -121,6 +122,7 @@ WalletControl.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updateNode: PropTypes.func.isRequired,
   walletMode: PropTypes.number.isRequired,
+  refreshNodes: PropTypes.func.isRequired,
 };
 
 function mapStateToProps(state) {

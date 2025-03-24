@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import {
   Box,
@@ -37,7 +37,37 @@ import {
  * all address histories, which has privacy implications.
  */
 
-const TransactionsTab: React.FC = () => {
+const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
+  refreshWallet,
+}) => {
+  // This key state controls remounting
+  const [mountKey, setMountKey] = useState(0);
+
+  // Handle refresh by forcing remount
+  const handleRefresh = () => {
+    if (refreshWallet) {
+      refreshWallet()
+        .then(() => {
+          // Force remount by incrementing key
+          setMountKey((k) => k + 1);
+        })
+        .catch((err) => {
+          console.error("Error refreshing wallet:", err);
+          setMountKey((k) => k + 1);
+        });
+    } else {
+      // No wallet refresh function, just force remount
+      setMountKey((k) => k + 1);
+    }
+  };
+
+  // Render actual content with key to force remount
+  return <TransactionsTabContent key={mountKey} onRefresh={handleRefresh} />;
+};
+
+const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
+  onRefresh,
+}) => {
   // const [tabValue, setTabValue] = useState(0);
   const network = useSelector((state: any) => state.settings.network);
 
@@ -64,6 +94,11 @@ const TransactionsTab: React.FC = () => {
   // Get transactions for current page
   const currentPageTxs = getCurrentPageItems(currentTabTxs);
 
+  const handleRefreshClick = () => {
+    fetchTransactions();
+    onRefresh();
+  };
+
   return (
     <div>
       <Box
@@ -74,7 +109,7 @@ const TransactionsTab: React.FC = () => {
       >
         <Typography variant="h6">Pending Transactions</Typography>
         <Tooltip title="Refresh transactions">
-          <IconButton onClick={fetchTransactions} disabled={isLoading}>
+          <IconButton onClick={handleRefreshClick} disabled={isLoading}>
             <Refresh />
           </IconButton>
         </Tooltip>
