@@ -2,6 +2,7 @@ import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
+import { BitcoindWalletParams, BaseBitcoindParams, ListUnspentResponse } from "./types";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {
@@ -10,16 +11,6 @@ export class BitcoindWalletClientError extends Error {
   }
 }
 
-export interface BitcoindWalletParams {
-  baseUrl: string;
-  walletName?: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  method: string;
-  params?: any[] | Record<string, any>;
-}
 
 export function callBitcoindWallet({
   baseUrl,
@@ -34,15 +25,6 @@ export function callBitcoindWallet({
     url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
   //@ts-expect-error Will Fix this
   return callBitcoind(url.toString(), auth, method, params);
-}
-
-export interface BaseBitcoindParams {
-  url: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  walletName?: string;
 }
 
 export function bitcoindWalletInfo({
@@ -138,12 +120,7 @@ export async function bitcoindGetAddressStatus({
   }
 }
 
-export interface ListUnspentResponse {
-  txid: string;
-  amount: number;
-  confirmations: number;
-  vout: number;
-}
+
 /**
  * Fetch unspent outputs for a single or set of addresses
  * @param {Object} options - what is needed to communicate with the RPC

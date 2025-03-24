@@ -143,18 +143,16 @@ export interface ListTransactionsItem {
   abandoned?: boolean; // Only available for 'send' category
 }
 
-export interface BitcoindWalletParams<T> {
-  baseUrl: string; // Base URL of the Bitcoin node
+export interface BitcoindWalletParams {
+  baseUrl: string;  // Base URL of the Bitcoin node
   walletName?: string; // Optional wallet name for multi-wallet setups
   auth: {
     // Auth credentials for the node
     username: string;
     password: string;
   };
-  method: string; // RPC method to call
-  params?: unknown[]; // Support both array and object params
-
-  responseType?: T;
+  method: string;  // RPC method to call
+  params?: any[] | Record<string, any>; // Support both array and object params
 }
 
 // Used in bitcoind.ts
@@ -314,4 +312,20 @@ export interface UTXOUpdates {
   fetchedUTXOs: boolean;
   fetchUTXOsError: string;
   addressKnown?: boolean;
+}
+
+export interface BaseBitcoindParams {
+  url: string;
+  auth: {
+    username: string;
+    password: string;
+  };
+  walletName?: string;
+}
+
+export interface ListUnspentResponse {
+  txid: string;
+  amount: number;
+  confirmations: number;
+  vout: number;
 }
