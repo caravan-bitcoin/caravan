@@ -2,7 +2,7 @@ import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
-import { BitcoindWalletParams, BaseBitcoindParams, ListUnspentResponse } from "./types";
+import { BitcoindWalletParams, BitcoindParams, ListUnspentResponseSubset } from "./types";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {
@@ -31,7 +31,7 @@ export function bitcoindWalletInfo({
   url,
   auth,
   walletName,
-}: BaseBitcoindParams) {
+}: BitcoindParams) {
   return callBitcoindWallet({
     baseUrl: url,
     walletName,
@@ -91,7 +91,7 @@ export async function bitcoindGetAddressStatus({
   auth,
   walletName,
   address,
-}: BaseBitcoindParams & { address: string }) {
+}: BitcoindParams & { address: string }) {
   try {
     const resp: any = await callBitcoindWallet({
       baseUrl: url,
@@ -135,7 +135,7 @@ export async function bitcoindListUnspent({
   walletName,
   address,
   addresses,
-}: BaseBitcoindParams & {
+}: BitcoindParams & {
   address?: string;
   addresses?: string[];
 }): Promise<
@@ -153,7 +153,7 @@ export async function bitcoindListUnspent({
     const addressParam = addresses || [address];
     //@ts-expect-error Will Fix this
     const resp: {
-      result: ListUnspentResponse[];
+      result: ListUnspentResponseSubset[];
     } = await callBitcoindWallet({
       baseUrl: url,
       auth,

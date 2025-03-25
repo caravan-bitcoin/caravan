@@ -314,18 +314,4 @@ export interface UTXOUpdates {
   addressKnown?: boolean;
 }
 
-export interface BaseBitcoindParams {
-  url: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  walletName?: string;
-}
-
-export interface ListUnspentResponse {
-  txid: string;
-  amount: number;
-  confirmations: number;
-  vout: number;
-}
+export interface ListUnspentResponseSubset extends Pick<ListUnspentResponse, 'txid' | 'amount' | 'confirmations' | 'vout'> {}
