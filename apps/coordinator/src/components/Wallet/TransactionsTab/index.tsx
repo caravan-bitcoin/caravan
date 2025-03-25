@@ -101,13 +101,7 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
 
   return (
     <div>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-      >
-        <Typography variant="h6">Pending Transactions</Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={2}>
         <Tooltip title="Refresh transactions">
           <IconButton onClick={handleRefreshClick} disabled={isLoading}>
             <Refresh />
