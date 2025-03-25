@@ -366,7 +366,11 @@ class WalletGenerator extends React.Component {
     if (this.extendedPublicKeyCount() === totalSigners) {
       if (generating && !configuring) {
         return (
-          <WalletControl addNode={this.addNode} updateNode={this.updateNode} />
+          <WalletControl
+            addNode={this.addNode}
+            updateNode={this.updateNode}
+            refreshNodes={this.refreshNodes}
+          />
         );
       }
       if (!hasConflict) {
