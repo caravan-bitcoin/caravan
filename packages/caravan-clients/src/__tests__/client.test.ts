@@ -1260,9 +1260,7 @@ describe("BlockchainClient", () => {
             bitcoind,
             "bitcoindRawTxData",
           );
-          mockBitcoindRawTxData.mockResolvedValue({
-            result: mockRawTransactionData,
-          });
+          mockBitcoindRawTxData.mockResolvedValue(mockRawTransactionData);
 
           const result = await client.getTransaction(mockTxid);
 
