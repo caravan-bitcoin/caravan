@@ -315,3 +315,61 @@ export interface UTXOUpdates {
   fetchUTXOsError: string;
   addressKnown?: boolean;
 }
+
+/**
+ * Interface for Bitcoin wallet transaction response
+ * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
+ */
+export interface WalletTransactionResponse {
+  in_active_chain?: boolean; // Whether specified block is in the active chain
+  hex: string; // The serialized, hex-encoded data
+  txid: string; // The transaction id
+  hash: string; // The transaction hash (differs from txid for witness transactions)
+  size: number; // The serialized transaction size
+  vsize: number; // The virtual transaction size
+  weight: number; // The transaction's weight
+  version: number; // The version
+  locktime: number; // The lock time
+  vin: {
+    // Transaction inputs
+    txid: string; // The transaction id
+    vout: number; // The output number
+    scriptSig: {
+      // The script
+      asm: string; // asm
+      hex: string; // hex
+    };
+    sequence: number; // The script sequence number
+    txinwitness?: string[]; // hex-encoded witness data (if any)
+  }[];
+  vout: {
+    // Transaction outputs
+    value: number; // The value in BTC
+    n: number; // index
+    scriptPubKey: {
+      // Script info
+      asm: string; // the asm
+      hex: string; // the hex
+      reqSigs?: number; // The required sigs
+      type: string; // The type, eg 'pubkeyhash'
+      addresses?: string[]; // bitcoin addresses
+    };
+  }[];
+  blockhash?: string; // the block hash
+  confirmations: number; // The confirmations
+  blocktime?: number; // The block time expressed in UNIX epoch time
+  time: number; // Same as "blocktime" for confirmed tx, wallet entry time for unconfirmed
+  walletconflicts: string[]; // Conflicting transactions
+  fee?: number; // Transaction fee (negative for outgoing transactions)
+  details: {
+    // Details about each payment
+    address: string; // The bitcoin address
+    category: "send" | "receive" | "generate" | "immature" | "orphan";
+    amount: number; // The amount in BTC
+    label?: string; // A comment for the address/transaction
+    vout: number; // the vout value
+    fee?: number; // The amount of the fee in BTC
+    abandoned?: boolean; // Whether a transaction was abandoned
+  }[];
+  bip125_replaceable: "yes" | "no" | "unknown"; // Whether this transaction could be replaced
+}
