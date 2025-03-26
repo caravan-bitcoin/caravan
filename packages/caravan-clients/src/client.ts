@@ -17,6 +17,7 @@ import {
   bitcoindImportDescriptors,
   bitcoindListUnspent,
   bitcoindWalletInfo,
+  bitcoindGetWalletTransaction,
 } from "./wallet";
 import BigNumber from "bignumber.js";
 import {
@@ -556,6 +557,50 @@ export class BlockchainClient extends ClientBase {
       return await this.Get(`/tx/${txid}/hex`);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
+    }
+  }
+
+  /**
+   * Gets detailed information about a wallet transaction including fee information
+   *
+   * This method is specifically for transactions that are tracked by the wallet,
+   * and provides fee information that isn't available in the general getTransaction
+   * method. This is especially useful for private nodes where fee information is
+   * critical for UI display.
+   *
+   * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
+   *
+   * @param txid - Transaction ID to retrieve
+   * @returns Normalized transaction details with fee information
+   */
+  public async getWalletTransaction(txid: string): Promise<TransactionDetails> {
+    if (this.type !== ClientType.PRIVATE) {
+      throw new BlockchainClientError(
+        "Wallet transactions are only available for private Bitcoin nodes",
+      );
+    }
+
+    if (!this.bitcoindParams.walletName) {
+      throw new BlockchainClientError(
+        "Wallet name is required for wallet transaction lookups",
+      );
+    }
+
+    try {
+      const walletTxData = await bitcoindGetWalletTransaction({
+        url: this.bitcoindParams.url,
+        auth: this.bitcoindParams.auth,
+        walletName: this.bitcoindParams.walletName,
+        txid,
+      });
+
+      // Transform the wallet transaction format to the standard format using our helper function
+      const normalizedTxData: RawTransactionData =
+        transformWalletTransactionToRawTransactionData(walletTxData);
+
+      return normalizeTransactionData(normalizedTxData, this.type);
+    } catch (error: any) {
+      throw new Error(`Failed to get wallet transaction: ${error.message}`);
     }
   }
 
