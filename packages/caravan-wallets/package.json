@@ -64,7 +64,7 @@
     "mocha": "^10.2.0",
     "prettier": "^2.8.4",
     "ts-jest": "^29.0.5",
-    "tsup": "^7.2.0",
+    "tsup": "^8.4.0",
     "typescript": "^4.9.5"
   },
   "scripts": {
@@ -87,7 +87,7 @@
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.27.12",
     "@trezor/connect-web": "9.5.0",
-    "axios": "1.7.4",
+    "axios": "1.8.2",
     "bignumber.js": "^8.1.1",
     "bitbox-api": "^0.7.0",
     "bitcoinjs-lib": "^5.1.10",
