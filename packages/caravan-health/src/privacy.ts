@@ -3,15 +3,32 @@ import { getAddressType } from "@caravan/bitcoin";
 import { WalletMetrics } from "./wallet";
 import { determineSpendType, getSpendTypeScore } from "./spendType";
 
-// Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
-// More about deniability: https://www.truthcoin.info/blog/deniability/
+/**
+ * Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
+ * More about deniability: https://www.truthcoin.info/blog/deniability/
+ */
 const DENIABILITY_FACTOR = 1.5;
 
+/**
+ * PrivacyMetrics class extends WalletMetrics to evaluate the privacy health of a Bitcoin wallet.
+ */
 export class PrivacyMetrics extends WalletMetrics {
   /**
-   * Computes the topology score for a given transaction.
-   * @param {Transaction} transaction - The transaction to evaluate.
-   * @returns {number} Privacy score based on transaction topology.
+   * Name: Topology Score
+   *
+   * Definition:
+   * The score is calculated based on the number of inputs and outputs, which influence the topology type of the transaction.
+   *
+   * Calculation:
+   * There are five categories of transaction types, each with their own impact on privacy score:
+   * - Perfect Spend (1 input, 1 output)
+   * - Simple Spend (1 input, 2 outputs)
+   * - UTXO Fragmentation (1 input, more than 2 standard outputs)
+   * - Consolidation (more than 1 input, 1 output)
+   * - CoinJoin or Mixing (more than 1 input, more than 1 output)
+   *
+   * @param {Transaction} transaction - The transaction to analyze.
+   * @returns {number} The calculated topology score.
    */
   getTopologyScore(transaction: Transaction): number {
     const numberOfInputs: number = transaction.vin.length;
@@ -26,27 +43,38 @@ export class PrivacyMetrics extends WalletMetrics {
     if (spendType === SpendType.Consolidation) {
       return score;
     }
-
     for (const output of transaction.vout) {
       const address = output.scriptPubkeyAddress;
       const isReused = this.isReusedAddress(address);
-      if (isReused) {
+      if (isReused === true) {
         return score;
       }
     }
-
     return score * DENIABILITY_FACTOR;
   }
 
   /**
-   * Computes the mean topology privacy score (MTPS) for the wallet.
-   * @returns {number} Mean topology score across transactions.
+   * Name: Mean Transaction Topology Privacy Score (MTPS)
+   *
+   * Definition:
+   * The mean topology is evaluated for the entire wallet history based on
+   * the topology score for each transaction.
+   *
+   * Calculation:
+   * The mean topology score is calculated by evaluating the topology score for each transaction.
+   *
+   * Expected Range : [0, 0.75]
+      -> Very Poor : [0, 0.15]
+      -> Poor : (0.15, 0.3]
+      -> Moderate : (0.3, 0.45]
+      -> Good : (0.45, 0.6]
+      -> Very Good : (0.6, 0
+
+   * @returns {number} The mean topology score.
    */
   getMeanTopologyScore(): number {
-    const transactions = this.transactions;
-    if (transactions.length === 0) return 0; // Prevent division by zero
-
     let privacyScore = 0;
+    const transactions = this.transactions;
     for (const tx of transactions) {
       const topologyScore = this.getTopologyScore(tx);
       privacyScore += topologyScore;
@@ -55,14 +83,29 @@ export class PrivacyMetrics extends WalletMetrics {
   }
 
   /**
-   * Calculates the Address Reuse Factor (ARF).
-   * @returns {number} A metric measuring the proportion of reused addresses.
+   * Name: Address Reuse Factor (ARF)
+   *
+   *  Definition :
+      The address reuse factor evaluates the amount being held by reused addresses with respect 
+      to the total amount. It signifies the privacy health of the wallet based on address reuse.
+
+    Calculation : 
+      The factor is calculated by summing the amount held by reused addresses and dividing it 
+      by the total amount.
+
+    Expected Range : [0,1]
+      -> Very Poor : (0.8, 1]
+      -> Poor : [0.6, 0.8)
+      -> Moderate : [0.4, 0.6)
+      -> Good : [0.2, 0.4)
+      -> Very Good : [0 ,0.2) 
+   *
+   * @returns {number} The address reuse factor.
    */
   addressReuseFactor(): number {
-    let reusedAmount: number = 0;
-    let totalAmount: number = 0;
+    let reusedAmount = 0;
+    let totalAmount = 0;
     const utxos = this.utxos;
-
     for (const address in utxos) {
       const addressUtxos = utxos[address];
       for (const utxo of addressUtxos) {
@@ -72,15 +115,31 @@ export class PrivacyMetrics extends WalletMetrics {
         }
       }
     }
-
-    return totalAmount === 0 ? 0 : reusedAmount / totalAmount; // Prevent division by zero
+    return reusedAmount / totalAmount;
   }
 
   /**
-   * Calculates the Address Type Factor (ATF) based on the variety of address types used.
-   * @param {MultisigAddressType} walletAddressType - The type of addresses used in the wallet.
-   * @param {Network} network - The Bitcoin network.
-   * @returns {number} The address type factor score.
+   * Name: Address Type Factor (ATF)
+   *
+   * Definition :
+      The address type factor evaluates the address type distribution of the wallet transactions. 
+      It signifies the privacy health of the wallet based on the address types used.
+
+    Calculation :
+      It is calculated as 
+        ATF= 1/(same+1)
+      where "same" denotes the number of output address types matching the input address type. 
+      A higher "same" value results in a lower ATF, indicating reduced privacy due to less variety in address types.
+      If all are same or all are different address type then there will be no change in the privacy score.
+
+    Expected Range : (0,1]
+      -> Very Poor : (0, 0.1]
+      -> Poor : [0.1, 0.3)
+      -> Moderate : [0.3, 0.4)
+      -> Good : [0.4, 0.5)
+      -> Very Good : [0.
+   *
+   * @returns {number} The address type factor.
    */
   addressTypeFactor(
     walletAddressType: MultisigAddressType,
@@ -94,79 +153,89 @@ export class PrivacyMetrics extends WalletMetrics {
       UNKNOWN: 0,
       "P2SH-P2WSH": 0,
     };
-
     this.transactions.forEach((tx) => {
       tx.vout.forEach((output) => {
         const addressType = getAddressType(output.scriptPubkeyAddress, network);
         addressCounts[addressType]++;
       });
     });
-
     const totalAddresses = Object.values(addressCounts).reduce(
       (a, b) => a + b,
       0,
     );
-    const walletTypeCount = addressCounts[walletAddressType];
-
-    if (walletTypeCount === 0 || totalAddresses === walletTypeCount) {
-      return 1;
-    }
-    return 1 / (walletTypeCount + 1);
+    return totalAddresses === addressCounts[walletAddressType]
+      ? 1
+      : 1 / (addressCounts[walletAddressType] + 1);
   }
 
   /**
-   * Computes the UTXO Spread Factor based on the distribution of UTXO values.
-   * @returns {number} A measure of UTXO value dispersion.
+   * Name: UTXO Spread Factor
+   *
+    Definition :
+      The spread factor using standard deviation helps in assessing the dispersion of UTXO values.
+      In Bitcoin privacy, spreading UTXOs reduces traceability by making it harder for adversaries
+      to link transactions and deduce the ownership and spending patterns of users.
+
+    Calculation :
+      The spread factor is calculated by evaluating the standard deviation of UTXO values.
+      It is calculated as the standard deviation divided by the sum of the standard deviation with 1.
+
+    Expected Range : [0,1)
+    -> Very Poor : (0, 0.2]
+    -> Poor : [0.2, 0.4)
+    -> Moderate : [0.4, 0.6)
+    -> Good : [0.6, 0.8)
+    -> Very Good : [0.8 ,1]
+   *
+   * @returns {number} The UTXO spread factor.
    */
   utxoSpreadFactor(): number {
-    const amounts: number[] = [];
-    const utxos = this.utxos;
-
-    for (const address in utxos) {
-      utxos[address].forEach((utxo) => {
-        amounts.push(utxo.value);
-      });
-    }
-
-    if (amounts.length === 0) return 0; // Prevent division by zero
-
+    const amounts: number[] = Object.values(this.utxos)
+      .flat()
+      .map((utxo) => utxo.value);
     const mean =
       amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
     const variance =
       amounts.reduce((sum, amount) => sum + Math.pow(amount - mean, 2), 0) /
       amounts.length;
-    const stdDev = Math.sqrt(variance);
-
-    return stdDev / (stdDev + 1);
+    return Math.sqrt(variance) / (Math.sqrt(variance) + 1);
   }
 
   /**
-   * Computes the UTXO Mass Factor (UMF) based on the number of UTXOs.
-   * @returns {number} A measure of the number of UTXOs.
-   */
-  utxoMassFactor(): number {
-    const totalUtxos = Object.values(this.utxos).reduce(
-      (sum, utxos) => sum + utxos.length,
-      0,
-    );
-    return totalUtxos / (totalUtxos + 1);
-  }
+   * Name: UTXO Value Dispersion Factor (UVDF)
+   *
+   * Definition :
+      The UTXO value dispersion factor is a combination of UTXO Spread Factor and UTXO Mass Factor.
+      It signifies the combined effect of how much variance there is in the UTXO Set values and 
+      the total number of UTXOs there are.
 
-  /**
-   * Computes the UTXO Value Dispersion Factor (UVDF).
-   * @returns {number} A metric combining UTXO spread and UTXO mass.
+    Calculation :
+      The U.V.D.F is calculated as a combination of UTXO Spread Factor and UTXO Set Length Weight.
+      It is calculated as (USF + UMF) * 0.15 - 0.15.
+
+    Expected Range : [-0.15,0.15]
+    -> Very Poor : [-0.15, -0.1]
+    -> Poor : (-0.1, -0.075]
+    -> Moderate : (-0.075, 0)
+    -> Good : (0, 0.075]
+    -> Very Good : (0.075, 0.15
+   *
+   * @returns {number} The UTXO Value Dispersion Factor.
    */
   utxoValueDispersionFactor(): number {
-    const UMF = this.utxoMassFactor();
-    const USF = this.utxoSpreadFactor();
-    return (USF + UMF) * 0.15 - 0.15;
+    return (this.utxoSpreadFactor() + this.utxoMassFactor()) * 0.15 - 0.15;
   }
 
   /**
-   * Computes the Weighted Privacy Score (WPS) for the wallet.
-   * @param {MultisigAddressType} walletAddressType - The wallet's address type.
-   * @param {Network} network - The Bitcoin network.
-   * @returns {number} A weighted score representing overall privacy health.
+   * Name: Weighted Privacy Score (WPS)
+   *
+   * Definition:
+   * The weighted privacy score is a combination of all the privacy metrics.
+   *  Calculation :
+      The weighted privacy score is calculated by 
+        WPS = (MTPS * (1 - 0.5 * ARF) + 0.1 * (1 - ARF)) * (1 - ATF) + 0.1 * UVDF
+   *
+   * @returns {number} The overall wallet privacy score.
    */
   getWalletPrivacyScore(
     walletAddressType: MultisigAddressType,
