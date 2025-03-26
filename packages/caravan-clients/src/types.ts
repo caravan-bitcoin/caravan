@@ -321,55 +321,69 @@ export interface UTXOUpdates {
  * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
  */
 export interface WalletTransactionResponse {
-  in_active_chain?: boolean; // Whether specified block is in the active chain
-  hex: string; // The serialized, hex-encoded data
-  txid: string; // The transaction id
-  hash: string; // The transaction hash (differs from txid for witness transactions)
-  size: number; // The serialized transaction size
-  vsize: number; // The virtual transaction size
-  weight: number; // The transaction's weight
-  version: number; // The version
-  locktime: number; // The lock time
-  vin: {
-    // Transaction inputs
-    txid: string; // The transaction id
-    vout: number; // The output number
-    scriptSig: {
-      // The script
-      asm: string; // asm
-      hex: string; // hex
-    };
-    sequence: number; // The script sequence number
-    txinwitness?: string[]; // hex-encoded witness data (if any)
-  }[];
-  vout: {
-    // Transaction outputs
-    value: number; // The value in BTC
-    n: number; // index
-    scriptPubKey: {
-      // Script info
-      asm: string; // the asm
-      hex: string; // the hex
-      reqSigs?: number; // The required sigs
-      type: string; // The type, eg 'pubkeyhash'
-      addresses?: string[]; // bitcoin addresses
-    };
-  }[];
-  blockhash?: string; // the block hash
-  confirmations: number; // The confirmations
-  blocktime?: number; // The block time expressed in UNIX epoch time
-  time: number; // Same as "blocktime" for confirmed tx, wallet entry time for unconfirmed
-  walletconflicts: string[]; // Conflicting transactions
-  fee?: number; // Transaction fee (negative for outgoing transactions)
+  amount: number; // The total amount (negative for outgoing transactions)
+  fee: number; // The fee amount (negative for outgoing transactions)
+  confirmations: number; // Number of confirmations
+  blockhash?: string; // The block hash containing the transaction
+  blockheight?: number; // The block height containing the transaction
+  blockindex?: number; // Position of tx in the block
+  blocktime?: number; // Block time in UNIX epoch time
+  txid: string; // The transaction ID
+  wtxid?: string; // The witness transaction ID
+  walletconflicts: string[]; // Conflicting transaction IDs
+  mempoolconflicts?: string[]; // Conflicts in mempool
+  time: number; // Transaction time in UNIX epoch time
+  timereceived: number; // Time received in UNIX epoch time
+  "bip125-replaceable": "yes" | "no" | "unknown"; // Replace-by-fee status
+
   details: {
-    // Details about each payment
-    address: string; // The bitcoin address
+    address: string;
     category: "send" | "receive" | "generate" | "immature" | "orphan";
-    amount: number; // The amount in BTC
-    label?: string; // A comment for the address/transaction
-    vout: number; // the vout value
-    fee?: number; // The amount of the fee in BTC
-    abandoned?: boolean; // Whether a transaction was abandoned
+    amount: number; // Amount (negative for outgoing)
+    vout: number; // Output index
+    fee?: number; // Fee amount (if category is "send")
+    abandoned?: boolean; // If the transaction was abandoned
+    label?: string; // Address label if any
   }[];
-  bip125_replaceable: "yes" | "no" | "unknown"; // Whether this transaction could be replaced
+
+  hex: string; // Raw transaction data
+
+  decoded?: {
+    // Only present when verbose=true
+    txid: string;
+    hash: string; // Witness transaction hash
+    version: number;
+    size: number; // Transaction size in bytes
+    vsize: number; // Virtual size (for segwit)
+    weight: number; // Transaction weight
+    locktime: number;
+
+    vin: {
+      txid: string; // Input transaction ID
+      vout: number; // Referenced output
+      scriptSig: {
+        asm: string;
+        hex: string;
+      };
+      txinwitness?: string[]; // Witness data (for segwit inputs)
+      sequence: number;
+    }[];
+
+    vout: {
+      value: number; // Output amount in BTC
+      n: number; // Output index
+      scriptPubKey: {
+        asm: string;
+        desc?: string; // Output descriptor
+        hex: string;
+        address?: string; // Bitcoin address
+        type: string; // Script type
+      };
+    }[];
+  };
+  lastprocessedblock?: {
+    // Information about the last processed block
+    hash: string;
+    height: number;
+  };
 }
