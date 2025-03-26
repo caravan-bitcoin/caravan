@@ -517,7 +517,7 @@ export class BlockchainClient extends ClientBase {
           auth: this.bitcoindParams.auth,
           txid,
         });
-        txData = response.result;
+        txData = response;
       } else if (
         this.type === ClientType.BLOCKSTREAM ||
         this.type === ClientType.MEMPOOL

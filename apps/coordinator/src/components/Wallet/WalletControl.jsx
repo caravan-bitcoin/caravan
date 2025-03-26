@@ -16,6 +16,7 @@ import { setRequiredSigners as setRequiredSignersAction } from "../../actions/tr
 import { MAX_FETCH_UTXOS_ERRORS, MAX_TRAILING_EMPTY_NODES } from "./constants";
 import WalletDeposit from "./WalletDeposit";
 import WalletSpend from "./WalletSpend";
+import TransactionsTab from "./TransactionsTab/index";
 import { SlicesTableContainer } from "../Slices";
 
 class WalletControl extends React.Component {
@@ -41,6 +42,11 @@ class WalletControl extends React.Component {
             <Tab label="Addresses" value={WALLET_MODES.VIEW} key={0} />,
             <Tab label="Receive" value={WALLET_MODES.DEPOSIT} key={1} />,
             <Tab label="Send" value={WALLET_MODES.SPEND} key={2} />,
+            <Tab
+              label="Transactions"
+              value={WALLET_MODES.TRANSACTIONS}
+              key={3}
+            />,
           ]}
         </Tabs>
         <Box mt={2}>{this.renderModeComponent()}</Box>
@@ -55,6 +61,8 @@ class WalletControl extends React.Component {
       if (walletMode === WALLET_MODES.SPEND)
         return <WalletSpend addNode={addNode} updateNode={updateNode} />;
       if (walletMode === WALLET_MODES.VIEW) return <SlicesTableContainer />;
+      if (walletMode === WALLET_MODES.TRANSACTIONS)
+        return <TransactionsTab refreshWallet={this.props.refreshNodes} />;
     }
     const progress = this.progress();
     return [
@@ -114,6 +122,7 @@ WalletControl.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updateNode: PropTypes.func.isRequired,
   walletMode: PropTypes.number.isRequired,
+  refreshNodes: PropTypes.func.isRequired,
 };
 
 function mapStateToProps(state) {
