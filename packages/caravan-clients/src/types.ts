@@ -101,6 +101,18 @@ interface RawTxStatus {
   block_time?: number;
 }
 
+export type RPCParam = 
+  | string 
+  | number 
+  | boolean 
+  | null 
+  | undefined 
+  | RPCParam[] 
+  | { [key: string]: RPCParam };
+
+export type RPCParams = RPCParam[] | Record<string, RPCParam>;
+
+
 /**
  * Interface representing raw transaction data
  */
@@ -175,7 +187,7 @@ export interface BitcoindWalletParams {
   walletName?: string;
   auth: { username: string; password: string };
   method: string;
-  params?: any[] | Record<string, any>;
+  params?: RPCParams;
 }
 
 /**
@@ -185,7 +197,7 @@ export interface RPCRequest {
   jsonrpc: string;
   id: number;
   method: string;
-  params: unknown[];
+  params: RPCParams;
 }
 
 /**
