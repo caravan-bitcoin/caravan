@@ -84,6 +84,7 @@ export interface RawTransactionData {
   vin: RawTxInput[];
   vout: RawTxOutput[];
   size: number;
+  vsize?: number;
   weight: number;
   fee: number;
   status?: RawTxStatus; // Optional for private node
@@ -109,6 +110,7 @@ export interface TransactionDetails {
     scriptPubkeyAddress?: string;
   }>;
   size: number;
+  vsize?: number;
   weight: number;
   fee: number;
   status: {
