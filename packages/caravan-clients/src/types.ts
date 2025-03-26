@@ -144,27 +144,27 @@ export interface TransactionDetails {
  * Interface representing a transaction from list transactions
  */
 export interface ListTransactionsItem {
-  involvesWatchonly?: boolean;
-  address: string;
-  category: "send" | "receive" | "generate" | "immature" | "orphan";
-  amount: number;
-  label?: string;
-  vout: number;
-  fee?: number;
-  confirmations: number;
-  generated?: boolean;
-  trusted?: boolean;
-  blockhash: string;
-  blockheight?: number;
-  blockindex: number;
-  blocktime: number;
-  txid: string;
-  walletconflicts: string[];
-  time: number;
-  timereceived: number;
-  comment?: string;
-  "bip125-replaceable": "yes" | "no" | "unknown";
-  abandoned?: boolean;
+  involvesWatchonly?: boolean; // Only present if imported addresses were involved
+  address: string; // The bitcoin address of the transaction
+  category: "send" | "receive" | "generate" | "immature" | "orphan"; // The transaction category
+  amount: number; // The amount in BTC
+  label?: string; // Optional comment for the address/transaction
+  vout: number; // The vout value
+  fee?: number; // Only available for 'send' category
+  confirmations: number; // Number of confirmations, can be negative
+  generated?: boolean; // Only present if transaction only input is coinbase
+  trusted?: boolean; // Only present if we consider transaction to be trusted
+  blockhash: string; // The block hash containing the transaction
+  blockheight?: number; // The block height containing the transaction
+  blockindex: number; // The index of the transaction in the block
+  blocktime: number; // Block time in UNIX epoch time
+  txid: string; // The transaction id
+  walletconflicts: string[]; // Conflicting transaction ids
+  time: number; // Transaction time in UNIX epoch time
+  timereceived: number; // Time received in UNIX epoch time
+  comment?: string; // Optional comment associated with the transaction
+  "bip125-replaceable": "yes" | "no" | "unknown"; // Replace-by-fee status
+  abandoned?: boolean; // Only available for 'send' category
 }
 
 /**
@@ -277,8 +277,10 @@ export interface ImportMultiResponse {
   error?: string;
 }
 
+// Used in block_explorer.ts
+
 /**
- * Interface for the block explorer UTXO response
+ * Interface for the block explorer API response format for UTXOs
  */
 export interface BlockExplorerUTXOResponse {
   txid: string;
