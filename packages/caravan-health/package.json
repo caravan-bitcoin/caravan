@@ -29,9 +29,9 @@
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "jest src",
-    "test:watch": "jest --watch src",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+    "test": "vitest --watch=false src",
+    "test:watch": "vitest src",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest --runInBand"
   },
   "dependencies": {
     "@caravan/clients": "*",
