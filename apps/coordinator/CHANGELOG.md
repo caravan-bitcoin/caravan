@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.0
+
+### Minor Changes
+
+- [#168](https://github.com/caravan-bitcoin/caravan/pull/168) [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add a new Transactions tab to the wallet interface that provides users with a detailed view of their transaction history.
+
+### Patch Changes
+
+- [#205](https://github.com/caravan-bitcoin/caravan/pull/205) [`19bff49`](https://github.com/caravan-bitcoin/caravan/commit/19bff491cdcc8ccb9e092c76c75d826dd33e3c87) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - UI cleanup: Remove redundant header and focus on pending transactions
+
+- Updated dependencies [[`b3d3033`](https://github.com/caravan-bitcoin/caravan/commit/b3d3033f807bf41c270af890ba8459ff31263ac0), [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4)]:
+  - @caravan/psbt@1.9.0
+  - @caravan/clients@0.3.2
+
 ## 1.5.3
 
 ### Patch Changes

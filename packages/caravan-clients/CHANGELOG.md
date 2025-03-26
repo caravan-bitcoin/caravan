@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.3.2
+
+### Patch Changes
+
+- [#168](https://github.com/caravan-bitcoin/caravan/pull/168) [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Patch: align client.getTransaction method implementation with bitcoindRawTxData response
+
 ## 0.3.1
 
 ### Patch Changes

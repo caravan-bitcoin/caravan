@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.9.0
+
+### Minor Changes
+
+- [#199](https://github.com/caravan-bitcoin/caravan/pull/199) [`b3d3033`](https://github.com/caravan-bitcoin/caravan/commit/b3d3033f807bf41c270af890ba8459ff31263ac0) Thanks [@Shadouts](https://github.com/Shadouts)! - Fixes PsbtV2.isReadyForConstructor by not requiring that PSBT_GLOBAL_FALLBACK_LOCKTIME be set. This field is not required on a psbtv2 per BIP370.
+
 ## 1.8.0
 
 ### Minor Changes
