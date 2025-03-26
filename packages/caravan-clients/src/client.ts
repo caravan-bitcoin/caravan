@@ -27,6 +27,7 @@ import {
   RawTransactionData,
   ListTransactionsItem,
   TransactionResponse,
+  WalletTransactionResponse,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -45,6 +46,57 @@ export enum ClientType {
 const delay = () => {
   return new Promise((resolve) => setTimeout(resolve, 500));
 };
+
+/**
+ * Transforms a wallet transaction response to the standard raw transaction format
+ * used by the the package. This ensures consistency in transaction data handling
+ * regardless of the source (wallet transaction, raw transaction, or explorer API).
+ *
+ * @param walletTx - The wallet transaction response from bitcoind
+ * @returns Standardized raw transaction data
+ */
+export function transformWalletTransactionToRawTransactionData(
+  walletTx: WalletTransactionResponse,
+): RawTransactionData {
+  // Make sure decoded data exists as it has fields like size,etc
+  if (!walletTx.decoded) {
+    throw new Error(
+      "Transaction decoded data is missing. Make sure verbose=true was passed to gettransaction.",
+    );
+  }
+
+  // Convert fee from BTC to satoshis (and make positive)
+  const feeSats = Math.abs(walletTx.fee || 0) * 100000000;
+
+  return {
+    txid: walletTx.txid,
+    version: walletTx.decoded.version,
+    locktime: walletTx.decoded.locktime,
+    size: walletTx.decoded.size,
+    weight: walletTx.decoded.weight,
+    fee: feeSats, // Convert from BTC to satoshis
+    vin: walletTx.decoded.vin.map((input) => ({
+      txid: input.txid,
+      vout: input.vout,
+      sequence: input.sequence,
+    })),
+    vout: walletTx.decoded.vout.map((output) => ({
+      value: output.value,
+      scriptpubkey: output.scriptPubKey.hex,
+      scriptpubkey_address: output.scriptPubKey.address,
+    })),
+    confirmations: walletTx.confirmations,
+    blockhash: walletTx.blockhash,
+    blocktime: walletTx.blocktime,
+    status: {
+      confirmed: (walletTx.confirmations || 0) > 0,
+      block_height: walletTx.blockheight,
+      block_hash: walletTx.blockhash,
+      block_time: walletTx.blocktime,
+    },
+    hex: walletTx.hex,
+  };
+}
 
 /**
  * Normalizes transaction data from different sources (private node, blockstream, mempool)
