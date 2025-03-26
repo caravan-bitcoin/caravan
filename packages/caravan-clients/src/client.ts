@@ -594,7 +594,6 @@ export class BlockchainClient extends ClientBase {
         txid,
       });
 
-      // Transform the wallet transaction format to the standard format using our helper function
       const normalizedTxData: RawTransactionData =
         transformWalletTransactionToRawTransactionData(walletTxData);
 

@@ -4,11 +4,17 @@ import {
   ClientType,
   ClientBase,
   BlockchainClientError,
+  transformWalletTransactionToRawTransactionData,
 } from "./client";
 import * as bitcoind from "./bitcoind";
 import * as wallet from "./wallet";
 import BigNumber from "bignumber.js";
-import { UTXO, RawTransactionData, TransactionDetails } from "./types";
+import {
+  UTXO,
+  RawTransactionData,
+  TransactionDetails,
+  WalletTransactionResponse,
+} from "./types";
 import axios from "axios";
 jest.mock("axios");
 
@@ -1350,6 +1356,161 @@ describe("BlockchainClient", () => {
           `Failed to get transaction: ${mockError.message}`,
         );
       });
+    });
+  });
+  describe("transformWalletTransactionToRawTransactionData", () => {
+    it("should correctly transform wallet transaction to raw transaction data", () => {
+      const walletTx: WalletTransactionResponse = {
+        amount: -1.5,
+        fee: -0.00025,
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blockheight: 123456,
+        blocktime: 1631234567,
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        hex: "01000000...",
+        walletconflicts: [],
+        time: 1631234560,
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
+        timereceived: 1631234562,
+        "bip125-replaceable": "no",
+        decoded: {
+          txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          hash: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          version: 2,
+          size: 225,
+          vsize: 225,
+          weight: 900,
+          locktime: 0,
+          vin: [
+            {
+              txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              vout: 1,
+              scriptSig: { asm: "", hex: "" },
+              sequence: 4294967295,
+            },
+          ],
+          vout: [
+            {
+              value: 1.4997,
+              n: 0,
+              scriptPubKey: {
+                asm: "OP_DUP OP_HASH160 ...",
+                hex: "76a914...",
+                type: "pubkeyhash",
+                address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+              },
+            },
+          ],
+        },
+      };
+
+      const result = transformWalletTransactionToRawTransactionData(walletTx);
+
+      expect(result).toEqual({
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        version: 2,
+        locktime: 0,
+        size: 225,
+        weight: 900,
+        fee: 25000, // Converted from -0.00025 BTC to 25000 sats and made positive
+        vin: [
+          {
+            txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            vout: 1,
+            sequence: 4294967295,
+          },
+        ],
+        vout: [
+          {
+            value: 1.4997,
+            scriptpubkey: "76a914...",
+            scriptpubkey_address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          },
+        ],
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blocktime: 1631234567,
+        status: {
+          confirmed: true,
+          block_height: 123456,
+          block_hash:
+            "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+          block_time: 1631234567,
+        },
+        hex: "01000000...",
+      });
+    });
+
+    it("should throw an error when decoded data is missing", () => {
+      const walletTx = {
+        amount: -1.5,
+        fee: -0.00025,
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        // No decoded field
+      };
+
+      expect(() =>
+        transformWalletTransactionToRawTransactionData(walletTx as any),
+      ).toThrow("Transaction decoded data is missing");
+    });
+
+    it("should handle missing fee value", () => {
+      const walletTx = {
+        amount: -1.5,
+        // No fee field
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blockheight: 123456,
+        blocktime: 1631234567,
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        decoded: {
+          txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          version: 2,
+          size: 225,
+          weight: 900,
+          locktime: 0,
+          vin: [
+            {
+              txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              vout: 1,
+              sequence: 4294967295,
+            },
+          ],
+          vout: [
+            {
+              value: 1.4997,
+              n: 0,
+              scriptPubKey: {
+                hex: "76a914...",
+                addresses: ["1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"],
+              },
+            },
+          ],
+        },
+      };
+
+      const result = transformWalletTransactionToRawTransactionData(
+        walletTx as any,
+      );
+
+      // Fee should be 0 when missing
+      expect(result.fee).toBe(0);
     });
   });
 });
