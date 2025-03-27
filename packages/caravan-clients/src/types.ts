@@ -1,6 +1,9 @@
 import BigNumber from "bignumber.js";
 import { AxiosBasicCredentials } from "axios";
 
+/**
+ * Interface representing an Unspent Transaction Output (UTXO)
+ */
 export interface UTXO {
   txid: string;
   vout: number;
@@ -11,6 +14,9 @@ export interface UTXO {
   };
 }
 
+/**
+ * Interface representing a Bitcoin transaction
+ */
 export interface Transaction {
   txid: string;
   vin: Input[];
@@ -23,18 +29,27 @@ export interface Transaction {
   block_time: number;
 }
 
+/**
+ * Interface for transaction input details
+ */
 interface Input {
   prevTxId: string;
   vout: number;
   sequence: number;
 }
 
+/**
+ * Interface for transaction output details
+ */
 interface Output {
   scriptPubkeyHex: string;
   scriptPubkeyAddress: string;
   value: number;
 }
 
+/**
+ * Interface representing fee rate percentiles
+ */
 export interface FeeRatePercentile {
   avgHeight: number;
   timestamp: number;
@@ -47,6 +62,9 @@ export interface FeeRatePercentile {
   avgFee_100: number;
 }
 
+/**
+ * Interface representing raw transaction input
+ */
 interface RawTxInput {
   txid: string;
   vout: number;
@@ -62,6 +80,9 @@ interface RawTxInput {
   };
 }
 
+/**
+ * Interface representing raw transaction output
+ */
 interface RawTxOutput {
   value: number;
   scriptpubkey: string;
@@ -70,6 +91,9 @@ interface RawTxOutput {
   scriptpubkey_address?: string;
 }
 
+/**
+ * Interface representing raw transaction status
+ */
 interface RawTxStatus {
   confirmed: boolean;
   block_height?: number;
@@ -77,6 +101,21 @@ interface RawTxStatus {
   block_time?: number;
 }
 
+export type RPCParam = 
+  | string 
+  | number 
+  | boolean 
+  | null 
+  | undefined 
+  | RPCParam[] 
+  | { [key: string]: RPCParam };
+
+export type RPCParams = RPCParam[] | Record<string, RPCParam>;
+
+
+/**
+ * Interface representing raw transaction data
+ */
 export interface RawTransactionData {
   txid: string;
   version: number;
@@ -87,13 +126,16 @@ export interface RawTransactionData {
   weight: number;
   fee: number;
   status?: RawTxStatus; // Optional for private node
-  // Additional fields for private node
+    // Additional fields for private node
   confirmations?: number;
   blockhash?: string;
   blocktime?: number;
   hex?: string;
 }
 
+/**
+ * Interface for transaction details
+ */
 export interface TransactionDetails {
   txid: string;
   version: number;
@@ -119,6 +161,9 @@ export interface TransactionDetails {
   };
 }
 
+/**
+ * Interface representing a transaction from list transactions
+ */
 export interface ListTransactionsItem {
   involvesWatchonly?: boolean; // Only present if imported addresses were involved
   address: string; // The bitcoin address of the transaction
@@ -143,21 +188,20 @@ export interface ListTransactionsItem {
   abandoned?: boolean; // Only available for 'send' category
 }
 
-export interface BitcoindWalletParams<T> {
+/**
+ * Interface for Bitcoin node wallet parameters
+ */
+export interface BitcoindWalletParams {
   baseUrl: string; // Base URL of the Bitcoin node
   walletName?: string; // Optional wallet name for multi-wallet setups
   auth: {
     // Auth credentials for the node
-    username: string;
-    password: string;
+    username: string; 
+    password: string 
   };
   method: string; // RPC method to call
-  params?: unknown[]; // Support both array and object params
-
-  responseType?: T;
+  params?: RPCParams; // Support both array and object params
 }
-
-// Used in bitcoind.ts
 
 /**
  * Interface for the RPC request parameters
@@ -166,7 +210,7 @@ export interface RPCRequest {
   jsonrpc: string;
   id: number;
   method: string;
-  params: unknown[]; // using unknown instead of any beacuse forces us to check the type before using it, while any allows unsafe operations without warnings
+  params: RPCParams;
 }
 
 /**
@@ -174,24 +218,24 @@ export interface RPCRequest {
  */
 export interface RPCResponse<T = unknown> {
   result: T;
-  error?: {
-    code: number;
-    message: string;
-  };
+  error?: { code: number; message: string };
   id: number;
 }
 
+/**
+ * Base parameters for interacting with Bitcoin node
+ */
 export interface BaseBitcoindArgs {
   url: string;
   auth: AxiosBasicCredentials;
 }
 
+/**
+ * Interface for Bitcoin node parameters
+ */
 export interface BitcoindParams {
   url: string;
-  auth: {
-    username: string;
-    password: string;
-  };
+  auth: { username: string; password: string };
   walletName?: string;
 }
 
@@ -208,14 +252,18 @@ export interface UnspentOutput {
   time: number;
 }
 
+/**
+ * Interface for importing Bitcoin address descriptors
+ */
 export interface ImportDescriptor {
-  scriptPubKey: {
-    address: string;
-  };
+  scriptPubKey: { address: string };
   label?: string;
   timestamp: number;
 }
 
+/**
+ * Interface for listing unspent transactions
+ */
 export interface ListUnspentResponse {
   txid: string;
   vout: number;
@@ -229,6 +277,9 @@ export interface ListUnspentResponse {
   safe: boolean;
 }
 
+/**
+ * Interface for a transaction response from the node
+ */
 export interface TransactionResponse {
   amount: number;
   fee: number;
@@ -242,6 +293,9 @@ export interface TransactionResponse {
   hex: string;
 }
 
+/**
+ * Interface for the import multi-response from Bitcoin node
+ */
 export interface ImportMultiResponse {
   success: boolean;
   warnings?: string[];
@@ -257,22 +311,15 @@ export interface BlockExplorerUTXOResponse {
   txid: string;
   vout: number;
   value: number;
-  status: {
-    confirmed: boolean;
-    block_time: number;
-  };
+  status: { confirmed: boolean; block_time: number };
 }
 
 /**
- * Interface for the block explorer API response for address data
+ * Interface for block explorer API response for address data
  */
 export interface BlockExplorerAddressResponse {
-  chain_stats: {
-    funded_txo_count: number;
-  };
-  mempool_stats: {
-    funded_txo_count: number;
-  };
+  chain_stats: { funded_txo_count: number };
+  mempool_stats: { funded_txo_count: number };
 }
 
 /**
@@ -288,10 +335,15 @@ export interface FormattedUTXO {
   time: number;
 }
 
-// Used in blockchain.ts
+/**
+ * Constants for client types
+ */
 export const BLOCK_EXPLORER = "public" as const;
 export const BITCOIND = "private" as const;
 
+/**
+ * Type representing the client type
+ */
 export type ClientType = typeof BLOCK_EXPLORER | typeof BITCOIND;
 
 /**

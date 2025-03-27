@@ -2,6 +2,7 @@ import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
+import { BitcoindWalletParams, BitcoindParams, ListUnspentResponse } from "./types";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {
@@ -10,16 +11,6 @@ export class BitcoindWalletClientError extends Error {
   }
 }
 
-export interface BitcoindWalletParams {
-  baseUrl: string;
-  walletName?: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  method: string;
-  params?: any[] | Record<string, any>;
-}
 
 export function callBitcoindWallet({
   baseUrl,
@@ -36,20 +27,11 @@ export function callBitcoindWallet({
   return callBitcoind(url.toString(), auth, method, params);
 }
 
-export interface BaseBitcoindParams {
-  url: string;
-  auth: {
-    username: string;
-    password: string;
-  };
-  walletName?: string;
-}
-
 export function bitcoindWalletInfo({
   url,
   auth,
   walletName,
-}: BaseBitcoindParams) {
+}: BitcoindParams) {
   return callBitcoindWallet({
     baseUrl: url,
     walletName,
@@ -109,7 +91,7 @@ export async function bitcoindGetAddressStatus({
   auth,
   walletName,
   address,
-}: BaseBitcoindParams & { address: string }) {
+}: BitcoindParams & { address: string }) {
   try {
     const resp: any = await callBitcoindWallet({
       baseUrl: url,
@@ -138,12 +120,7 @@ export async function bitcoindGetAddressStatus({
   }
 }
 
-export interface ListUnspentResponse {
-  txid: string;
-  amount: number;
-  confirmations: number;
-  vout: number;
-}
+
 /**
  * Fetch unspent outputs for a single or set of addresses
  * @param {Object} options - what is needed to communicate with the RPC
@@ -158,7 +135,7 @@ export async function bitcoindListUnspent({
   walletName,
   address,
   addresses,
-}: BaseBitcoindParams & {
+}: BitcoindParams & {
   address?: string;
   addresses?: string[];
 }): Promise<
@@ -176,7 +153,7 @@ export async function bitcoindListUnspent({
     const addressParam = addresses || [address];
     //@ts-expect-error Will Fix this
     const resp: {
-      result: ListUnspentResponse[];
+      result: Pick<ListUnspentResponse, "txid" | "amount" | "confirmations" | "vout">[];
     } = await callBitcoindWallet({
       baseUrl: url,
       auth,
@@ -184,8 +161,9 @@ export async function bitcoindListUnspent({
       method: "listunspent",
       params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
     });
+    
     const promises: Promise<any>[] = [];
-
+    
     resp.result.forEach((utxo) => {
       promises.push(
         callBitcoindWallet({
@@ -197,7 +175,9 @@ export async function bitcoindListUnspent({
         }),
       );
     });
+    
     const previousTransactions = await Promise.all(promises);
+    
     return resp.result.map((utxo, mapindex) => {
       const amount = new BigNumber(utxo.amount);
       return {
@@ -209,7 +189,7 @@ export async function bitcoindListUnspent({
         transactionHex: previousTransactions[mapindex].result.hex,
         time: previousTransactions[mapindex].result.blocktime,
       };
-    });
+    });    
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("There was a problem:", (e as Error).message);
