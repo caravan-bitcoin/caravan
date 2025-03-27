@@ -15,6 +15,7 @@ import {
   BitcoindParams,
   UnspentOutput,
   BaseBitcoindArgs,
+  RPCParams
 } from "./types";
 
 /**
@@ -42,7 +43,7 @@ export async function callBitcoind<T>(
     jsonrpc: "2.0",
     id: 0, // We use a static ID since we're not batching requests
     method: `${method}`,
-    params,
+    params: params as RPCParams,
   };
 
   try {
