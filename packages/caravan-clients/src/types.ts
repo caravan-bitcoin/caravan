@@ -125,7 +125,8 @@ export interface RawTransactionData {
   size: number;
   weight: number;
   fee: number;
-  status?: RawTxStatus; 
+  status?: RawTxStatus; // Optional for private node
+    // Additional fields for private node
   confirmations?: number;
   blockhash?: string;
   blocktime?: number;
@@ -139,8 +140,16 @@ export interface TransactionDetails {
   txid: string;
   version: number;
   locktime: number;
-  vin: Array<{ txid: string; vout: number; sequence: number }>;
-  vout: Array<{ value: number; scriptPubkey: string; scriptPubkeyAddress?: string }>;
+  vin: Array<{
+    txid: string;
+    vout: number;
+    sequence: number;
+  }>;
+  vout: Array<{
+    value: number;
+    scriptPubkey: string;
+    scriptPubkeyAddress?: string;
+  }>;
   size: number;
   weight: number;
   fee: number;
@@ -183,11 +192,15 @@ export interface ListTransactionsItem {
  * Interface for Bitcoin node wallet parameters
  */
 export interface BitcoindWalletParams {
-  baseUrl: string;
-  walletName?: string;
-  auth: { username: string; password: string };
-  method: string;
-  params?: RPCParams;
+  baseUrl: string; // Base URL of the Bitcoin node
+  walletName?: string; // Optional wallet name for multi-wallet setups
+  auth: {
+    // Auth credentials for the node
+    username: string; 
+    password: string 
+  };
+  method: string; // RPC method to call
+  params?: RPCParams; // Support both array and object params
 }
 
 /**
@@ -227,7 +240,7 @@ export interface BitcoindParams {
 }
 
 /**
- * Interface for unspent output details
+ * Interface for unspent transaction output details
  */
 export interface UnspentOutput {
   confirmed: boolean;
@@ -354,9 +367,3 @@ export interface UTXOUpdates {
   fetchUTXOsError: string;
   addressKnown?: boolean;
 }
-
-/**
- * Subset of ListUnspentResponse with specific fields required by the bitcoindListUnspent function.
- */
-export interface ListUnspentResponseSubset
-  extends Pick<ListUnspentResponse, "txid" | "amount" | "confirmations" | "vout"> {}

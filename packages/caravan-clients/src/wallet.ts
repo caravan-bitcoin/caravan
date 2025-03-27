@@ -2,7 +2,7 @@ import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { isWalletAddressNotFoundError } from "./bitcoind";
 import { callBitcoind } from "./bitcoind";
 import BigNumber from "bignumber.js";
-import { BitcoindWalletParams, BitcoindParams, ListUnspentResponseSubset } from "./types";
+import { BitcoindWalletParams, BitcoindParams, ListUnspentResponse } from "./types";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {
@@ -153,7 +153,7 @@ export async function bitcoindListUnspent({
     const addressParam = addresses || [address];
     //@ts-expect-error Will Fix this
     const resp: {
-      result: ListUnspentResponseSubset[];
+      result: Pick<ListUnspentResponse, "txid" | "amount" | "confirmations" | "vout">[];
     } = await callBitcoindWallet({
       baseUrl: url,
       auth,
@@ -161,8 +161,9 @@ export async function bitcoindListUnspent({
       method: "listunspent",
       params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
     });
+    
     const promises: Promise<any>[] = [];
-
+    
     resp.result.forEach((utxo) => {
       promises.push(
         callBitcoindWallet({
@@ -174,7 +175,9 @@ export async function bitcoindListUnspent({
         }),
       );
     });
+    
     const previousTransactions = await Promise.all(promises);
+    
     return resp.result.map((utxo, mapindex) => {
       const amount = new BigNumber(utxo.amount);
       return {
@@ -186,7 +189,7 @@ export async function bitcoindListUnspent({
         transactionHex: previousTransactions[mapindex].result.hex,
         time: previousTransactions[mapindex].result.blocktime,
       };
-    });
+    });    
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("There was a problem:", (e as Error).message);
