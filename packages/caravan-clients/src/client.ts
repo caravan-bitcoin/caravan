@@ -606,11 +606,29 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async getTransaction(txid: string): Promise<TransactionDetails> {
+  public async getTransaction(
+    txid: string,
+    forceRawTx: boolean = false,
+  ): Promise<TransactionDetails> {
     try {
       let txData: RawTransactionData;
 
       if (this.type === ClientType.PRIVATE) {
+        // For private nodes, try wallet transaction first (which includes fee data)
+
+        // unless forceRawTx is true
+        if (!forceRawTx && this.bitcoindParams.walletName) {
+          try {
+            return await this.getWalletTransaction(txid);
+          } catch (walletError: any) {
+            // If wallet transaction lookup fails (e.g., tx not in wallet),
+            // fall back to raw transaction lookup
+            console.warn(
+              `Wallet transaction lookup failed, falling back to raw transaction: ${walletError.message}`,
+            );
+          }
+        }
+        // Use raw transaction lookup as fallback
         const response = await bitcoindRawTxData({
           url: this.bitcoindParams.url,
           auth: this.bitcoindParams.auth,
