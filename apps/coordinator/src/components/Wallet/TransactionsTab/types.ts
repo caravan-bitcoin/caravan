@@ -14,6 +14,8 @@ export interface Transaction {
   };
   size: number;
   fee: number;
+  isReceived?: boolean;
+  vsize?: number;
 }
 
 export interface TransactionTableProps {
@@ -36,6 +38,8 @@ export interface TransactionT {
   size: number;
   fee: number;
   isSpent?: boolean;
+  vsize?: number;
+  isReceived?: boolean;
 }
 
 // For MUI's Select component
@@ -46,3 +50,9 @@ export type SelectChangeEvent<Value = string> =
 // Sorting parameters
 export type SortDirection = "asc" | "desc";
 export type SortBy = keyof TransactionT | "blockTime";
+
+// Fee Display Component
+export interface FeeDisplayProps {
+  feeInSats?: number | null;
+  isReceived?: boolean;
+}

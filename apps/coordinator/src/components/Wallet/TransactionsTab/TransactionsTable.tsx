@@ -14,22 +14,14 @@ import {
   Alert,
   Snackbar,
   Box,
+  Typography,
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
-import { TransactionT, TransactionTableProps } from "./types";
-
-/**
- * ⚠️ MAJOR TODO:
- * ---------------------------------------------------------------
- * Due to a discrepancy in fees not being supplied by the client's
- * package for the private note, the "fees" column has been dropped.
- * This will be included in a future update of the coordinator.
- *
- * That’s why the fee component code has been commented out.
- * ---------------------------------------------------------------
- */
+import { TransactionT, TransactionTableProps, FeeDisplayProps } from "./types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -42,42 +34,79 @@ const columns = [
   { id: "txid", label: "Transaction ID", sortable: false },
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
-  // { id: "fee", label: "Fee (sats)", sortable: true },
+  { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "status", label: "Status", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
-// FeeDisplay component to display fees in both sats and BTC
-// const FeeDisplay: React.FC<{ feeInSats?: number }> = ({ feeInSats }) => {
-//   if (feeInSats === null || feeInSats === undefined) {
-//     return <Typography color="textSecondary">N/A</Typography>;
-//   }
+/**
+ * FeeDisplay component to show transaction fees with appropriate handling for:
+ * - Normal fee display (both sats and BTC)
+ * - Received transactions (no fee available)
+ * - Missing fee data
+ */
+export const FeeDisplay: React.FC<FeeDisplayProps> = ({
+  feeInSats,
+  isReceived = false,
+}) => {
+  // For received transactions, show appropriate message
+  if (isReceived) {
+    return (
+      <Tooltip
+        title="Fee not shown for received transactions as you didn't pay it"
+        placement="top"
+      >
+        <Box display="flex" alignItems="center">
+          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
+            N/A
+          </Typography>
+          <InfoOutlinedIcon fontSize="small" color="disabled" />
+        </Box>
+      </Tooltip>
+    );
+  }
 
-//   const feeInBTC = satoshisToBitcoins(feeInSats.toString());
+  // For missing fee data
+  if (feeInSats === null || feeInSats === undefined) {
+    return (
+      <Tooltip title="Fee information not available" placement="top">
+        <Box display="flex" alignItems="center">
+          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
+            --
+          </Typography>
+          <InfoOutlinedIcon fontSize="small" color="disabled" />
+        </Box>
+      </Tooltip>
+    );
+  }
 
-//   return (
-//     <Tooltip
-//       title={
-//         <Box>
-//           <Typography variant="caption">
-//             {`${feeInSats.toLocaleString()} sats`}
-//           </Typography>
-//           <br />
-//           <Typography variant="caption">{`${feeInBTC} BTC`}</Typography>
-//         </Box>
-//       }
-//     >
-//       <Box>
-//         <Typography variant="body2" color="textPrimary">
-//           {feeInSats.toLocaleString()} sats
-//         </Typography>
-//         <Typography variant="caption" color="textSecondary">
-//           {feeInBTC} BTC
-//         </Typography>
-//       </Box>
-//     </Tooltip>
-//   );
-// };
+  // Normal fee display
+  const feeInBTC = satoshisToBitcoins(feeInSats.toString());
+
+  return (
+    <Tooltip
+      title={
+        <Box>
+          <Typography variant="caption">
+            {`${feeInSats.toLocaleString()} sats`}
+          </Typography>
+          <br />
+          <Typography variant="caption">{`${feeInBTC} BTC`}</Typography>
+        </Box>
+      }
+      placement="top"
+    >
+      <Box>
+        <Typography variant="body2" color="textPrimary">
+          {feeInSats.toLocaleString()} sats
+        </Typography>
+        <Typography variant="caption" color="textSecondary">
+          {feeInBTC} BTC
+        </Typography>
+      </Box>
+    </Tooltip>
+  );
+};
 
 // Table header with sort labels
 const TransactionTableHeader: React.FC<{
@@ -155,10 +184,10 @@ const TransactionTableRow: React.FC<{
       </Box>
     </TableCell>
     <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
-    <TableCell>{tx.size}</TableCell>
-    {/* <TableCell>
-      <FeeDisplay feeInSats={tx.fee} />
-    </TableCell> */}
+    <TableCell>{tx.vsize || tx.size}</TableCell>
+    <TableCell>
+      <FeeDisplay feeInSats={tx.fee} isReceived={tx.isReceived} />
+    </TableCell>
     <TableCell>
       <Chip
         label={tx.status.confirmed ? "Confirmed" : "Pending"}
