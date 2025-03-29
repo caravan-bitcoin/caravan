@@ -64,8 +64,8 @@
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
-    "test": "vitest --watch=false src",
-    "test:watch": "vitest --watch src ",
+    "test": "PACKAGE=caravan-wallets vitest --watch=false src",
+    "test:watch": "PACKAGE=caravan-wallets vitest src",
     "test:debug": "node --inspect-brk vitest --runInBand",
     "docs": "./bin/build-docs.sh",
     "lint": "eslint src --ignore-pattern src/vendor"

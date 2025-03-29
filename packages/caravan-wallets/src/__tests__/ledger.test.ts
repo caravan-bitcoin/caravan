@@ -15,7 +15,7 @@ import {
 } from "../ledger";
 import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
@@ -119,7 +119,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when metadata can't be parsed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parseMetadata([]);
         }).toThrow(/unable to parse/i);
@@ -155,7 +155,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when the public key can't be compressed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parsePublicKey();
         }).toThrow(/received no public key/i);
@@ -348,30 +348,28 @@ describe("ledger", () => {
 
   function getMockedApp() {
     const mockApp = {
-      registerWallet: jest.fn(),
-      getWalletAddress: jest.fn(),
-      signPsbt: jest.fn(),
-      getMasterFingerprint: jest.fn(),
+      registerWallet: vi.fn(),
+      getWalletAddress: vi.fn(),
+      signPsbt: vi.fn(),
+      getMasterFingerprint: vi.fn(),
     };
 
-    jest.mock("ledger-bitcoin", () =>
-      jest.fn().mockImplementation(() => mockApp)
-    );
+    vi.mock("ledger-bitcoin", () => vi.fn().mockImplementation(() => mockApp));
 
-    const mockWithApp = jest.fn().mockImplementation((callback) => {
+    const mockWithApp = vi.fn().mockImplementation((callback) => {
       return callback(mockApp);
     });
     return [mockApp, mockWithApp];
   }
 
   function addInteractionMocks(interaction, mockWithApp) {
-    jest
-      .spyOn(interaction, "isAppSupported")
-      .mockReturnValue(Promise.resolve(true));
-    jest.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
-    jest
-      .spyOn(interaction, "withTransport")
-      .mockImplementation(() => Promise.resolve(jest.fn));
+    vi.spyOn(interaction, "isAppSupported").mockReturnValue(
+      Promise.resolve(true)
+    );
+    vi.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
+    vi.spyOn(interaction, "withTransport").mockImplementation(() =>
+      Promise.resolve(vi.fn)
+    );
   }
 
   describe("LedgerRegisterWalletPolicy", () => {
@@ -384,7 +382,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -422,7 +420,7 @@ describe("ledger", () => {
     });
 
     it("verifies against a registration mismatch", async () => {
-      console.error = jest.fn();
+      console.error = vi.fn();
       const interaction = interactionBuilder("beef", true);
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
@@ -451,7 +449,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -511,7 +509,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     const fixture = TEST_FIXTURES.transactions[0];
