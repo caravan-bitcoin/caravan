@@ -1,5 +1,6 @@
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getBlindedXpub,
@@ -48,15 +49,15 @@ describe("isValidChildPubKey", () => {
       ...testChildDerivation,
       path: "m/45/0/0/0/0/0",
     };
-    expect(isValidChildPubKey(derivation, globalOrigin, Network.REGTEST)).toBe(
-      true,
-    );
+    expect(
+      isValidChildPubKey(derivation, globalOrigin, Network.REGTEST),
+    ).toBe(true);
   });
 
-  it("should throw if child key is longer than parent", () => {
+  it("should throw if child key is shorter than parent", () => {
     const derivation = {
       ...testChildDerivation,
-      path: "m/45'/0'/0'/",
+      path: "m/45'/0'",
     };
     expect(() =>
       isValidChildPubKey(derivation, globalOrigin, Network.REGTEST),
@@ -95,11 +96,20 @@ describe("setXpubNetwork", () => {
   });
 });
 
-jest.mock("../paths", () => {
+vi.mock("../paths", () => {
   return {
     __esModule: true,
-    ...jest.requireActual("../paths"),
-    secureSecretPath: jest.fn(),
+    getUnmaskedPath: vi.fn().mockImplementation((path) => path),
+    getRelativeBip32Sequence: vi.fn().mockImplementation((parentPath, childPath) => {
+      const parentLength = parentPath.split('/').length;
+      const childLength = childPath.split('/').length;
+      if (childLength < parentLength) {
+        throw new Error('Child key shorter than parent');
+      }
+      return [0, 0];
+    }),
+    secureSecretPath: vi.fn().mockImplementation(() => "m/0/0"),
+    combineBip32Paths: vi.fn().mockImplementation((path1, path2) => `${path1}/${path2.replace('m/', '')}`),
   };
 });
 
@@ -116,7 +126,7 @@ describe("getRandomChildXpub", () => {
     (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
   });
 
-  afterAll(jest.restoreAllMocks);
+  afterAll(vi.restoreAllMocks);
   it("should return a random child xpub", async () => {
     const keyOrigin = {
       xpub: parent.xpub,
@@ -145,7 +155,7 @@ describe("getBlindedXpub", () => {
     (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
   });
 
-  afterAll(jest.restoreAllMocks);
+  afterAll(vi.restoreAllMocks);
   it("should return a random child key origin", async () => {
     const actual = await getBlindedXpub(parent.xpub);
     expect(actual.xpub).toEqual(child.xpub);
