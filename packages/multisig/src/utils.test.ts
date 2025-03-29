@@ -1,6 +1,7 @@
 import { TEST_FIXTURES } from "@caravan/bitcoin";
 import { MultisigWalletConfig } from "./types";
 import { braidDetailsToWalletConfig } from "./utils";
+import { describe, it, expect } from "vitest";
 
 describe("braidDetailsToWalletConfig", () => {
   TEST_FIXTURES.transactions.forEach((fixture) => {
