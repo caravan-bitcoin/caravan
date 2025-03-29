@@ -1,8 +1,13 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
+
+if (typeof global.self === "undefined") {
+  global.self = global as Window & typeof globalThis;
+}
 
 export default defineConfig({
-  plugins: [react()],
+  define: {
+    self: "globalThis",
+  },
   test: {
     include: ["./**/*.test.ts"],
     globals: true,

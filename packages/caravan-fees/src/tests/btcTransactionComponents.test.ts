@@ -8,7 +8,7 @@ import {
   validOutputTemplateFixtures,
   invalidOutputTemplateFixtures,
   utxoFixture,
-} from "./btcTransactionComponents.fixtures";
+} from "./fixtures/btcTransactionComponents.fixtures";
 
 describe("BtcTxInputTemplate", () => {
   describe("Valid Inputs", () => {

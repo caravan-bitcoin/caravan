@@ -5,7 +5,7 @@ import {
 } from "../btcTransactionComponents";
 import { Network } from "@caravan/bitcoin";
 import { UTXO } from "../types";
-import { fixtures, TestFixture } from "./btcTransactionTemplate.fixtures";
+import { fixtures, TestFixture } from "./fixtures/btcTransactionTemplate.fixtures";
 import BigNumber from "bignumber.js";
 
 describe("BtcTransactionTemplate", () => {

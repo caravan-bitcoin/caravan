@@ -2,7 +2,7 @@ import {
   createCancelRbfTransaction,
   createAcceleratedRbfTransaction,
 } from "../rbf";
-import { rbfFixtures } from "./rbf.fixtures";
+import { rbfFixtures } from "./fixtures/rbf.fixtures";
 import { PsbtV2 } from "@caravan/psbt";
 import BigNumber from "bignumber.js";
 import {

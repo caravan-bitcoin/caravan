@@ -1,6 +1,9 @@
 import { createCPFPTransaction } from "../cpfp";
 import { TransactionAnalyzer } from "../transactionAnalyzer";
-import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
+import {
+  cpfpValidFixtures,
+  cpfpInvalidFixtures,
+} from "./fixtures/cpfp.fixtures";
 import { PsbtV2 } from "@caravan/psbt";
 import BigNumber from "bignumber.js";
 import {
