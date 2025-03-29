@@ -18,8 +18,8 @@
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "PACKAGE=caravan-fees vitest --watch=false src/tests",
-    "test:watch": "PACKAGE=caravan-fees vitest --watch src",
+    "test": "vitest --watch=false src/tests",
+    "test:watch": "vitest --watch src",
     "lint": "eslint src"
   },
   "keywords": [
