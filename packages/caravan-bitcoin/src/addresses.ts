@@ -8,6 +8,7 @@ import {
 } from "bitcoin-address-validation";
 
 import { Network } from "./networks";
+import { MultisigAddressType } from "./types";
 
 const MAINNET_ADDRESS_MAGIC_BYTE_PATTERN = "^(bc1|[13])";
 const TESTNET_ADDRESS_MAGIC_BYTE_PATTERN = "^(tb1|bcrt1|[mn2])";
@@ -59,4 +60,32 @@ export function validateAddress(address: string, network: Network) {
   }
 
   return valid ? "" : "Address is invalid.";
+}
+
+export function getAddressType(
+  address: string,
+  network: Network,
+): MultisigAddressType {
+  if (validateAddress(address, network) !== "") {
+    return "UNKNOWN";
+  }
+  const bech32Regex = /^(bc1|tb1|bcrt1)/;
+  const p2pkhRegex = /^(1|m|n)/;
+  const p2shRegex = /^(3|2)/;
+
+  if (address.match(bech32Regex)) {
+    if (
+      address.startsWith("bc1p") ||
+      address.startsWith("tb1p") ||
+      address.startsWith("bcrt1p")
+    ) {
+      return "P2TR";
+    }
+    return "P2WSH";
+  } else if (address.match(p2pkhRegex)) {
+    return "P2PKH";
+  } else if (address.match(p2shRegex)) {
+    return "P2SH";
+  }
+  return "UNKNOWN";
 }

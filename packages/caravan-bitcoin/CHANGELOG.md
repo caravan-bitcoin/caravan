@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- [#124](https://github.com/caravan-bitcoin/caravan/pull/124) [`ed8a2dd`](https://github.com/caravan-bitcoin/caravan/commit/ed8a2dd5cc53cee30fef430d2b02ae616e76376d) Thanks [@chadchapnick](https://github.com/chadchapnick)! - SegWit PSBT fixes: include non witness utxo for inputs and witness script for outputs
+
+## 0.3.0
+
+### Minor Changes
+
+- [#112](https://github.com/caravan-bitcoin/caravan/pull/112) [`7cf2bf4`](https://github.com/caravan-bitcoin/caravan/commit/7cf2bf48ebda2d8dc45c6a83068a5dc5ce028beb) Thanks [@Harshil-Jani](https://github.com/Harshil-Jani)! - @caravan/client
+  We are exposing a new method `getAddressTransactions` which will fetch all the transaction for a given address and format it as per needs. To facilitate the change, we had moved the interfaces in the new file `types.ts`.
+
+  Another change was about getting the block fee-rate percentile history from mempool as a client.
+
+  @caravan/bitcoin
+  The new function that has the capability to detect the address type (i.e P2SH, P2PKH, P2WSH or P2TR) was added.
+
+  Overall, The changes were to support the new library within caravan called @caravan/health.
+
 ## 0.2.0
 
 ### Minor Changes

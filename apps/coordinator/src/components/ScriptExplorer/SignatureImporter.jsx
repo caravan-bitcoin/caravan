@@ -7,8 +7,9 @@ import {
   multisigBIP32Root,
   validateBIP32Path,
   getMaskedDerivation,
+  P2SH,
 } from "@caravan/bitcoin";
-import { TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -93,7 +94,7 @@ class SignatureImporter extends React.Component {
   };
 
   renderImport = () => {
-    const { signatureImporter, number, isWallet } = this.props;
+    const { signatureImporter, number, isWallet, addressType } = this.props;
     const currentNumber = this.getCurrent();
     const notMyTurn = number > currentNumber;
     const { disableChangeMethod } = this.state;
@@ -119,6 +120,7 @@ class SignatureImporter extends React.Component {
             onChange={this.handleMethodChange}
           >
             <MenuItem value={UNKNOWN}>{"< Select method >"}</MenuItem>
+            {addressType != P2SH && <MenuItem value={BITBOX}>BitBox</MenuItem>}
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={COLDCARD} disabled={!isWallet}>
@@ -145,7 +147,7 @@ class SignatureImporter extends React.Component {
       fee,
       isWallet,
       extendedPublicKeyImporter,
-      unsignedPsbt,
+      unsignedPSBT,
       extendedPublicKeys,
       requiredSigners,
       addressType,
@@ -155,7 +157,7 @@ class SignatureImporter extends React.Component {
     } = this.props;
     const { method } = signatureImporter;
 
-    if (method === TREZOR || method === LEDGER) {
+    if (method === BITBOX || method === TREZOR || method === LEDGER) {
       return (
         <DirectSignatureImporter
           network={network}
@@ -173,6 +175,7 @@ class SignatureImporter extends React.Component {
           validateAndSetSignature={this.validateAndSetSignature}
           enableChangeMethod={this.enableChangeMethod}
           disableChangeMethod={this.disableChangeMethod}
+          unsignedPSBT={unsignedPSBT}
           walletConfig={{
             addressType,
             network,
@@ -194,7 +197,7 @@ class SignatureImporter extends React.Component {
           outputs={outputs}
           inputsTotalSats={inputsTotalSats}
           fee={fee}
-          unsignedPsbt={unsignedPsbt}
+          unsignedPSBT={unsignedPSBT}
           extendedPublicKeyImporter={extendedPublicKeyImporter}
           validateAndSetBIP32Path={this.validateAndSetBIP32Path}
           resetBIP32Path={this.resetBIP32Path}
@@ -621,7 +624,7 @@ SignatureImporter.propTypes = {
   txid: PropTypes.string.isRequired,
   unsignedTransaction: PropTypes.shape({}).isRequired,
   setSigningKey: PropTypes.func.isRequired,
-  unsignedPsbt: PropTypes.string,
+  unsignedPSBT: PropTypes.string,
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
@@ -630,7 +633,7 @@ SignatureImporter.propTypes = {
 
 SignatureImporter.defaultProps = {
   extendedPublicKeyImporter: {},
-  unsignedPsbt: "",
+  unsignedPSBT: "",
 };
 
 function mapStateToProps(state, ownProps) {

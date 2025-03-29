@@ -1,6 +1,6 @@
 {
   "name": "@caravan/clients",
-  "version": "0.1.1",
+  "version": "0.3.1",
   "description": "A package for querying different bitcoin blockchain backends",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
-    "axios": "^1.6.5",
+    "axios": "^1.7.4",
     "bignumber.js": "^9.1.2"
   }
 }

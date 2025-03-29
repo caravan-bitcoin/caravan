@@ -103,6 +103,12 @@ export const initialState = () => ({
   signingKeys: [0, 0], // default 2 required signers
   spendingStep: SPEND_STEP_CREATE,
   unsignedPSBT: "",
+  transactions: {
+    transactions: [],
+    isLoading: false, // Array to store actual transactions
+    error: null,
+    lastUpdated: null,
+  },
 });
 
 function updateInputs(state, action) {
@@ -283,16 +289,19 @@ function finalizeOutputs(state, action) {
   let unsignedTransaction;
   // First try to build the transaction via PSBT, if that fails (e.g. an input doesn't know about its braid),
   // then try to build it using the old TransactionBuilder plumbing.
+  let unsignedPSBT = "";
   try {
     const args = {
       network: state.network,
       inputs: state.inputs.map(convertLegacyInput),
       outputs: state.outputs.map(convertLegacyOutput),
+      includeGlobalXpubs: true,
     };
     const psbt = getUnsignedMultisigPsbtV0(args);
     unsignedTransaction = Transaction.fromHex(
       psbt.data.globalMap.unsignedTx.toBuffer().toString("hex"),
     );
+    unsignedPSBT = psbt.toBase64();
   } catch (e) {
     // probably has an input that isn't braid aware.
     // NOTE: This won't work for txs with taproot outputs
@@ -304,7 +313,7 @@ function finalizeOutputs(state, action) {
   }
   return {
     ...state,
-    ...{ finalizedOutputs: action.value, unsignedTransaction },
+    ...{ finalizedOutputs: action.value, unsignedTransaction, unsignedPSBT },
   };
 }
 

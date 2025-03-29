@@ -301,7 +301,12 @@ describe("trezor", () => {
       });
     });
 
-    function psbtInteractionBuilder(tx, keyDetails, returnSignatureArray) {
+    function psbtInteractionBuilder(
+      tx,
+      keyDetails,
+      returnSignatureArray,
+      addressType
+    ) {
       return new TrezorSignMultisigTransaction({
         network: tx.network,
         inputs: [],
@@ -310,6 +315,7 @@ describe("trezor", () => {
         psbt: tx.psbt,
         keyDetails,
         returnSignatureArray,
+        addressType,
       });
     }
 
@@ -319,7 +325,7 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/1'/100'",
       };
-      const interaction = psbtInteractionBuilder(tx, keyDetails, false);
+      const interaction = psbtInteractionBuilder(tx, keyDetails, false, tx.braidDetails.addressType);
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));
@@ -337,7 +343,7 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/0'/100'",
       };
-      const interaction = psbtInteractionBuilder(tx, keyDetails, true);
+      const interaction = psbtInteractionBuilder(tx, keyDetails, true, tx.braidDetails.addressType);
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));

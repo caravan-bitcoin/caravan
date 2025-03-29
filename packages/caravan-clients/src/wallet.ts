@@ -32,6 +32,7 @@ export function callBitcoindWallet({
 
   if (walletName)
     url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
+  //@ts-expect-error Will Fix this
   return callBitcoind(url.toString(), auth, method, params);
 }
 
@@ -173,6 +174,7 @@ export async function bitcoindListUnspent({
 > {
   try {
     const addressParam = addresses || [address];
+    //@ts-expect-error Will Fix this
     const resp: {
       result: ListUnspentResponse[];
     } = await callBitcoindWallet({

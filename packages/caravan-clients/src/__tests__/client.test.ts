@@ -3,7 +3,6 @@ import {
   BlockchainClient,
   ClientType,
   ClientBase,
-  UTXO,
   BlockchainClientError,
 } from "../client";
 import * as bitcoind from "../bitcoind";
@@ -11,6 +10,8 @@ import * as wallet from "../wallet";
 import BigNumber from "bignumber.js";
 
 import { Mocked, MockInstance } from "vitest";
+
+import { UTXO, RawTransactionData, TransactionDetails } from "../types";
 
 import axios from "axios";
 vi.mock("axios");
@@ -148,7 +149,8 @@ describe("BlockchainClient", () => {
   describe("broadcastTransaction", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API
-      const mockResponse = { success: true };
+      const mockResponse =
+        "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d";
       const mockBitcoindSendRawTransaction = vi.spyOn(
         bitcoind,
         "bitcoindSendRawTransaction",
@@ -833,7 +835,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -859,7 +861,7 @@ describe("BlockchainClient", () => {
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -894,7 +896,7 @@ describe("BlockchainClient", () => {
 
     it("calls bitcoindImportDescriptors with descriptors to import", async () => {
       const mockImportDescriptors = vi.spyOn(wallet, "bitcoindWalletInfo");
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -903,6 +905,454 @@ describe("BlockchainClient", () => {
       await blockchainClient.getWalletInfo();
       expect(mockImportDescriptors).toHaveBeenCalledWith({
         ...blockchainClient.bitcoindParams,
+      });
+    });
+  });
+
+  describe("getAddressTransactions", () => {
+    it("should get the all the transactions for a given address in PRIVATE network MAINNET", async () => {
+      // Mock the response from the API
+      const mockResponseListTransaction = {
+        result: [
+          {
+            address:
+              "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
+            parent_descs: [
+              "wsh(sortedmulti(1,tpubDFnYXDztf7GxeGVpPsgYaqbfE6mCsvVzCGKhtafJU3pbF8r8cuGQgp81puJcjuBdsMhk1oUHdhNbsrPcn8SHjktJ45pzJNhAd1BY3jRdzvj/0/*,tpubDDwMB2bTZPY5Usnyqn7PN1cYmNWNghRxtY968LCA2DRr4HM93JqkLd5uEHXQb2rRLjHrkccguYRxyDkQi71mBuZ7XAfLH29918Gu9vKVmhy/0/*))#dw99d0sw",
+            ],
+            category: "receive",
+            amount: 15.0,
+            label: "",
+            vout: 0,
+            confirmations: 22,
+            blockhash:
+              "1ab9eed7ff3b824dfdee22560e8fc826f2bac0ca835c992b8659b1c834721ffa",
+            blockheight: 1181,
+            blockindex: 1,
+            blocktime: 1718291897,
+            txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
+            wtxid:
+              "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
+            walletconflicts: [],
+            time: 1718291888,
+            timereceived: 1718291888,
+            "bip125-replaceable": "no",
+          },
+        ],
+        id: 0,
+      };
+
+      const mockBitcoindListTransaction = vi.spyOn(bitcoind, "callBitcoind");
+      mockBitcoindListTransaction.mockResolvedValue(
+        mockResponseListTransaction,
+      );
+
+      const mockBitcoindRawTxData = {
+        txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
+        hash: "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
+        version: 2,
+        size: 312,
+        vsize: 212,
+        weight: 846,
+        locktime: 1180,
+        vin: [
+          {
+            txid: "c628cc1cde5ca9adf470c4837ac99d3745a72d9a57a6cffb40e22508627af554",
+            vout: 1,
+            scriptSig: {
+              asm: "",
+              hex: "",
+            },
+            txinwitness: [
+              "23e8ef69bd66165cb1bc41a4354ecc69ee0d92a1b98fcb528f93dd2ae54ea7033c0fdf24e1419705ace5d1bd3d2aba34cccfabde22ec08ed1728c97e6fb85a7b",
+            ],
+            sequence: 4294967293,
+          },
+          {
+            txid: "0dfe7a6df3c7840df8a6f5f74160bb3545d60aa0924eb0a6574f29e3eddb4354",
+            vout: 0,
+            scriptSig: {
+              asm: "",
+              hex: "",
+            },
+            txinwitness: [
+              "b342d6f9d0e75900d7301e3ddf3c386f1f4103596e92bbd36df88d860d2a8631af177d69a47e619fbe1054690865fada18b3695d3160620d716090ae356ddf53",
+            ],
+            sequence: 4294967293,
+          },
+        ],
+        vout: [
+          {
+            value: 15.0,
+            n: 0,
+            scriptPubKey: {
+              asm: "0 26c7d90f6f7029c63bfb92b5f35838b9919f0e09781715a46c0e1d861a1b1862",
+              desc: "addr(bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7)#szq6selt",
+              hex: "002026c7d90f6f7029c63bfb92b5f35838b9919f0e09781715a46c0e1d861a1b1862",
+              address:
+                "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
+              type: "witness_v0_scripthash",
+            },
+          },
+          {
+            value: 11.561891,
+            n: 1,
+            scriptPubKey: {
+              asm: "1 5a475ace36c3054538843e859a1485bf3dd438924ec4d2d81abf55feeabe5a56",
+              desc: "rawtr(5a475ace36c3054538843e859a1485bf3dd438924ec4d2d81abf55feeabe5a56)#am899zm3",
+              hex: "51205a475ace36c3054538843e859a1485bf3dd438924ec4d2d81abf55feeabe5a56",
+              address:
+                "bcrt1ptfr44n3kcvz52wyy86ze59y9hu7agwyjfmzd9kq6ha2la647tftq8dhx2a",
+              type: "witness_v1_taproot",
+            },
+          },
+        ],
+      };
+
+      const mockBitcoindGetAddressTransactions = vi.spyOn(
+        bitcoind,
+        "bitcoindRawTxData",
+      );
+      mockBitcoindGetAddressTransactions.mockResolvedValue(
+        mockBitcoindRawTxData,
+      );
+
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      const address =
+        "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7";
+      const transactions =
+        await blockchainClient.getAddressTransactions(address);
+      const expectedResponse = [
+        {
+          txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
+          vin: [
+            {
+              prevTxId:
+                "c628cc1cde5ca9adf470c4837ac99d3745a72d9a57a6cffb40e22508627af554",
+              vout: 1,
+              sequence: 4294967293,
+            },
+            {
+              prevTxId:
+                "0dfe7a6df3c7840df8a6f5f74160bb3545d60aa0924eb0a6574f29e3eddb4354",
+              vout: 0,
+              sequence: 4294967293,
+            },
+          ],
+          vout: [
+            {
+              scriptPubkeyHex:
+                "002026c7d90f6f7029c63bfb92b5f35838b9919f0e09781715a46c0e1d861a1b1862",
+              scriptPubkeyAddress:
+                "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
+              value: 15,
+            },
+            {
+              scriptPubkeyHex:
+                "51205a475ace36c3054538843e859a1485bf3dd438924ec4d2d81abf55feeabe5a56",
+              scriptPubkeyAddress:
+                "bcrt1ptfr44n3kcvz52wyy86ze59y9hu7agwyjfmzd9kq6ha2la647tftq8dhx2a",
+              value: 11.561891,
+            },
+          ],
+          size: 312,
+          weight: 846,
+          fee: undefined,
+          isSend: false,
+          amount: 15,
+          block_time: 1718291897,
+        },
+      ];
+
+      expect(transactions).toEqual(expectedResponse);
+    });
+  });
+
+  describe("getBlockFeeRatePercentileHistory", () => {
+    it("should get the fee rate percentiles for a closest blocks' transactions (MEMPOOL client)", async () => {
+      // Mock the response from the API
+      const mockResponse = [
+        {
+          avgHeight: 45,
+          timestamp: 1231605377,
+          avgFee_0: 0,
+          avgFee_10: 0,
+          avgFee_25: 0,
+          avgFee_50: 0,
+          avgFee_75: 0,
+          avgFee_90: 0,
+          avgFee_100: 0,
+        },
+      ];
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.MEMPOOL,
+        network: Network.MAINNET,
+      });
+      blockchainClient.Get = mockGet;
+
+      // Call the getTransactionHex method
+      const feeRateHistory =
+        await blockchainClient.getBlockFeeRatePercentileHistory();
+
+      // Verify the mock axios instance was called with the correct URL
+      expect(mockGet).toHaveBeenCalledWith(`/v1/mining/blocks/fee-rates/all`);
+
+      // Verify the returned transaction hex
+      expect(feeRateHistory).toEqual(mockResponse);
+    });
+
+    it("should throw an error when using BLOCKSTREAM or PRIVATE client", async () => {
+      const mockError = new Error(
+        "Not supported for private clients and blockstream. Currently only supported for mempool",
+      );
+
+      // Create a new instance of BlockchainClient with a mock axios instance
+      const blockchainClient = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+      });
+
+      let error;
+      try {
+        await blockchainClient.getBlockFeeRatePercentileHistory();
+      } catch (err) {
+        error = err;
+      }
+
+      // Verify the error message
+      expect(error).toEqual(
+        new Error(
+          `Failed to get feerate percentile block: ${mockError.message}`,
+        ),
+      );
+    });
+  });
+
+  describe("getTransaction", () => {
+    // https://unchained.mempool.space/tx/3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84
+    const mockTxid =
+      "3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84";
+
+    const mockRawTransactionData: RawTransactionData = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "3044022055831f73fc755df0e3ab4b29fdae593312f9c395fac3c11e4d26d559dbe7e3f202201971c090da1721e41bbb8b7719d48f3117c0595a3495ca8d2359d1ac72d4b0a201",
+            "033688c799699d3d9ed7fffccb5c59960d8788ecdf81258a0dffd813d02b93f94a",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "0014d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1q6g3jjcxy2qla09jsc4qmpw2uhnep9u9z6rjvhf",
+            value: 130.00123744,
+          },
+        },
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "304402202fdcd389d3cf70e8c3d8ead029b4257adb21a5ee3841445ad97f45875f36e60b0220537741d6e3e333dcb9e4d83f79a1e90a055d206d4ecdb3a30c5169df8b20414001",
+            "0313f50b92e4f73cf0e0de9375b29d4f275a400149d9609b09cf334989171cfa26",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "00140c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 0c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1qpsc99kp272rr73ukgw4c9gu2kqlk8vn9j73833",
+            value: 0.202756,
+          },
+        },
+      ],
+      vout: [
+        {
+          scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+          scriptpubkey_asm:
+            "OP_DUP OP_HASH160 OP_PUSHBYTES_20 a9808a3da3a4574b7eae1c6f4f19160f927fb9e0 OP_EQUALVERIFY OP_CHECKSIG",
+          scriptpubkey_type: "p2pkh",
+          scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          value: 20398739,
+        },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      status: {
+        confirmed: true,
+        block_height: 861058,
+        block_hash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        block_time: 1694567537,
+      },
+    };
+
+    // Expected normalized transaction data
+    const expectedTransactionDetails: TransactionDetails = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293,
+        },
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293,
+        },
+      ],
+      vout: [
+        {
+          value: mockRawTransactionData.vout[0].value,
+          scriptPubkey: mockRawTransactionData.vout[0].scriptpubkey,
+          scriptPubkeyAddress:
+            mockRawTransactionData.vout[0].scriptpubkey_address,
+        },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      status: {
+        confirmed: true,
+        blockHeight: 861058,
+        blockHash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        blockTime: 1694567537,
+      },
+    };
+
+    describe("client type specific behavior", () => {
+      let client: BlockchainClient;
+
+      afterEach(() => {
+        vi.resetAllMocks();
+      });
+
+      describe("PRIVATE client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.PRIVATE,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockBitcoindRawTxData = vi.spyOn(
+            bitcoind,
+            "bitcoindRawTxData",
+          );
+          mockBitcoindRawTxData.mockResolvedValue(mockRawTransactionData);
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockBitcoindRawTxData).toHaveBeenCalledWith({
+            url: client.bitcoindParams.url,
+            auth: client.bitcoindParams.auth,
+            txid: mockTxid,
+          });
+          expect(result).toEqual(expectedTransactionDetails);
+        });
+      });
+
+      describe("BLOCKSTREAM client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.BLOCKSTREAM,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = vi.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
+      });
+
+      describe("MEMPOOL client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.MEMPOOL,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = vi.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
+      });
+    });
+
+    describe("error handling", () => {
+      it("should throw an error for invalid client type", async () => {
+        const client = new BlockchainClient({
+          type: "INVALID" as ClientType,
+          network: Network.MAINNET,
+        });
+
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          "Invalid client type",
+        );
+      });
+
+      it("should handle errors when fetching transaction details", async () => {
+        const mockError = new Error("Failed to fetch transaction");
+        const mockGet = vi.fn().mockRejectedValue(mockError);
+
+        const client = new BlockchainClient({
+          type: ClientType.BLOCKSTREAM,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          `Failed to get transaction: ${mockError.message}`,
+        );
       });
     });
   });
