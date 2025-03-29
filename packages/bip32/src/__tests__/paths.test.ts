@@ -1,4 +1,5 @@
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   combineBip32Paths,
@@ -67,10 +68,13 @@ describe("combineBip32Paths", () => {
   });
 });
 
-jest.mock("../utils", () => {
+vi.mock("../utils", () => {
   return {
     __esModule: true,
-    secureRandomInt: jest.fn(() => 42),
+    default: {
+      secureRandomInt: vi.fn().mockImplementation(() => 42),
+    },
+    secureRandomInt: vi.fn().mockImplementation(() => 42),
   };
 });
 
