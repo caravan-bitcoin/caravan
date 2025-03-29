@@ -197,7 +197,7 @@ export interface BitcoindWalletParams {
   auth: {
     // Auth credentials for the node
     username: string; 
-    password: string 
+    password: string; 
   };
   method: string; // RPC method to call
   params?: RPCParams; // Support both array and object params
@@ -335,6 +335,7 @@ export interface FormattedUTXO {
   time: number;
 }
 
+// Used in blockchain.ts
 /**
  * Constants for client types
  */
