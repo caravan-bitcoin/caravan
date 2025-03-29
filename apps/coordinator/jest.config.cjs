@@ -20,4 +20,4 @@ module.exports = {
     "!src/tests/**/*",
     "!src/tests-vitest/**/*", // Exclude Vitest test files from coverage
   ],
-}; 
+};
