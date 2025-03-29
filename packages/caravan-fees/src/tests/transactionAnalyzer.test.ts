@@ -1,5 +1,5 @@
 import { TransactionAnalyzer } from "../transactionAnalyzer";
-import { transactionAnalyzerFixtures } from "./transactionAnalyzer.fixtures";
+import { transactionAnalyzerFixtures } from "./fixtures/transactionAnalyzer.fixtures";
 import BigNumber from "bignumber.js";
 
 describe("TransactionAnalyzer", () => {
