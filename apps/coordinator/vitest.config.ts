@@ -1,4 +1,4 @@
-// <reference types="vitest" />
+/// <reference types="vitest" />
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
@@ -12,6 +12,19 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/tests-vitest/**/*.{test,spec}.{js,jsx,ts,tsx}"],
     mockReset: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      exclude: [
+        "node_modules/",
+        "src/tests/",
+        "src/tests-vitest/",
+        "**/*.d.ts",
+        "**/*.test.{js,jsx,ts,tsx}",
+        "**/*.spec.{js,jsx,ts,tsx}",
+      ],
+      include: ["src/**/*.{js,jsx,ts,tsx}"],
+    },
     deps: {
       inline: [
         "@caravan/wallets",
