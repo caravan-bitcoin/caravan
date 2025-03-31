@@ -1,3 +1,4 @@
+import { vi, expect, describe, it, beforeAll } from "vitest";
 import { validateMultisigSignature } from "../signatures";
 import { TEST_FIXTURES } from "../fixtures";
 
