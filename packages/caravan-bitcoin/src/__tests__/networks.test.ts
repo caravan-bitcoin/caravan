@@ -26,7 +26,7 @@ describe("networks", () => {
 
   describe("getNetworkFromPrefix", () => {
     it("throws error on unknown prefix", () => {
-      expect(() => getNetworkFromPrefix("foo")).toThrowError(/unknown prefix/i);
+      expect(() => getNetworkFromPrefix("foo")).toThrowError(/Unrecognized extended public key prefix/i);
     });
     it("returns testnet for testnet prefixes, case insensitive", () => {
       expect(getNetworkFromPrefix("tpub")).toBe(Network.TESTNET);
