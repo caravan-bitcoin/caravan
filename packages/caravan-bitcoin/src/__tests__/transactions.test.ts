@@ -1,4 +1,5 @@
 import { generateMultisigFromHex } from "../multisig";
+import { vi, describe, it, expect } from "vitest";
 import {
   unsignedMultisigTransaction,
   signedMultisigTransaction,
