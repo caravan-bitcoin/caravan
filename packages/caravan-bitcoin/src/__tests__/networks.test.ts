@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import {
   Network,
   networkLabel,
@@ -12,7 +13,7 @@ describe("networks", () => {
     it("returns a human-readable network name", () => {
       expect(networkLabel(Network.MAINNET)).toBe("Mainnet");
       expect(networkLabel(Network.TESTNET)).toBe("Testnet");
-      expect(networkLabel("foobar")).toBe("Testnet");
+      expect(networkLabel(Network.REGTEST)).toBe("Testnet");
     });
   });
 
@@ -20,7 +21,7 @@ describe("networks", () => {
     it("returns a human-readable network name", () => {
       expect(networkData(Network.MAINNET)).toBe(networks.bitcoin);
       expect(networkData(Network.TESTNET)).toBe(networks.testnet);
-      expect(networkData("foobar")).toBe(networks.testnet);
+      expect(networkData(Network.REGTEST)).toBe(networks.regtest);
     });
   });
 
