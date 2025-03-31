@@ -44,7 +44,7 @@
     "@babel/preset-typescript": "^7.12.7",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
-    "@types/node": "^14.14.22",
+    "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
     "bs58": "^4.0.1",
@@ -57,15 +57,17 @@
     "react-silence": "^1.0.4",
     "tsup": "^7.2.0",
     "typescript": "^4.1.3",
-    "vitest": "^1.3.1"
+    "vitest": "^1.3.1",
+    "@vitest/coverage-v8": "^1.3.1"
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
     "lint": "eslint src/ --ext .ts",
-    "ci": "npm run lint && npm run test",
+    "ci": "npm run lint && npm run test:coverage",
     "test": "vitest --watch=false src",
-    "test:watch": "vitest --watch src"
+    "test:watch": "vitest --watch src",
+    "test:coverage": "vitest run --coverage src"
   },
   "bin": {},
   "dependencies": {

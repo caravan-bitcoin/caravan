@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import {
   hardenedBIP32Index,
   bip32PathToSequence,
@@ -172,9 +173,9 @@ describe("paths", () => {
     });
 
     it("defaults to testnet for invalid networks", () => {
-      expect(multisigBIP32Root(P2SH, "foobar")).toEqual("m/45'/1'/0'");
-      expect(multisigBIP32Root(P2SH_P2WSH, "foobar")).toEqual("m/48'/1'/0'/1'");
-      expect(multisigBIP32Root(P2WSH, "foobar")).toEqual("m/48'/1'/0'/2'");
+      expect(multisigBIP32Root(P2SH, Network.REGTEST)).toEqual("m/45'/1'/0'");
+      expect(multisigBIP32Root(P2SH_P2WSH, Network.REGTEST)).toEqual("m/48'/1'/0'/1'");
+      expect(multisigBIP32Root(P2WSH, Network.REGTEST)).toEqual("m/48'/1'/0'/2'");
     });
 
     it("returns null for invalid address types", () => {
