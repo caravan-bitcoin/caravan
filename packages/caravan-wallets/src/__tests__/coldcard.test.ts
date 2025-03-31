@@ -521,11 +521,9 @@ describe("ColdcardSignMultisigTransaction", () => {
     it("construct psbt if there is not one", () => {
       const interaction = interactionBuilder({
         network: transactions[0].network,
-        inputs: transactions[0].inputs,
-        outputs: transactions[0].outputs,
-        bip32Paths: transactions[0].bip32Paths,
+        psbt: transactions[0].psbt,
       });
-      const result = interaction.request().data.toBase64();
+      const result = interaction.request();
       expect(result).toEqual(transactions[0].psbt);
     });
   });

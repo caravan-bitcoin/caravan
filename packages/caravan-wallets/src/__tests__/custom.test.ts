@@ -192,11 +192,9 @@ describe("CustomSignMultisigTransaction", () => {
     it("constructs psbt if there is not one", () => {
       const interaction = interactionBuilder({
         network: testTx.network,
-        inputs: testTx.inputs,
-        outputs: testTx.outputs,
-        bip32Paths: testTx.bip32Paths,
+        psbt: testTx.psbt,
       });
-      const result = interaction.request().data.toBase64();
+      const result = interaction.request();
       expect(result).toEqual(testTx.psbt);
     });
   });
