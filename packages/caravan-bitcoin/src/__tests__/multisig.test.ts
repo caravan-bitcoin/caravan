@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { P2SH } from "../p2sh";
 import { P2WSH } from "../p2wsh";
 import { scriptToHex } from "../script";
