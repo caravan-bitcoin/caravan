@@ -405,12 +405,10 @@ export function validatePublicKey(
     return "Invalid public key.";
   }
 
-  if (
-    !isKeyCompressed(pubkeyHex) &&
-    addressType &&
-    [P2SH_P2WSH, P2WSH].includes(addressType)
-  ) {
-    return `${addressType} does not support uncompressed public keys.`;
+  if (addressType && [P2SH_P2WSH, P2WSH].includes(addressType)) {
+    if (!isKeyCompressed(pubkeyHex)) {
+      return `${addressType} does not support uncompressed public keys.`;
+    }
   }
 
   return "";
@@ -427,6 +425,9 @@ export function validatePublicKey(
  * // "03b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee"
  */
 export function compressPublicKey(publicKey: string): string {
+  if (isKeyCompressed(publicKey)) {
+    return publicKey;
+  }
   // validate Public Key Length
   // validate Public Key Structure
   const pubkeyBuffer = Buffer.from(publicKey, "hex");
