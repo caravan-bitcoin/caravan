@@ -176,9 +176,17 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
         if (sortBy === "blockTime") {
           comparison = (a.status.blockTime || 0) - (b.status.blockTime || 0);
         } else if (sortBy === "size") {
-          comparison = a.size - b.size;
+          // Prefer vsize if available, fallback to size
+          const aSize = a.vsize !== undefined ? a.vsize : a.size;
+          const bSize = b.vsize !== undefined ? b.vsize : b.size;
+          comparison = aSize - bSize;
         } else if (sortBy === "fee") {
-          comparison = (a.fee || 0) - (b.fee || 0);
+          // Fee sorting with null/undefined fees handled
+          const aFee =
+            a.fee !== undefined ? (a.isReceived ? 0 : a.fee || 0) : 0;
+          const bFee =
+            b.fee !== undefined ? (b.isReceived ? 0 : b.fee || 0) : 0;
+          comparison = aFee - bFee;
         } else {
           // For any other property that might be sortable
           const aValue = a[sortBy as keyof Transaction];
