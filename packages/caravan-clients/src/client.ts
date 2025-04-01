@@ -65,7 +65,6 @@ export function transformWalletTransactionToRawTransactionData(
       "Transaction decoded data is missing. Make sure verbose=true was passed to gettransaction.",
     );
   }
-
   // Convert fee from BTC to satoshis (and make positive)
   const feeSats = Math.abs(walletTx.fee || 0) * 100000000;
 
@@ -76,6 +75,7 @@ export function transformWalletTransactionToRawTransactionData(
     size: walletTx.decoded.size,
     vsize: walletTx.decoded.vsize,
     weight: walletTx.decoded.weight,
+    category: walletTx.details[0]["category"],
     fee: feeSats, // Convert from BTC to satoshis
     vin: walletTx.decoded.vin.map((input) => ({
       txid: input.txid,
@@ -112,6 +112,8 @@ export function normalizeTransactionData(
   txData: RawTransactionData,
   clientType: ClientType,
 ): TransactionDetails {
+  // Determine if this is a received transaction
+  const isReceived = txData.category === "receive" || false;
   return {
     txid: txData.txid,
     version: txData.version,
@@ -132,6 +134,8 @@ export function normalizeTransactionData(
     size: txData.size,
     // add the vsize property to the returned object if txData.vsize is defined
     ...(txData.vsize !== undefined && { vsize: txData.vsize }),
+    // add the category property to the returned object if txData.category is defined ( For Private clients)
+    ...(isReceived !== undefined && { isReceived }),
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
     status: {
@@ -643,7 +647,6 @@ export class BlockchainClient extends ClientBase {
       } else {
         throw new Error("Invalid client type");
       }
-
       return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);

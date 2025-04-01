@@ -87,6 +87,7 @@ export interface RawTransactionData {
   vsize?: number;
   weight: number;
   fee: number;
+  category?: "send" | "receive" | "generate" | "immature" | "orphan";
   status?: RawTxStatus; // Optional for private node
   // Additional fields for private node
   confirmations?: number;
@@ -119,6 +120,7 @@ export interface TransactionDetails {
     blockHash?: string;
     blockTime?: number;
   };
+  isReceived?: boolean;
 }
 
 export interface ListTransactionsItem {
