@@ -87,7 +87,13 @@ export interface RawTransactionData {
   vsize?: number;
   weight: number;
   fee: number;
-  category?: "send" | "receive" | "generate" | "immature" | "orphan";
+  category?:
+    | "send"
+    | "receive"
+    | "generate"
+    | "immature"
+    | "orphan"
+    | "unknown";
   status?: RawTxStatus; // Optional for private node
   // Additional fields for private node
   confirmations?: number;
@@ -342,7 +348,13 @@ export interface WalletTransactionResponse {
 
   details: {
     address: string;
-    category: "send" | "receive" | "generate" | "immature" | "orphan";
+    category:
+      | "send"
+      | "receive"
+      | "generate"
+      | "immature"
+      | "orphan"
+      | "unknown";
     amount: number; // Amount (negative for outgoing)
     vout: number; // Output index
     fee?: number; // Fee amount (if category is "send")
