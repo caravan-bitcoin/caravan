@@ -68,6 +68,12 @@ export function transformWalletTransactionToRawTransactionData(
   // Convert fee from BTC to satoshis (and make positive)
   const feeSats = Math.abs(walletTx.fee || 0) * 100000000;
 
+  // Safely access category from details array if it exists
+  const category =
+    walletTx.details && walletTx.details.length > 0
+      ? walletTx.details[0]["category"]
+      : "unknown"; // Default category if details is missing
+
   return {
     txid: walletTx.txid,
     version: walletTx.decoded.version,
@@ -75,7 +81,7 @@ export function transformWalletTransactionToRawTransactionData(
     size: walletTx.decoded.size,
     vsize: walletTx.decoded.vsize,
     weight: walletTx.decoded.weight,
-    category: walletTx.details[0]["category"],
+    category: category,
     fee: feeSats, // Convert from BTC to satoshis
     vin: walletTx.decoded.vin.map((input) => ({
       txid: input.txid,
