@@ -1233,6 +1233,7 @@ describe("BlockchainClient", () => {
       size: 342,
       weight: 720,
       fee: 0.00000605,
+      isReceived: false,
       status: {
         confirmed: true,
         blockHeight: 861058,
@@ -1443,6 +1444,7 @@ describe("BlockchainClient", () => {
         blockhash:
           "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
         blocktime: 1631234567,
+        category: "send",
         status: {
           confirmed: true,
           block_height: 123456,
@@ -1650,6 +1652,7 @@ describe("BlockchainClient", () => {
         vsize: 225,
         weight: 900,
         fee: 25000, // Fee is in satoshis for PRIVATE client
+        isReceived: false,
         status: {
           confirmed: true,
           blockHeight: 123456,
