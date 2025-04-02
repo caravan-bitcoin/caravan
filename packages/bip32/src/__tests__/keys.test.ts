@@ -96,11 +96,11 @@ describe("setXpubNetwork", () => {
   });
 });
 
-vi.mock("../paths", () => {
+vi.mock("../paths", async () => {
+  const actual = await vi.importActual("../paths");
   return {
-    __esModule: true,
-    ...vi.importActual("../paths"),
-    secureSecretPath: vi.fn(),
+    ...actual,
+    secureSecretPath: vi.fn()
   };
 });
 
