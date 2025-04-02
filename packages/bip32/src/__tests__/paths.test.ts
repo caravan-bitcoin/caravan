@@ -1,5 +1,5 @@
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
-import { describe, expect, it, vi } from 'vitest';
+import { vi } from 'vitest';
 
 import {
   combineBip32Paths,
