@@ -1,14 +1,14 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import {
   CustomExportExtendedPublicKey,
   CustomSignMultisigTransaction,
-} from "./custom";
+} from "../custom";
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
-import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
-import { customFixtures } from "./fixtures/custom.fixtures";
+import { INFO, PENDING, ACTIVE, ERROR } from "../interaction";
+import { customFixtures } from "../fixtures/custom.fixtures";
+
+import { describe, it, expect } from "vitest";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 
@@ -192,11 +192,9 @@ describe("CustomSignMultisigTransaction", () => {
     it("constructs psbt if there is not one", () => {
       const interaction = interactionBuilder({
         network: testTx.network,
-        inputs: testTx.inputs,
-        outputs: testTx.outputs,
-        bip32Paths: testTx.bip32Paths,
+        psbt: testTx.psbt,
       });
-      const result = interaction.request().data.toBase64();
+      const result = interaction.request();
       expect(result).toEqual(testTx.psbt);
     });
   });
