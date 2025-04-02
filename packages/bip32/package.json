@@ -1,11 +1,16 @@
 {
   "name": "@caravan/bip32",
   "version": "1.0.0",
+  "author": "unchained capital",
   "description": "Package for working with bip32 and derivative objects like extended public keys",
+  "engines": {
+    "node": ">=20"
+  },
+  "private": false,
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
-  "private": false,
   "files": [
     "./dist/index.js",
     "./dist/index.mjs",
@@ -29,11 +34,7 @@
     "extended keys",
     "derivation"
   ],
-  "author": "Unchained Capital",
   "license": "MIT",
-  "engines": {
-    "node": ">=20"
-  },
   "devDependencies": {
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
