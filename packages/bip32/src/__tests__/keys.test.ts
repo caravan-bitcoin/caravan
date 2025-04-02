@@ -1,6 +1,6 @@
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
-import { vi, Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 
 import {
   getBlindedXpub,
