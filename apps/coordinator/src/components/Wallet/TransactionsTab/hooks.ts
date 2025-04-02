@@ -5,6 +5,20 @@ import { Transaction, SortDirection, SortBy } from "./types";
 import { useGetClient } from "../../../hooks/client";
 
 /**
+ * NOTE: This version only shows pending transactions
+ *
+ * We're currently only tracking pending (unconfirmed) transactions and have
+ * commented out the code for confirmed/spent transactions. This is because:
+ *
+ * - Once UTXOs are spent, their txid's disappear from the wallet state
+ * - We'd need to query address histories for private clients, which has privacy issues
+ * - We don't have a great way to track transaction history right now
+ *
+ * The commented code is still here in case we figure out a better approach later.
+ * For now, we're keeping it simple and just showing what's pending.
+ */
+
+/**
  * Custom hook to manage transaction fetching and state
  */
 export const useFetchTransactions = () => {
@@ -47,12 +61,12 @@ export const useFetchTransactions = () => {
       // Set to store transaction IDs
       const txids = new Set<string>();
 
-      // As some addresses can belong to UTXO's that no longer belong to the wallet so we separate addresses with active UTXOs and spent UTXOs
+      // Track addresses with active UTXOs only - pending transactions
       const addressesWithActiveUTXOs = new Set<string>();
-      const addressesWithSpentUTXOs = new Set<string>();
 
-      // Track which transactions are from spent UTXOs
-      const spentTxids = new Set<string>();
+      // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
+      // const addressesWithSpentUTXOs = new Set<string>();
+      // const spentTxids = new Set<string>();
 
       //Now we process all nodes to categorize addresses
       [
@@ -68,13 +82,19 @@ export const useFetchTransactions = () => {
             node.utxos.forEach((utxo: any) => {
               if (utxo.txid) txids.add(utxo.txid);
             });
-          } else if (node.addressUsed) {
+          }
+          // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
+          /*
+          else if (node.addressUsed) {
             // Address has been used but has no UTXOs (spent)
             addressesWithSpentUTXOs.add(node.multisig.address);
           }
+                 */
         }
       });
 
+      // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
+      /*
       // Only fetch transaction history for addresses with spent UTXOs
       for (const address of addressesWithSpentUTXOs) {
         try {
@@ -89,6 +109,7 @@ export const useFetchTransactions = () => {
           console.error(`Error fetching history for address ${address}:`, err);
         }
       }
+       */
 
       // Fetch transaction details in parallel
       const txPromises = Array.from(txids).map((txid) =>
@@ -155,9 +176,17 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
         if (sortBy === "blockTime") {
           comparison = (a.status.blockTime || 0) - (b.status.blockTime || 0);
         } else if (sortBy === "size") {
-          comparison = a.size - b.size;
+          // Prefer vsize if available, fallback to size
+          const aSize = a.vsize !== undefined ? a.vsize : a.size;
+          const bSize = b.vsize !== undefined ? b.vsize : b.size;
+          comparison = aSize - bSize;
         } else if (sortBy === "fee") {
-          comparison = (a.fee || 0) - (b.fee || 0);
+          // Fee sorting with null/undefined fees handled
+          const aFee =
+            a.fee !== undefined ? (a.isReceived ? 0 : a.fee || 0) : 0;
+          const bFee =
+            b.fee !== undefined ? (b.isReceived ? 0 : b.fee || 0) : 0;
+          comparison = aFee - bFee;
         } else {
           // For any other property that might be sortable
           const aValue = a[sortBy as keyof Transaction];
@@ -180,16 +209,21 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
   const pendingTxs = getSortedTransactions(
     transactions.filter((tx) => !tx.status.confirmed),
   );
+
+  // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
+  /*
   const confirmedTxs = getSortedTransactions(
     transactions.filter((tx) => tx.status.confirmed),
   );
+  */
 
   return {
     sortBy,
     sortDirection,
     handleSort,
     pendingTxs,
-    confirmedTxs,
+    // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
+    // confirmedTxs,
   };
 };
 
