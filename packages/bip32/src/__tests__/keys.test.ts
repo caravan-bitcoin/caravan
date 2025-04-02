@@ -1,6 +1,6 @@
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
-import { vi } from 'vitest';
+import { vi, Mock } from 'vitest';
 
 import {
   getBlindedXpub,
@@ -54,10 +54,10 @@ describe("isValidChildPubKey", () => {
     ).toBe(true);
   });
 
-  it("should throw if child key is shorter than parent", () => {
+  it("should throw if child key is longer than parent", () => {
     const derivation = {
       ...testChildDerivation,
-      path: "m/45'/0'",
+      path: "m/45'/0'/0'/",
     };
     expect(() =>
       isValidChildPubKey(derivation, globalOrigin, Network.REGTEST),
@@ -99,17 +99,8 @@ describe("setXpubNetwork", () => {
 vi.mock("../paths", () => {
   return {
     __esModule: true,
-    getUnmaskedPath: vi.fn().mockImplementation((path) => path),
-    getRelativeBip32Sequence: vi.fn().mockImplementation((parentPath, childPath) => {
-      const parentLength = parentPath.split('/').length;
-      const childLength = childPath.split('/').length;
-      if (childLength < parentLength) {
-        throw new Error('Child key shorter than parent');
-      }
-      return [0, 0];
-    }),
-    secureSecretPath: vi.fn().mockImplementation(() => "m/0/0"),
-    combineBip32Paths: vi.fn().mockImplementation((path1, path2) => `${path1}/${path2.replace('m/', '')}`),
+    ...vi.importActual("../paths"),
+    secureSecretPath: vi.fn(),
   };
 });
 
@@ -123,7 +114,7 @@ describe("getRandomChildXpub", () => {
     // depth below the parent path
     childPath = "m/45'/0'/0'/0/0";
     child = nodes["m/45'/0'/0'/0/0"];
-    (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
   });
 
   afterAll(vi.restoreAllMocks);
@@ -152,7 +143,7 @@ describe("getBlindedXpub", () => {
     parent = nodes[parentPath];
     // depth below the parent path
     child = nodes["m/45'/0'/0'/0/0"];
-    (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
   });
 
   afterAll(vi.restoreAllMocks);
