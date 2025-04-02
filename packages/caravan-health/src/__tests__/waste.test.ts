@@ -1,5 +1,5 @@
-import { AddressUtxos } from "./types";
-import { WasteMetrics } from "./waste";
+import { AddressUtxos } from "../types";
+import { WasteMetrics } from "../waste";
 
 const transactions = [
   {
