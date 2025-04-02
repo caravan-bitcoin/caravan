@@ -18,8 +18,8 @@
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "jest src/tests",
-    "test:watch": "jest --watch src",
+    "test": "vitest --watch=false src/tests",
+    "test:watch": "vitest --watch src",
     "lint": "eslint src"
   },
   "keywords": [
@@ -36,8 +36,6 @@
   },
   "devDependencies": {
     "prettier": "^3.2.5",
-    "@inrupt/jest-jsdom-polyfills": "^3.2.1",
-    "ts-jest": "^29.0.5",
     "tsup": "^7.2.0",
     "typescript": "^4.9.5",
     "@caravan/typescript-config": "*",

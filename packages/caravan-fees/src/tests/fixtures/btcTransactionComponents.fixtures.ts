@@ -1,4 +1,4 @@
-import { UTXO } from "../types";
+import { UTXO } from "../../types";
 
 export const validInputTemplateFixtures = [
   {
