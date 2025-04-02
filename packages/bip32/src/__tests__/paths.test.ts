@@ -70,10 +70,6 @@ describe("combineBip32Paths", () => {
 
 vi.mock("../utils", () => {
   return {
-    __esModule: true,
-    default: {
-      secureRandomInt: vi.fn().mockImplementation(() => 42),
-    },
     secureRandomInt: vi.fn().mockImplementation(() => 42),
   };
 });
