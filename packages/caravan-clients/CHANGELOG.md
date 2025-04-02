@@ -1,5 +1,23 @@
 # @caravan/clients
 
+## 0.4.0
+
+### Minor Changes
+
+- [#206](https://github.com/caravan-bitcoin/caravan/pull/206) [`08a485d`](https://github.com/caravan-bitcoin/caravan/commit/08a485d382847d1af234ebb0f37628e12f4186e7) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add a new method `getWalletTransaction` in BlockchainClient and `bitcoindGetWalletTransaction` in wallet methods
+
+## 0.3.2
+
+### Patch Changes
+
+- [#168](https://github.com/caravan-bitcoin/caravan/pull/168) [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Patch: align client.getTransaction method implementation with bitcoindRawTxData response
+
+## 0.3.1
+
+### Patch Changes
+
+- [#196](https://github.com/caravan-bitcoin/caravan/pull/196) [`509436c`](https://github.com/caravan-bitcoin/caravan/commit/509436cf299ee83de481557928eb8638b20ec62e) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - fix: Private node transaction RPC call by aligning client.getTransaction method implementation with bitcoindRawTxData response
+
 ## 0.3.0
 
 ### Minor Changes
