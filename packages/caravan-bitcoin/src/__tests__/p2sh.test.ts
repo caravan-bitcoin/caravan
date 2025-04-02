@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { estimateMultisigP2SHTransactionVSize } from "../p2sh";
 
 describe("p2sh", () => {
@@ -10,7 +11,7 @@ describe("p2sh", () => {
           m: 2,
           n: 3,
         }),
-      ).toBe(391);
+      ).toEqual(391);
     });
   });
 });

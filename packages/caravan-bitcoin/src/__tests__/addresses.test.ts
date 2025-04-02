@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { validateAddress, getAddressType } from "../addresses";
 import * as multisig from "../multisig";
 import { Network } from "../networks";
