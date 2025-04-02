@@ -11,8 +11,6 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/**/*.d.ts',
-        'src/**/*.test.ts',
-        'src/**/index.ts',
       ],
     },
   },
