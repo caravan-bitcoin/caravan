@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.4.0
+
+### Minor Changes
+
+- [#206](https://github.com/caravan-bitcoin/caravan/pull/206) [`08a485d`](https://github.com/caravan-bitcoin/caravan/commit/08a485d382847d1af234ebb0f37628e12f4186e7) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add a new method `getWalletTransaction` in BlockchainClient and `bitcoindGetWalletTransaction` in wallet methods
+
 ## 0.3.2
 
 ### Patch Changes
