@@ -1420,6 +1420,7 @@ describe("BlockchainClient", () => {
 
       expect(result).toEqual({
         txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        amount: -1.5,
         version: 2,
         locktime: 0,
         size: 225,
@@ -1651,6 +1652,7 @@ describe("BlockchainClient", () => {
         size: 225,
         vsize: 225,
         weight: 900,
+        amount: -1.5,
         fee: 25000, // Fee is in satoshis for PRIVATE client
         isReceived: false,
         status: {

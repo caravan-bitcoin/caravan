@@ -87,6 +87,7 @@ export interface RawTransactionData {
   vsize?: number;
   weight: number;
   fee: number;
+  amount?: number;
   category?:
     | "send"
     | "receive"
