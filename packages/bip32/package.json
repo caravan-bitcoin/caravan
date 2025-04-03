@@ -7,7 +7,6 @@
     "node": ">=20"
   },
   "private": false,
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
