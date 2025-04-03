@@ -19,6 +19,18 @@ import { useGetClient } from "../../../hooks/client";
  */
 
 /**
+ * Helper function to check if we have complete input data for a transaction
+ */
+const hasCompleteInputData = (tx: any): boolean => {
+  if (!tx.vin || !Array.isArray(tx.vin)) return false;
+
+  return tx.vin.every(
+    (input: any) =>
+      input.prevout && input.prevout.scriptpubkey_address !== undefined,
+  );
+};
+
+/**
  * Custom hook to manage transaction fetching and state
  */
 export const useFetchTransactions = () => {
