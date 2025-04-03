@@ -342,7 +342,6 @@ export const useFetchTransactions = () => {
               tx,
               walletAddresses,
             );
-
             // Determine if transaction is received based on value if not already set
             const isReceived =
               tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0;
@@ -425,6 +424,11 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
           const bFee =
             b.fee !== undefined ? (b.isReceived ? 0 : b.fee || 0) : 0;
           comparison = aFee - bFee;
+        } else if (sortBy === "valueToWallet") {
+          // Value sorting
+          const aValue = a.valueToWallet || 0;
+          const bValue = b.valueToWallet || 0;
+          comparison = aValue - bValue;
         } else {
           // For any other property that might be sortable
           const aValue = a[sortBy as keyof Transaction];
