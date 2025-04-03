@@ -43,6 +43,9 @@ export const useFetchTransactions = () => {
   const deposits = useSelector((state: any) => state.wallet.deposits);
   const change = useSelector((state: any) => state.wallet.change);
 
+  // Get wallet addresses
+  const walletAddresses = useWalletAddresses();
+
   const blockchainClient = useGetClient();
 
   // Helper function to fetch individual transaction details
@@ -56,6 +59,57 @@ export const useFetchTransactions = () => {
       console.error(`Error fetching tx ${txid}:`, err);
       return null;
     }
+  };
+
+  /**
+   * Calculates the net value of a transaction to the wallet
+   */
+  const calculateTransactionValue = (tx: any): number => {
+    // Skip calculation if tx is invalid
+    if (!tx || !tx.vin || !tx.vout) return 0;
+
+    let valueToWallet = 0;
+
+    // Track outputs to wallet addresses
+    let walletOutputsSum = 0;
+    for (const output of tx.vout) {
+      if (
+        output.scriptpubkey_address &&
+        walletAddresses.includes(output.scriptpubkey_address)
+      ) {
+        walletOutputsSum += output.value;
+      }
+    }
+
+    // If we have complete input data
+    if (hasCompleteInputData(tx)) {
+      // Track inputs from wallet addresses
+      let walletInputsSum = 0;
+      for (const input of tx.vin) {
+        if (
+          input.prevout &&
+          input.prevout.scriptpubkey_address &&
+          walletAddresses.includes(input.prevout.scriptpubkey_address)
+        ) {
+          walletInputsSum += input.prevout.value;
+        }
+      }
+
+      // Net value = outputs to wallet - inputs from wallet
+      valueToWallet = walletOutputsSum - walletInputsSum;
+    } else {
+      // Fallback calculation using isReceived flag
+      if (tx.isReceived || walletOutputsSum > 0) {
+        // For incoming or if we detect outputs to our wallet
+        valueToWallet = walletOutputsSum;
+      } else {
+        // For outgoing, we can't calculate precisely, use isReceived flag
+        valueToWallet = -Math.abs(tx.fee || 0); // So At minimum, we lost the fee
+      }
+    }
+
+    // Convert from BTC to satoshis and round to integer
+    return Math.round(valueToWallet * 100000000);
   };
 
   // Fetch transactions
@@ -131,9 +185,23 @@ export const useFetchTransactions = () => {
       const txDetails = await Promise.all(txPromises);
 
       if (mounted) {
-        setTransactions(
-          txDetails.filter((tx): tx is Transaction => tx !== null),
-        );
+        const processedTransactions = txDetails
+          .filter((tx): tx is any => tx !== null)
+          .map((tx) => {
+            // Calculate value to wallet
+            const valueToWallet = calculateTransactionValue(tx);
+
+            // Determine if transaction is received based on value if not already set
+            const isReceived =
+              tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0;
+
+            return {
+              ...tx,
+              valueToWallet,
+              isReceived,
+            };
+          });
+        setTransactions(processedTransactions);
         setError(null);
       }
     } catch (err) {
@@ -145,7 +213,13 @@ export const useFetchTransactions = () => {
         setIsLoading(false);
       }
     }
-  }, [blockchainClient, deposits.nodes, change.nodes, mounted]);
+  }, [
+    blockchainClient,
+    deposits.nodes,
+    change.nodes,
+    mounted,
+    walletAddresses,
+  ]);
 
   // Initialize and clean up
   useEffect(() => {
