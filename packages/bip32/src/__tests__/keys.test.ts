@@ -1,5 +1,6 @@
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
+import { type Mock, vi } from 'vitest';
 
 import {
   getBlindedXpub,
@@ -48,9 +49,9 @@ describe("isValidChildPubKey", () => {
       ...testChildDerivation,
       path: "m/45/0/0/0/0/0",
     };
-    expect(isValidChildPubKey(derivation, globalOrigin, Network.REGTEST)).toBe(
-      true,
-    );
+    expect(
+      isValidChildPubKey(derivation, globalOrigin, Network.REGTEST),
+    ).toBe(true);
   });
 
   it("should throw if child key is longer than parent", () => {
@@ -95,11 +96,11 @@ describe("setXpubNetwork", () => {
   });
 });
 
-jest.mock("../paths", () => {
+vi.mock("../paths", async () => {
+  const actual = await vi.importActual("../paths");
   return {
-    __esModule: true,
-    ...jest.requireActual("../paths"),
-    secureSecretPath: jest.fn(),
+    ...actual,
+    secureSecretPath: vi.fn()
   };
 });
 
@@ -113,10 +114,10 @@ describe("getRandomChildXpub", () => {
     // depth below the parent path
     childPath = "m/45'/0'/0'/0/0";
     child = nodes["m/45'/0'/0'/0/0"];
-    (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
   });
 
-  afterAll(jest.restoreAllMocks);
+  afterAll(vi.restoreAllMocks);
   it("should return a random child xpub", async () => {
     const keyOrigin = {
       xpub: parent.xpub,
@@ -142,10 +143,10 @@ describe("getBlindedXpub", () => {
     parent = nodes[parentPath];
     // depth below the parent path
     child = nodes["m/45'/0'/0'/0/0"];
-    (mockPaths.secureSecretPath as jest.Mock).mockReturnValue("m/0/0");
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
   });
 
-  afterAll(jest.restoreAllMocks);
+  afterAll(vi.restoreAllMocks);
   it("should return a random child key origin", async () => {
     const actual = await getBlindedXpub(parent.xpub);
     expect(actual.xpub).toEqual(child.xpub);
