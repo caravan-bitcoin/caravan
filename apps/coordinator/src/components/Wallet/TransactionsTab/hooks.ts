@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { blockExplorerTransactionURL } from "@caravan/bitcoin";
 import { Transaction, SortDirection, SortBy } from "./types";
@@ -311,4 +311,28 @@ export const useHandleExplorerLinkClick = () => {
     },
     [network, client],
   );
+};
+
+/**
+ * Custom hook to access all wallet addresses from Redux
+ */
+export const useWalletAddresses = () => {
+  // Get deposits and change addresses from Redux
+  const deposits = useSelector((state: any) => state.wallet.deposits);
+  const change = useSelector((state: any) => state.wallet.change);
+
+  // Extract all addresses from wallet nodes
+  const addresses = useMemo(() => {
+    const depositAddresses = Object.values(deposits.nodes || {})
+      .map((node: any) => node.multisig?.address)
+      .filter(Boolean);
+
+    const changeAddresses = Object.values(change.nodes || {})
+      .map((node: any) => node.multisig?.address)
+      .filter(Boolean);
+
+    return [...depositAddresses, ...changeAddresses];
+  }, [deposits.nodes, change.nodes]);
+
+  return addresses;
 };
