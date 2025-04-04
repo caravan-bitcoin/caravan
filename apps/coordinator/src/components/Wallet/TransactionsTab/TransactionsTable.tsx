@@ -21,7 +21,12 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
-import { TransactionT, TransactionTableProps, FeeDisplayProps } from "./types";
+import {
+  TransactionT,
+  TransactionTableProps,
+  FeeDisplayProps,
+  ValueDisplayProps,
+} from "./types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -35,6 +40,7 @@ const columns = [
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
+  { id: "valueToWallet", label: "Value", sortable: true },
   { id: "status", label: "Status", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
@@ -102,6 +108,87 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
         </Typography>
         <Typography variant="caption" color="textSecondary">
           {feeInBTC} BTC
+        </Typography>
+      </Box>
+    </Tooltip>
+  );
+};
+
+/**
+ * ValueDisplay component to show transaction value with appropriate handling for:
+ * - Incoming payments (positive value)
+ * - Outgoing payments (negative value)
+ * - Missing value data
+ */
+export const ValueDisplay: React.FC<ValueDisplayProps> = ({ valueInSats }) => {
+  // For missing value data
+  if (valueInSats === null || valueInSats === undefined) {
+    return (
+      <Tooltip title="Value information not available" placement="top">
+        <Box display="flex" alignItems="center">
+          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
+            --
+          </Typography>
+          <InfoOutlinedIcon fontSize="small" color="disabled" />
+        </Box>
+      </Tooltip>
+    );
+  }
+
+  const valueInBTC = satoshisToBitcoins(Math.abs(valueInSats).toString());
+  const isPositive = valueInSats > 0;
+
+  return (
+    <Tooltip
+      title={
+        <Box>
+          {/* Main value information */}
+          <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+            Transaction Value
+          </Typography>
+
+          <Typography variant="caption" display="block" gutterBottom>
+            {`${isPositive ? "+" : "-"}${Math.abs(valueInSats).toLocaleString()} sats / ${isPositive ? "+" : "-"}${valueInBTC} BTC`}
+          </Typography>
+
+          {/* Explanation of what the value means */}
+          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+            This represents the net effect of this transaction on your wallet
+            balance.
+          </Typography>
+
+          {isPositive ? (
+            <Typography variant="caption" display="block">
+              <strong>Positive value:</strong> You received funds in this
+              transaction.
+            </Typography>
+          ) : (
+            <Typography variant="caption" display="block">
+              <strong>Negative value:</strong> You sent funds in this
+              transaction (including fees).
+            </Typography>
+          )}
+        </Box>
+      }
+      placement="top"
+      arrow
+      sx={{ maxWidth: 300 }}
+    >
+      <Box>
+        <Typography
+          variant="body2"
+          color={isPositive ? "success.main" : "error.main"}
+          fontWeight="medium"
+        >
+          {isPositive ? "+" : "-"}
+          {Math.abs(valueInSats).toLocaleString()} sats
+        </Typography>
+        <Typography
+          variant="caption"
+          color={isPositive ? "success.main" : "error.main"}
+        >
+          {isPositive ? "+" : "-"}
+          {valueInBTC} BTC
         </Typography>
       </Box>
     </Tooltip>
@@ -187,6 +274,9 @@ const TransactionTableRow: React.FC<{
     <TableCell>{tx.vsize || tx.size}</TableCell>
     <TableCell>
       <FeeDisplay feeInSats={tx.fee} isReceived={tx.isReceived} />
+    </TableCell>
+    <TableCell>
+      <ValueDisplay valueInSats={tx.valueToWallet} />
     </TableCell>
     <TableCell>
       <Chip
