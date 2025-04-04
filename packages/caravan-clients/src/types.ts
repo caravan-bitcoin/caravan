@@ -84,8 +84,16 @@ export interface RawTransactionData {
   vin: RawTxInput[];
   vout: RawTxOutput[];
   size: number;
+  vsize?: number;
   weight: number;
   fee: number;
+  category?:
+    | "send"
+    | "receive"
+    | "generate"
+    | "immature"
+    | "orphan"
+    | "unknown";
   status?: RawTxStatus; // Optional for private node
   // Additional fields for private node
   confirmations?: number;
@@ -109,6 +117,7 @@ export interface TransactionDetails {
     scriptPubkeyAddress?: string;
   }>;
   size: number;
+  vsize?: number;
   weight: number;
   fee: number;
   status: {
@@ -117,6 +126,7 @@ export interface TransactionDetails {
     blockHash?: string;
     blockTime?: number;
   };
+  isReceived?: boolean;
 }
 
 export interface ListTransactionsItem {
@@ -314,4 +324,82 @@ export interface UTXOUpdates {
   fetchedUTXOs: boolean;
   fetchUTXOsError: string;
   addressKnown?: boolean;
+}
+
+/**
+ * Interface for Bitcoin wallet transaction response
+ * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
+ */
+export interface WalletTransactionResponse {
+  amount: number; // The total amount (negative for outgoing transactions)
+  fee: number; // The fee amount (negative for outgoing transactions)
+  confirmations: number; // Number of confirmations
+  blockhash?: string; // The block hash containing the transaction
+  blockheight?: number; // The block height containing the transaction
+  blockindex?: number; // Position of tx in the block
+  blocktime?: number; // Block time in UNIX epoch time
+  txid: string; // The transaction ID
+  wtxid?: string; // The witness transaction ID
+  walletconflicts: string[]; // Conflicting transaction IDs
+  mempoolconflicts?: string[]; // Conflicts in mempool
+  time: number; // Transaction time in UNIX epoch time
+  timereceived: number; // Time received in UNIX epoch time
+  "bip125-replaceable": "yes" | "no" | "unknown"; // Replace-by-fee status
+
+  details: {
+    address: string;
+    category:
+      | "send"
+      | "receive"
+      | "generate"
+      | "immature"
+      | "orphan"
+      | "unknown";
+    amount: number; // Amount (negative for outgoing)
+    vout: number; // Output index
+    fee?: number; // Fee amount (if category is "send")
+    abandoned?: boolean; // If the transaction was abandoned
+    label?: string; // Address label if any
+  }[];
+
+  hex: string; // Raw transaction data
+
+  decoded?: {
+    // Only present when verbose=true
+    txid: string;
+    hash: string; // Witness transaction hash
+    version: number;
+    size: number; // Transaction size in bytes
+    vsize: number; // Virtual size (for segwit)
+    weight: number; // Transaction weight
+    locktime: number;
+
+    vin: {
+      txid: string; // Input transaction ID
+      vout: number; // Referenced output
+      scriptSig: {
+        asm: string;
+        hex: string;
+      };
+      txinwitness?: string[]; // Witness data (for segwit inputs)
+      sequence: number;
+    }[];
+
+    vout: {
+      value: number; // Output amount in BTC
+      n: number; // Output index
+      scriptPubKey: {
+        asm: string;
+        desc?: string; // Output descriptor
+        hex: string;
+        address?: string; // Bitcoin address
+        type: string; // Script type
+      };
+    }[];
+  };
+  lastprocessedblock?: {
+    // Information about the last processed block
+    hash: string;
+    height: number;
+  };
 }
