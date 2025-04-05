@@ -101,11 +101,12 @@ class Node extends React.Component {
   };
 
   renderAddress = () => {
-    const { braidNode } = this.props;
+    const { braidNode, feeRate } = this.props;
     return (
       <AddressExpander
         node={braidNode}
         setSpendCheckbox={this.setSpendCheckbox}
+        feeRate={feeRate}
       />
     );
   };
