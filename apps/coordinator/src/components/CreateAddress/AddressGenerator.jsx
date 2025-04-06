@@ -1,6 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { fromBase58 } from "bip32";
+import * as bitcoin from "bitcoinjs-lib";
+import * as bitcoinMessage from "bitcoinjs-message";
+import ECPairFactory from "ecpair";
+import * as ecc from "tiny-secp256k1";
+import { Buffer } from "buffer";
+// initialize ECPair
+const ECPair = ECPairFactory(ecc);
 import {
   generateMultisigFromPublicKeys,
   scriptToHex,
@@ -16,9 +24,16 @@ import {
   CardHeader,
   CardContent,
   FormHelperText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
 } from "@mui/material";
 import { downloadFile } from "utils";
 import { externalLink } from "utils/ExternalLink";
+import Copyable from "../Copyable";
 
 // Actions
 import {
@@ -39,6 +54,99 @@ const AddressGenerator = ({
   requiredSigners,
   setMultisigAddress,
 }) => {
+  const [isSignMessageOpen, setSignMessageOpen] = useState(false);
+  const [messageToSign, setMessageToSign] = useState("");
+  const [selectedPublicKey, setSelectedPublicKey] = useState("");
+  const [privateKeyType, setPrivateKeyType] = useState("xpriv");
+  const [privateKey, setPrivateKey] = useState("");
+  const [derivedPublicKey, setDerivedPublicKey] = useState("");
+  const [signedMessage, setSignedMessage] = useState("");
+  const [keyMismatchError, setKeyMismatchError] = useState("");
+
+  const getBitcoinNetwork = () => {
+    return network === "testnet" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
+  };
+
+  const handleSignMessageOpen = () => setSignMessageOpen(true);
+  const handleSignMessageClose = () => {
+    setSignMessageOpen(false);
+    setMessageToSign("");
+    setSelectedPublicKey("");
+    setPrivateKey("");
+    setDerivedPublicKey("");
+    setKeyMismatchError("");
+  };
+
+  const handlePrivateKeyChange = (event) => {
+    const key = event.target.value;
+    setPrivateKey(key);
+
+    try {
+      let keyPair;
+      if (privateKeyType === "xpriv") {
+        const node = fromBase58(key, getBitcoinNetwork());
+        const child = node.derivePath("0/0");
+        keyPair = ECPair.fromPrivateKey(child.privateKey, {
+          network: getBitcoinNetwork(),
+        });
+      } else if (privateKeyType === "wif") {
+        keyPair = ECPair.fromWIF(key, getBitcoinNetwork());
+      }
+      const derivedKey = Buffer.from(keyPair.publicKey).toString("hex");
+      console.log("Derived Public Key:", derivedKey); // Log derived public key
+      setDerivedPublicKey(derivedKey);
+
+      if (selectedPublicKey) {
+        console.log("Selected Public Key:", selectedPublicKey); // Log selected public key
+        if (derivedKey !== selectedPublicKey) {
+          setKeyMismatchError("The private key does not match the selected public key.");
+        } else {
+          setKeyMismatchError("");
+        }
+      }
+    } catch (err) {
+      setDerivedPublicKey("");
+      setKeyMismatchError("Invalid private key.");
+    }
+  };
+
+  const handleSignMessage = () => {
+    try {
+      let keyPair;
+      if (privateKeyType === "xpriv") {
+        const node = fromBase58(privateKey, getBitcoinNetwork());
+        const child = node.derivePath("0/0");
+        keyPair = ECPair.fromPrivateKey(child.privateKey, {
+          network: getBitcoinNetwork(),
+        });
+      } else if (privateKeyType === "wif") {
+        keyPair = ECPair.fromWIF(privateKey, getBitcoinNetwork());
+      }
+
+      const signature = bitcoinMessage.sign(
+        messageToSign,
+        keyPair.privateKey,
+        keyPair.compressed
+      );
+
+      setSignedMessage(signature.toString("base64"));
+      handleSignMessageClose();
+    } catch (err) {
+      console.error("Signing error:", err);
+      setSignedMessage("Failed to sign message.");
+    }
+  };
+
+  const handlePublicKeyChange = (event) => {
+    const newSelectedPublicKey = event.target.value;
+    setSelectedPublicKey(newSelectedPublicKey);
+
+    // Reset private key and derived public key when the public key is changed
+    setPrivateKey("");
+    setDerivedPublicKey("");
+    setKeyMismatchError("");
+  };
+
   const isInConflict = () => {
     return Object.values(publicKeyImporters).some(
       (importer) => importer.conflict,
@@ -203,6 +311,19 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
             <MultisigDetails multisig={multisig} />
           </Box>
 
+          {signedMessage && (
+            <Box mt={2}>
+              <Grid container alignItems="center" spacing={2}>
+                <Grid item>
+                  <strong>Signed Message:</strong>
+                </Grid>
+                <Grid item>
+                  <Copyable text={signedMessage} showIcon />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
           <Box mt={2}>
             <Button
               variant="contained"
@@ -210,6 +331,15 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
               onClick={downloadAddressDetails}
             >
               Download Address Details
+            </Button>
+          </Box>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleSignMessageOpen}
+            >
+              Sign Message
             </Button>
           </Box>
         </div>
@@ -222,11 +352,95 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
     );
   };
 
+  const publicKeyOptions = Object.values(publicKeyImporters)
+    .filter(({ publicKey }) => publicKey) // Only include valid public keys
+    .map(({ publicKey }, index) => ({
+      label: `Public Key ${index + 1}`,
+      value: publicKey,
+    }));
+
   return (
-    <Card>
-      <CardHeader title={title()} />
-      <CardContent>{body()}</CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader title={title()} />
+        <CardContent>{body()}</CardContent>
+      </Card>
+      <Dialog 
+        open={isSignMessageOpen} 
+        onClose={handleSignMessageClose} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>Sign Message</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Message"
+            value={messageToSign}
+            onChange={(e) => setMessageToSign(e.target.value)}
+            variant="standard"
+          />
+          <Box mt={2}>
+            <TextField
+              select
+              fullWidth
+              label="Public Key"
+              value={selectedPublicKey}
+              onChange={handlePublicKeyChange} // Use the new handler
+              variant="standard"
+            >
+              {publicKeyOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+          <Box mt={2}>
+            <TextField
+              select
+              fullWidth
+              label="Private Key Type"
+              value={privateKeyType}
+              onChange={(e) => setPrivateKeyType(e.target.value)}
+              variant="standard"
+            >
+              <MenuItem value="xpriv">XPRIV</MenuItem>
+              <MenuItem value="wif">WIF</MenuItem>
+            </TextField>
+          </Box>
+          <Box mt={2}>
+            <TextField
+              fullWidth
+              label="Private Key"
+              value={privateKey}
+              onChange={handlePrivateKeyChange}
+              variant="standard"
+              disabled={!selectedPublicKey} // Disable until a public key is selected
+              error={!!keyMismatchError}
+              helperText={keyMismatchError}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSignMessageClose} color="secondary">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSignMessage}
+            color="primary"
+            disabled={
+              !messageToSign ||
+              !privateKey ||
+              !selectedPublicKey ||
+              !!keyMismatchError
+            }
+          >
+            Sign
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

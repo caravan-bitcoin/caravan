@@ -15,7 +15,7 @@ import ImportAddressesButton from "../ImportAddressesButton";
 import { clientPropTypes } from "../../proptypes";
 import "../styles.css";
 
-const CreateAddress = ({ address, client, totalSigners }) => {
+const CreateAddress = ({ address, client, totalSigners, network }) => {
   return (
     <Box mt={2}>
       <Grid container spacing={3}>
@@ -25,7 +25,7 @@ const CreateAddress = ({ address, client, totalSigners }) => {
         <Grid item md={8}>
           <PublicKeyImporters totalSigners={totalSigners} />
           <Box mt={2}>
-            <AddressGenerator />
+            <AddressGenerator network={network} />
           </Box>
         </Grid>
         <Grid item md={4}>
@@ -85,6 +85,7 @@ function mapStateToProps(state) {
     ...{ totalSigners: state.settings.totalSigners },
     ...state.address,
     client: state.client,
+    network: state.settings.network, // Pass the selected network
   };
 }
 
@@ -92,6 +93,7 @@ CreateAddress.propTypes = {
   address: PropTypes.string,
   totalSigners: PropTypes.number.isRequired,
   client: PropTypes.shape(clientPropTypes).isRequired,
+  network: PropTypes.string.isRequired, // Add network prop type
 };
 
 CreateAddress.defaultProps = {
