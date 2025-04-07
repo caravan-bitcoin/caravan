@@ -1,0 +1,37 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "module": "es2020",
+      "target": "es2020",
+      "allowJs": false,
+      "declaration": true,
+      "emitDeclarationOnly": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "noEmit": false,
+      "outDir": "temp",
+      "baseUrl": ".", // important
+    "paths": {
+        "src/*": ["packages/caravan-psbt/src/*"]
+    }
+    },
+    "include": [
+      "packages/bip32/src/index.ts",
+      "packages/caravan-bitcoin/src/index.ts",
+      "packages/caravan-clients/src/index.ts",
+      "packages/caravan-fees/src/index.ts",
+      "packages/caravan-health/src/index.ts",
+      "packages/caravan-psbt/src/index.ts",
+      "packages/caravan-wallets/src/index.ts",
+      "packages/multisig/src/index.ts"
+    ],
+    "exclude": [
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.js",
+      "**/node_modules",
+      "docs",
+      "temp"
+    ]
+  }
+  

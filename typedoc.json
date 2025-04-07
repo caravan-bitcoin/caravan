@@ -1,0 +1,19 @@
+{
+    "entryPoints": [
+      "packages/bip32/src/index.ts",
+      "packages/caravan-bitcoin/src/index.ts",
+      "packages/caravan-clients/src/index.ts",
+      "packages/caravan-fees/src/index.ts",
+      "packages/caravan-health/src/index.ts",
+      "packages/caravan-psbt/src/index.ts",
+      "packages/caravan-wallets/src/index.ts",
+      "packages/multisig/src/index.ts"
+    ],
+    "tsconfig": "tsconfig.typedoc.json",
+    "out": "docs",
+    "includeVersion": true,
+    "excludePrivate": true,
+    "excludeInternal": true,
+    "excludeExternals": true
+  }
+  
