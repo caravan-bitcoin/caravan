@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { fromBase58 } from "bip32";
 import * as bitcoin from "bitcoinjs-lib";
-import * as bitcoinMessage from "bitcoinjs-message";
-import ECPairFactory from "ecpair";
+import { Signer } from "bip322-js";
+const { payments } = bitcoin;
+
+import { ECPairFactory } from "ecpair";
 import * as ecc from "tiny-secp256k1";
 import { Buffer } from "buffer";
 // initialize ECPair
@@ -57,14 +58,15 @@ const AddressGenerator = ({
   const [isSignMessageOpen, setSignMessageOpen] = useState(false);
   const [messageToSign, setMessageToSign] = useState("");
   const [selectedPublicKey, setSelectedPublicKey] = useState("");
-  const [privateKeyType, setPrivateKeyType] = useState("xpriv");
+  const [privateKeyType, setPrivateKeyType] = useState("wif");
   const [privateKey, setPrivateKey] = useState("");
-  const [derivedPublicKey, setDerivedPublicKey] = useState("");
   const [signedMessage, setSignedMessage] = useState("");
   const [keyMismatchError, setKeyMismatchError] = useState("");
 
   const getBitcoinNetwork = () => {
-    return network === "testnet" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
+    return network === "testnet"
+      ? bitcoin.networks.testnet
+      : bitcoin.networks.bitcoin;
   };
 
   const handleSignMessageOpen = () => setSignMessageOpen(true);
@@ -73,7 +75,6 @@ const AddressGenerator = ({
     setMessageToSign("");
     setSelectedPublicKey("");
     setPrivateKey("");
-    setDerivedPublicKey("");
     setKeyMismatchError("");
   };
 
@@ -83,56 +84,51 @@ const AddressGenerator = ({
 
     try {
       let keyPair;
-      if (privateKeyType === "xpriv") {
-        const node = fromBase58(key, getBitcoinNetwork());
-        const child = node.derivePath("0/0");
-        keyPair = ECPair.fromPrivateKey(child.privateKey, {
-          network: getBitcoinNetwork(),
-        });
-      } else if (privateKeyType === "wif") {
+      if (privateKeyType === "wif") {
         keyPair = ECPair.fromWIF(key, getBitcoinNetwork());
       }
       const derivedKey = Buffer.from(keyPair.publicKey).toString("hex");
-      console.log("Derived Public Key:", derivedKey); // Log derived public key
-      setDerivedPublicKey(derivedKey);
 
       if (selectedPublicKey) {
-        console.log("Selected Public Key:", selectedPublicKey); // Log selected public key
         if (derivedKey !== selectedPublicKey) {
-          setKeyMismatchError("The private key does not match the selected public key.");
+          setKeyMismatchError(
+            "The private key does not match the selected public key.",
+          );
         } else {
           setKeyMismatchError("");
         }
       }
     } catch (err) {
-      setDerivedPublicKey("");
       setKeyMismatchError("Invalid private key.");
     }
   };
 
-  const handleSignMessage = () => {
+  const handleSignMessage = async () => {
     try {
       let keyPair;
-      if (privateKeyType === "xpriv") {
-        const node = fromBase58(privateKey, getBitcoinNetwork());
-        const child = node.derivePath("0/0");
-        keyPair = ECPair.fromPrivateKey(child.privateKey, {
-          network: getBitcoinNetwork(),
-        });
-      } else if (privateKeyType === "wif") {
-        keyPair = ECPair.fromWIF(privateKey, getBitcoinNetwork());
+      const bitcoinNetwork = getBitcoinNetwork();
+
+      if (privateKeyType === "wif") {
+        keyPair = ECPair.fromWIF(privateKey, bitcoinNetwork);
       }
 
-      const signature = bitcoinMessage.sign(
-        messageToSign,
-        keyPair.privateKey,
-        keyPair.compressed
-      );
+      if (!keyPair || !keyPair.privateKey) {
+        throw new Error("Invalid key pair generated.");
+      }
 
-      setSignedMessage(signature.toString("base64"));
+      const address = payments.p2pkh({
+        pubkey: Buffer.from(keyPair.publicKey),
+        network: bitcoinNetwork,
+      }).address;
+
+      const wif = keyPair.toWIF();
+      const signature = Signer.sign(wif, address, messageToSign);
+
+      // Convert the signature to base64 format
+      const base64Signature = Buffer.from(signature).toString("base64");
+      setSignedMessage(base64Signature);
       handleSignMessageClose();
     } catch (err) {
-      console.error("Signing error:", err);
       setSignedMessage("Failed to sign message.");
     }
   };
@@ -140,10 +136,7 @@ const AddressGenerator = ({
   const handlePublicKeyChange = (event) => {
     const newSelectedPublicKey = event.target.value;
     setSelectedPublicKey(newSelectedPublicKey);
-
-    // Reset private key and derived public key when the public key is changed
     setPrivateKey("");
-    setDerivedPublicKey("");
     setKeyMismatchError("");
   };
 
@@ -365,10 +358,10 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
         <CardHeader title={title()} />
         <CardContent>{body()}</CardContent>
       </Card>
-      <Dialog 
-        open={isSignMessageOpen} 
-        onClose={handleSignMessageClose} 
-        maxWidth="md" 
+      <Dialog
+        open={isSignMessageOpen}
+        onClose={handleSignMessageClose}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>Sign Message</DialogTitle>
@@ -404,8 +397,8 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
               value={privateKeyType}
               onChange={(e) => setPrivateKeyType(e.target.value)}
               variant="standard"
+              disabled
             >
-              <MenuItem value="xpriv">XPRIV</MenuItem>
               <MenuItem value="wif">WIF</MenuItem>
             </TextField>
           </Box>

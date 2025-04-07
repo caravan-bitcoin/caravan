@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ledgerhq/hw-transport-webusb": "6.27.12",
-    "bitcoinjs-message": "^2.2.0",
+    "bip322-js": "^2.0.0",
     "ecpair": "^3.0.0",
     "tiny-secp256k1": "^2.2.3"
   },
