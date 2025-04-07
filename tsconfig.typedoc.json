@@ -10,7 +10,7 @@
       "strict": true,
       "noEmit": false,
       "outDir": "temp",
-      "baseUrl": ".", // important
+      "baseUrl": ".",
     "paths": {
         "src/*": ["packages/caravan-psbt/src/*"]
     }
