@@ -240,6 +240,11 @@ export interface ListUnspentResponse {
 }
 
 export interface TransactionResponse {
+  size: number;
+  weight: number;
+  vin: RawTxInput[];
+  vout: RawTxOutput[];
+  result: RawTransactionData;
   amount: number;
   fee: number;
   confirmations: number;
@@ -289,6 +294,7 @@ export interface BlockExplorerAddressResponse {
  * Interface for formatted UTXO data
  */
 export interface FormattedUTXO {
+  vout: number;
   confirmed: boolean;
   txid: string;
   index: number;
