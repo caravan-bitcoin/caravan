@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { blockExplorerTransactionURL } from "@caravan/bitcoin";
+import {
+  blockExplorerTransactionURL,
+  satoshisToBitcoins,
+  bitcoinsToSatoshis,
+} from "@caravan/bitcoin";
 import { Transaction, SortDirection, SortBy } from "./types";
 import { useGetClient } from "../../../hooks/client";
 
@@ -41,22 +45,20 @@ const hasCompleteInputData = (tx: any): boolean => {
  * This gives the most accurate calculation as bitcoind provides detailed category information and amount field
  */
 const calculateValueFromDetails = (details: any[]): number => {
-  let valueToWallet = 0;
+  return details.reduce((valueToWallet, detail) => {
+    const amountInSats = Number(bitcoinsToSatoshis(detail.amount));
 
-  // Sum all transaction details affecting the wallet
-  details.forEach((detail: any) => {
     if (
       detail.category === "receive" ||
       detail.category === "generate" ||
-      detail.category === "immature"
+      detail.category === "immature" ||
+      detail.category === "send" // Amount is already negative for send
     ) {
-      valueToWallet += detail.amount * 100000000; // Convert BTC to satoshis
-    } else if (detail.category === "send") {
-      valueToWallet += detail.amount * 100000000; // Amount is already negative for send
+      return valueToWallet + amountInSats;
     }
-  });
 
-  return Math.round(valueToWallet);
+    return valueToWallet;
+  }, 0);
 };
 
 /**
@@ -64,10 +66,7 @@ const calculateValueFromDetails = (details: any[]): number => {
  */
 const outputValueToSatoshis = (value: any): number => {
   if (typeof value === "undefined" || value === null) return 0;
-
-  return typeof value === "string"
-    ? parseFloat(value) * 100000000
-    : value * 100000000;
+  return Number(bitcoinsToSatoshis(value));
 };
 
 /**
@@ -119,7 +118,7 @@ const estimateValueFromOutputs = (
   // If transaction is explicitly marked as sent
   if (tx.isReceived === false) {
     // At minimum, we spent the fee
-    let spentAmount = (tx.fee || 0) * 100000000;
+    let spentAmount = tx.fee ? Number(bitcoinsToSatoshis(tx.fee)) : 0;
 
     // Add outputs to non-wallet addresses (funds leaving our wallet)
     for (const output of tx.vout) {
