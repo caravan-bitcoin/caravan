@@ -19,7 +19,7 @@
     "skipLibCheck": true,
     "strict": true,
     "outDir": "./dist",
-    "types": ["vitest/globals", "node"]
+    "types": ["vitest/globals", "jest", "node"]
   },
   "exclude": [
     "**/node_modules"
