@@ -412,12 +412,6 @@ export class PsbtV2 extends PsbtV2Maps {
     return val.readUInt8(0);
   }
 
-  // set PSBT_GLOBAL_INPUT_COUNT(count: number) {
-  //   const bw = new BufferWriter();
-  //   bw.writeU8(count);
-  //   this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
-  // }
-
   get PSBT_GLOBAL_OUTPUT_COUNT() {
     const val = this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
 
@@ -426,12 +420,6 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     return val.readUInt8(0);
-  }
-
-  set PSBT_GLOBAL_OUTPUT_COUNT(count: number) {
-    const bw = new BufferWriter();
-    bw.writeU8(count);
-    this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 
   get PSBT_GLOBAL_TX_MODIFIABLE() {
