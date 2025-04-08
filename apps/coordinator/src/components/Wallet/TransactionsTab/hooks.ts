@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import {
   blockExplorerTransactionURL,
-  satoshisToBitcoins,
   bitcoinsToSatoshis,
 } from "@caravan/bitcoin";
 import { Transaction, SortDirection, SortBy } from "./types";
@@ -77,7 +76,7 @@ const calculateValueFromCompleteData = (
   walletAddresses: string[],
 ): number => {
   let walletInputsSum = 0;
-  let walletOutputsSum = 0;
+  let totalChange = 0;
 
   // Sum all inputs from our wallet
   for (const input of tx.vin) {
@@ -94,12 +93,12 @@ const calculateValueFromCompleteData = (
   for (const output of tx.vout) {
     const outputAddress = output.scriptPubkeyAddress;
     if (outputAddress && walletAddresses.includes(outputAddress)) {
-      walletOutputsSum += outputValueToSatoshis(output.value);
+      totalChange += outputValueToSatoshis(output.value);
     }
   }
 
   // Net value = outputs to wallet - inputs from wallet
-  return walletOutputsSum - walletInputsSum;
+  return totalChange - walletInputsSum;
 };
 
 /**
@@ -108,11 +107,11 @@ const calculateValueFromCompleteData = (
 const estimateValueFromOutputs = (
   tx: any,
   walletAddresses: string[],
-  walletOutputsSum: number,
+  totalChange: number,
 ): number => {
   // If transaction is explicitly marked as received or we have outputs to our wallet addresses
-  if (tx.isReceived === true || walletOutputsSum > 0) {
-    return walletOutputsSum;
+  if (tx.isReceived === true || totalChange > 0) {
+    return totalChange;
   }
 
   // If transaction is explicitly marked as sent
@@ -136,28 +135,25 @@ const estimateValueFromOutputs = (
   }
 
   // If we can't determine direction, best guess is sum of outputs to our wallet
-  return walletOutputsSum;
+  return totalChange;
 };
 
 /**
  * Calculate wallet outputs sum for a transaction
  */
-const calculateWalletOutputsSum = (
-  tx: any,
-  walletAddresses: string[],
-): number => {
-  let walletOutputsSum = 0;
+const calculatetotalChange = (tx: any, walletAddresses: string[]): number => {
+  let totalChange = 0;
 
   if (!tx?.vout || !Array.isArray(tx.vout)) return 0;
 
   for (const output of tx.vout) {
     const outputAddress = output.scriptPubkeyAddress;
     if (outputAddress && walletAddresses.includes(outputAddress)) {
-      walletOutputsSum += outputValueToSatoshis(output.value);
+      totalChange += outputValueToSatoshis(output.value);
     }
   }
 
-  return walletOutputsSum;
+  return totalChange;
 };
 
 /**
@@ -208,7 +204,7 @@ const calculateTransactionValue = (
   // CASE 2: Public client or private client without details field
   if (tx.vin && tx.vout) {
     // Calculate sum of all outputs to wallet addresses
-    const walletOutputsSum = calculateWalletOutputsSum(tx, walletAddresses);
+    const totalChange = calculatetotalChange(tx, walletAddresses);
 
     // If we have complete input data with prevout information
     if (hasCompleteInputData(tx)) {
@@ -216,7 +212,7 @@ const calculateTransactionValue = (
     }
 
     // Otherwise estimate based on outputs and transaction direction
-    return estimateValueFromOutputs(tx, walletAddresses, walletOutputsSum);
+    return estimateValueFromOutputs(tx, walletAddresses, totalChange);
   }
 
   // CASE 3: Not enough data to calculate
