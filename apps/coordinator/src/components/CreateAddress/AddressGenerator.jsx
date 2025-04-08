@@ -86,6 +86,12 @@ const AddressGenerator = ({
       let keyPair;
       if (privateKeyType === "wif") {
         keyPair = ECPair.fromWIF(key, getBitcoinNetwork());
+      } else {
+        throw new Error("Unsupported private key type");
+      }
+
+      if (!keyPair) {
+        throw new Error("Failed to generate key pair");
       }
       const derivedKey = Buffer.from(keyPair.publicKey).toString("hex");
 
@@ -110,6 +116,8 @@ const AddressGenerator = ({
 
       if (privateKeyType === "wif") {
         keyPair = ECPair.fromWIF(privateKey, bitcoinNetwork);
+      } else {
+        throw new Error("Unsupported private key type");
       }
 
       if (!keyPair || !keyPair.privateKey) {
@@ -129,7 +137,7 @@ const AddressGenerator = ({
       setSignedMessage(base64Signature);
       handleSignMessageClose();
     } catch (err) {
-      setSignedMessage("Failed to sign message.");
+      setKeyMismatchError(`Failed to sign message`);
     }
   };
 
