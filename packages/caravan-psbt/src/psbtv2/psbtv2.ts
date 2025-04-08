@@ -111,12 +111,6 @@ export class PsbtV2 extends PsbtV2Maps {
     return val.readUInt8(0);
   }
 
-  set PSBT_GLOBAL_INPUT_COUNT(count: number) {
-    const bw = new BufferWriter();
-    bw.writeU8(count);
-    this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
-  }
-
   get PSBT_GLOBAL_OUTPUT_COUNT() {
     const val = this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
 
@@ -125,12 +119,6 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     return val.readUInt8(0);
-  }
-
-  set PSBT_GLOBAL_OUTPUT_COUNT(count: number) {
-    const bw = new BufferWriter();
-    bw.writeU8(count);
-    this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 
   get PSBT_GLOBAL_TX_MODIFIABLE() {
@@ -728,9 +716,8 @@ export class PsbtV2 extends PsbtV2Maps {
   private create() {
     this.PSBT_GLOBAL_VERSION = 2;
     this.PSBT_GLOBAL_TX_VERSION = 2;
-    this.PSBT_GLOBAL_INPUT_COUNT = 0;
-    this.PSBT_GLOBAL_OUTPUT_COUNT = 0;
-
+    this.updateGlobalInputCount();
+    this.updateGlobalOutputCount();
     // TODO: Right now these values are setting a default. How can it be made to
     // accept values on the constructor method? The Creator role should be
     // allowed to configure these.
@@ -998,7 +985,9 @@ export class PsbtV2 extends PsbtV2Maps {
       map.set(KeyType.PSBT_IN_SIGHASH_TYPE, bw.render());
     }
 
-    this.PSBT_GLOBAL_INPUT_COUNT = this.inputMaps.push(map);
+    this.inputMaps.push(map);
+    this.updateGlobalInputCount();
+    
   }
 
   public addOutput({
@@ -1055,7 +1044,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     this.outputMaps.push(map);
-    this.PSBT_GLOBAL_OUTPUT_COUNT = this.outputMaps.length;
+    this.updateGlobalOutputCount();    
   }
 
   /**
@@ -1078,7 +1067,8 @@ export class PsbtV2 extends PsbtV2Maps {
     }
     const newInputs = this.inputMaps.filter((_, i) => i !== index);
     this.inputMaps = newInputs;
-    this.PSBT_GLOBAL_INPUT_COUNT = this.inputMaps.length;
+    this.updateGlobalInputCount();
+
   }
 
   /**
@@ -1107,7 +1097,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     this.outputMaps = newOutputs;
-    this.PSBT_GLOBAL_OUTPUT_COUNT = this.outputMaps.length;
+    this.updateGlobalOutputCount();
   }
 
   /**
@@ -1427,5 +1417,24 @@ export class PsbtV2 extends PsbtV2Maps {
     // Creates the unsigned tx and adds it to the map and then removes v2 keys.
     converterMap.convertToV0();
     return converterMap.serialize(format);
+  }
+
+  /**
+   * Updates the PSBT_GLOBAL_INPUT_COUNT and PSBT_GLOBAL_OUTPUT_COUNT fields
+   * in the global map.
+   */
+  private updateGlobalInputCount() {
+    const bw = new BufferWriter();
+    bw.writeU8(this.inputMaps.length); // or `.size` if inputMaps is a Map
+    this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
+  }
+  
+  /**
+   * Updates the PSBT_GLOBAL_OUTPUT_COUNT field in the global map.
+   */
+  private updateGlobalOutputCount() {
+    const bw = new BufferWriter();
+    bw.writeU8(this.outputMaps.length); // or `.size` if outputMaps is a Map
+    this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 }
