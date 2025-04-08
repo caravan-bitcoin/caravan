@@ -28,6 +28,17 @@ import { useGetClient } from "../../../hooks/client";
  */
 
 /**
+ * Check if a transaction output belongs to the wallet
+ */
+const belongsToWallet = (
+  output: { scriptPubkeyAddress?: string },
+  walletAddresses: string[],
+): boolean => {
+  const outputAddress = output.scriptPubkeyAddress;
+  return Boolean(outputAddress && walletAddresses.includes(outputAddress));
+};
+
+/**
  * Helper function to check if we have complete input data for a transaction
  */
 const hasCompleteInputData = (tx: any): boolean => {
@@ -75,27 +86,22 @@ const calculateValueFromCompleteData = (
   tx: any,
   walletAddresses: string[],
 ): number => {
-  let walletInputsSum = 0;
-  let totalChange = 0;
-
   // Sum all inputs from our wallet
-  for (const input of tx.vin) {
-    if (
-      input.prevout &&
-      input.prevout.scriptpubkey_address &&
-      walletAddresses.includes(input.prevout.scriptpubkey_address)
-    ) {
-      walletInputsSum += outputValueToSatoshis(input.prevout.value);
-    }
-  }
+  const walletInputsSum = tx.vin
+    .filter(
+      (input: any) =>
+        input.prevout &&
+        input.prevout.scriptpubkey_address &&
+        walletAddresses.includes(input.prevout.scriptpubkey_address),
+    )
+    .reduce(
+      (sum: any, input: any) =>
+        sum + outputValueToSatoshis(input.prevout.value),
+      0,
+    );
 
-  // Sum all outputs to our wallet
-  for (const output of tx.vout) {
-    const outputAddress = output.scriptPubkeyAddress;
-    if (outputAddress && walletAddresses.includes(outputAddress)) {
-      totalChange += outputValueToSatoshis(output.value);
-    }
-  }
+  // Calculate total change (outputs back to our wallet)
+  const totalChange = calculateTotalChange(tx, walletAddresses);
 
   // Net value = outputs to wallet - inputs from wallet
   return totalChange - walletInputsSum;
@@ -120,15 +126,16 @@ const estimateValueFromOutputs = (
     let spentAmount = tx.fee ? Number(bitcoinsToSatoshis(tx.fee)) : 0;
 
     // Add outputs to non-wallet addresses (funds leaving our wallet)
-    for (const output of tx.vout) {
-      const outputAddress = output.scriptPubkeyAddress;
-      const outputValue = outputValueToSatoshis(output.value);
-
-      // If this isn't a wallet address, we sent money to it
-      if (outputAddress && !walletAddresses.includes(outputAddress)) {
-        spentAmount += outputValue;
-      }
-    }
+    spentAmount += tx.vout
+      .filter(
+        (output: any) =>
+          output.scriptPubkeyAddress &&
+          !walletAddresses.includes(output.scriptPubkeyAddress),
+      )
+      .reduce(
+        (sum: any, output: any) => sum + outputValueToSatoshis(output.value),
+        0,
+      );
 
     // Value to wallet is negative spent amount
     return -spentAmount;
@@ -141,19 +148,13 @@ const estimateValueFromOutputs = (
 /**
  * Calculate wallet outputs sum for a transaction
  */
-const calculatetotalChange = (tx: any, walletAddresses: string[]): number => {
-  let totalChange = 0;
-
+const calculateTotalChange = (tx: any, walletAddresses: string[]): number => {
   if (!tx?.vout || !Array.isArray(tx.vout)) return 0;
-
-  for (const output of tx.vout) {
-    const outputAddress = output.scriptPubkeyAddress;
-    if (outputAddress && walletAddresses.includes(outputAddress)) {
-      totalChange += outputValueToSatoshis(output.value);
-    }
-  }
-
-  return totalChange;
+  return tx.vout
+    .filter((output: any) => belongsToWallet(output, walletAddresses))
+    .reduce((total: any, output: any) => {
+      return total + outputValueToSatoshis(output.value);
+    }, 0);
 };
 
 /**
@@ -204,7 +205,7 @@ const calculateTransactionValue = (
   // CASE 2: Public client or private client without details field
   if (tx.vin && tx.vout) {
     // Calculate sum of all outputs to wallet addresses
-    const totalChange = calculatetotalChange(tx, walletAddresses);
+    const totalChange = calculateTotalChange(tx, walletAddresses);
 
     // If we have complete input data with prevout information
     if (hasCompleteInputData(tx)) {
