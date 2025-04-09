@@ -440,3 +440,23 @@ export function parseSignatureArrayFromPSBT(psbtFromFile) {
   }
   return numSigners === 1 ? signatureArrays[0] : signatureArrays;
 }
+
+/**
+ * Extracts the signatures from a PSBT and returns them as an object
+ * with the public key as the key and the signature as the value.
+ */
+export function extractInputSignatureStatuses(psbt): { index: number; signatures: string[] }[] {
+  const statuses: { index: number; signatures: string[] }[] = [];
+
+  psbt.data.inputs.forEach((input, index) => {
+    const sigs = input.partialSig || [];
+    const sigPubkeys = sigs.map((sig) => sig.pubkey.toString("hex"));
+
+    statuses.push({
+      index,
+      signatures: sigPubkeys,
+    });
+  });
+
+  return statuses;
+}

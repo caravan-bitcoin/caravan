@@ -5,6 +5,7 @@ import {
   satoshisToBitcoins,
   networkData,
   autoLoadPSBT,
+  extractInputSignatureStatuses
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 
@@ -43,6 +44,7 @@ export const SET_BALANCE_ERROR = "SET_BALANCE_ERROR";
 export const SPEND_STEP_CREATE = 0;
 export const SPEND_STEP_PREVIEW = 1;
 export const SPEND_STEP_SIGN = 2;
+export const SET_INPUT_SIGNATURE_STATUSES = "SET_INPUT_SIGNATURE_STATUSES";
 
 export function choosePerformSpend() {
   return {
@@ -379,10 +381,10 @@ export function importPSBT(psbtText) {
 
     dispatch(finalizeOutputs(true));
 
-    // In the future, if we want to support loading in signatures
-    // (or sets of signatures) included in a PSBT, we likely need to do
-    // that work here. Initial implementation just ignores any signatures
-    // included with the uploaded PSBT.
+    // Extract and store signature statuses
+    const signatureStatuses = extractInputSignatureStatuses(psbt);
+    console.log("Signature statuses:", signatureStatuses);
+    dispatch(setInputSignatureStatuses(signatureStatuses));
   };
 }
 
@@ -425,3 +427,8 @@ export function importLegacyPSBT(psbtText) {
     return psbt;
   };
 }
+
+export const setInputSignatureStatuses = (statuses) => ({
+  type: SET_INPUT_SIGNATURE_STATUSES,
+  value: statuses,
+});
