@@ -46,6 +46,7 @@ import {
   SET_BALANCE_ERROR,
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
+  SET_INPUT_SIGNATURE_STATUSES,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -109,6 +110,7 @@ export const initialState = () => ({
     error: null,
     lastUpdated: null,
   },
+  inputSignatureStatuses: [], // Array of { index, signatures }
 });
 
 function updateInputs(state, action) {
@@ -461,6 +463,9 @@ export default (state = initialState(), action) => {
       return updateState(state, { balanceError: action.value });
     case SET_SPEND_STEP:
       return updateState(state, { spendingStep: action.value });
+    case SET_INPUT_SIGNATURE_STATUSES:
+      return updateState(state, { inputSignatureStatuses: action.value });
+      
     default:
       return state;
   }
