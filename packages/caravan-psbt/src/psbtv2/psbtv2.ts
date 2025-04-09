@@ -1420,8 +1420,7 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
-   * Updates the PSBT_GLOBAL_INPUT_COUNT and PSBT_GLOBAL_OUTPUT_COUNT fields
-   * in the global map.
+   * Updates the PSBT_GLOBAL_INPUT_COUNT field in the global map.
    */
   private updateGlobalInputCount() {
     const bw = new BufferWriter();
