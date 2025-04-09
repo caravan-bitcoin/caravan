@@ -412,6 +412,12 @@ export class PsbtV2 extends PsbtV2Maps {
     return val.readUInt8(0);
   }
 
+  set PSBT_GLOBAL_INPUT_COUNT(count: number) {
+    const bw = new BufferWriter();
+    bw.writeU8(count);
+    this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
+  }
+
   get PSBT_GLOBAL_OUTPUT_COUNT() {
     const val = this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
 
@@ -420,6 +426,12 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     return val.readUInt8(0);
+  }
+
+  set PSBT_GLOBAL_OUTPUT_COUNT(count: number) {
+    const bw = new BufferWriter();
+    bw.writeU8(count);
+    this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 
   get PSBT_GLOBAL_TX_MODIFIABLE() {
@@ -822,8 +834,8 @@ export class PsbtV2 extends PsbtV2Maps {
   private create() {
     this.PSBT_GLOBAL_VERSION = 2;
     this.PSBT_GLOBAL_TX_VERSION = 2;
-    this.updateGlobalInputCount();
-    this.updateGlobalOutputCount();
+    this.PSBT_GLOBAL_INPUT_COUNT = 0;
+    this.PSBT_GLOBAL_OUTPUT_COUNT = 0;
     this.PSBT_GLOBAL_FALLBACK_LOCKTIME = 0;
   }
 
@@ -974,8 +986,7 @@ export class PsbtV2 extends PsbtV2Maps {
       }
     }
 
-    this.inputMaps.push(map);
-    this.updateGlobalInputCount();
+    this.PSBT_GLOBAL_INPUT_COUNT = this.inputMaps.push(map);
   }
 
   public addOutput({
@@ -1027,7 +1038,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     this.outputMaps.push(map);
-    this.updateGlobalOutputCount();
+    this.PSBT_GLOBAL_OUTPUT_COUNT = this.outputMaps.length;
   }
 
   /**
@@ -1043,7 +1054,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
     const newInputs = this.inputMaps.filter((_, i) => i !== index);
     this.inputMaps = newInputs;
-    this.updateGlobalInputCount();
+    this.PSBT_GLOBAL_INPUT_COUNT = this.inputMaps.length;
   }
 
   // Removes an output-map from outputMaps
@@ -1065,7 +1076,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     this.outputMaps = newOutputs;
-    this.updateGlobalOutputCount(); 
+    this.PSBT_GLOBAL_OUTPUT_COUNT = this.outputMaps.length;
   }
 
   // Checks that provided flags are present in PSBT_GLOBAL_TX_MODIFIABLE.
@@ -1262,24 +1273,6 @@ export class PsbtV2 extends PsbtV2Maps {
 
     return psbtv2;
   }
-    /**
-   * Updates the PSBT_GLOBAL_INPUT_COUNT and PSBT_GLOBAL_OUTPUT_COUNT fields
-   * in the global map.
-   */
-    private updateGlobalInputCount() {
-      const bw = new BufferWriter();
-      bw.writeU8(this.inputMaps.length); // or `.size` if inputMaps is a Map
-      this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
-    }
-    
-    /**
-     * Updates the PSBT_GLOBAL_OUTPUT_COUNT field in the global map.
-     */
-    private updateGlobalOutputCount() {
-      const bw = new BufferWriter();
-      bw.writeU8(this.outputMaps.length); // or `.size` if outputMaps is a Map
-      this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
-    }
 }
 
 /**

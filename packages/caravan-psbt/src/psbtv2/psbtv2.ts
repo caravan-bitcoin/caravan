@@ -1425,7 +1425,7 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   private updateGlobalInputCount() {
     const bw = new BufferWriter();
-    bw.writeU8(this.inputMaps.length); // or `.size` if inputMaps is a Map
+    bw.writeU8(this.inputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
   }
   
@@ -1434,7 +1434,7 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   private updateGlobalOutputCount() {
     const bw = new BufferWriter();
-    bw.writeU8(this.outputMaps.length); // or `.size` if outputMaps is a Map
+    bw.writeU8(this.outputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 }
