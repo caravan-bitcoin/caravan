@@ -1795,3 +1795,51 @@ describe("PsbtV2.toV0", () => {
     },
   );
 });
+
+describe("PsbtV2 private methods", () => {
+  let psbt: PsbtV2;
+
+  beforeEach(() => {
+    psbt = new PsbtV2();
+  });
+
+  it("should correctly update PSBT_GLOBAL_INPUT_COUNT", () => {
+    // Add inputs to the PSBT
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0), // Dummy txid
+      outputIndex: 0,
+    });
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1), // Dummy txid
+      outputIndex: 1,
+    });
+
+    // Use reflection to call the private method
+    (psbt as any).updateGlobalInputCount();
+
+    // Verify the global input count
+    const inputCount = psbt.PSBT_GLOBAL_INPUT_COUNT;
+    expect(inputCount).toBeDefined();
+    expect(inputCount).toBe(2);
+  });
+
+  it("should correctly update PSBT_GLOBAL_OUTPUT_COUNT", () => {
+    // Add outputs to the PSBT
+    psbt.addOutput({
+      amount: 1000,
+      script: Buffer.alloc(25, 0), // Dummy script
+    });
+    psbt.addOutput({
+      amount: 2000,
+      script: Buffer.alloc(25, 1), // Dummy script
+    });
+
+    // Use reflection to call the private method
+    (psbt as any).updateGlobalOutputCount();
+
+    // Verify the global output count
+    const outputCount = psbt.PSBT_GLOBAL_OUTPUT_COUNT;
+    expect(outputCount).toBeDefined();
+    expect(outputCount).toBe(2);
+  });
+});
