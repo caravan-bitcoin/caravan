@@ -15,17 +15,10 @@
         "src/*": ["packages/caravan-psbt/src/*"]
     }
     },
-    "include": [
-      "packages/bip32/src/index.ts",
-      "packages/caravan-bitcoin/src/index.ts",
-      "packages/caravan-clients/src/index.ts",
-      "packages/caravan-fees/src/index.ts",
-      "packages/caravan-health/src/index.ts",
-      "packages/caravan-psbt/src/index.ts",
-      "packages/caravan-wallets/src/index.ts",
-      "packages/multisig/src/index.ts"
-    ],
+    "include": ["packages/**/index.ts"],
     "exclude": [
+      "packages/eslint-config",
+      "packages/typescript-config",
       "**/__tests__/**",
       "**/*.test.ts",
       "**/*.test.js",

@@ -1,9 +1,6 @@
-name: Test & Docs
+name: Test
 
 on: [push, pull_request]
-
-permissions:
-  contents: write
 
 jobs:
   ci:
@@ -32,16 +29,3 @@ jobs:
       - name: Run tests
         run: |
           npx turbo run ci
-
-      - name: Generate Typedoc (only on main)
-        if: github.ref == 'refs/heads/main'
-        run: npm run docs
-
-      - name: Commit docs to main
-        if: github.ref == 'refs/heads/main'
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add docs/
-          git diff --cached --quiet || git commit -m "chore(docs): update typedocs [skip ci]"
-          git push

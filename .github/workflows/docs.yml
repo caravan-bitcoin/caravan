@@ -1,0 +1,50 @@
+name: Publish Docs to Branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build docs
+        run: npm run docs
+
+      - name: Switch to docs branch and copy docs
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          git fetch origin docs:docs || echo "No docs branch yet"
+          git checkout -B docs origin/docs || git checkout --orphan docs
+
+          # Clean old files
+          rm -rf *
+
+          # Copy new docs
+          cp -r ../docs/* ./
+
+          # Commit and push
+          git add .
+          git diff --cached --quiet || git commit -m "chore(docs): update typedocs [skip ci]"
+          git push origin docs --force
+        working-directory: ./docs
