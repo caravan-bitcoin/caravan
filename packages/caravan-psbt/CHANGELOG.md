@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.9.1
+
+### Patch Changes
+
+- [#233](https://github.com/caravan-bitcoin/caravan/pull/233) [`ae1971e`](https://github.com/caravan-bitcoin/caravan/commit/ae1971ed3f0f83095c92b5f86f0d58fa1fafa882) Thanks [@bucko13](https://github.com/bucko13)! - use peer deps to enforce minimum caravan-bitcoin dependency
+
 ## 1.9.0
 
 ### Minor Changes
