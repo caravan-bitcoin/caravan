@@ -23,8 +23,9 @@ const TextPublicKeyImporter = ({ validatePublicKey, onImport }) => {
   };
 
   const handleChange = (event) => {
-    setPublicKey(event.target.value);
-    setError(validatePublicKey(publicKey));
+    const newValue = event.target.value;
+    setPublicKey(newValue);
+    setError(validatePublicKey(newValue));
   };
 
   return (

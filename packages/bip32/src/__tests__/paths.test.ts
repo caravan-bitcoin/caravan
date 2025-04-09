@@ -67,10 +67,12 @@ describe("combineBip32Paths", () => {
   });
 });
 
-jest.mock("../utils", () => {
+vi.mock("../utils", async () => {
+  const actual = await vi.importActual("../paths");
   return {
     __esModule: true,
-    secureRandomInt: jest.fn(() => 42),
+    ...actual,
+    secureRandomInt: vi.fn(() => 42),
   };
 });
 
