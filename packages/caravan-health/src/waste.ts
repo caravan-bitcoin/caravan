@@ -1,6 +1,7 @@
+import { getWitnessSize } from "@caravan/bitcoin";
+
 import { FeeRatePercentile, Transaction, MultisigAddressType } from "./types";
 import { WalletMetrics } from "./wallet";
-import { getWitnessSize } from "@caravan/bitcoin";
 
 export class WasteMetrics extends WalletMetrics {
   /*

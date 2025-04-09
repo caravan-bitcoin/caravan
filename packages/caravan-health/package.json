@@ -26,12 +26,12 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
-    "lint": "eslint src/",
+    "lint": "eslint --fix src/",
     "ci": "npm run lint && npm run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "jest src",
-    "test:watch": "jest --watch src",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run"
   },
   "dependencies": {
     "@caravan/clients": "*",
