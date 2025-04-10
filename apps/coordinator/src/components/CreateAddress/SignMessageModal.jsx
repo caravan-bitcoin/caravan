@@ -22,7 +22,9 @@ const SUPPORTED_KEYSTORES = {
 const SignMessageModal = ({ onClose, multisig, publicKeyImporters }) => {
   const [keystoreType, setKeystoreType] = useState("");
   const [selectedKeyIndex, setSelectedKeyIndex] = useState("");
-  const [message, setMessage] = useState("Sign to prove ownership of this multisig address.");
+  const [message, setMessage] = useState(
+    "Sign to prove ownership of this multisig address.",
+  );
   const [signatureResult, setSignatureResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,7 +51,11 @@ const SignMessageModal = ({ onClose, multisig, publicKeyImporters }) => {
       const interaction = SignMessage({ keystore, bip32Path, message });
       const result = await interaction.run();
 
-      const verified = verifyMessageSignature(multisig.address, message, result.signature);
+      const verified = verifyMessageSignature(
+        multisig.address,
+        message,
+        result.signature,
+      );
 
       setSignatureResult({
         signature: result.signature,
@@ -90,7 +96,8 @@ const SignMessageModal = ({ onClose, multisig, publicKeyImporters }) => {
         >
           {Object.entries(publicKeyImporters).map(([index, importer]) => (
             <MenuItem key={index} value={index}>
-              {importer.name || `Signer ${index}`} - {importer.publicKey.slice(0, 16)}...
+              {importer.name || `Signer ${index}`} -{" "}
+              {importer.publicKey.slice(0, 16)}...
             </MenuItem>
           ))}
         </TextField>
@@ -126,7 +133,9 @@ const SignMessageModal = ({ onClose, multisig, publicKeyImporters }) => {
         {signatureResult && (
           <Box mt={2}>
             <Typography>
-              {signatureResult.verified ? "✅ Signature verified!" : "❌ Signature invalid"}
+              {signatureResult.verified
+                ? "✅ Signature verified!"
+                : "❌ Signature invalid"}
             </Typography>
             <Grid container alignItems="center" spacing={1} mt={1}>
               <Grid item>
@@ -138,7 +147,6 @@ const SignMessageModal = ({ onClose, multisig, publicKeyImporters }) => {
             </Grid>
           </Box>
         )}
-
 
         {error && (
           <Box mt={2}>

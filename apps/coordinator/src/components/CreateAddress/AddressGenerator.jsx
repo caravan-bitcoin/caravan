@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { downloadFile } from "utils";
 import { externalLink } from "utils/ExternalLink";
-import SignMessageModal from "./SignMessageModal"; 
+import SignMessageModal from "./SignMessageModal";
 // Actions
 import {
   sortPublicKeyImporters as sortPublicKeyImportersAction,
