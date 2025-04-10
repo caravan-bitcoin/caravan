@@ -16,7 +16,7 @@ if (typeof self === 'undefined') {
 const headerBytes = Uint8Array.from(Array.from(headerText, c => c.charCodeAt(0)))
 const n_header = headerBytes.length
 
-export default function ProvideSelf(): Plugin {
+export default function provideSelf(): Plugin {
   return {
     name: 'provide-self',
     setup(build) {

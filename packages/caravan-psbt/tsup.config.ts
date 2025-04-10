@@ -1,6 +1,6 @@
 import { defineConfig } from "tsup";
 import { polyfillNode } from "esbuild-plugin-polyfill-node";
-import ProvideSelf from "./provide-self";
+import provideSelf from "./provide-self";
 
 
 export default defineConfig({
@@ -11,6 +11,6 @@ export default defineConfig({
         crypto: true,
       },
     }),
-    ProvideSelf(),
+    provideSelf(),
   ],
 });
