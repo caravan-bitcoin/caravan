@@ -1,7 +1,8 @@
+import { satoshisToBitcoins } from "@caravan/bitcoin";
+import { BigNumber } from "bignumber.js";
+
 import { Satoshis, BTC, UTXO } from "./types";
 import { validateNonWitnessUtxo, validateSequence } from "./utils";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
-import BigNumber from "bignumber.js";
 
 /**
  * Abstract base class for Bitcoin transaction components (inputs and outputs).
