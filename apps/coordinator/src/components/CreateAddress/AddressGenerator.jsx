@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import {
@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { downloadFile } from "utils";
 import { externalLink } from "utils/ExternalLink";
-
+import SignMessageModal from "./SignMessageModal"; 
 // Actions
 import {
   sortPublicKeyImporters as sortPublicKeyImportersAction,
@@ -39,6 +39,7 @@ const AddressGenerator = ({
   requiredSigners,
   setMultisigAddress,
 }) => {
+  const [showSignMessageModal, setShowSignMessageModal] = useState(false);
   const isInConflict = () => {
     return Object.values(publicKeyImporters).some(
       (importer) => importer.conflict,
@@ -212,6 +213,23 @@ ${redeemScriptLine}${scriptsSpacer}${witnessScriptLine}
               Download Address Details
             </Button>
           </Box>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => setShowSignMessageModal(true)}
+            >
+              Sign Message
+            </Button>
+          </Box>
+
+          {showSignMessageModal && (
+            <SignMessageModal
+              multisig={multisig}
+              publicKeyImporters={publicKeyImporters}
+              onClose={() => setShowSignMessageModal(false)}
+            />
+          )}
         </div>
       );
     }
