@@ -12,45 +12,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the main branch
       - name: Checkout main branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
           cache: 'npm'
 
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          npm ci || npm install  # Attempt to use 'npm ci', fallback to 'npm install'
+      - name: Install dependencies from monorepo root
+        run: npm ci
 
-      # Build docs (Make sure this is correctly set up in your package.json)
-      - name: Build docs
+      - name: Build all workspace packages
+        run: npm run build
+
+      - name: Generate docs
         run: npm run docs
 
-      # Switch to docs branch, copy docs, and push
-      - name: Switch to docs branch and copy docs
+      - name: Switch to docs branch and publish
         run: |
+          # Configure git
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-          git fetch origin docs:docs || echo "No docs branch yet"
-          git checkout -B docs origin/docs || git checkout --orphan docs
-
-          # Clean old files
-          rm -rf *
-
-          # Copy new docs from the generated directory (adjust path if necessary)
-          cp -r ../docs/* ./
-
-          # Commit and push the changes
+          
+          # Save the generated docs to a temp location
+          mv docs docs_temp
+          
+          # Create and switch to an orphan docs branch
+          git checkout --orphan docs
+          
+          # Clear existing contents but preserve git directory
+          git rm -rf . || true
+          
+          # Copy the new docs in
+          cp -r docs_temp/* .
+          
+          # Stage and commit
           git add .
-          git diff --cached --quiet || git commit -m "chore(docs): update typedocs [skip ci]"
-          git push origin docs --force
-        working-directory: ./docs
+          git commit -m "chore(docs): update typedocs [skip ci]"
+          
+          # Force push to create/update the docs branch
+          git push -f origin docs
