@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.9.2
+
+### Patch Changes
+
+- [#239](https://github.com/caravan-bitcoin/caravan/pull/239) [`84de228`](https://github.com/caravan-bitcoin/caravan/commit/84de2287ccbfe9033b5bde46c23cb1b50c41face) Thanks [@joelangeway](https://github.com/joelangeway)! - Adds a fix for importing @caravan/psbt on the server side.
+
 ## 1.9.1
 
 ### Patch Changes
