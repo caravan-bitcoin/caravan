@@ -1,0 +1,9 @@
+{
+  "entryPoints": ["packages/**/src/index.ts"],
+  "tsconfig": "tsconfig.typedoc.json",
+  "out": "docs",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true
+}
