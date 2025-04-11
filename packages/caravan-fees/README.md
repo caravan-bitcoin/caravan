@@ -1,6 +1,7 @@
 # Caravan Fees Package
 
 ## Table of Contents
+
 1. [Introduction](#introduction)
 2. [Key Components](#key-components)
 3. [Transaction Analyzer](#transaction-analyzer)
@@ -62,6 +63,7 @@ const analysis = analyzer.analyze();
 console.log(analysis);
 
 ```
+
 ## Example Output
 
 ```json
@@ -112,20 +114,24 @@ const txTemplate = new BtcTransactionTemplate({
   network: Network.MAINNET,
   scriptType: "P2WSH",
   requiredSigners: 2,
-  totalSigners: 3
+  totalSigners: 3,
 });
 
-txTemplate.addInput(new BtcTxInputTemplate({
-  txid: "previous_txid",
-  vout: 0,
-  amountSats: "100000"
-}));
+txTemplate.addInput(
+  new BtcTxInputTemplate({
+    txid: "previous_txid",
+    vout: 0,
+    amountSats: "100000",
+  }),
+);
 
-txTemplate.addOutput(new BtcTxOutputTemplate({
-  address: "recipient_address",
-  amountSats: "90000",
-  type: TxOutputType.EXTERNAL
-}));
+txTemplate.addOutput(
+  new BtcTxOutputTemplate({
+    address: "recipient_address",
+    amountSats: "90000",
+    type: TxOutputType.EXTERNAL,
+  }),
+);
 
 txTemplate.adjustChangeOutput();
 
@@ -151,34 +157,31 @@ It performs the following key actions:
 
 - Allows users to specify custom fee rate and absolute fee targets.
 - Ensures the new transaction meets BIP125 requirements, including:
-   - At least one input from the original transaction.
-   - New fee must be higher than the old fee.
-   - New absolute fee must meet the minimum relay fee requirement.
+  - At least one input from the original transaction.
+  - New fee must be higher than the old fee.
+  - New absolute fee must meet the minimum relay fee requirement.
 - Performs sanity checks to prevent overpayment and ensure transaction validity.
-
 
 ## Usage Example
 
 ```javascript
-const cancelRbfTx = createCancelRbfTransaction(
-  {
-    originalTx: "020000000001...", // original transaction hex
-    availableInputs: [
-      { txid: "abc123...", vout: 0, value: "10000" },
-      // ... more UTXOs
-    ],
-    cancelAddress: "bc1q...",
-    network: Network.MAINNET,
-    dustThreshold: "546",
-    scriptType: "P2WSH",
-    requiredSigners: 2,
-    totalSigners: 3,
-    targetFeeRate: 5,
-    absoluteFee: "1000",
-    fullRBF: false,
-    strict: true
-  }
-);
+const cancelRbfTx = createCancelRbfTransaction({
+  originalTx: "020000000001...", // original transaction hex
+  availableInputs: [
+    { txid: "abc123...", vout: 0, value: "10000" },
+    // ... more UTXOs
+  ],
+  cancelAddress: "bc1q...",
+  network: Network.MAINNET,
+  dustThreshold: "546",
+  scriptType: "P2WSH",
+  requiredSigners: 2,
+  totalSigners: 3,
+  targetFeeRate: 5,
+  absoluteFee: "1000",
+  fullRBF: false,
+  strict: true,
+});
 
 console.log("Cancel RBF PSBT:", cancelRbfTx);
 // Example output:
@@ -200,34 +203,32 @@ The package calculates the necessary fee for the child transaction to bring the 
 ```plaintext
 child_fee = (target_fee_rate * (parent_size + child_size)) - parent_fee
 ```
+
 ## Usage Example
+
 ```javascript
-const cpfpTx = createCPFPTransaction(
-  {
-    originalTx: "020000000001...", // original transaction hex
-    availableInputs: [
-      { txid: "def456...", vout: 1, value: "20000" },
-      // ... more UTXOs
-    ],
-    spendableOutputIndex: 1,
-    changeAddress: "bc1q...",
-    network: Network.MAINNET,
-    dustThreshold: "546",
-    scriptType: "P2WSH",
-    targetFeeRate: 10,
-    absoluteFee: "1000",
-    requiredSigners: 2,
-    totalSigners: 3,
-    strict: true
-  }
-);
+const cpfpTx = createCPFPTransaction({
+  originalTx: "020000000001...", // original transaction hex
+  availableInputs: [
+    { txid: "def456...", vout: 1, value: "20000" },
+    // ... more UTXOs
+  ],
+  spendableOutputIndex: 1,
+  changeAddress: "bc1q...",
+  network: Network.MAINNET,
+  dustThreshold: "546",
+  scriptType: "P2WSH",
+  targetFeeRate: 10,
+  absoluteFee: "1000",
+  requiredSigners: 2,
+  totalSigners: 3,
+  strict: true,
+});
 
 console.log("CPFP PSBT:", cpfpTx);
 // Example output:
 // CPFP PSBT: cHNidP8BAH0CAAAAAT+X8zhpWKt0cK8nYEslhQLwCxFR5Zk3wl...
-
 ```
-
 
 ### Manual RBF Implementation:
 
@@ -310,13 +311,13 @@ if (cpfpTemplate.validate()) {
   console.log("CPFP PSBT:", psbt);
 }
 ```
+
 ## Advanced Customization
 
 The package allows for advanced customization through various options:
 
 - **Custom Fee Calculations**: Implement custom fee estimation logic by extending the `TransactionAnalyzer` class.
 - **Transaction Templates**: Create custom transaction templates for specific use cases by extending `BtcTransactionTemplate`.
-
 
 ## Best Practices
 

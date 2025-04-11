@@ -1,12 +1,14 @@
-import { BtcTransactionTemplate } from "../btcTransactionTemplate";
+import { Network } from "@caravan/bitcoin";
+import { BigNumber } from "bignumber.js";
+
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "../btcTransactionComponents";
-import { Network } from "@caravan/bitcoin";
+import { BtcTransactionTemplate } from "../btcTransactionTemplate";
 import { UTXO } from "../types";
+
 import { fixtures, TestFixture } from "./btcTransactionTemplate.fixtures";
-import BigNumber from "bignumber.js";
 
 describe("BtcTransactionTemplate", () => {
   fixtures.forEach((fixture: TestFixture) => {

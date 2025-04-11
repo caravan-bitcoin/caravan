@@ -1,13 +1,15 @@
+import { PsbtV2 } from "@caravan/psbt";
+import { BigNumber } from "bignumber.js";
+
 import { createCPFPTransaction } from "../cpfp";
 import { TransactionAnalyzer } from "../transactionAnalyzer";
-import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
 import {
   calculateTotalInputValue,
   calculateTotalOutputValue,
   estimateTransactionVsize,
 } from "../utils";
+
+import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
 
 describe("CPFP Transaction Creation", () => {
   describe("Valid CPFP Transactions", () => {
