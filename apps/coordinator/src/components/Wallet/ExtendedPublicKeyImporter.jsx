@@ -9,7 +9,14 @@ import {
   Network,
   P2SH,
 } from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCURDecoder2,
+} from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -38,10 +45,7 @@ import {
 } from "../../actions/extendedPublicKeyImporterActions";
 import ColdcardExtendedPublicKeyImporter from "../Coldcard/ColdcardExtendedPublicKeyImporter";
 import HermitExtendedPublicKeyImporter from "../Hermit/HermitExtendedPublicKeyImporter";
-import { URDecoder, UR } from "@ngraveio/bc-ur";
 import { QrReader } from "react-qr-reader";
-import { CryptoHDKey,CryptoAccount } from "@keystonehq/bc-ur-registry";
-
 
 const TEXT = "text";
 
@@ -61,7 +65,7 @@ class ExtendedPublicKeyImporter extends React.Component {
       showScanner: false,
       scanStatus: "Idle",
     };
-    this.decoder = new URDecoder();
+    this.decoder = new BCURDecoder2();
   }
 
   title = () => {
@@ -374,6 +378,7 @@ class ExtendedPublicKeyImporter extends React.Component {
       setExtendedPublicKeyRootXfp(number, rootFingerprint);
     }
   };
+
   handleQRResult = (result) => {
     const text = typeof result === "string" ? result : result?.text;
   
@@ -385,149 +390,91 @@ class ExtendedPublicKeyImporter extends React.Component {
     console.log("QR text scanned:", text);
     
     try {
-      // Handle UR (either animated or single-part)
-      if (text.toUpperCase().startsWith("UR:")) {
-        let ur;
-        if (text.includes("/")) {
-          // Handle multi-part animated QR 
-          this.decoder.receivePart(text);
-  
-          // Use the correct method names for the decoder
-          const progress = `Processing part ${this.decoder.getProgress()}`;
-          this.setState({ scanStatus: progress });
-  
-          if (!this.decoder.isComplete()) return;
-  
-          ur = this.decoder.resultUR();
-        } else {
-          // Handle single complete UR QR
-          ur = UR.parse(text);
-        }
-
-        // Check if it's a crypto-account type
-        if (ur.type === "crypto-account") {
-          try {
-            const account = CryptoAccount.fromCBOR(ur.cbor);
-            const outputDescriptors = account.getOutputDescriptors();
-            console.log("Account output descriptors:", outputDescriptors);
-
-            if (!outputDescriptors || outputDescriptors.length === 0) {
-              this.setState({ scanStatus: "❌ No output descriptors found in crypto-account", showScanner: false });
-              return;
-            }
-
-            // Get the first descriptor
-            const firstDescriptor = outputDescriptors[0];
-            
-            // Get the HDKey from the descriptor
-            const hdKey = firstDescriptor.getCryptoKey();
-            if (!hdKey) {
-              this.setState({ scanStatus: "❌ No HD key found in descriptor", showScanner: false });
-              return;
-            }
-
-            // Extract xpub and other details
-            const xpub = hdKey.getBip32Key();
-            const xfp = hdKey.getOrigin()?.getSourceFingerprint()?.toString('hex')?.toUpperCase();
-            const originPath = hdKey.getOrigin()?.getPath();
-
-            console.log("Extracted key details:", { xpub, xfp, originPath });
-
-            if (!xpub) {
-              this.setState({ scanStatus: "❌ Could not extract xpub from crypto-account", showScanner: false });
-              return;
-            }
-
-            // Set the extracted values
-            this.validateAndSetExtendedPublicKey(xpub, (error) => {
-              if (error) {
-                this.setState({ scanStatus: "❌ " + error, showScanner: false });
-              } else {
-                this.setState({ scanStatus: "✅ Successfully imported xpub", showScanner: false });
-              }
-            });
-
-            if (xfp) {
-              this.validateAndSetRootFingerprint(xfp, (error) => {
-                if (error) console.warn("Error setting fingerprint:", error);
-              });
-            }
-
-            if (originPath) {
-              this.validateAndSetBIP32Path(
-                originPath,
-                () => {},
-                (error) => {
-                  if (error) console.warn("Error setting BIP32 path:", error);
-                }
-              );
-            }
-
-            return;
-          } catch (err) {
-            console.error("Error parsing crypto-account:", err);
-            this.setState({ scanStatus: "❌ Failed to parse crypto-account data", showScanner: false });
-            return;
-          }
-        }
-
-        // Handle crypto-hdkey type as fallback
-        if (ur.type === "crypto-hdkey") {
-          const hdkey = CryptoHDKey.fromCBOR(ur.cbor);
-          const xpub = hdkey.getBip32Key();
-          const xfp = hdkey.getOrigin()?.getSourceFingerprint()?.toString('hex')?.toUpperCase();
-          const path = hdkey.getOrigin()?.getPath();
-
-          if (!xpub) {
-            this.setState({ scanStatus: "❌ Could not extract xpub", showScanner: false });
-            return;
-          }
-
-          this.validateAndSetExtendedPublicKey(xpub, (error) => {
-            if (error) {
-              this.setState({ scanStatus: "❌ " + error, showScanner: false });
-            } else {
-              this.setState({ scanStatus: "✅ Successfully imported xpub", showScanner: false });
-            }
-          });
-
-          if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
-          if (path) this.validateAndSetBIP32Path(path, () => {}, () => {});
-          return;
-        }
-
-        this.setState({ scanStatus: `❌ Unsupported UR type: ${ur.type}`, showScanner: false });
-        return;
-      }
-
-      // Handle legacy [xfp/path]xpub format
+      // Handle legacy [xfp/path]xpub format first
       const legacyRegex = /\[([a-fA-F0-9]{8})(\/[^\]]+)?\]([A-Za-z0-9]+pub[a-zA-Z0-9]+)$/;
       const match = text.match(legacyRegex);
-  
-      if (!match) {
-        console.warn("Legacy xpub string not matched:", text);
-        this.setState({ scanStatus: "❌ Invalid legacy format", showScanner: false });
+      
+      if (match) {
+        const xfp = match[1].toUpperCase();
+        const path = match[2]?.slice(1) ?? "";
+        const xpub = match[3];
+    
+        this.validateAndSetExtendedPublicKey(xpub, (error) => {
+          if (error) {
+            this.setState({ scanStatus: "❌ " + error, showScanner: false });
+          } else {
+            this.setState({ scanStatus: "✅ Done", showScanner: false });
+          }
+        });
+    
+        if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
+        if (path) this.validateAndSetBIP32Path(path, () => {}, () => {});
         return;
       }
-  
-      const xfp = match[1].toUpperCase();
-      const path = match[2]?.slice(1) ?? "";
-      const xpub = match[3];
-  
+
+      // Handle UR format using BCURDecoder2
+      this.decoder.receivePart(text);
+      this.setState({ scanStatus: this.decoder.getProgress() });
+      if (!this.decoder.isComplete()) return;
+
+      const error = this.decoder.getError();
+      if (error) {
+        this.setState({ scanStatus: "❌ " + error, showScanner: false });
+        this.decoder.reset();
+        return;
+      }
+
+      const decodedData = this.decoder.getDecodedData();
+      console.log("Decoded data:", decodedData);
+      if (!decodedData) {
+        this.setState({ scanStatus: "❌ Failed to decode QR data", showScanner: false });
+        this.decoder.reset();
+        return;
+      }
+
+      // Extract and parse xpub from decoded data
+      let xpub;
+      xpub = decodedData.xpub;
+      
+      if (!xpub) {
+        this.setState({ scanStatus: "❌ Invalid xpub format in QR code", showScanner: false });
+        this.decoder.reset();
+        return;
+      }
+
+      const { xfp, path } = decodedData;
+
       this.validateAndSetExtendedPublicKey(xpub, (error) => {
         if (error) {
           this.setState({ scanStatus: "❌ " + error, showScanner: false });
         } else {
-          this.setState({ scanStatus: "✅ Done", showScanner: false });
+          this.setState({ scanStatus: "✅ Successfully imported xpub", showScanner: false });
         }
       });
-  
-      if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
-      if (path) this.validateAndSetBIP32Path(path, () => {}, () => {});
+
+      if (xfp) {
+        this.validateAndSetRootFingerprint(xfp, (error) => {
+          if (error) console.warn("Error setting fingerprint:", error);
+        });
+      }
+
+      if (path) {
+        this.validateAndSetBIP32Path(
+          path,
+          () => {},
+          (error) => {
+            if (error) console.warn("Error setting BIP32 path:", error);
+          }
+        );
+      }
+
+      this.decoder.reset();
+
     } catch (err) {
       console.error("Error while handling QR:", err);
       const message = err?.message || String(err);
       this.setState({ scanStatus: "❌ " + message, showScanner: false });
+      this.decoder.reset();
     }
   };
   
