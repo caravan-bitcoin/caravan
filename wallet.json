@@ -1,0 +1,34 @@
+{
+    "name": "My Multisig Wallet",
+    "uuid": "",
+    "addressType": "P2SH-P2WSH",
+    "network": "regtest",
+    "client": {
+      "type": "private",
+      "url": "http://localhost:3001",
+      "username": "bitcoin",
+      "walletName": "testwallet"
+    },
+    "quorum": {
+      "requiredSigners": 1,
+      "totalSigners": 2
+    },
+    "extendedPublicKeys": [
+      {
+        "name": "Extended Public Key 1",
+        "bip32Path": "Unknown (make sure you have written this down previously!)",
+        "xpub": "tpubDD2c4ia2AA5Z1Ls3x8htzKrrSSv4Z58MDd18G6UwazU9Szx3UKzGFk3axgB1YXijXGX9XNivoxugRfWDDpuEfxt36BfdheytykPjtV7LNj5",
+        "xfp": "",
+        "method": "text"
+      },
+      {
+        "name": "Extended Public Key 2",
+        "bip32Path": "Unknown (make sure you have written this down previously!)",
+        "xpub": "tpubDCksNPmSiXHDDaNB9RYxBPCmYBpABUW9wmeTsyq4sXA2zgziQ27YBif6QAjnzPrYAYnmVMQYYoxiJaKp4JQRu5Ho1BqRdyesxyNtvqSvYc5",
+        "xfp": "",
+        "method": "text"
+      }
+    ],
+    "startingAddressIndex": 0,
+    "ledgerPolicyHmacs": []
+  }
