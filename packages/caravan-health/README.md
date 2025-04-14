@@ -27,7 +27,7 @@ The `WasteMetrics` class focuses on transaction fee efficiency and UTXO manageme
 - **Relative Fees Score (RFS):** Compares transaction fees to others in the same block.
 - **Fees To Amount Ratio (FAR):** Evaluates the proportion of fees to transaction amounts.
 - **calculateDustLimits:** Calculates the dust limits for UTXOs based on the current fee rate. A utxo is dust if it costs more to send based on the size of the input.
-- **Spend Waste Amount (SWA):** Determines the cost of keeping or spending UTXOs in particular transaction at a given point of time. 
+- **Spend Waste Amount (SWA):** Determines the cost of keeping or spending UTXOs in particular transaction at a given point of time.
 - **Weighted Waste Score (WWS):** Combines various metrics for an overall efficiency score.
 
 # Dependencies

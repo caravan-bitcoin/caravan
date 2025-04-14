@@ -1,6 +1,6 @@
 import { PrivacyMetrics } from "./privacy";
-import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 import { determineSpendType, getSpendTypeScore } from "./spendType";
+import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 
 const transactions: Transaction[] = [
   // Perfect spend: 1 input, 1 output
