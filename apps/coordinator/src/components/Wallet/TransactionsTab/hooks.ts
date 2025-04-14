@@ -69,9 +69,8 @@ const calculateValueFromDetails = (details: any[]): number => {
 /**
  * Convert output value to satoshis, handling both string and number formats
  */
-const outputValueToSatoshis = (value: any): number => {
-  if (typeof value === "undefined" || value === null) return 0;
-  return Number(bitcoinsToSatoshis(value));
+const outputValueToSatoshis = (value?: number | string): number => {
+  return Number(bitcoinsToSatoshis(value ?? 0));
 };
 
 /**
