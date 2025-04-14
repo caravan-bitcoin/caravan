@@ -381,24 +381,25 @@ class ExtendedPublicKeyImporter extends React.Component {
 
   handleQRResult = (result) => {
     const text = typeof result === "string" ? result : result?.text;
-  
+
     if (!text || typeof text !== "string") {
       console.error("No valid string result from QR scanner:", result);
       return;
     }
-  
+
     console.log("QR text scanned:", text);
-    
+
     try {
       // Handle legacy [xfp/path]xpub format first
-      const legacyRegex = /\[([a-fA-F0-9]{8})(\/[^\]]+)?\]([A-Za-z0-9]+pub[a-zA-Z0-9]+)$/;
+      const legacyRegex =
+        /\[([a-fA-F0-9]{8})(\/[^\]]+)?\]([A-Za-z0-9]+pub[a-zA-Z0-9]+)$/;
       const match = text.match(legacyRegex);
-      
+
       if (match) {
         const xfp = match[1].toUpperCase();
         const path = match[2]?.slice(1) ?? "";
         const xpub = match[3];
-    
+
         this.validateAndSetExtendedPublicKey(xpub, (error) => {
           if (error) {
             this.setState({ scanStatus: "❌ " + error, showScanner: false });
@@ -406,9 +407,14 @@ class ExtendedPublicKeyImporter extends React.Component {
             this.setState({ scanStatus: "✅ Done", showScanner: false });
           }
         });
-    
+
         if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
-        if (path) this.validateAndSetBIP32Path(path, () => {}, () => {});
+        if (path)
+          this.validateAndSetBIP32Path(
+            path,
+            () => {},
+            () => {},
+          );
         return;
       }
 
@@ -427,7 +433,10 @@ class ExtendedPublicKeyImporter extends React.Component {
       const decodedData = this.decoder.getDecodedData();
       console.log("Decoded data:", decodedData);
       if (!decodedData) {
-        this.setState({ scanStatus: "❌ Failed to decode QR data", showScanner: false });
+        this.setState({
+          scanStatus: "❌ Failed to decode QR data",
+          showScanner: false,
+        });
         this.decoder.reset();
         return;
       }
@@ -435,9 +444,12 @@ class ExtendedPublicKeyImporter extends React.Component {
       // Extract and parse xpub from decoded data
       let xpub;
       xpub = decodedData.xpub;
-      
+
       if (!xpub) {
-        this.setState({ scanStatus: "❌ Invalid xpub format in QR code", showScanner: false });
+        this.setState({
+          scanStatus: "❌ Invalid xpub format in QR code",
+          showScanner: false,
+        });
         this.decoder.reset();
         return;
       }
@@ -448,7 +460,10 @@ class ExtendedPublicKeyImporter extends React.Component {
         if (error) {
           this.setState({ scanStatus: "❌ " + error, showScanner: false });
         } else {
-          this.setState({ scanStatus: "✅ Successfully imported xpub", showScanner: false });
+          this.setState({
+            scanStatus: "✅ Successfully imported xpub",
+            showScanner: false,
+          });
         }
       });
 
@@ -464,12 +479,11 @@ class ExtendedPublicKeyImporter extends React.Component {
           () => {},
           (error) => {
             if (error) console.warn("Error setting BIP32 path:", error);
-          }
+          },
         );
       }
 
       this.decoder.reset();
-
     } catch (err) {
       console.error("Error while handling QR:", err);
       const message = err?.message || String(err);
@@ -477,28 +491,72 @@ class ExtendedPublicKeyImporter extends React.Component {
       this.decoder.reset();
     }
   };
-  
-renderScanner = () => {
-  const { showScanner, scanStatus } = this.state;
-  if (!showScanner) return null;
 
-  return (
-    <Box mt={2}>
-      <QrReader
-        onResult={this.handleQRResult}
-        constraints={{ facingMode: "environment" }}
-        containerStyle={{ width: "100%" }}
-      />
-      <p>{scanStatus}</p>
-      <Button
-        variant="contained"
-        onClick={() => this.setState({ showScanner: false })}
-      >
-        Close Scanner
-      </Button>
-    </Box>
-  );
-};
+  handleScanFingerprint = async (fingerprint) => {
+    this.setState({
+      scanStatus: "",
+      showScanner: false,
+      fingerprintScanned: fingerprint,
+    });
+  };
+
+  handleBIP32PathChange = (event) => {
+    const path = event.target.value;
+    this.validateAndSetBIP32Path(
+      path,
+      () => {},
+      () => {},
+    );
+  };
+
+  handleScanError = () => {
+    // Prevent error from killing scanner
+    this.setState({
+      scanStatus: "❌ Failed to decode QR data",
+      showScanner: false,
+    });
+  };
+
+  handleScanInvalid = () => {
+    this.setState({
+      scanStatus: "❌ Invalid xpub format in QR code",
+      showScanner: false,
+    });
+  };
+
+  handleScanSuccess = () => {
+    this.setState({
+      scanStatus: "✅ Successfully imported xpub",
+      showScanner: false,
+    });
+  };
+
+  handleCloseDialog = () => {
+    this.setState({ dialogOpen: false });
+  };
+
+  renderScanner = () => {
+    const { showScanner, scanStatus } = this.state;
+    if (!showScanner) return null;
+
+    return (
+      <Box mt={2}>
+        <QrReader
+          onResult={this.handleQRResult}
+          constraints={{ facingMode: "environment" }}
+          containerStyle={{ width: "100%" }}
+        />
+        <p>{scanStatus}</p>
+        <Button
+          variant="contained"
+          onClick={() => this.setState({ showScanner: false })}
+        >
+          Close Scanner
+        </Button>
+      </Box>
+    );
+  };
+
   render() {
     const { extendedPublicKeyImporter, finalizedNetwork, network } = this.props;
     const hasConflict =
