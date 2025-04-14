@@ -41,7 +41,7 @@ const belongsToWallet = (
 /**
  * Helper function to check if we have complete input data for a transaction
  */
-const hasCompleteInputData = (tx: any): boolean => {
+const hasCompleteInputData = (tx: Transaction): boolean => {
   if (!tx.vin || !Array.isArray(tx.vin)) return false;
 
   return tx.vin.every(
@@ -77,7 +77,7 @@ const outputValueToSatoshis = (value?: number | string): number => {
  * Calculate value based on inputs and outputs when we have complete data
  */
 const calculateValueFromCompleteData = (
-  tx: any,
+  tx: Transaction,
   walletAddresses: string[],
 ): number => {
   // Sum all inputs from our wallet
@@ -105,7 +105,7 @@ const calculateValueFromCompleteData = (
  * Estimate transaction value when we only have outputs (incomplete input data)
  */
 const estimateValueFromOutputs = (
-  tx: any,
+  tx: Transaction,
   walletAddresses: string[],
   totalChange: number,
 ): number => {
@@ -142,7 +142,10 @@ const estimateValueFromOutputs = (
 /**
  * Calculate wallet outputs sum for a transaction
  */
-const calculateTotalChange = (tx: any, walletAddresses: string[]): number => {
+const calculateTotalChange = (
+  tx: Transaction,
+  walletAddresses: string[],
+): number => {
   if (!tx?.vout || !Array.isArray(tx.vout)) return 0;
   return tx.vout
     .filter((output: any) => belongsToWallet(output, walletAddresses))
@@ -190,7 +193,7 @@ const calculateTransactionValue = (
 ): number => {
   // Skip calculation if tx is invalid
   if (!tx) return 0;
-
+  console.log("tx", tx);
   // CASE 1: Private client with details array - most accurate calculation
   if (tx.details && Array.isArray(tx.details)) {
     return calculateValueFromDetails(tx.details);
