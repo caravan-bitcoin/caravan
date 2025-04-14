@@ -58,12 +58,7 @@ const calculateValueFromDetails = (details: any[]): number => {
   return details.reduce((valueToWallet, detail) => {
     const amountInSats = Number(bitcoinsToSatoshis(detail.amount));
 
-    if (
-      detail.category === "receive" ||
-      detail.category === "generate" ||
-      detail.category === "immature" ||
-      detail.category === "send" // Amount is already negative for send
-    ) {
+    if (["receive", "generate", "immature", "send"].includes(detail.category)) {
       return valueToWallet + amountInSats;
     }
 
