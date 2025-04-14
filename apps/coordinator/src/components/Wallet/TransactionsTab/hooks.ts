@@ -193,7 +193,7 @@ const calculateTransactionValue = (
 ): number => {
   // Skip calculation if tx is invalid
   if (!tx) return 0;
-  console.log("tx", tx);
+
   // CASE 1: Private client with details array - most accurate calculation
   if (tx.details && Array.isArray(tx.details)) {
     return calculateValueFromDetails(tx.details);
