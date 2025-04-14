@@ -341,6 +341,13 @@ describe("Privacy metric scoring", () => {
       const arf = privacyMetric.addressReuseFactor();
       expect(arf).toBeCloseTo(0.833);
     });
+    it("Returns 1 when only one address is fully used", () => {
+      const uniqueUtxos: AddressUtxos = {
+        "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": utxos["bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"]
+      };
+      const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
+      expect(metricUnique.addressReuseFactor()).toBe(1);
+    });
   });
 
   describe("Address Type Factor", () => {
