@@ -41,8 +41,12 @@ export class BlockchainClientError extends Error {
 
 export enum ClientType {
   PRIVATE = "private",
+  PUBLIC = "public"
+}
+
+export enum PublicBitcoinProvider {
   BLOCKSTREAM = "blockstream",
-  MEMPOOL = "mempool",
+  MEMPOOL = "mempool"
 }
 
 const delay = () => {
@@ -217,6 +221,7 @@ export interface BitcoindParams {
 
 export interface BlockchainClientParams {
   type: ClientType;
+  provider?: PublicBitcoinProvider;
   network?: Network;
   throttled?: boolean;
   client?: BitcoindClientConfig;
@@ -224,11 +229,13 @@ export interface BlockchainClientParams {
 
 export class BlockchainClient extends ClientBase {
   public readonly type: ClientType;
+  public readonly provider?: PublicBitcoinProvider;
   public readonly network?: Network;
   public readonly bitcoindParams: BitcoindParams;
 
   constructor({
     type,
+    provider,
     network,
     throttled = false,
     client = {
@@ -240,33 +247,38 @@ export class BlockchainClient extends ClientBase {
   }: BlockchainClientParams) {
     // regtest not supported by public explorers
     if (
-      type !== ClientType.PRIVATE &&
+      type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
       network !== Network.SIGNET
     ) {
       throw new Error("Invalid network");
     }
-    if (type !== ClientType.MEMPOOL && network === Network.SIGNET) {
+    if (type === ClientType.PUBLIC && provider !== PublicBitcoinProvider.MEMPOOL && network === Network.SIGNET) {
       throw new Error("Invalid network");
     }
 
     let host = "";
 
-    if (type === ClientType.BLOCKSTREAM) {
-      host = "https://blockstream.info";
-    } else if (type === ClientType.MEMPOOL) {
-      host = "https://unchained.mempool.space";
-    }
-    if (type !== ClientType.PRIVATE && network !== Network.MAINNET) {
-      host += `/${network}`;
-    }
-    if (type !== ClientType.PRIVATE) {
+    if (type === ClientType.PUBLIC) {
+      if (!provider) {
+        throw new Error("Provider is required for public client type");
+      }
+      if (provider === PublicBitcoinProvider.BLOCKSTREAM) {
+        host = "https://blockstream.info";
+      } else if (provider === PublicBitcoinProvider.MEMPOOL) {
+        host = "https://unchained.mempool.space";
+      }
+      if (network !== Network.MAINNET) {
+        host += `/${network}`;
+      }
       host += "/api";
     }
+
     super(throttled, host);
     this.network = network;
     this.type = type;
+    this.provider = provider;
     this.bitcoindParams = bitcoindParams(client);
   }
 
@@ -433,7 +445,7 @@ export class BlockchainClient extends ClientBase {
         );
       }
     } catch (error: Error | any) {
-      if (this.type === "private" && isWalletAddressNotFoundError(error)) {
+      if (this.type === ClientType.PRIVATE && isWalletAddressNotFoundError(error)) {
         updates = {
           utxos: [],
           balanceSats: BigNumber(0),
@@ -497,29 +509,33 @@ export class BlockchainClient extends ClientBase {
   public async getFeeEstimate(blocks: number = 3): Promise<any> {
     let fees;
     try {
-      switch (this.type) {
-        case ClientType.PRIVATE:
-          return bitcoindEstimateSmartFee({
-            numBlocks: +blocks,
-            ...this.bitcoindParams,
-          });
-        case ClientType.BLOCKSTREAM:
-          fees = await this.Get(`/fee-estimates`);
-          return fees[blocks];
-        case ClientType.MEMPOOL:
-          fees = await this.Get("/v1/fees/recommended");
-          if (blocks === 1) {
-            return fees.fastestFee;
-          } else if (blocks <= 3) {
-            return fees.halfHourFee;
-          } else if (blocks <= 6) {
-            return fees.hourFee;
-          } else {
-            return fees.economyFee;
-          }
-        default:
-          throw new Error("Invalid client type");
+      if (this.type === ClientType.PRIVATE) {
+        return bitcoindEstimateSmartFee({
+          numBlocks: +blocks,
+          ...this.bitcoindParams,
+        });
       }
+
+      if (!this.provider) {
+        throw new Error("Provider is required for public client type");
+      }
+
+      if (this.provider === PublicBitcoinProvider.BLOCKSTREAM) {
+        fees = await this.Get(`/fee-estimates`);
+        return fees[blocks];
+      } else if (this.provider === PublicBitcoinProvider.MEMPOOL) {
+        fees = await this.Get("/v1/fees/recommended");
+        if (blocks === 1) {
+          return fees.fastestFee;
+        } else if (blocks <= 3) {
+          return fees.halfHourFee;
+        } else if (blocks <= 6) {
+          return fees.hourFee;
+        } else {
+          return fees.economyFee;
+        }
+      }
+      throw new Error("Invalid provider type");
     } catch (error: any) {
       throw new Error(`Failed to get fee estimate: ${error.message}`);
     }
@@ -531,7 +547,7 @@ export class BlockchainClient extends ClientBase {
     try {
       if (
         this.type === ClientType.PRIVATE ||
-        this.type === ClientType.BLOCKSTREAM
+        this.provider === PublicBitcoinProvider.BLOCKSTREAM
       ) {
         throw new Error(
           "Not supported for private clients and blockstream. Currently only supported for mempool",
@@ -652,8 +668,8 @@ export class BlockchainClient extends ClientBase {
         });
         txData = response;
       } else if (
-        this.type === ClientType.BLOCKSTREAM ||
-        this.type === ClientType.MEMPOOL
+        this.provider === PublicBitcoinProvider.BLOCKSTREAM ||
+        this.provider === PublicBitcoinProvider.MEMPOOL
       ) {
         txData = await this.Get(`/tx/${txid}`);
       } else {
