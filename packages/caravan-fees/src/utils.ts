@@ -5,6 +5,8 @@ import {
   Network,
   validateAddress,
 } from "@caravan/bitcoin";
+import { PsbtV2 } from "@caravan/psbt";
+import { BigNumber } from "bignumber.js";
 import {
   payments,
   address as bitcoinAddress,
@@ -12,9 +14,8 @@ import {
   Transaction,
   Network as BitcoinJSNetwork,
 } from "bitcoinjs-lib-v6";
+
 import { ScriptType, SCRIPT_TYPES } from "./types";
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
 
 /**
  * Creates an output script for a given Bitcoin address.
