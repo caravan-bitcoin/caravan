@@ -1,5 +1,4 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test, jest } from "@jest/globals";
 import { silenceDescribe } from "react-silence";
 
 import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
@@ -973,9 +972,9 @@ describe("PsbtV2.isReadyForSigner", () => {
   });
 
   it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
-    jest
-      .spyOn(psbt, "isReadyForTransactionExtractor", "get")
-      .mockReturnValue(true);
+    vi.spyOn(psbt, "isReadyForTransactionExtractor", "get").mockReturnValue(
+      true,
+    );
     expect(psbt.isReadyForSigner).toBe(false);
   });
 
@@ -1245,7 +1244,7 @@ describe("PsbtV2.addPartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1307,7 +1306,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
