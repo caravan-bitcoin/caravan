@@ -236,8 +236,8 @@ class ExtendedPublicKeyImporter extends React.Component {
       );
     }
     // Add m/ prefix to display if not already present
-    const displayPath = extendedPublicKeyImporter.bip32Path.startsWith('m/') 
-      ? extendedPublicKeyImporter.bip32Path 
+    const displayPath = extendedPublicKeyImporter.bip32Path.startsWith("m/")
+      ? extendedPublicKeyImporter.bip32Path
       : `m/${extendedPublicKeyImporter.bip32Path}`;
 
     return (
@@ -257,7 +257,9 @@ class ExtendedPublicKeyImporter extends React.Component {
   validateAndSetBIP32Path = (bip32Path, callback, errback, options) => {
     const { number, setBIP32Path } = this.props;
     // Ensure path has m/ prefix for storage
-    const normalizedPath = bip32Path.startsWith('m/') ? bip32Path : `m/${bip32Path}`;
+    const normalizedPath = bip32Path.startsWith("m/")
+      ? bip32Path
+      : `m/${bip32Path}`;
     const error = validateBIP32Path(normalizedPath, options);
     setBIP32Path(number, normalizedPath);
     if (error) {
