@@ -17,6 +17,7 @@ import {
   bitcoindImportDescriptors,
   bitcoindListUnspent,
   bitcoindWalletInfo,
+  bitcoindGetWalletTransaction,
 } from "./wallet";
 import BigNumber from "bignumber.js";
 import {
@@ -27,6 +28,7 @@ import {
   RawTransactionData,
   ListTransactionsItem,
   TransactionResponse,
+  WalletTransactionResponse,
 } from "./types";
 
 export class BlockchainClientError extends Error {
@@ -47,6 +49,64 @@ const delay = () => {
 };
 
 /**
+ * Transforms a wallet transaction response to the standard raw transaction format
+ * used by the the package. This ensures consistency in transaction data handling
+ * regardless of the source (wallet transaction, raw transaction, or explorer API).
+ *
+ * @param walletTx - The wallet transaction response from bitcoind
+ * @returns Standardized raw transaction data
+ */
+export function transformWalletTransactionToRawTransactionData(
+  walletTx: WalletTransactionResponse,
+): RawTransactionData {
+  // Make sure decoded data exists as it has fields like size,etc
+  if (!walletTx.decoded) {
+    throw new Error(
+      "Transaction decoded data is missing. Make sure verbose=true was passed to gettransaction.",
+    );
+  }
+  // Convert fee from BTC to satoshis (and make positive)
+  const feeSats = Math.abs(walletTx.fee || 0) * 100000000;
+
+  // Safely access category from details array if it exists
+  const category =
+    walletTx.details && walletTx.details.length > 0
+      ? walletTx.details[0]["category"]
+      : "unknown"; // Default category if details is missing
+
+  return {
+    txid: walletTx.txid,
+    version: walletTx.decoded.version,
+    locktime: walletTx.decoded.locktime,
+    size: walletTx.decoded.size,
+    vsize: walletTx.decoded.vsize,
+    weight: walletTx.decoded.weight,
+    category: category,
+    fee: feeSats, // Convert from BTC to satoshis
+    vin: walletTx.decoded.vin.map((input) => ({
+      txid: input.txid,
+      vout: input.vout,
+      sequence: input.sequence,
+    })),
+    vout: walletTx.decoded.vout.map((output) => ({
+      value: output.value,
+      scriptpubkey: output.scriptPubKey.hex,
+      scriptpubkey_address: output.scriptPubKey.address,
+    })),
+    confirmations: walletTx.confirmations,
+    blockhash: walletTx.blockhash,
+    blocktime: walletTx.blocktime,
+    status: {
+      confirmed: (walletTx.confirmations || 0) > 0,
+      block_height: walletTx.blockheight,
+      block_hash: walletTx.blockhash,
+      block_time: walletTx.blocktime,
+    },
+    hex: walletTx.hex,
+  };
+}
+
+/**
  * Normalizes transaction data from different sources (private node, blockstream, mempool)
  * into a consistent format for use throughout the application.
  *
@@ -58,6 +118,8 @@ export function normalizeTransactionData(
   txData: RawTransactionData,
   clientType: ClientType,
 ): TransactionDetails {
+  // Determine if this is a received transaction
+  const isReceived = txData.category === "receive" || false;
   return {
     txid: txData.txid,
     version: txData.version,
@@ -76,6 +138,10 @@ export function normalizeTransactionData(
       scriptPubkeyAddress: output.scriptpubkey_address,
     })),
     size: txData.size,
+    // add the vsize property to the returned object if txData.vsize is defined
+    ...(txData.vsize !== undefined && { vsize: txData.vsize }),
+    // add the category property to the returned object if txData.category is defined ( For Private clients)
+    ...(isReceived !== undefined && { isReceived }),
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
     status: {
@@ -507,11 +573,72 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async getTransaction(txid: string): Promise<TransactionDetails> {
+  /**
+   * Gets detailed information about a wallet transaction including fee information
+   *
+   * This method is specifically for transactions that are tracked by the wallet,
+   * and provides fee information that isn't available in the general getTransaction
+   * method. This is especially useful for private nodes where fee information is
+   * critical for UI display.
+   *
+   * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
+   *
+   * @param txid - Transaction ID to retrieve
+   * @returns Normalized transaction details with fee information
+   */
+  public async getWalletTransaction(txid: string): Promise<TransactionDetails> {
+    if (this.type !== ClientType.PRIVATE) {
+      throw new BlockchainClientError(
+        "Wallet transactions are only available for private Bitcoin nodes",
+      );
+    }
+
+    if (!this.bitcoindParams.walletName) {
+      throw new BlockchainClientError(
+        "Wallet name is required for wallet transaction lookups",
+      );
+    }
+
+    try {
+      const walletTxData = await bitcoindGetWalletTransaction({
+        url: this.bitcoindParams.url,
+        auth: this.bitcoindParams.auth,
+        walletName: this.bitcoindParams.walletName,
+        txid,
+      });
+
+      const normalizedTxData: RawTransactionData =
+        transformWalletTransactionToRawTransactionData(walletTxData);
+
+      return normalizeTransactionData(normalizedTxData, this.type);
+    } catch (error: any) {
+      throw new Error(`Failed to get wallet transaction: ${error.message}`);
+    }
+  }
+
+  public async getTransaction(
+    txid: string,
+    forceRawTx: boolean = false,
+  ): Promise<TransactionDetails> {
     try {
       let txData: RawTransactionData;
 
       if (this.type === ClientType.PRIVATE) {
+        // For private nodes, try wallet transaction first (which includes fee data)
+
+        // unless forceRawTx is true
+        if (!forceRawTx && this.bitcoindParams.walletName) {
+          try {
+            return await this.getWalletTransaction(txid);
+          } catch (walletError: any) {
+            // If wallet transaction lookup fails (e.g., tx not in wallet),
+            // fall back to raw transaction lookup
+            console.warn(
+              `Wallet transaction lookup failed, falling back to raw transaction: ${walletError.message}`,
+            );
+          }
+        }
+        // Use raw transaction lookup as fallback
         const response = await bitcoindRawTxData({
           url: this.bitcoindParams.url,
           auth: this.bitcoindParams.auth,
@@ -526,7 +653,6 @@ export class BlockchainClient extends ClientBase {
       } else {
         throw new Error("Invalid client type");
       }
-
       return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
       throw new Error(`Failed to get transaction: ${error.message}`);
