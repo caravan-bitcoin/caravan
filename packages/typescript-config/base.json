@@ -18,6 +18,7 @@
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "strict": true,
+    "types": ["vitest/globals", "jest", "node"]
   },
   "exclude": [
     "**/node_modules"
