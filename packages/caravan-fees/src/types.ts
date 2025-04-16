@@ -1,9 +1,9 @@
-import { Network } from "@caravan/bitcoin";
+import { Network, MULTISIG_ADDRESS_TYPES } from "@caravan/bitcoin";
+
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { MULTISIG_ADDRESS_TYPES } from "@caravan/bitcoin";
 
 /**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.

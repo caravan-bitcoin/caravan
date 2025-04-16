@@ -1,5 +1,5 @@
 ---
-"caravan-coordinator": major
+"caravan-coordinator": minor
 "@caravan/wallets": minor
 ---
 
