@@ -10,8 +10,11 @@ interface DecodedData {
 
 export class BCURDecoder2 {
   private decoder: URRegistryDecoder;
+
   private error: string | null = null;
+
   private progress: string = "Idle";
+
   private network: BitcoinNetwork = Network.MAINNET;
 
   constructor(network: BitcoinNetwork = Network.MAINNET) {
@@ -89,18 +92,17 @@ export class BCURDecoder2 {
 
   receivePart(text: string): void {
     try {
-      if (!text.toUpperCase().startsWith("UR:")) {
-        this.error = "Invalid QR format: Must start with UR:";
-        return;
-      }
-
-      this.decoder.receivePart(text);
+      if (text.toUpperCase().startsWith("UR:")) {
+        this.decoder.receivePart(text);
       
-      if (!this.decoder.isComplete()) {
-        const progress = this.decoder.getProgress();
-        this.progress = `Processing QR parts: ${Math.round(progress * 100)}%`;
+        if (this.decoder.isComplete()) {
+          this.progress = "Complete";
+        } else {
+          const progress = this.decoder.getProgress();
+          this.progress = `Processing QR parts: ${Math.round(progress * 100)}%`;
+        }
       } else {
-        this.progress = "Complete";
+        this.error = "Invalid QR format: Must start with UR:";
       }
     } catch (err: any) {
       this.error = err.message || String(err);
@@ -108,7 +110,7 @@ export class BCURDecoder2 {
   }
 
   isComplete(): boolean {
-    return this.decoder.isComplete() || !!this.error;
+    return this.decoder.isComplete() || Boolean(this.error);
   }
 
   getProgress(): string {
