@@ -1,7 +1,8 @@
-import { SpendType, MultisigAddressType, Network, Transaction } from "./types";
 import { getAddressType } from "@caravan/bitcoin";
-import { WalletMetrics } from "./wallet";
+
 import { determineSpendType, getSpendTypeScore } from "./spendType";
+import { SpendType, MultisigAddressType, Network, Transaction } from "./types";
+import { WalletMetrics } from "./wallet";
 
 // Deniability Factor is a normalizing quantity that increases the score by a certain factor in cases of self-payment.
 // More about deniability : https://www.truthcoin.info/blog/deniability/
@@ -31,10 +32,7 @@ export class PrivacyMetrics extends WalletMetrics {
       numberOfInputs,
       numberOfOutputs,
     );
-    const score: number = getSpendTypeScore(
-      numberOfInputs,
-      numberOfOutputs,
-    );
+    const score: number = getSpendTypeScore(numberOfInputs, numberOfOutputs);
 
     if (spendType === SpendType.Consolidation) {
       return score;
