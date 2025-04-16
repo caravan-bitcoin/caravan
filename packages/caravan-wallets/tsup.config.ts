@@ -11,5 +11,5 @@ export default defineConfig({
   external: ["bitbox-api"],
   // noExternal makes sure that certain packages are bundled
   // in the final package rather than independently installed
-  noExternal: ["@caravan/psbt"],
+  noExternal: ["@caravan/psbt", "bignumber.js"],
 });
