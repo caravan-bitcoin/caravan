@@ -1,16 +1,17 @@
-import { TransactionAnalyzer } from "./transactionAnalyzer";
-import { BtcTransactionTemplate } from "./btcTransactionTemplate";
+import { BigNumber } from "bignumber.js";
+
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
+import { BtcTransactionTemplate } from "./btcTransactionTemplate";
+import { TransactionAnalyzer } from "./transactionAnalyzer";
 import {
   FeeBumpStrategy,
   CancelRbfOptions,
   AcceleratedRbfOptions,
   UTXO,
 } from "./types";
-import BigNumber from "bignumber.js";
 
 /**
  * RBF (Replace-By-Fee) Transaction Creation
