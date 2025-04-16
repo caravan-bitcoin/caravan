@@ -53,6 +53,8 @@ const hasCompleteInputData = (tx: Transaction): boolean => {
 /**
  * Calculate transaction value from transaction details (private client)
  * This gives the most accurate calculation as bitcoind provides detailed category information and amount field
+ * TODO: waiting for issue #192 (https://github.com/caravan-bitcoin/caravan/issues/192) to be fixed so we
+ * have better typing for the details array
  */
 const calculateValueFromDetails = (details: any[]): number => {
   return details.reduce((valueToWallet, detail) => {
@@ -89,7 +91,7 @@ const calculateValueFromCompleteData = (
         walletAddresses.includes(input.prevout.scriptpubkey_address),
     )
     .reduce(
-      (sum: any, input: any) =>
+      (sum: number, input: any) =>
         sum + outputValueToSatoshis(input.prevout.value),
       0,
     );
@@ -127,7 +129,7 @@ const estimateValueFromOutputs = (
           !walletAddresses.includes(output.scriptPubkeyAddress),
       )
       .reduce(
-        (sum: any, output: any) => sum + outputValueToSatoshis(output.value),
+        (sum: number, output: any) => sum + outputValueToSatoshis(output.value),
         0,
       );
 
@@ -149,7 +151,7 @@ const calculateTotalChange = (
   if (!tx?.vout || !Array.isArray(tx.vout)) return 0;
   return tx.vout
     .filter((output: any) => belongsToWallet(output, walletAddresses))
-    .reduce((total: any, output: any) => {
+    .reduce((total: number, output: any) => {
       return total + outputValueToSatoshis(output.value);
     }, 0);
 };
