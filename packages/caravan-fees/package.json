@@ -20,7 +20,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "lint": "eslint --fix src"
+    "lint": "eslint src",
+    "lint:fix": "eslint --fix src"
   },
   "keywords": [
     "bitcoin",
