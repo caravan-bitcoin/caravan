@@ -1,7 +1,7 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { isWalletAddressNotFoundError } from "./bitcoind";
-import { callBitcoind } from "./bitcoind";
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
+
+import { isWalletAddressNotFoundError, callBitcoind } from "./bitcoind";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {

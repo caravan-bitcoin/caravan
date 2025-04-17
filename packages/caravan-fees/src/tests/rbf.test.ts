@@ -1,15 +1,17 @@
+import { PsbtV2 } from "@caravan/psbt";
+import { BigNumber } from "bignumber.js";
+
 import {
   createCancelRbfTransaction,
   createAcceleratedRbfTransaction,
 } from "../rbf";
-import { rbfFixtures } from "./rbf.fixtures";
-import { PsbtV2 } from "@caravan/psbt";
-import BigNumber from "bignumber.js";
 import {
   calculateTotalInputValue,
   calculateTotalOutputValue,
   estimateTransactionVsize,
 } from "../utils";
+
+import { rbfFixtures } from "./rbf.fixtures";
 
 describe("RBF Transaction Functions", () => {
   describe("createCancelRbfTransaction", () => {
