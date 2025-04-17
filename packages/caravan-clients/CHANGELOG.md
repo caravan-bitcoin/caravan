@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.4.1
+
+### Patch Changes
+
+- [#225](https://github.com/caravan-bitcoin/caravan/pull/225) [`049d730`](https://github.com/caravan-bitcoin/caravan/commit/049d730f0dc1bac7ba854f26192ca79afa03afe9) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Value Column Integration for Transaction Table
+
 ## 0.4.0
 
 ### Minor Changes
