@@ -2,8 +2,10 @@
 /*
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
-import axios, { Method } from "axios";
 import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
+import axios, { Method } from "axios";
+import { BigNumber } from "bignumber.js";
+
 import {
   bitcoindEstimateSmartFee,
   bitcoindParams,
@@ -12,14 +14,6 @@ import {
   callBitcoind,
   bitcoindRawTxData,
 } from "./bitcoind";
-import {
-  bitcoindGetAddressStatus,
-  bitcoindImportDescriptors,
-  bitcoindListUnspent,
-  bitcoindWalletInfo,
-  bitcoindGetWalletTransaction,
-} from "./wallet";
-import BigNumber from "bignumber.js";
 import {
   FeeRatePercentile,
   Transaction,
@@ -30,6 +24,13 @@ import {
   TransactionResponse,
   WalletTransactionResponse,
 } from "./types";
+import {
+  bitcoindGetAddressStatus,
+  bitcoindImportDescriptors,
+  bitcoindListUnspent,
+  bitcoindWalletInfo,
+  bitcoindGetWalletTransaction,
+} from "./wallet";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
@@ -73,8 +74,8 @@ export function transformWalletTransactionToRawTransactionData(
     walletTx.details && walletTx.details.length > 0
       ? walletTx.details[0]["category"]
       : "unknown"; // Default category if details is missing
-
   return {
+    amount: walletTx.amount,
     txid: walletTx.txid,
     version: walletTx.decoded.version,
     locktime: walletTx.decoded.locktime,
@@ -82,6 +83,7 @@ export function transformWalletTransactionToRawTransactionData(
     vsize: walletTx.decoded.vsize,
     weight: walletTx.decoded.weight,
     category: category,
+    details: walletTx.details,
     fee: feeSats, // Convert from BTC to satoshis
     vin: walletTx.decoded.vin.map((input) => ({
       txid: input.txid,
@@ -138,10 +140,14 @@ export function normalizeTransactionData(
       scriptPubkeyAddress: output.scriptpubkey_address,
     })),
     size: txData.size,
+    // add the amount property to the returned object if txData.amount is defined
+    ...(txData.amount !== undefined && { amount: txData.amount }),
     // add the vsize property to the returned object if txData.vsize is defined
     ...(txData.vsize !== undefined && { vsize: txData.vsize }),
     // add the category property to the returned object if txData.category is defined ( For Private clients)
     ...(isReceived !== undefined && { isReceived }),
+    // add the details property to the returned object if txData.details is defined ( For Private clients)
+    ...(txData.details !== undefined && { details: txData.details }),
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
     status: {
