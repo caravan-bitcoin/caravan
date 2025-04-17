@@ -3,7 +3,7 @@ import { determineSpendType, getSpendTypeScore } from "./spendType";
 import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 
 const transactions: Transaction[] = [
-  // Perfect spend: 1 input, 1 output
+  // Perfect transaction: 1 input, 1 output
   {
     txid: "txid1",
     vin: [{ prevTxId: "coinbase", vout: 0, sequence: 0 }],
