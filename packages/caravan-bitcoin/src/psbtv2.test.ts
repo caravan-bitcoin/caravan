@@ -1,6 +1,7 @@
 import { PsbtV2, getPsbtVersionNumber } from "./psbtv2";
-import { test } from "@jest/globals";
+// import { test } from "@jest/globals";
 import { silenceDescribe } from "react-silence";
+import { vi } from "vitest";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
@@ -1018,7 +1019,7 @@ describe("PsbtV2.addPartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1075,7 +1076,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];

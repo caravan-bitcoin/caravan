@@ -372,6 +372,38 @@ describe("keys", () => {
     });
   });
 
+  describe('convertExtendedPublicKey', () => {
+    it(`should fail to convert`, () => {
+      expect(() => convertExtendedPublicKey("tpub", "xpub")).toThrow(
+        /Unable to convert extended/
+      );
+    });
+    const testCases = [];
+    Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((_convertTo) => {
+      const convertTo = _convertTo as KeyPrefix;
+      Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((convertFrom) => {
+        if (
+          convertFrom !== convertTo &&
+          extendedPubKeyNode[convertFrom] &&
+          extendedPubKeyNode[convertTo]
+        ) {
+          testCases.push([convertFrom, convertTo]);
+        }
+      });
+    });
+  
+    test.each(testCases)(
+      'should properly convert extended public key from %s to %s',
+      (convertFrom, convertTo) => {
+        const converted = convertExtendedPublicKey(
+          extendedPubKeyNode[convertFrom],
+          convertTo
+        );
+        expect(converted).toBe(extendedPubKeyNode[convertTo]);
+      }
+    );
+  });
+
   describe("validatePrefix", () => {
     it("should return null if valid or throw otherwise", () => {
       Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((prefix) => {
@@ -384,36 +416,6 @@ describe("keys", () => {
       }
 
       expect(invalidPrefix).toThrow();
-    });
-  });
-
-  describe("convertExtendedPublicKey", () => {
-    it(`should fail to convert`, () => {
-      expect(() => convertExtendedPublicKey("tpub", "xpub")).toThrow(
-        /Unable to convert extended/
-      );
-    });
-
-    Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((_convertTo) => {
-      const convertTo = _convertTo as KeyPrefix;
-      describe(`Test converting to ${convertTo}`, () => {
-        Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((convertFrom) => {
-          if (
-            convertFrom === convertTo ||
-            !extendedPubKeyNode[convertFrom] ||
-            !extendedPubKeyNode[convertTo]
-          ) {
-            return;
-          }
-          it(`should properly convert extended public key from ${convertFrom} to ${convertTo}`, () => {
-            const converted = convertExtendedPublicKey(
-              extendedPubKeyNode[convertFrom],
-              convertTo
-            );
-            expect(converted).toBe(extendedPubKeyNode[convertTo]);
-          });
-        });
-      });
     });
   });
 
