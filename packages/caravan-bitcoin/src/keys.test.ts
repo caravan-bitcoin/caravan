@@ -393,7 +393,7 @@ describe("keys", () => {
     });
   
     test.each(testCases)(
-      'should properly convert extended public key from %s to %s',
+      'should properly convert extended public key from ${convertFrom} to ${convertTo}',
       (convertFrom, convertTo) => {
         const converted = convertExtendedPublicKey(
           extendedPubKeyNode[convertFrom],
