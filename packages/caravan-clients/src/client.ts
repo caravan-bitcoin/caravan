@@ -2,8 +2,10 @@
 /*
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
-import axios, { Method } from "axios";
 import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
+import axios, { Method } from "axios";
+import { BigNumber } from "bignumber.js";
+
 import {
   bitcoindEstimateSmartFee,
   bitcoindParams,
@@ -12,14 +14,6 @@ import {
   callBitcoind,
   bitcoindRawTxData,
 } from "./bitcoind";
-import {
-  bitcoindGetAddressStatus,
-  bitcoindImportDescriptors,
-  bitcoindListUnspent,
-  bitcoindWalletInfo,
-  bitcoindGetWalletTransaction,
-} from "./wallet";
-import BigNumber from "bignumber.js";
 import {
   FeeRatePercentile,
   Transaction,
@@ -30,6 +24,13 @@ import {
   TransactionResponse,
   WalletTransactionResponse,
 } from "./types";
+import {
+  bitcoindGetAddressStatus,
+  bitcoindImportDescriptors,
+  bitcoindListUnspent,
+  bitcoindWalletInfo,
+  bitcoindGetWalletTransaction,
+} from "./wallet";
 
 export class BlockchainClientError extends Error {
   constructor(message) {
