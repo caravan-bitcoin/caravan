@@ -1420,6 +1420,7 @@ describe("BlockchainClient", () => {
 
       expect(result).toEqual({
         txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        amount: -1.5,
         version: 2,
         locktime: 0,
         size: 225,
@@ -1438,6 +1439,16 @@ describe("BlockchainClient", () => {
             value: 1.4997,
             scriptpubkey: "76a914...",
             scriptpubkey_address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          },
+        ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
           },
         ],
         confirmations: 6,
@@ -1648,9 +1659,20 @@ describe("BlockchainClient", () => {
             scriptPubkeyAddress: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
           },
         ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
         size: 225,
         vsize: 225,
         weight: 900,
+        amount: -1.5,
         fee: 25000, // Fee is in satoshis for PRIVATE client
         isReceived: false,
         status: {
