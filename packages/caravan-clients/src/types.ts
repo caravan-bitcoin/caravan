@@ -1,5 +1,5 @@
-import BigNumber from "bignumber.js";
 import { AxiosBasicCredentials } from "axios";
+import { BigNumber } from "bignumber.js";
 
 export interface UTXO {
   txid: string;
