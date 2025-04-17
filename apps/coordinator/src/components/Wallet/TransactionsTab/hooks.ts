@@ -123,7 +123,7 @@ const estimateValueFromOutputs = (
   // If transaction is explicitly marked as sent
   if (!tx.isReceived) {
     // At minimum, we spent the fee
-    let spentAmount = tx.fee ? tx.fee : 0;
+    let spentAmount = tx.fee ?? 0;
 
     // Add outputs to non-wallet addresses (funds leaving our wallet)
     spentAmount += tx.vout
