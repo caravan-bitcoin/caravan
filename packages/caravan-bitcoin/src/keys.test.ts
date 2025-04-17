@@ -378,7 +378,7 @@ describe("keys", () => {
         /Unable to convert extended/
       );
     });
-    const testCases = [];
+    const testCases: [KeyPrefix, KeyPrefix][] = [];
     Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((_convertTo) => {
       const convertTo = _convertTo as KeyPrefix;
       Object.keys(EXTENDED_PUBLIC_KEY_VERSIONS).forEach((convertFrom) => {
@@ -393,7 +393,7 @@ describe("keys", () => {
     });
   
     test.each(testCases)(
-      'should properly convert extended public key from ${convertFrom} to ${convertTo}',
+      'should properly convert extended public key from %s to %s',
       (convertFrom, convertTo) => {
         const converted = convertExtendedPublicKey(
           extendedPubKeyNode[convertFrom],
