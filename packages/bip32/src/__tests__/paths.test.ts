@@ -65,6 +65,13 @@ describe("combineBip32Paths", () => {
     const secondPath = "invalid/path";
     expect(() => combineBip32Paths(firstPath, secondPath)).toThrow();
   });
+  it("should throw for paths with negative indices", () => {
+    expect(() => combineBip32Paths("m/0", "m/-1")).toThrow();
+  });
+
+  it("should throw for non-numeric path components", () => {
+    expect(() => combineBip32Paths("m/0", "m/abc")).toThrow();
+  });
 });
 
 vi.mock("../utils", async () => {
@@ -103,6 +110,13 @@ describe("secureSecretPath", () => {
     }
     expect(failures).toBe(2);
   });
+
+  it("should handle maximum allowed depth", () => {
+    const maxDepth = 31;
+    const path = secureSecretPath(maxDepth);
+    expect(path.split("/").length).toBe(maxDepth + 1);
+  });
+  
 });
 
 describe("getRelativeBip32Sequence", () => {
