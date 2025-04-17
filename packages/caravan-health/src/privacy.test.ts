@@ -337,7 +337,7 @@ describe("Privacy metric scoring", () => {
       const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
       expect(metricUnique.addressReuseFactor()).toBe(0);
     });
-    it("Calculates ARF correctly for half reused addresses", () => {
+    it("Calculates ARF for half used addresses", () => {
       const arf = privacyMetric.addressReuseFactor();
       expect(arf).toBeCloseTo(0.833);
     });
