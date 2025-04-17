@@ -112,14 +112,14 @@ const estimateValueFromOutputs = (
   totalChange: number,
 ): number => {
   // If transaction is explicitly marked as received or we have outputs to our wallet addresses
-  if (tx.isReceived === true || totalChange > 0) {
+  if (tx.isReceived && totalChange > 0) {
     return totalChange;
   }
 
   // If transaction is explicitly marked as sent
-  if (tx.isReceived === false) {
+  if (!tx.isReceived) {
     // At minimum, we spent the fee
-    let spentAmount = tx.fee ? Number(bitcoinsToSatoshis(tx.fee)) : 0;
+    let spentAmount = tx.fee ? tx.fee : 0;
 
     // Add outputs to non-wallet addresses (funds leaving our wallet)
     spentAmount += tx.vout
@@ -136,7 +136,6 @@ const estimateValueFromOutputs = (
     // Value to wallet is negative spent amount
     return -spentAmount;
   }
-
   // If we can't determine direction, best guess is sum of outputs to our wallet
   return totalChange;
 };
@@ -210,7 +209,6 @@ const calculateTransactionValue = (
     if (hasCompleteInputData(tx)) {
       return calculateValueFromCompleteData(tx, walletAddresses);
     }
-
     // Otherwise estimate based on outputs and transaction direction
     return estimateValueFromOutputs(tx, walletAddresses, totalChange);
   }
