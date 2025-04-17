@@ -82,6 +82,7 @@ export function transformWalletTransactionToRawTransactionData(
     vsize: walletTx.decoded.vsize,
     weight: walletTx.decoded.weight,
     category: category,
+    details: walletTx.details,
     fee: feeSats, // Convert from BTC to satoshis
     vin: walletTx.decoded.vin.map((input) => ({
       txid: input.txid,
@@ -144,6 +145,8 @@ export function normalizeTransactionData(
     ...(txData.vsize !== undefined && { vsize: txData.vsize }),
     // add the category property to the returned object if txData.category is defined ( For Private clients)
     ...(isReceived !== undefined && { isReceived }),
+    // add the details property to the returned object if txData.details is defined ( For Private clients)
+    ...(txData.details !== undefined && { details: txData.details }),
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
     status: {

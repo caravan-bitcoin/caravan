@@ -1441,6 +1441,16 @@ describe("BlockchainClient", () => {
             scriptpubkey_address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
           },
         ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
         confirmations: 6,
         blockhash:
           "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
@@ -1647,6 +1657,16 @@ describe("BlockchainClient", () => {
             value: 1.4997,
             scriptPubkey: "76a914...",
             scriptPubkeyAddress: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          },
+        ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
           },
         ],
         size: 225,
