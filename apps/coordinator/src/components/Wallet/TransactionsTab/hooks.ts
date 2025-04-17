@@ -27,6 +27,10 @@ import { useGetClient } from "../../../hooks/client";
  * ==============================================================================
  */
 
+// TODO: All types should come from the `clients` package or a centralized type definition
+// This discussion references the changes we need in future refactors :
+// https://github.com/caravan-bitcoin/caravan/pull/225#discussion_r2048700059
+
 /**
  * Check if a transaction output belongs to the wallet
  */
