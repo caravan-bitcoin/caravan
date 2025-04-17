@@ -201,7 +201,7 @@ const calculateTransactionValue = (
 
   // CASE 1: Private client with details array - most accurate calculation
   if (tx.details && Array.isArray(tx.details)) {
-    const fees = tx.fee ? tx.fee : 0;
+    const fees = tx.fee ?? 0;
     return calculateValueFromDetails(tx.details) - fees;
   }
 
