@@ -6,7 +6,7 @@ import {
 } from "./fixtures";
 
 // FIXME: transactionbuilder is deprecating, but we know this. remove this after addressing.
-console.warn = jest.fn();
+console.warn = vi.fn();
 
 describe('signatures', () => {
 
