@@ -1795,14 +1795,17 @@ describe("PsbtV2.toV0", () => {
   );
 });
 
-describe("PsbtV2 private methods", () => {
+describe("PsbtV2 addInput", () => {
   let psbt: PsbtV2;
-
+  const updateGlobalInputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalInputCount",
+  );
   beforeEach(() => {
+    vi.clearAllMocks();
     psbt = new PsbtV2();
   });
-
-  it("should correctly update PSBT_GLOBAL_INPUT_COUNT", () => {
+  it("should call updateGlobalInputCount", () => {
     // Add inputs to the PSBT
     psbt.addInput({
       previousTxId: Buffer.alloc(32, 0), // Dummy txid
@@ -1812,33 +1815,41 @@ describe("PsbtV2 private methods", () => {
       previousTxId: Buffer.alloc(32, 1), // Dummy txid
       outputIndex: 1,
     });
-
-    // Use reflection to call the private method
-    (psbt as any).updateGlobalInputCount();
-
     // Verify the global input count
     const inputCount = psbt.PSBT_GLOBAL_INPUT_COUNT;
     expect(inputCount).toBeDefined();
     expect(inputCount).toBe(2);
+    // Once, for creation and once for each call to addInput
+    expect(updateGlobalInputCountSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("PsbtV2 addOutput", () => {
+  let psbt: PsbtV2;
+  const updateGlobalOutputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalOutputCount",
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    psbt = new PsbtV2();
   });
 
-  it("should correctly update PSBT_GLOBAL_OUTPUT_COUNT", () => {
-    // Add outputs to the PSBT
+  it("should call updateGlobalOutputCount", () => {
     psbt.addOutput({
       amount: 1000,
-      script: Buffer.alloc(25, 0), // Dummy script
+      script: Buffer.alloc(25, 0),
     });
     psbt.addOutput({
       amount: 2000,
-      script: Buffer.alloc(25, 1), // Dummy script
+      script: Buffer.alloc(25, 1),
     });
 
-    // Use reflection to call the private method
-    (psbt as any).updateGlobalOutputCount();
-
-    // Verify the global output count
     const outputCount = psbt.PSBT_GLOBAL_OUTPUT_COUNT;
     expect(outputCount).toBeDefined();
     expect(outputCount).toBe(2);
+    // Once during creation + once per addOutput
+    expect(updateGlobalOutputCountSpy).toHaveBeenCalledTimes(3);
   });
 });
