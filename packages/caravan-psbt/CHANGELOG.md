@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 1.9.3
+
+### Patch Changes
+
+- [#229](https://github.com/caravan-bitcoin/caravan/pull/229) [`7bf47bf`](https://github.com/caravan-bitcoin/caravan/commit/7bf47bfc8ea8b5ec78c4ff562e4fcc9e72ec508c) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Replaced the setters with the private functions so that the output and input count always stays in sync with the actual counts in the PSBT.
+
 ## 1.9.2
 
 ### Patch Changes
