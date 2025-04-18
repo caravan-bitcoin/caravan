@@ -2,6 +2,7 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "../btcTransactionComponents";
+
 import {
   validInputTemplateFixtures,
   invalidInputTemplateFixtures,
