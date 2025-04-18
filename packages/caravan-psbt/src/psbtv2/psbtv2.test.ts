@@ -1794,3 +1794,63 @@ describe("PsbtV2.toV0", () => {
     },
   );
 });
+
+describe("PsbtV2 addInput", () => {
+  let psbt: PsbtV2;
+  const updateGlobalInputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalInputCount",
+  );
+  beforeEach(() => {
+    vi.clearAllMocks();
+    psbt = new PsbtV2();
+  });
+  it("should call updateGlobalInputCount", () => {
+    // Add inputs to the PSBT
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0), // Dummy txid
+      outputIndex: 0,
+    });
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1), // Dummy txid
+      outputIndex: 1,
+    });
+    // Verify the global input count
+    const inputCount = psbt.PSBT_GLOBAL_INPUT_COUNT;
+    expect(inputCount).toBeDefined();
+    expect(inputCount).toBe(2);
+    // Once, for creation and once for each call to addInput
+    expect(updateGlobalInputCountSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("PsbtV2 addOutput", () => {
+  let psbt: PsbtV2;
+  const updateGlobalOutputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalOutputCount",
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    psbt = new PsbtV2();
+  });
+
+  it("should call updateGlobalOutputCount", () => {
+    psbt.addOutput({
+      amount: 1000,
+      script: Buffer.alloc(25, 0),
+    });
+    psbt.addOutput({
+      amount: 2000,
+      script: Buffer.alloc(25, 1),
+    });
+
+    const outputCount = psbt.PSBT_GLOBAL_OUTPUT_COUNT;
+    expect(outputCount).toBeDefined();
+    expect(outputCount).toBe(2);
+    // Once during creation + once per addOutput
+    expect(updateGlobalOutputCountSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
