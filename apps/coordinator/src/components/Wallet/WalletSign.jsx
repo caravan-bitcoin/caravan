@@ -129,7 +129,7 @@ class WalletSign extends React.Component {
 
   handleQRResult = (result) => {
     const text = typeof result === "string" ? result : result?.text;
-    
+
     if (!text || typeof text !== "string") {
       console.error("No valid string result from QR scanner");
       return;
@@ -137,13 +137,16 @@ class WalletSign extends React.Component {
 
     try {
       const { inputs } = this.props;
-      console.log("Scanning QR code with content:", text.substring(0, 50) + "...");
+      console.log(
+        "Scanning QR code with content:",
+        text.substring(0, 50) + "...",
+      );
 
       // Handle UR encoded PSBT
       if (text.toLowerCase().startsWith("ur:")) {
         this.setState({ scanStatus: "Receiving parts..." });
         console.log("Received UR encoded PSBT part");
-        
+
         this.decoder.receivePart(text);
         if (!this.decoder.isComplete()) {
           console.log("PSBT parts incomplete, waiting for more parts...");
@@ -154,7 +157,7 @@ class WalletSign extends React.Component {
         const decoded = this.decoder.getDecodedData();
         console.log(decoded);
         console.log("Decoded UR data type:", decoded?.type);
-        
+
         if (!decoded || decoded.type !== "crypto-psbt" || !decoded.psbt) {
           throw new Error("Invalid or unsupported UR type");
         }
@@ -163,24 +166,28 @@ class WalletSign extends React.Component {
 
         const signatureArrays = parseSignatureArrayFromPSBT(decoded.psbt);
         console.log("Extracted signature arrays:", signatureArrays);
-        
+
         if (!signatureArrays) {
           throw new Error("No signatures found in PSBT");
         }
 
         // Handle both single and multiple signature sets
-        const signatures = Array.isArray(signatureArrays[0]) ? signatureArrays : [signatureArrays];
+        const signatures = Array.isArray(signatureArrays[0])
+          ? signatureArrays
+          : [signatureArrays];
         console.log("Processing signature sets:", signatures.length);
-        
+
         signatures.forEach((signatureSet, index) => {
           console.log(`Signature set ${index + 1}:`, signatureSet);
           if (signatureSet.length < inputs.length) {
-            throw new Error(`Signature set ${index + 1} does not have enough signatures`);
+            throw new Error(
+              `Signature set ${index + 1} does not have enough signatures`,
+            );
           }
-          
+
           const importerNum = this.getNextSignatureImporterNumber();
           console.log("Using signature importer number:", importerNum);
-          
+
           if (!importerNum) {
             throw new Error("No more signature importers available");
           }
@@ -198,23 +205,27 @@ class WalletSign extends React.Component {
       console.log("Attempting to parse raw PSBT...");
       const signatureArrays = parseSignatureArrayFromPSBT(text);
       console.log("Raw PSBT signature arrays:", signatureArrays);
-      
+
       if (!signatureArrays) {
         throw new Error("No signatures found in PSBT");
       }
 
-      const signatures = Array.isArray(signatureArrays[0]) ? signatureArrays : [signatureArrays];
+      const signatures = Array.isArray(signatureArrays[0])
+        ? signatureArrays
+        : [signatureArrays];
       console.log("Processing raw PSBT signature sets:", signatures.length);
 
       signatures.forEach((signatureSet, index) => {
         console.log(`Raw PSBT signature set ${index + 1}:`, signatureSet);
         if (signatureSet.length < inputs.length) {
-          throw new Error(`Signature set ${index + 1} does not have enough signatures`);
+          throw new Error(
+            `Signature set ${index + 1} does not have enough signatures`,
+          );
         }
 
         const importerNum = this.getNextSignatureImporterNumber();
         console.log("Using signature importer number:", importerNum);
-        
+
         if (!importerNum) {
           throw new Error("No more signature importers available");
         }
@@ -224,7 +235,6 @@ class WalletSign extends React.Component {
 
       // Success - close scanner
       this.setState({ showScanner: false, scanStatus: "Idle" });
-
     } catch (err) {
       console.error("Error importing PSBT signatures:", err);
       // Add debug info to error message
@@ -243,13 +253,18 @@ class WalletSign extends React.Component {
   };
 
   setSignatureImporter = (number, signatures) => {
-    const { setSignatureImporterFinalized, setSignatureImporterSignature } = this.props;
-    
+    const { setSignatureImporterFinalized, setSignatureImporterSignature } =
+      this.props;
+
     // Convert any signature objects to their raw hex strings
-    const processedSignatures = signatures.map(sig => {
-      if (typeof sig === 'object' && sig.signature && sig.signature.type === 'Buffer') {
+    const processedSignatures = signatures.map((sig) => {
+      if (
+        typeof sig === "object" &&
+        sig.signature &&
+        sig.signature.type === "Buffer"
+      ) {
         // Convert Buffer object to hex string
-        return Buffer.from(sig.signature.data).toString('hex');
+        return Buffer.from(sig.signature.data).toString("hex");
       }
       return sig;
     });

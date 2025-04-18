@@ -13,6 +13,7 @@ interface DecodedData {
 
 export class BCUREncoder2 {
   private data: string;
+
   private maxFragmentLength: number;
 
   constructor(data: string, maxFragmentLength: number = 100) {
