@@ -3,22 +3,22 @@
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
 import { Network, sortInputs } from "@caravan/bitcoin";
-import BigNumber from "bignumber.js";
-import {
-  blockExplorerGetAddresesUTXOs,
-  blockExplorerGetFeeEstimate,
-  blockExplorerBroadcastTransaction,
-  blockExplorerGetAddressStatus,
-} from "./blockExplorer";
-import { bitcoindListUnspent, bitcoindGetAddressStatus } from "./wallet";
+import { BigNumber } from "bignumber.js";
+
 import {
   bitcoindEstimateSmartFee,
   bitcoindSendRawTransaction,
   bitcoindParams,
   isWalletAddressNotFoundError,
 } from "./bitcoind";
-
+import {
+  blockExplorerGetAddresesUTXOs,
+  blockExplorerGetFeeEstimate,
+  blockExplorerBroadcastTransaction,
+  blockExplorerGetAddressStatus,
+} from "./blockExplorer";
 import { BLOCK_EXPLORER, BITCOIND, ClientConfig, UTXOUpdates } from "./types";
+import { bitcoindListUnspent, bitcoindGetAddressStatus } from "./wallet";
 
 /**
  * Type guard to check if client has required bitcoind parameters
