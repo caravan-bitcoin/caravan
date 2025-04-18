@@ -1,7 +1,5 @@
 import { PsbtV2, getPsbtVersionNumber } from "./psbtv2";
-// import { test } from "@jest/globals";
 import { silenceDescribe } from "react-silence";
-import { vi } from "vitest";
 
 const BIP_370_VECTORS_INVALID_PSBT = [
   // Case: PSBTv0 but with PSBT_GLOBAL_VERSION set to 2.
