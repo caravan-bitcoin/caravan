@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import {
   ROOT_FINGERPRINT,
@@ -10,7 +8,6 @@ import {
   Network,
 } from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
-
 import {
   trezorCoin,
   TrezorInteraction,

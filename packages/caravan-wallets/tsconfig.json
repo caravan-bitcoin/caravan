@@ -22,7 +22,7 @@
     "isolatedModules": true,
     "outDir": "lib",
     "types": [
-      "jest"
+      "vitest/globals"
     ],
     "skipLibCheck": true,
   },

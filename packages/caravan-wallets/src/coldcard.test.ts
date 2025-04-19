@@ -1,7 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-
+import '@inrupt/jest-jsdom-polyfills';
 import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
