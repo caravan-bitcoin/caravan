@@ -79,7 +79,12 @@ class WalletGenerator extends React.Component {
       configuring,
     } = this.props;
     const { unknownClient } = this.state;
-    if (client.type === "unknown" && prevProps.client.type === "public") {
+    if (
+      client.type === "unknown" &&
+      (prevProps.client.type === "public" ||
+        prevProps.client.type === ClientType.MEMPOOL ||
+        prevProps.client.type === ClientType.BLOCKSTREAM)
+    ) {
       this.setState({ unknownClient: true });
     } else if (configuring && client.type !== "unknown" && unknownClient) {
       // re-initializes the state if we're in the configuring stage.
