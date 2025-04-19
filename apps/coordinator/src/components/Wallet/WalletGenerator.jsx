@@ -228,7 +228,11 @@ class WalletGenerator extends React.Component {
     freeze(true);
     setImportersVisible(false);
     setGenerating(true);
+
+    // We need to wait for any password changes to be tested
+    this.debouncedTestConnection.cancel();
     this.setState({ connectSuccess: false }, () => {
+      console.log("Setting up initial nodes...");
       this.addNode(false, startingDepositBIP32Suffix, true);
       this.addNode(true, startingChangeBIP32Suffix, true);
     });

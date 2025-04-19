@@ -47,6 +47,7 @@ import {
 
 const TEXT = "text";
 const UNKNOWN = "unknown";
+const QR = "qr";
 
 class SignatureImporter extends React.Component {
   titleRef = React.createRef();
@@ -127,6 +128,7 @@ class SignatureImporter extends React.Component {
               Coldcard
             </MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
+            <MenuItem value={QR}>QR Code</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
