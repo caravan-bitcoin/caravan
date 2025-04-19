@@ -28,20 +28,14 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
-    "test": "jest src",
-    "test:watch": "jest --watch src",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
+    "test": "vitest --watch=false src",
+    "test:watch": "vitest --watch src"
   },
   "devDependencies": {
     "@caravan/bitcoin": "*",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
-    "@types/jest": "^29.5.12",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "jest": "^29.4.1",
-    "jsdom": "24.0.0",
-    "ts-jest": "^29.1.2",
-    "ts-node": "^10.9.2",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"
   }
