@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- [#253](https://github.com/caravan-bitcoin/caravan/pull/253) [`dbe4f41`](https://github.com/caravan-bitcoin/caravan/commit/dbe4f41f8fdca63b352f334e55c6997b5694905b) Thanks [@bucko13](https://github.com/bucko13)! - Added from string policy conversion for KeyOrigins
+
 ## 0.5.1
 
 ### Patch Changes
