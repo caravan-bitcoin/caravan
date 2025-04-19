@@ -52,8 +52,9 @@
     },
     "ci": {
       "dependsOn": [
-        "^build"
-      ]
+        "^build", "build","test","lint"
+      ],
+      "outputs": []
     }
   }
 }
