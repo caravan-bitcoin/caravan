@@ -24,7 +24,7 @@ import { BlockchainClient } from "@caravan/clients";
  * It fully integrates with the wallet state and blockchain client to provide
  * accurate UTXO information and fee estimates.
  */
-export const useFeeBumpoing = () => {
+export const useFeeBumping = () => {
   const dispatch = useDispatch();
 
   // Transaction state
