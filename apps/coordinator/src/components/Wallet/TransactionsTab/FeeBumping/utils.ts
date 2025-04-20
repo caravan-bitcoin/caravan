@@ -1,15 +1,11 @@
-import { Network, satoshisToBitcoins } from "@caravan/bitcoin";
+import { Network } from "@caravan/bitcoin";
 import {
-  FeeBumpStrategy,
   TransactionAnalyzer,
   UTXO as FeeUTXO,
+  TxAnalysis,
 } from "@caravan/fees";
-import { Transaction } from "bitcoinjs-lib-v6";
-import { BigNumber } from "bignumber.js";
-import { TransactionT } from "../types";
-import { FeeBumpRecommendation } from "./types";
+import { FeePriority } from "./types";
 import { BlockchainClient } from "@caravan/clients";
-import { Prompt } from "react-router";
 
 /**
  * Confirmation targets for fee estimation in blocks
@@ -67,4 +63,97 @@ export const getFeeEstimate = async (
         return 32.75; // Default medium priority
     }
   }
+};
+
+/**
+ * Analyzes a transaction and provides fee bumping recommendations based on
+ * current network fee estimates and transaction characteristics
+ *
+ * @param txHex - The raw transaction hex string
+ * @param fee - The current transaction fee in satoshis
+ * @param network - The Bitcoin network being used
+ * @param availableUtxos - Available UTXOs for fee bumping
+ * @param blockchainClient - The blockchain client for fee estimation
+ * @param walletConfig - Wallet configuration parameters
+ * @returns Fee bumping analysis and recommendations
+ */
+export const analyzeTransaction = async (
+  txHex: string,
+  fee: number,
+  network: Network,
+  availableUtxos: FeeUTXO[],
+  blockchainClient: BlockchainClient,
+  walletConfig: {
+    requiredSigners: number;
+    totalSigners: number;
+    addressType: string;
+  },
+  feePriority: FeePriority = FeePriority.MEDIUM,
+): Promise<
+  TxAnalysis & {
+    networkFeeEstimates: {
+      highPriority: number;
+      mediumPriority: number;
+      lowPriority: number;
+    };
+    userSelectedFeeRate: number;
+    userSelectedPriority: FeePriority;
+  }
+> => {
+  // Get fee estimates for different confirmation targets
+  const highPriorityFee = await getFeeEstimate(
+    blockchainClient,
+    CONFIRMATION_TARGETS.HIGH,
+  );
+  const mediumPriorityFee = await getFeeEstimate(
+    blockchainClient,
+    CONFIRMATION_TARGETS.MEDIUM,
+  );
+  const lowPriorityFee = await getFeeEstimate(
+    blockchainClient,
+    CONFIRMATION_TARGETS.LOW,
+  );
+
+  // Select target fee rate based on user priority
+  let targetFeeRate: number;
+  switch (feePriority) {
+    case FeePriority.HIGH:
+      targetFeeRate = highPriorityFee;
+      break;
+    case FeePriority.MEDIUM:
+      targetFeeRate = mediumPriorityFee;
+      break;
+    case FeePriority.LOW:
+      targetFeeRate = lowPriorityFee;
+      break;
+    default:
+      targetFeeRate = mediumPriorityFee; // Default to medium if somehow invalid
+  }
+
+  // Create analyzer with wallet-specific parameters
+  const analyzer = new TransactionAnalyzer({
+    txHex,
+    network,
+    targetFeeRate,
+    absoluteFee: fee.toString(),
+    availableUtxos,
+    requiredSigners: walletConfig.requiredSigners,
+    totalSigners: walletConfig.totalSigners,
+    addressType: walletConfig.addressType,
+  });
+
+  // Get comprehensive analysis
+  const analysis = analyzer.analyze();
+
+  // Return the analysis from the analyzer with added network fee estimates
+  return {
+    ...analysis,
+    networkFeeEstimates: {
+      highPriority: highPriorityFee,
+      mediumPriority: mediumPriorityFee,
+      lowPriority: lowPriorityFee,
+    },
+    userSelectedFeeRate: targetFeeRate,
+    userSelectedPriority: feePriority,
+  };
 };

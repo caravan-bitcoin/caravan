@@ -90,72 +90,12 @@ export interface FeeBumpResult {
 }
 
 /**
- * Recommendations for fee bumping based on analysis
- *
- * Contains comprehensive information about fee bumping options,
- * including current network fee estimates, transaction characteristics,
- * and strategy recommendations.
+ * Fee priority options for transaction fee selection
  */
-export interface FeeBumpRecommendation {
-  /**
-   * The recommended strategy for fee bumping
-   */
-  recommendedStrategy: FeeBumpStrategy;
-
-  /**
-   * Whether RBF is possible for this transaction
-   */
-  canRBF: boolean;
-
-  /**
-   * Whether CPFP is possible for this transaction
-   */
-  canCPFP: boolean;
-
-  /**
-   * The suggested fee rate for RBF in sat/vB
-   */
-  suggestedRBFFeeRate: number;
-
-  /**
-   * The minimum required fee for RBF in satoshis
-   */
-  minimumRBFFee: Satoshis;
-
-  /**
-   * The suggested fee rate for CPFP in sat/vB
-   */
-  suggestedCPFPFeeRate: number;
-
-  /**
-   * The minimum required fee for CPFP in satoshis
-   */
-  minimumCPFPFee: Satoshis;
-
-  /**
-   * The current fee rate of the transaction in sat/vB
-   */
-  currentFeeRate?: number;
-
-  /**
-   * Current network fee estimates for different priorities
-   */
-  networkFeeEstimates?: {
-    /**
-     * High priority fee rate (likely to confirm in next block)
-     */
-    highPriority: number;
-
-    /**
-     * Medium priority fee rate (likely to confirm in ~3 blocks)
-     */
-    mediumPriority: number;
-  };
-
-  /**
-   * The transaction's virtual size in vbytes
-   */
-  txVsize?: number;
+export enum FeePriority {
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
 }
 
 /**
