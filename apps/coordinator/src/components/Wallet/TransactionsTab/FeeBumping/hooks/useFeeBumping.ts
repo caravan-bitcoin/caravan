@@ -108,7 +108,7 @@ export const useFeeBumpoing = () => {
         const rawTxHex: string = await blockchainClient.getTransactionHex(
           tx.txid,
         );
-
+        setTxHex(rawTxHex);
         // Extract UTXOs for fee bumping
         const availableUtxos = await extractUtxosForFeeBumping(
           tx,
@@ -188,5 +188,83 @@ export const useFeeBumpoing = () => {
       addressType,
       walletState,
     ],
+  );
+
+  /**
+   * Sets a transaction for fee bumping and analyzes it
+   *
+   * This function is called when a user selects a transaction to fee bump.
+   * It sets the transaction data and initiates the analysis process.
+   *
+   * @param tx - The transaction object to fee bump
+   * @param rawTxHex - The raw transaction hex string
+   * @param priority - Optional fee priority level (defaults to MEDIUM)
+   * @returns Promise that resolves when analysis is complete
+   */
+  const setTransactionForBumping = useCallback(
+    async (tx: any, priority: FeePriority = FeePriority.MEDIUM) => {
+      setTransaction(tx);
+      setSelectedPriority(priority);
+      await analyzeTx(tx, priority);
+    },
+    [analyzeTx],
+  );
+
+  /**
+   * Updates the selected fee rate
+   *
+   * @param feeRate - New fee rate in sat/vB
+   */
+  const updateFeeRate = useCallback((feeRate: number) => {
+    if (feeRate < 1) {
+      console.warn("Fee rate cannot be less than 1 sat/vB, setting to 1");
+      setSelectedFeeRate(1);
+    } else {
+      setSelectedFeeRate(feeRate);
+    }
+  }, []);
+
+  /**
+   * Updates the fee priority and recalculates the recommended fee rate
+   *
+   * @param priority - New fee priority level
+   */
+  const updateFeePriority = useCallback(
+    async (priority: FeePriority) => {
+      if (!transaction || !txHex) {
+        console.warn("Cannot update fee priority: No transaction selected");
+        return;
+      }
+
+      setSelectedPriority(priority);
+      await analyzeTx(transaction, txHex, priority);
+    },
+    [transaction, txHex, analyzeTx],
+  );
+
+  /**
+   * Updates the selected strategy and associated fee rate
+   *
+   * @param strategy - Selected fee bumping strategy
+   */
+  const updateStrategy = useCallback(
+    (strategy: FeeBumpStrategy) => {
+      if (strategy === FeeBumpStrategy.NONE) {
+        console.warn("Cannot select NONE as a strategy");
+        return;
+      }
+
+      setSelectedStrategy(strategy);
+
+      // Update fee rate based on the selected strategy
+      if (recommendation) {
+        if (strategy === FeeBumpStrategy.RBF) {
+          setSelectedFeeRate(recommendation.suggestedRBFFeeRate!);
+        } else if (strategy === FeeBumpStrategy.CPFP) {
+          setSelectedFeeRate(recommendation.suggestedCPFPFeeRate!);
+        }
+      }
+    },
+    [recommendation],
   );
 };
