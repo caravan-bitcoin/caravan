@@ -1,10 +1,6 @@
 import { Network, bitcoinsToSatoshis } from "@caravan/bitcoin";
-import {
-  TransactionAnalyzer,
-  UTXO as FeeUTXO,
-  TxAnalysis,
-} from "@caravan/fees";
-import { FeePriority } from "./types";
+import { TransactionAnalyzer, UTXO as FeeUTXO } from "@caravan/fees";
+import { FeePriority, FeeBumpRecommendation } from "./types";
 import { TransactionT } from "../types";
 import { BlockchainClient } from "@caravan/clients";
 
@@ -90,17 +86,7 @@ export const analyzeTransaction = async (
     addressType: string;
   },
   feePriority: FeePriority = FeePriority.MEDIUM,
-): Promise<
-  TxAnalysis & {
-    networkFeeEstimates: {
-      highPriority: number;
-      mediumPriority: number;
-      lowPriority: number;
-    };
-    userSelectedFeeRate: number;
-    userSelectedPriority: FeePriority;
-  }
-> => {
+): Promise<FeeBumpRecommendation> => {
   // Get fee estimates for different confirmation targets
   const highPriorityFee = await getFeeEstimate(
     blockchainClient,

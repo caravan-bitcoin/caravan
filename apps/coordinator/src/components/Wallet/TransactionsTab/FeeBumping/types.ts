@@ -1,5 +1,5 @@
 import { Network } from "@caravan/bitcoin";
-import { FeeBumpStrategy, Satoshis } from "@caravan/fees";
+import { FeeBumpStrategy, Satoshis, TxAnalysis } from "@caravan/fees";
 import { TransactionT } from "../types";
 
 /**
@@ -136,4 +136,17 @@ export interface RBFContext {
    * The address to send funds to if cancelling
    */
   cancelAddress?: string;
+}
+
+export interface FeeBumpRecommendation extends TxAnalysis {
+  currentFeeRate?: number;
+  suggestedRBFFeeRate?: number;
+  suggestedCPFPFeeRate?: number;
+  networkFeeEstimates?: {
+    highPriority: number;
+    mediumPriority: number;
+    lowPriority: number;
+  };
+  userSelectedFeeRate: number;
+  userSelectedPriority: FeePriority;
 }
