@@ -2,20 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { FeeBumpStrategy } from "@caravan/fees";
 import {
-  FeeBumpOptions,
   FeeBumpResult,
   FeeBumpStatus,
   FeeBumpRecommendation,
   FeePriority,
 } from "../types";
-import {
-  analyzeTransaction,
-  extractUtxosForFeeBumping,
-  getFeeEstimate,
-  CONFIRMATION_TARGETS,
-} from "../utils";
+import { analyzeTransaction, extractUtxosForFeeBumping } from "../utils";
 import { useRBF } from "./useRBF";
-import { useWalletAddresses } from "../../hooks";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 import { BlockchainClient } from "@caravan/clients";
 
@@ -57,9 +50,6 @@ export const useFeeBumpoing = () => {
 
   // Result of the fee bumping operation
   const [result, setResult] = useState<FeeBumpResult | null>(null);
-
-  // Get wallet addresses for change output detection
-  const walletAddresses = useWalletAddresses();
 
   // Get wallet configuration from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -369,4 +359,46 @@ export const useFeeBumpoing = () => {
       createCancelRBF,
     ],
   );
+
+  /**
+   * Resets the fee bumping state
+   *
+   * This function clears all state related to the current fee bump operation
+   * and returns the hook to its initial state.
+   */
+  const reset = useCallback(() => {
+    setTransaction(null);
+    setTxHex("");
+    setStatus(FeeBumpStatus.IDLE);
+    setError(null);
+    setRecommendation(null);
+    setSelectedStrategy(FeeBumpStrategy.NONE);
+    setSelectedFeeRate(0);
+    setResult(null);
+  }, []);
+
+  // Update status when RBF creation is in progress
+  useEffect(() => {
+    if (isCreatingRBF && status === FeeBumpStatus.READY) {
+      setStatus(FeeBumpStatus.CREATING);
+    }
+  }, [isCreatingRBF, status]);
+
+  // Return the hook's API
+  return {
+    transaction,
+    txHex,
+    status,
+    error,
+    recommendation,
+    selectedStrategy,
+    selectedFeeRate,
+    result,
+    setTransactionForBumping,
+    updateFeeRate,
+    updateFeePriority,
+    updateStrategy,
+    createFeeBumpedTransaction,
+    reset,
+  };
 };
