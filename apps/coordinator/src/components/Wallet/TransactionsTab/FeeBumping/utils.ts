@@ -392,3 +392,25 @@ export const getChangeOutputIndex = (
   // This is the least reliable method, so we use it as a last resort
   return transaction.vout.length - 1;
 };
+
+/**
+ * Formats a fee amount in satoshis to a human-readable string
+ *
+ * @param feeInSatoshis - The fee amount in satoshis
+ * @param includeSuffix - Whether to include the "sats" suffix
+ * @returns Formatted fee string
+ */
+export const formatFee = (
+  feeInSatoshis: string,
+  includeSuffix = true,
+): string => {
+  // Parse the fee as a number
+  const fee = parseInt(feeInSatoshis, 10);
+
+  if (isNaN(fee)) return "0" + (includeSuffix ? " sats" : "");
+
+  // Format with thousands separators
+  const formattedFee = fee.toLocaleString();
+
+  return formattedFee + (includeSuffix ? " sats" : "");
+};
