@@ -7,9 +7,7 @@ import {
   AcceleratedRbfOptions,
   SCRIPT_TYPES,
 } from "@caravan/fees";
-import { RBFContext } from "../types";
 import { getChangeOutputIndex, extractUtxosForFeeBumping } from "../utils";
-import { useWalletAddresses } from "../../hooks";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 
 /**
@@ -176,4 +174,109 @@ export const useRBF = () => {
       getScriptType,
     ],
   );
+  /**
+   * Creates a cancel RBF transaction that redirects all funds to a new address
+   *
+   * This function performs the following steps:
+   * 1. Extracts UTXOs from wallet state
+   * 2. Creates a cancel RBF transaction that sends all funds to the specified address
+   * 3. Returns the base64-encoded PSBT
+   *
+   * Cancel transactions are useful when you want to completely replace a
+   * transaction, for example to stop a payment that hasn't confirmed yet.
+   *
+   * @param options Transaction and cancel address details
+   * @returns Promise resolving to the base64-encoded PSBT
+   *
+   * @see https://bitcoinops.org/en/topics/replace-by-fee/
+   */
+  const createCancelRBF = useCallback(
+    async ({
+      transaction,
+      originalTxHex,
+      feeRate,
+      cancelAddress,
+    }: {
+      transaction: any;
+      originalTxHex: string;
+      feeRate: number;
+      cancelAddress: string;
+    }) => {
+      setIsCreating(true);
+      setError(null);
+
+      try {
+        // Get blockchain client
+        const blockchainClient = dispatch(
+          updateBlockchainClient(),
+        ) as unknown as BlockchainClient;
+        if (!blockchainClient) {
+          throw new Error("Blockchain client not available");
+        }
+
+        // Extract UTXOs from wallet state
+        const availableInputs = await extractUtxosForFeeBumping(
+          transaction,
+          walletState,
+          blockchainClient,
+        );
+
+        if (!availableInputs.length) {
+          throw new Error(
+            "No UTXOs available for RBF. Transaction inputs may not be in your wallet.",
+          );
+        }
+
+        // Create cancel RBF transaction options
+        const scriptType = getScriptType();
+
+        const options = {
+          originalTx: originalTxHex,
+          network,
+          targetFeeRate: feeRate,
+          absoluteFee: transaction.fee.toString(),
+          availableInputs,
+          requiredSigners,
+          totalSigners,
+          scriptType,
+          dustThreshold: "546", // Default dust threshold
+          cancelAddress,
+          strict: false, // Less strict validation for better user experience
+          fullRBF: false, // Only use signals RBF by default
+          reuseAllInputs: false, // For cancel transactions, we don't need to reuse all inputs
+        };
+
+        // Create the cancel RBF transaction
+        const psbtBase64 = createCancelRbfTransaction(options);
+
+        return psbtBase64;
+      } catch (error) {
+        console.error("Error creating cancel RBF transaction:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Unknown error creating cancel RBF transaction",
+        );
+        throw error;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [
+      dispatch,
+      network,
+      walletState,
+      requiredSigners,
+      totalSigners,
+      getScriptType,
+    ],
+  );
+
+  // Return the hook's API
+  return {
+    createAcceleratedRBF,
+    createCancelRBF,
+    isCreating,
+    error,
+  };
 };
