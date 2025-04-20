@@ -19,8 +19,8 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import CancelIcon from "@mui/icons-material/Cancel";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import { FeeBumpResult } from "../../types";
-import { formatFee } from "../../utils";
+import { FeeBumpResult } from "../types";
+import { formatFee } from "../utils";
 
 interface TransactionComparisonProps {
   originalTx: any;

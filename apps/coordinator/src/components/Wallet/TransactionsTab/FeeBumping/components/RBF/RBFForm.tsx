@@ -19,8 +19,8 @@ import {
   Chip,
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
-import { formatFee } from "../utils";
-import { FeeBumpRecommendation, FeePriority } from "../types";
+import { FeeBumpRecommendation, FeePriority } from "../../types";
+import { formatFee } from "../../utils";
 
 const FEE_LEVELS = {
   LOW: "low",
