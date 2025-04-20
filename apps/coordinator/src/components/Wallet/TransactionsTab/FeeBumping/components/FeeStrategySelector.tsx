@@ -194,13 +194,13 @@ export const FeeStrategySelector: React.FC<FeeStrategySelectorProps> = ({
                         {rbfInfo.title}
                         {recommendation.recommendedStrategy ===
                           FeeBumpStrategy.RBF && (
-                            <Chip
-                              label="Recommended"
-                              color="primary"
-                              size="small"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
+                          <Chip
+                            label="Recommended"
+                            color="primary"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {rbfInfo.description}
@@ -270,13 +270,13 @@ export const FeeStrategySelector: React.FC<FeeStrategySelectorProps> = ({
                         {cpfpInfo.title}
                         {recommendation.recommendedStrategy ===
                           FeeBumpStrategy.CPFP && (
-                            <Chip
-                              label="Recommended"
-                              color="primary"
-                              size="small"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
+                          <Chip
+                            label="Recommended"
+                            color="primary"
+                            size="small"
+                            sx={{ ml: 1 }}
+                          />
+                        )}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {cpfpInfo.description}
