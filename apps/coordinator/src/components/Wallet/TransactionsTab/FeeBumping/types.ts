@@ -87,6 +87,9 @@ export interface FeeBumpResult {
    * Whether this is a cancel transaction (vs. acceleration)
    */
   isCancel?: boolean;
+
+  priority: FeePriority;
+  createdAt: string;
 }
 
 /**

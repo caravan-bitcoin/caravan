@@ -267,4 +267,106 @@ export const useFeeBumpoing = () => {
     },
     [recommendation],
   );
+
+  /**
+   * Creates a fee-bumped transaction based on the selected strategy
+   *
+   * This function:
+   * 1. Validates inputs and parameters
+   * 2. Delegates to the appropriate RBF or CPFP function
+   * 3. Handles errors and updates state accordingly
+   *
+   * @param options - Options for the fee-bumped transaction
+   * @returns Promise resolving to the fee bump result containing the PSBT
+   */
+  const createFeeBumpedTransaction = useCallback(
+    async (
+      options: {
+        isCancel?: boolean;
+        cancelAddress?: string;
+        changeAddress?: string;
+      } = {},
+    ) => {
+      if (!transaction || !txHex || !recommendation) {
+        setError("No transaction selected for fee bumping");
+        return null;
+      }
+
+      if (selectedFeeRate <= 0) {
+        setError("Fee rate must be greater than 0");
+        return null;
+      }
+
+      try {
+        setStatus(FeeBumpStatus.CREATING);
+        setError(null);
+
+        let psbtBase64: string;
+
+        // Create the appropriate type of fee-bumped transaction
+        if (selectedStrategy === FeeBumpStrategy.RBF) {
+          if (options.isCancel && options.cancelAddress) {
+            // Create cancel RBF transaction
+            psbtBase64 = await createCancelRBF({
+              transaction,
+              originalTxHex: txHex,
+              feeRate: selectedFeeRate,
+              cancelAddress: options.cancelAddress,
+            });
+          } else {
+            // Create accelerated RBF transaction
+            psbtBase64 = await createAcceleratedRBF({
+              transaction,
+              originalTxHex: txHex,
+              feeRate: selectedFeeRate,
+              changeAddress: options.changeAddress,
+            });
+          }
+        } else if (selectedStrategy === FeeBumpStrategy.CPFP) {
+          // CPFP not implemented in this version we'll add it's hook here
+          throw new Error("CPFP not implemented in this version");
+        } else {
+          throw new Error("Invalid fee bumping strategy");
+        }
+
+        // Calculate the estimated new fee
+        const txVsize = transaction.vsize || transaction.size;
+        const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
+
+        // Set the result
+        const result: FeeBumpResult = {
+          psbtBase64,
+          newFee: estimatedNewFee,
+          newFeeRate: selectedFeeRate,
+          strategy: selectedStrategy,
+          isCancel: options.isCancel || false,
+          priority: selectedPriority,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResult(result);
+        setStatus(FeeBumpStatus.SUCCESS);
+        return result;
+      } catch (err) {
+        console.error("Error creating fee-bumped transaction:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unknown error creating fee-bumped transaction",
+        );
+        setStatus(FeeBumpStatus.ERROR);
+        return null;
+      }
+    },
+    [
+      transaction,
+      txHex,
+      recommendation,
+      selectedStrategy,
+      selectedFeeRate,
+      selectedPriority,
+      createAcceleratedRBF,
+      createCancelRBF,
+    ],
+  );
 };
