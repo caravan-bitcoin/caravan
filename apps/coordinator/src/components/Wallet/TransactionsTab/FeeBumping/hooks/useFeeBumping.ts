@@ -237,7 +237,7 @@ export const useFeeBumpoing = () => {
       }
 
       setSelectedPriority(priority);
-      await analyzeTx(transaction, txHex, priority);
+      await analyzeTx(transaction, priority);
     },
     [transaction, txHex, analyzeTx],
   );
