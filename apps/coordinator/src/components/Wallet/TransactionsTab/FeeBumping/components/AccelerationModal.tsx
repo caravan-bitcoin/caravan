@@ -39,14 +39,13 @@ interface AccelerationModalProps {
   open: boolean;
   onClose: () => void;
   transaction: any; // The transaction to accelerate
-  txHex: string; // Raw transaction hex (optional, will be fetched if not provided)
+  txHex?: string; // Raw transaction hex (optional, will be fetched if not provided)
 }
 
 export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   open,
   onClose,
   transaction,
-  txHex,
 }) => {
   // Track the current step in the wizard
   const [activeStep, setActiveStep] = useState(0);
