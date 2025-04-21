@@ -104,7 +104,7 @@ const NODES = {
     upub: "upub5DhVaiY2dTMshxGyE6dZpa6d1d18FoFhMDynSRqRguJge7uAdF7ZGRGAW8yewCq9iW87Pti4RHhXC4mFLf88rdXd7pXMjy3wAjFmK6jyHiX",
     vpub: "vpub5YXktPCwn8uMZFU64TRC2fC8Bb9aCRFCGLW1DpjK4ugZhDiPsuH7tUvJXLwEw7V589Ev9NJcsx455MNp4MY9esDDzADnKssRSTKQhgCrtoZ",
     Upub: "Upub5QbahxGUCQvF8XSMAm6YeeSRjR3PU9wHfVdTMh6y4g96GJU5PeVqMY86Jqw8Ve43wyC6GUiBJW62KEP1dtH617eHxHdm9NWw4TXdu1aWzdx",
-    Jpub: "Vpub5jRr1cwPM6TiypdU17tArjXvuPBqQmvnac9g95zrSgWyKQHJeJfPybnEL3tiVYhyMcJu1xJjmASaCWzaMah6oMKtpdLBjHLRLBbHHcy3jDH",
+    Vpub: "Vpub5jRr1cwPM6TiypdU17tArjXvuPBqQmvnac9g95zrSgWyKQHJeJfPybnEL3tiVYhyMcJu1xJjmASaCWzaMah6oMKtpdLBjHLRLBbHHcy3jDH",
     chaincode:
       "470bb034dbc8e7b5f5c0b19f747e3e768f0cc9ff298361b2741e1b7fd70d376d",
     parentFingerprint: 1240308660,
