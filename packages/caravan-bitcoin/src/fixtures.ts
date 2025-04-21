@@ -22,17 +22,18 @@
  */
 
 import BigNumber from "bignumber.js";
+
+import { braidConfig } from "./braid";
+import { sortInputs } from "./inputs";
 import {
   generateMultisigFromPublicKeys,
   multisigRedeemScript,
   multisigWitnessScript,
 } from "./multisig";
-import { sortInputs } from "./inputs";
+import { Network } from "./networks";
 import { P2SH } from "./p2sh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
-import { Network } from "./networks";
-import { braidConfig } from "./braid";
 
 // Without this, BigNumber will report strings as exponentials. 16 places covers
 // all possible values in satoshis.

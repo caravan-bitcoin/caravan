@@ -3,8 +3,9 @@
  * multisig transactions.
  */
 
-import BigNumber from "bignumber.js";
 import assert from "assert";
+
+import BigNumber from "bignumber.js";
 import {
   TransactionBuilder,
   Psbt,
@@ -12,9 +13,10 @@ import {
   script,
   payments,
 } from "bitcoinjs-lib-v5";
-import { networkData } from "./networks";
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
-import { P2WSH } from "./p2wsh";
+
+import { Braid } from "./braid";
+import { validateMultisigInputs } from "./inputs";
+import { ExtendedPublicKey } from "./keys";
 import {
   multisigRequiredSigners,
   multisigPublicKeys,
@@ -23,16 +25,16 @@ import {
   multisigWitnessScript,
   generateMultisigFromRaw,
 } from "./multisig";
+import { networkData } from "./networks";
+import { validateOutputs } from "./outputs";
+import { P2SH_P2WSH } from "./p2sh_p2wsh";
+import { P2WSH } from "./p2wsh";
+import { psbtInputFormatter, psbtOutputFormatter } from "./psbt";
+import { scriptToHex } from "./script";
 import {
   validateMultisigSignature,
   signatureNoSighashType,
 } from "./signatures";
-import { validateMultisigInputs } from "./inputs";
-import { validateOutputs } from "./outputs";
-import { scriptToHex } from "./script";
-import { psbtInputFormatter, psbtOutputFormatter } from "./psbt";
-import { Braid } from "./braid";
-import { ExtendedPublicKey } from "./keys";
 
 /**
  * Create an unsigned bitcoin transaction based on the network, inputs
