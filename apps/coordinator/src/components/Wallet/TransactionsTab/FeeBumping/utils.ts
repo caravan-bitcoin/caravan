@@ -42,6 +42,19 @@ export const getFeeEstimate = async (
 
     // Get fee estimate from the clients
     const feeRate = await blockchainClient.getFeeEstimate(withinBlocks);
+    // Fallback values if the `getFeeEstimate` returns NaN
+    if (!feeRate) {
+      switch (withinBlocks) {
+        case CONFIRMATION_TARGETS.HIGH:
+          return 32.75; // Higher priority
+        case CONFIRMATION_TARGETS.MEDIUM:
+          return 32.75; // Medium priority
+        case CONFIRMATION_TARGETS.LOW:
+          return 20.09; // Lower priority
+        default:
+          return 32.75; // Default medium priority
+      }
+    }
     return Math.max(1, Math.ceil(feeRate)); // Ensure we have at least 1 sat/vB
   } catch (error) {
     console.error("Error fetching fee estimate:", error);
