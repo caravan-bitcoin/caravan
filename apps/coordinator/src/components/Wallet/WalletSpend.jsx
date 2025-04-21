@@ -11,7 +11,9 @@ import {
   FormControlLabel,
   FormHelperText,
   Button,
+  Tooltip,
 } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
@@ -29,6 +31,7 @@ import {
   SPEND_STEP_CREATE,
   SPEND_STEP_PREVIEW,
   SPEND_STEP_SIGN,
+  setRBF,
   setSpendStep as setSpendStepAction,
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
@@ -205,7 +208,7 @@ class WalletSpend extends React.Component {
               <Grid item md={12}>
                 <Grid container direction="row-reverse">
                   <Box display="flex-end">
-                    <Box p={1}>
+                    <Box mt={2} display="flex" alignItems="center">
                       <FormControlLabel
                         control={
                           <Switch
@@ -214,6 +217,29 @@ class WalletSpend extends React.Component {
                           />
                         }
                         label="Manual"
+                      />
+                      {/* Add RBF Toggle */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={this.props.enableRBF}
+                            onChange={(e) =>
+                              this.props.setRBF(e.target.checked)
+                            }
+                            color="primary"
+                          />
+                        }
+                        label={
+                          <Box display="flex" alignItems="center">
+                            Replace-by-Fee (RBF)
+                            <Tooltip title="When enabled, this transaction can be replaced with a higher fee transaction later if needed">
+                              <InfoIcon
+                                fontSize="small"
+                                style={{ marginLeft: 8 }}
+                              />
+                            </Tooltip>
+                          </Box>
+                        }
                       />
                     </Box>
                   </Box>
@@ -295,6 +321,8 @@ WalletSpend.propTypes = {
   changeAddress: PropTypes.string.isRequired,
   deleteChangeOutput: PropTypes.func.isRequired,
   depositNodes: PropTypes.shape({}),
+  enableRBF: PropTypes.bool,
+  setRBF: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeError: PropTypes.string,
   feeRate: PropTypes.string.isRequired,
@@ -323,6 +351,7 @@ WalletSpend.defaultProps = {
   autoSpend: false,
   balanceError: null,
   changeNodes: {},
+  enableRBF: true,
   depositNodes: {},
   finalizedOutputs: false,
   feeError: null,
@@ -337,6 +366,7 @@ function mapStateToProps(state) {
     changeNode: state.wallet.change.nextNode,
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
+    enableRBF: state.spend.transaction.enableRBF,
   };
 }
 
@@ -351,6 +381,7 @@ const mapDispatchToProps = {
   resetNodesSpend: resetNodesSpendAction,
   setFeeRate: setFeeRateAction,
   addOutput,
+  setRBF,
   finalizeOutputs: finalizeOutputsAction,
   setChangeAddress: setChangeAddressAction,
   setSpendStep: setSpendStepAction,
