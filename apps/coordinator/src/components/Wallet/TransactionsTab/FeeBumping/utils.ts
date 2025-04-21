@@ -117,6 +117,26 @@ export const analyzeTransaction = async (
       targetFeeRate = mediumPriorityFee; // Default to medium if somehow invalid
   }
 
+  // Validate inputs
+  if (!txHex || typeof txHex !== "string") {
+    console.error("Invalid txHex:", typeof txHex, txHex);
+    throw new Error("Transaction hex must be a string");
+  }
+
+  if (isNaN(fee) || fee < 0) {
+    console.error("Invalid fee:", fee);
+    fee = 0; // Use a default value
+  }
+
+  // Check if we have valid UTXOs
+  if (
+    !availableUtxos ||
+    !Array.isArray(availableUtxos) ||
+    availableUtxos.length === 0
+  ) {
+    throw new Error("No UTXOs available for fee bumping");
+  }
+
   // Create analyzer with wallet-specific parameters
   const analyzer = new TransactionAnalyzer({
     txHex,

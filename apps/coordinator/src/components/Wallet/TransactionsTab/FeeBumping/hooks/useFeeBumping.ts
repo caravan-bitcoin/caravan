@@ -95,10 +95,19 @@ export const useFeeBumping = () => {
           throw new Error("Blockchain client not available");
         }
 
-        const rawTxHex: string = await blockchainClient.getTransactionHex(
-          tx.txid,
-        );
-        setTxHex(rawTxHex);
+        // If txHex is already set (passed from the modal), use it
+        // Otherwise fetch it from the blockchain
+        let rawTxHex = txHex;
+        if (!rawTxHex || rawTxHex === "") {
+          rawTxHex = await blockchainClient.getTransactionHex(tx.txid);
+          setTxHex(rawTxHex);
+        }
+
+        // Validate the transaction hex
+        if (!rawTxHex || typeof rawTxHex !== "string") {
+          throw new Error("Invalid transaction hex received");
+        }
+
         // Extract UTXOs for fee bumping
         const availableUtxos = await extractUtxosForFeeBumping(
           tx,
