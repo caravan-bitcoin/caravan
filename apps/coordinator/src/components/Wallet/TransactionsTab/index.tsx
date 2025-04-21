@@ -145,6 +145,41 @@ const TransactionsTabContent: React.FC<{
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleExplorerLinkClick();
 
+  const renderActions = (tx: any) => {
+    // Don't show acceleration options for received transactions
+    if (tx.isReceived) {
+      return (
+        <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+          <Box>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              disabled={true}
+            >
+              Accelerate
+            </Button>
+          </Box>
+        </Tooltip>
+      );
+    }
+
+    // Show acceleration button for pending sent transactions
+    return (
+      <Button
+        variant="outlined"
+        size="small"
+        color="primary"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAccelerate(tx);
+        }}
+      >
+        Accelerate
+      </Button>
+    );
+  };
+
   // Get the correct transaction list based on selected tab
   // const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
   const currentTabTxs = pendingTxs;
@@ -219,20 +254,7 @@ const TransactionsTabContent: React.FC<{
               sortDirection={sortDirection}
               network={network}
               onClickTransaction={handleExplorerLinkClick}
-              renderActions={(tx: any) => (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  color="primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAccelerate(tx);
-                  }}
-                  disabled={tx.status?.confirmed}
-                >
-                  Accelerate
-                </Button>
-              )}
+              renderActions={renderActions}
             />
             {/* Pagination controls */}
             {currentTabTxs.length > 0 && (
