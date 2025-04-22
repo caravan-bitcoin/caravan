@@ -192,7 +192,8 @@ export const analyzeTransaction = async (
  */
 export const extractUtxosForFeeBumping = async (
   transaction: TransactionT,
-  walletState: any,
+  depositNodes: any,
+  changeNodes: any,
   blockchainClient: BlockchainClient,
 ): Promise<FeeUTXO[]> => {
   // Array to store
@@ -201,9 +202,6 @@ export const extractUtxosForFeeBumping = async (
   try {
     // STEP 1: COLLECT WALLET UTXOS
     // ---------------------------
-    // Get all nodes containing UTXOs from the wallet
-    const depositNodes = walletState.wallet.deposits.nodes;
-    const changeNodes = walletState.wallet.change.nodes;
 
     // Create a map to track which UTXOs we've already processed
     // This helps us avoid duplicates when checking transaction inputs
@@ -246,14 +244,14 @@ export const extractUtxosForFeeBumping = async (
         // This is REQUIRED for the TransactionAnalyzer to properly analyze inputs
         const fullTx = await blockchainClient.getTransaction(txid);
         const prevTxHex = await blockchainClient.getTransactionHex(txid);
-
+        console.log("node", fullTx, prevTxHex);
         // If we don't have the value yet, try to get it from the wallet state
         if (!value) {
           // Look through all nodes for matching UTXOs
           for (const nodes of [depositNodes, changeNodes]) {
             for (const node of Object.values(nodes) as any[]) {
               if (!node.utxos || !node.utxos.length) continue;
-
+              console.log("node", node);
               const matchingUtxo = node.utxos.find(
                 (u: any) => u.txid === txid && u.index === vout,
               );
@@ -271,7 +269,7 @@ export const extractUtxosForFeeBumping = async (
           // For private clients, we can use the raw transaction data
           if (typeof fullTx === "object" && fullTx && fullTx.vout) {
             // Handle private client response format
-            const voutData = prevTxHex.vout[vout];
+            const voutData = fullTx.vout[vout];
             if (voutData && voutData.value) {
               // Convert BTC to satoshis
               value = bitcoinsToSatoshis(voutData.value);
@@ -371,13 +369,10 @@ export const extractUtxosForFeeBumping = async (
  */
 export const getChangeOutputIndex = (
   transaction: TransactionT,
-  walletState: any,
+  depositNodes: any,
+  changeNodes: any,
 ): number | undefined => {
   if (!transaction.vout || !transaction.vout.length) return undefined;
-
-  // Get all wallet addresses
-  const depositNodes = walletState.wallet.deposits.nodes;
-  const changeNodes = walletState.wallet.change.nodes;
 
   // Create sets of known deposit and change addresses
   const depositAddresses = new Set(
