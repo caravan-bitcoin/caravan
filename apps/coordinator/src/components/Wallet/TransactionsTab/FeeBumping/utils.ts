@@ -244,14 +244,12 @@ export const extractUtxosForFeeBumping = async (
         // This is REQUIRED for the TransactionAnalyzer to properly analyze inputs
         const fullTx = await blockchainClient.getTransaction(txid);
         const prevTxHex = await blockchainClient.getTransactionHex(txid);
-        console.log("node", fullTx, prevTxHex);
         // If we don't have the value yet, try to get it from the wallet state
         if (!value) {
           // Look through all nodes for matching UTXOs
           for (const nodes of [depositNodes, changeNodes]) {
             for (const node of Object.values(nodes) as any[]) {
               if (!node.utxos || !node.utxos.length) continue;
-              console.log("node", node);
               const matchingUtxo = node.utxos.find(
                 (u: any) => u.txid === txid && u.index === vout,
               );
