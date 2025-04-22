@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { FeeBumpStrategy } from "@caravan/fees";
 import {
@@ -25,8 +25,11 @@ import { BlockchainClient } from "@caravan/clients";
  * accurate UTXO information and fee estimates.
  */
 export const useFeeBumping = () => {
-  const dispatch = useDispatch();
+  // Using useRef to Break Circular Dependencies Cycles
+  const transactionRef = useRef(null);
+  const txHexRef = useRef("");
 
+  const dispatch = useDispatch();
   // Transaction state
   const [transaction, setTransaction] = useState<any | null>(null);
   const [txHex, setTxHex] = useState<string>("");
@@ -59,8 +62,9 @@ export const useFeeBumping = () => {
   );
   const totalSigners = useSelector((state: any) => state.settings.totalSigners);
 
-  // Get wallet state from Redux store
-  const walletState = useSelector((state: any) => state);
+  // Get wallet nodes
+  const depositNodes = useSelector((state: any) => state.wallet.deposits.nodes);
+  const changeNodes = useSelector((state: any) => state.wallet.change.nodes);
 
   const {
     createAcceleratedRBF,
@@ -81,7 +85,11 @@ export const useFeeBumping = () => {
    * @param rawTxHex - The raw transaction hex string
    */
   const analyzeTx = useCallback(
-    async (tx: any, priority: FeePriority = FeePriority.MEDIUM) => {
+    async (
+      tx: any,
+      initialTxHex: string = "",
+      priority: FeePriority = FeePriority.MEDIUM,
+    ) => {
       if (!tx) return;
       try {
         setStatus(FeeBumpStatus.ANALYZING);
@@ -95,23 +103,14 @@ export const useFeeBumping = () => {
           throw new Error("Blockchain client not available");
         }
 
-        // If txHex is already set (passed from the modal), use it
-        // Otherwise fetch it from the blockchain
-        let rawTxHex = txHex;
-        if (!rawTxHex || rawTxHex === "") {
-          rawTxHex = await blockchainClient.getTransactionHex(tx.txid);
-          setTxHex(rawTxHex);
-        }
-
-        // Validate the transaction hex
-        if (!rawTxHex || typeof rawTxHex !== "string") {
-          throw new Error("Invalid transaction hex received");
-        }
+        txHexRef.current = initialTxHex;
+        setTxHex(initialTxHex);
 
         // Extract UTXOs for fee bumping
         const availableUtxos = await extractUtxosForFeeBumping(
           tx,
-          walletState,
+          depositNodes,
+          changeNodes,
           blockchainClient,
         );
 
@@ -126,7 +125,7 @@ export const useFeeBumping = () => {
 
         // Analyze transaction for fee bumping options
         const analysis = await analyzeTransaction(
-          rawTxHex,
+          initialTxHex,
           tx.fee, // Fee in satoshis
           network,
           availableUtxos,
@@ -184,8 +183,9 @@ export const useFeeBumping = () => {
       network,
       requiredSigners,
       totalSigners,
+      depositNodes,
+      changeNodes,
       addressType,
-      walletState,
     ],
   );
 
@@ -201,10 +201,16 @@ export const useFeeBumping = () => {
    * @returns Promise that resolves when analysis is complete
    */
   const setTransactionForBumping = useCallback(
-    async (tx: any, priority: FeePriority = FeePriority.MEDIUM) => {
+    async (
+      tx: any,
+      priority: FeePriority = FeePriority.MEDIUM,
+      initialTxHex: string = "",
+    ) => {
+      // Store in ref to avoid dependency problems
+      transactionRef.current = tx;
       setTransaction(tx);
       setSelectedPriority(priority);
-      await analyzeTx(tx, priority);
+      await analyzeTx(transactionRef.current, initialTxHex, priority);
     },
     [analyzeTx],
   );
@@ -215,12 +221,13 @@ export const useFeeBumping = () => {
    * @param feeRate - New fee rate in sat/vB
    */
   const updateFeeRate = useCallback((feeRate: number) => {
-    if (feeRate < 1) {
-      console.warn("Fee rate cannot be less than 1 sat/vB, setting to 1");
-      setSelectedFeeRate(1);
-    } else {
-      setSelectedFeeRate(feeRate);
-    }
+    // Only update if the value is actually changing
+    setSelectedFeeRate((prev) => {
+      if (prev === feeRate || (feeRate < 1 && prev === 1)) {
+        return prev; // No change
+      }
+      return feeRate < 1 ? 1 : feeRate;
+    });
   }, []);
 
   /**
@@ -235,10 +242,20 @@ export const useFeeBumping = () => {
         return;
       }
 
-      setSelectedPriority(priority);
-      await analyzeTx(transaction, priority);
+      // Only update if the priority is actually changing
+      setSelectedPriority((prev) => {
+        if (prev === priority) {
+          return prev; // No change
+        }
+        return priority;
+      });
+
+      // Only re-analyze if the priority changed
+      if (selectedPriority !== priority) {
+        await analyzeTx(transaction, txHex, priority);
+      }
     },
-    [transaction, txHex, analyzeTx],
+    [transaction, analyzeTx],
   );
 
   /**
@@ -342,7 +359,6 @@ export const useFeeBumping = () => {
           priority: selectedPriority,
           createdAt: new Date().toISOString(),
         };
-
         setResult(result);
         setStatus(FeeBumpStatus.SUCCESS);
         return result;
