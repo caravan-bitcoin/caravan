@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   Box,
   Button,
@@ -81,6 +87,11 @@ export const RBFForm: React.FC<RBFFormProps> = ({
   );
   const [customFeeRate, setCustomFeeRate] = useState<number>(selectedFeeRate);
 
+  // Refs to prevent infinite renders
+  const isInitialRender = useRef(true);
+  const isUpdatingFeeLevel = useRef(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Calculate min and max fee rates
   // Min fee rate must be at least 1 higher than original (per RBF rules)
   const minFeeRate = Math.max(originalFeeRate + 1, 1);
@@ -130,37 +141,77 @@ export const RBFForm: React.FC<RBFFormProps> = ({
     return Math.ceil(txVsize * selectedFeeRate).toString();
   }, [selectedFeeRate, recommendation]);
 
-  // Update the selected fee rate when fee level changes
-  useEffect(() => {
-    if (feeLevel === FEE_LEVELS.CUSTOM) {
-      onFeeRateChange(customFeeRate);
-    } else if (feeLevels[feeLevel]) {
-      onFeeRateChange(Math.ceil(feeLevels[feeLevel]));
-
-      // Update priority if available
-      if (onPriorityChange) {
-        if (feeLevel === FEE_LEVELS.LOW) {
-          onPriorityChange(FeePriority.LOW);
-        } else if (feeLevel === FEE_LEVELS.MEDIUM) {
-          onPriorityChange(FeePriority.MEDIUM);
-        } else if (feeLevel === FEE_LEVELS.HIGH) {
-          onPriorityChange(FeePriority.HIGH);
-        }
+  // Update parent component
+  const updateParentWithDebounce = useCallback(
+    (newFeeLevel: string, newFeeRate: number) => {
+      // Clear any existing timeout to avoid multiple updates
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
       }
-    }
-  }, [feeLevel, customFeeRate, feeLevels, onFeeRateChange, onPriorityChange]);
 
-  // Update custom fee rate when selected fee rate changes externally
+      // Mark that we're in the process of updating
+      isUpdatingFeeLevel.current = true;
+
+      // Set a debounced update
+      updateTimeoutRef.current = setTimeout(() => {
+        // For custom fee level, just update the fee rate
+        if (newFeeLevel === FEE_LEVELS.CUSTOM) {
+          onFeeRateChange(newFeeRate);
+        }
+        // For predefined levels, update priority first, then fee rate if needed ( else there is a conflict)
+        else if (feeLevels[newFeeLevel]) {
+          const calculatedFeeRate = Math.ceil(feeLevels[newFeeLevel]);
+
+          // Determine new priority
+          let newPriority: FeePriority = selectedPriority;
+          if (newFeeLevel === FEE_LEVELS.LOW) {
+            newPriority = FeePriority.LOW;
+          } else if (newFeeLevel === FEE_LEVELS.MEDIUM) {
+            newPriority = FeePriority.MEDIUM;
+          } else if (newFeeLevel === FEE_LEVELS.HIGH) {
+            newPriority = FeePriority.HIGH;
+          }
+
+          // Update priority if it changed and update callback exists
+          if (onPriorityChange && newPriority !== selectedPriority) {
+            onPriorityChange(newPriority);
+          }
+
+          // Update fee rate if different from current
+          if (calculatedFeeRate !== selectedFeeRate) {
+            onFeeRateChange(calculatedFeeRate);
+          }
+        }
+
+        // Reset updating flag
+        isUpdatingFeeLevel.current = false;
+        updateTimeoutRef.current = null;
+      }, 100); // 100ms debounce
+    },
+    [
+      feeLevels,
+      onFeeRateChange,
+      onPriorityChange,
+      selectedFeeRate,
+      selectedPriority,
+    ],
+  );
+
+  // Sync local customFeeRate with selectedFeeRate prop changes (coming from parent)
   useEffect(() => {
-    setCustomFeeRate(selectedFeeRate);
+    // Don't update if we're in the middle of our own update process
+    if (!isUpdatingFeeLevel.current) {
+      setCustomFeeRate(selectedFeeRate);
+    }
   }, [selectedFeeRate]);
 
-  // Update fee level based on selected priority when component mounts
+  // Set initial fee level based on priority
   useEffect(() => {
-    if (selectedPriority) {
+    if (isInitialRender.current && selectedPriority) {
       setFeeLevel(PRIORITY_TO_FEE_LEVEL[selectedPriority]);
+      isInitialRender.current = false;
     }
-  }, []);
+  }, [selectedPriority]);
 
   // Handle RBF type change
   const handleRbfTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,33 +220,50 @@ export const RBFForm: React.FC<RBFFormProps> = ({
   };
 
   // Handle fee level change
-  const handleFeeLevelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newFeeLevel = event.target.value;
-    setFeeLevel(newFeeLevel);
+  const handleFeeLevelChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newFeeLevel = event.target.value;
+      setFeeLevel(newFeeLevel);
 
-    // Update the custom fee rate if the level is "custom"
-    if (newFeeLevel !== FEE_LEVELS.CUSTOM) {
-      onFeeRateChange(Math.ceil(feeLevels[newFeeLevel]));
-    }
-  };
+      // Calculate the fee rate for this level
+      let newFeeRate = customFeeRate;
+      if (newFeeLevel !== FEE_LEVELS.CUSTOM && feeLevels[newFeeLevel]) {
+        newFeeRate = Math.ceil(feeLevels[newFeeLevel]);
+      }
+
+      // Update parent with debounce
+      updateParentWithDebounce(newFeeLevel, newFeeRate);
+    },
+    [feeLevels, customFeeRate, updateParentWithDebounce],
+  );
 
   // Handle slider change
-  const handleSliderChange = (_event: Event, newValue: number | number[]) => {
-    const value = newValue as number;
-    setCustomFeeRate(value);
-    setFeeLevel(FEE_LEVELS.CUSTOM);
-    onFeeRateChange(value);
-  };
-
-  // Handle custom fee input change
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(event.target.value);
-    if (!isNaN(value) && value >= minFeeRate) {
+  const handleSliderChange = useCallback(
+    (_event: Event, newValue: number | number[]) => {
+      const value = newValue as number;
       setCustomFeeRate(value);
       setFeeLevel(FEE_LEVELS.CUSTOM);
-      onFeeRateChange(value);
-    }
-  };
+
+      // Update parent with debounce
+      updateParentWithDebounce(FEE_LEVELS.CUSTOM, value);
+    },
+    [updateParentWithDebounce],
+  );
+
+  // Handle custom fee input change
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = parseInt(event.target.value);
+      if (!isNaN(value) && value >= minFeeRate) {
+        setCustomFeeRate(value);
+        setFeeLevel(FEE_LEVELS.CUSTOM);
+
+        // Update parent with debounce
+        updateParentWithDebounce(FEE_LEVELS.CUSTOM, value);
+      }
+    },
+    [minFeeRate, updateParentWithDebounce],
+  );
 
   // Handle address input changes
   const handleCancelAddressChange = (
