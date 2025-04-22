@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -46,6 +46,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   open,
   onClose,
   transaction,
+  txHex,
 }) => {
   // Track the current step in the wizard
   const [activeStep, setActiveStep] = useState(0);
@@ -72,24 +73,37 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
 
   // Initialize the transaction for fee bumping when the modal opens
   useEffect(() => {
+    let isMounted = true;
+
+    async function initializeTransaction() {
+      if (open && transaction && isMounted) {
+        await setTransactionForBumping(transaction, FeePriority.MEDIUM, txHex);
+        if (isMounted) {
+          setActiveStep(0);
+          setDownloadClicked(false);
+        }
+      }
+    }
+
     if (open && transaction) {
-      setTransactionForBumping(transaction, FeePriority.MEDIUM);
-      setActiveStep(0);
-      setDownloadClicked(false);
+      initializeTransaction();
     } else if (!open) {
       // Reset the fee bumping state when the modal closes
       reset();
     }
-  }, [open, transaction, setTransactionForBumping, reset]);
+    return () => {
+      isMounted = false;
+    };
+  }, [open, transaction, reset]);
 
-  // Handle step navigation
-  const handleNext = () => {
+  // Handle step navigation ( Memoizing step changes to prevent re-renders)
+  const handleNext = useCallback(() => {
     setActiveStep((prevStep) => prevStep + 1);
-  };
+  }, []);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setActiveStep((prevStep) => prevStep - 1);
-  };
+  }, []);
 
   // Handle form submission
   const handleSubmitRBF = async (options: {
@@ -191,11 +205,11 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
               originalFeeRate={calculateOriginalFeeRate()}
               originalFee={transaction.fee.toString()}
               selectedFeeRate={selectedFeeRate}
-              selectedPriority={selectedPriority} // Pass the selected priority
+              selectedPriority={selectedPriority}
               onFeeRateChange={updateFeeRate}
-              onPriorityChange={updateFeePriority} // Add priority change handler
+              onPriorityChange={updateFeePriority}
               onSubmit={handleSubmitRBF}
-              isCreating={isCreatingRBF} // Use the direct isCreating state
+              isCreating={isCreatingRBF}
             />
           );
         }
