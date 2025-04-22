@@ -23,7 +23,6 @@ import { updateBlockchainClient } from "../../../../../actions/clientActions";
  */
 export const useRBF = () => {
   const dispatch = useDispatch();
-
   // Track loading and error states
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +35,14 @@ export const useRBF = () => {
   );
   const totalSigners = useSelector((state: any) => state.settings.totalSigners);
 
-  // Get wallet state for UTXO extraction and change address detection
-  const walletState = useSelector((state: any) => state);
-
   // Get the next change address from the wallet
   const changeAddress = useSelector(
     (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
   );
+
+  // Get wallet nodes
+  const depositNodes = useSelector((state: any) => state.wallet.deposits.nodes);
+  const changeNodes = useSelector((state: any) => state.wallet.change.nodes);
 
   /**
    * Gets the appropriate script type based on wallet address type
@@ -76,7 +76,7 @@ export const useRBF = () => {
       transaction,
       originalTxHex,
       feeRate,
-      changeAddress: overrideChangeAddress,
+      changeAddress: userProvidedChangeAddress,
     }: {
       transaction: any;
       originalTxHex: string;
@@ -99,7 +99,8 @@ export const useRBF = () => {
         // Extract UTXOs from wallet state
         const availableInputs = await extractUtxosForFeeBumping(
           transaction,
-          walletState,
+          depositNodes,
+          changeNodes,
           blockchainClient,
         );
 
@@ -109,16 +110,45 @@ export const useRBF = () => {
           );
         }
         // Find the change output index
-        const changeIndex = getChangeOutputIndex(transaction, walletState);
+        const changeIndex = getChangeOutputIndex(
+          transaction,
+          depositNodes,
+          changeNodes,
+        );
+
         // Create accelerated RBF transaction options
         const scriptType = getScriptType();
 
         // We need either a change index or a change address
-        if (
-          changeIndex === undefined &&
-          !overrideChangeAddress &&
-          !changeAddress
-        ) {
+        if (changeIndex === undefined && !changeAddress && !changeAddress) {
+          throw new Error(
+            "Could not determine change output. Please provide a change address.",
+          );
+        }
+
+        // We determine change address with a clear priority:
+        // 1. User-provided change address from the RBF form
+        // 2. Change index from transaction analysis
+        // 3. Default wallet change address
+        let changeOptions = {};
+
+        if (userProvidedChangeAddress) {
+          // Priority 1: User explicitly provided a change address in the RBF form
+          console.log(
+            "Using user-provided change address:",
+            userProvidedChangeAddress,
+          );
+          changeOptions = { changeAddress: userProvidedChangeAddress };
+        } else if (changeIndex !== undefined) {
+          // Priority 3: Use detected change index from transaction
+          console.log("Using detected change index:", changeIndex);
+          changeOptions = { changeIndex };
+          // Priority 2: Use the wallet's default change address
+        } else if (changeAddress) {
+          console.log("Using default wallet change address:", changeAddress);
+          changeOptions = { changeAddress };
+        } else {
+          // No valid change destination found
           throw new Error(
             "Could not determine change output. Please provide a change address.",
           );
@@ -135,13 +165,7 @@ export const useRBF = () => {
           totalSigners,
           scriptType,
           dustThreshold: "546", // Default dust threshold
-          // Either use the found change index or provide a change address
-          ...(changeIndex !== undefined ? { changeIndex } : {}),
-          ...(overrideChangeAddress
-            ? { changeAddress: overrideChangeAddress }
-            : changeAddress
-              ? { changeAddress }
-              : {}),
+          ...changeOptions,
           strict: false, // Less strict validation for better user experience
           fullRBF: false, // Only use signals RBF by default
           reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
@@ -169,7 +193,8 @@ export const useRBF = () => {
       addressType,
       requiredSigners,
       totalSigners,
-      walletState,
+      depositNodes,
+      changeNodes,
       changeAddress,
       getScriptType,
     ],
@@ -217,7 +242,8 @@ export const useRBF = () => {
         // Extract UTXOs from wallet state
         const availableInputs = await extractUtxosForFeeBumping(
           transaction,
-          walletState,
+          depositNodes,
+          changeNodes,
           blockchainClient,
         );
 
@@ -265,8 +291,9 @@ export const useRBF = () => {
     [
       dispatch,
       network,
-      walletState,
       requiredSigners,
+      depositNodes,
+      changeNodes,
       totalSigners,
       getScriptType,
     ],
