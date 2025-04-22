@@ -101,6 +101,7 @@
     "@caravan/descriptors": "^0.1.1",
     "@caravan/eslint-config": "*",
     "@caravan/psbt": "*",
+    "@caravan/fees": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
     "@emotion/react": "^11.10.6",
