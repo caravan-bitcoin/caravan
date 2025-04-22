@@ -1,0 +1,30 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "module": "es2020",
+      "target": "es2020",
+      "allowJs": false,
+      "declaration": true,
+      "emitDeclarationOnly": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "noEmit": false,
+      "outDir": "temp",
+      "baseUrl": ".",
+    "paths": {
+        "src/*": ["packages/caravan-psbt/src/*"]
+    }
+    },
+    "include": ["packages/**/index.ts"],
+    "exclude": [
+      "packages/eslint-config",
+      "packages/typescript-config",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.js",
+      "**/node_modules",
+      "docs",
+      "temp"
+    ]
+  }
+  
