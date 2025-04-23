@@ -1,6 +1,5 @@
 import BigNumber from "bignumber.js";
 
-import { FeeValidationError } from "./types";
 import {
   validateFeeRate,
   validateFee,
@@ -12,6 +11,7 @@ import {
 import { P2SH } from "./p2sh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
+import { FeeValidationError } from "./types";
 
 describe("fees", () => {
   describe("validateFeeRate", () => {

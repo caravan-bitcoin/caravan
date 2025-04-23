@@ -5,7 +5,6 @@
 
 import BigNumber from "bignumber.js";
 
-import { FeeValidationError } from "./types";
 
 import { P2SH, estimateMultisigP2SHTransactionVSize } from "./p2sh";
 import {
@@ -13,6 +12,7 @@ import {
   estimateMultisigP2SH_P2WSHTransactionVSize,
 } from "./p2sh_p2wsh";
 import { P2WSH, estimateMultisigP2WSHTransactionVSize } from "./p2wsh";
+import { FeeValidationError } from "./types";
 import { ZERO } from "./utils";
 
 // Without this, BigNumber will report strings as exponentials. 16 places covers
