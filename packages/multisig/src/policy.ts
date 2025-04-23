@@ -11,7 +11,8 @@ import {
   validateExtendedPublicKeyForNetwork,
 } from "@caravan/bitcoin";
 import { WalletPolicy } from "ledger-bitcoin";
-import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
+
+import { MultisigWalletConfig } from "@caravan/multisig";
 
 export class KeyOrigin {
   readonly xfp: string;
@@ -94,7 +95,7 @@ export const getPolicyTemplateFromWalletConfig = (
   walletConfig: MultisigWalletConfig
 ) => {
   let scriptType: MultisigScriptType;
-  let requiredSigners = Number(walletConfig.quorum.requiredSigners);
+  const requiredSigners = Number(walletConfig.quorum.requiredSigners);
   let nested = false;
   switch (walletConfig.addressType) {
     case P2SH:
@@ -216,7 +217,7 @@ export class MultisigWalletPolicy {
 
 export const validateMultisigPolicyScriptType = (template) => {
   const acceptedScripts = ["sh", "wsh"];
-  let hasMatch = acceptedScripts.some((script) => template.startsWith(script));
+  const hasMatch = acceptedScripts.some((script) => template.startsWith(script));
 
   if (!hasMatch)
     throw new Error(
