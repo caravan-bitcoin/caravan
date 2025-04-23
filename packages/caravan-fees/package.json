@@ -37,10 +37,8 @@
   },
   "devDependencies": {
     "prettier": "^3.2.5",
-    "tsup": "^7.2.0",
-    "typescript": "^4.9.5",
     "@caravan/typescript-config": "*",
-    "esbuild-plugin-polyfill-node": "^0.3.0"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@caravan/bitcoin": "*",

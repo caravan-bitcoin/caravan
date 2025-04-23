@@ -1,11 +1,15 @@
 import { defineConfig } from "tsup";
-import { polyfillNode } from "esbuild-plugin-polyfill-node";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
+import { provideSelf } from "@caravan/build-plugins";
 
 export default defineConfig({
   esbuildPlugins: [
-    polyfillNode({
-      globals: { process: false },
+    nodeModulesPolyfillPlugin({
+      modules: {
+        process: false,
+      },
     }),
+    provideSelf(),
   ],
   // make sure that the bitbox-api package is not bundled
   external: ["bitbox-api"],

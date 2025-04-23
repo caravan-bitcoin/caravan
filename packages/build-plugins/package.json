@@ -1,0 +1,27 @@
+{
+  "name": "@caravan/build-plugins",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "devDependencies": {
+    "@caravan/typescript-config": "*",
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  }
+}
