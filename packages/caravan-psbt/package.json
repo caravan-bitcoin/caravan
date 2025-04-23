@@ -40,19 +40,19 @@
     "psbt"
   ],
   "dependencies": {
+    "@caravan/bip32": "*",
     "@caravan/bitcoin": "*",
     "bignumber.js": "^8.1.1",
     "bip174": "^2.1.1",
     "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",
     "buffer": "^6.0.3",
     "bufio": "^1.2.1",
-    "esbuild-plugin-polyfill-node": "^0.3.0",
     "uint8array-tools": "^0.0.7"
   },
   "author": "unchained capital",
   "license": "ISC",
   "devDependencies": {
-    "@caravan/bip32": "*",
+    "@caravan/build-plugins": "*",
     "@caravan/eslint-config": "*",
     "@caravan/multisig": "*",
     "@caravan/typescript-config": "*",
@@ -60,8 +60,7 @@
     "lodash": "^4.17.21",
     "react-silence": "^1.0.4",
     "ts-node": "^10.9.2",
-    "tsup": "^7.2.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "peerDependencies": {
     "@caravan/bitcoin": "0.3.1"
