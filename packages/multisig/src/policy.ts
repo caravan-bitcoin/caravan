@@ -95,7 +95,7 @@ export const getPolicyTemplateFromWalletConfig = (
   walletConfig: MultisigWalletConfig
 ) => {
   let scriptType: MultisigScriptType;
-  const requiredSigners = Number(walletConfig.quorum.requiredSigners);
+  let requiredSigners = Number(walletConfig.quorum.requiredSigners);
   let nested = false;
   switch (walletConfig.addressType) {
     case P2SH:
@@ -217,7 +217,7 @@ export class MultisigWalletPolicy {
 
 export const validateMultisigPolicyScriptType = (template) => {
   const acceptedScripts = ["sh", "wsh"];
-  const hasMatch = acceptedScripts.some((script) => template.startsWith(script));
+  let hasMatch = acceptedScripts.some((script) => template.startsWith(script));
 
   if (!hasMatch)
     throw new Error(
