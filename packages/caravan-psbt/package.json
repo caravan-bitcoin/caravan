@@ -60,7 +60,7 @@
     "lodash": "^4.17.21",
     "react-silence": "^1.0.4",
     "ts-node": "^10.9.2",
-    "tsup": "^7.2.0",
+    "tsup": "^8.4.0",
     "typescript": "^5.2.2"
   },
   "peerDependencies": {
