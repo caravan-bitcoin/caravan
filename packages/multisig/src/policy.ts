@@ -56,7 +56,7 @@ export class KeyOrigin {
   static fromString(str: string, _network?: Network) {
     let network = _network;
     const match = str.match(
-      /^\[([0-9a-f]{8})((?:\/[0-9]+'?)+)\](((?:x|t)pub)[A-Za-z0-9]+)$/
+      /^\[([0-9a-f]{8})((?:\/[0-9]+'?)+)\](((?:x|t)pub)[A-Za-z0-9]+)$/,
     );
     if (!match) {
       throw new Error("Invalid key origin string");
@@ -92,7 +92,7 @@ export type MultisigScriptType = "sh" | "wsh" | "tr";
  * @returns {string} valid policy template string
  */
 export const getPolicyTemplateFromWalletConfig = (
-  walletConfig: MultisigWalletConfig
+  walletConfig: MultisigWalletConfig,
 ) => {
   let scriptType: MultisigScriptType;
   const requiredSigners = Number(walletConfig.quorum.requiredSigners);
@@ -126,7 +126,7 @@ export const getPolicyTemplateFromWalletConfig = (
 };
 
 export const getKeyOriginsFromWalletConfig = (
-  walletConfig: MultisigWalletConfig
+  walletConfig: MultisigWalletConfig,
 ): KeyOrigin[] => {
   return walletConfig.extendedPublicKeys.map((key): KeyOrigin => {
     const xpub = ExtendedPublicKey.fromBase58(key.xpub);
@@ -164,7 +164,7 @@ export class MultisigWalletPolicy {
     // abbreviated when translating to a ledger policy?
     if (name.length > 64) {
       console.warn(
-        `Wallet policy name too long. (${name.length}) greater than max of 64 chars.`
+        `Wallet policy name too long. (${name.length}) greater than max of 64 chars.`,
       );
       this.name = `${name.slice(0, 61)}...`.trim();
     } else {
@@ -179,7 +179,7 @@ export class MultisigWalletPolicy {
     const totalSignerCount = getTotalSignerCountFromTemplate(template);
     if (totalSignerCount !== keyOrigins.length) {
       throw new Error(
-        `Expected ${totalSignerCount} key origins but ${keyOrigins.length} were passed`
+        `Expected ${totalSignerCount} key origins but ${keyOrigins.length} were passed`,
       );
     }
 
@@ -217,12 +217,14 @@ export class MultisigWalletPolicy {
 
 export const validateMultisigPolicyScriptType = (template) => {
   const acceptedScripts = ["sh", "wsh"];
-  const hasMatch = acceptedScripts.some((script) => template.startsWith(script));
+  const hasMatch = acceptedScripts.some((script) =>
+    template.startsWith(script),
+  );
 
   if (!hasMatch)
     throw new Error(
       `Invalid script type in template ${template}. Only script types \
-${acceptedScripts.join(", ")} accepted`
+${acceptedScripts.join(", ")} accepted`,
     );
 };
 
@@ -231,7 +233,7 @@ export const validateMultisigPolicyKeys = (template) => {
 
   if (!requiredSigners)
     throw new Error(
-      "Expected to find a required number of signers from the quorum"
+      "Expected to find a required number of signers from the quorum",
     );
 
   const count = getTotalSignerCountFromTemplate(template);
@@ -239,7 +241,7 @@ export const validateMultisigPolicyKeys = (template) => {
   if (!count || count < requiredSigners) {
     throw new Error(
       `Required signers in policy ${template} is ` +
-        `${requiredSigners} but found only ${count} total keys`
+        `${requiredSigners} but found only ${count} total keys`,
     );
   }
 };
