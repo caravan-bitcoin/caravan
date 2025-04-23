@@ -5,8 +5,8 @@
 
 import BigNumber from "bignumber.js";
 
-import { ZERO } from "./utils";
 import { validateAddress } from "./addresses";
+import { ZERO } from "./utils";
 
 /**
  * Represents an output in a transaction.
