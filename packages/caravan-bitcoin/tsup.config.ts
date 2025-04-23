@@ -1,6 +1,11 @@
 import { defineConfig } from "tsup";
-import { polyfillNode } from "esbuild-plugin-polyfill-node";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
+import { provideNavigator, provideSelf } from "@caravan/build-plugins";
 
 export default defineConfig({
-  esbuildPlugins: [polyfillNode()],
+  esbuildPlugins: [
+    nodeModulesPolyfillPlugin(),
+    provideSelf(),
+    provideNavigator(),
+  ],
 });
