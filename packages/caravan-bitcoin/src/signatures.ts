@@ -7,8 +7,6 @@ import BigNumber from "bignumber.js";
 import bip66 from "bip66";
 import { ECPair, Transaction } from "bitcoinjs-lib-v5";
 
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
-import { P2WSH } from "./p2wsh";
 import {
   multisigAddressType,
   multisigRedeemScript,
@@ -16,6 +14,8 @@ import {
   multisigPublicKeys,
   multisigTotalSigners,
 } from "./multisig";
+import { P2SH_P2WSH } from "./p2sh_p2wsh";
+import { P2WSH } from "./p2wsh";
 import { unsignedMultisigTransaction } from "./transactions";
 
 /**
