@@ -1,6 +1,6 @@
 {
   "name": "@caravan/bip32",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "unchained capital",
   "description": "Package for working with bip32 and derivative objects like extended public keys",
   "engines": {
