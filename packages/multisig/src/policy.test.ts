@@ -4,7 +4,7 @@
 
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 
-import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
+import { BraidDetails, MultisigWalletConfig } from "./types";
 
 import { POLICY_FIXTURE } from "./fixtures";
 import {
