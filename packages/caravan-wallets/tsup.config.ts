@@ -1,15 +1,19 @@
 import { defineConfig } from "tsup";
 import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
-import { provideSelf } from "@caravan/build-plugins";
+import { provideNavigator, provideSelf } from "@caravan/build-plugins";
 
 export default defineConfig({
   esbuildPlugins: [
     nodeModulesPolyfillPlugin({
       modules: {
         process: false,
+        util: true,
+        buffer: true,
+        crypto: true,
       },
     }),
     provideSelf(),
+    provideNavigator(),
   ],
   // make sure that the bitbox-api package is not bundled
   external: ["bitbox-api"],
