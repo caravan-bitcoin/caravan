@@ -7,6 +7,7 @@ export default defineConfig({
     nodeModulesPolyfillPlugin({
       modules: {
         process: false,
+        navigator: true,
       },
     }),
     provideSelf(),
