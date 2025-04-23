@@ -12,7 +12,7 @@ import {
 } from "@caravan/bitcoin";
 import { WalletPolicy } from "ledger-bitcoin";
 
-import { MultisigWalletConfig } from "@caravan/multisig";
+import { MultisigWalletConfig } from "./types";
 
 export class KeyOrigin {
   readonly xfp: string;
