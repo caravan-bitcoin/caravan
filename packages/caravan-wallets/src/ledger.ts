@@ -53,7 +53,8 @@ import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeT
 import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
 import { DeviceError, MultisigWalletConfig } from "./types";
-import { MultisigWalletPolicy } from "./policy";
+import { MultisigWalletPolicy } from "@caravan/multisig";
+
 
 /**
  * Constant defining Ledger interactions.

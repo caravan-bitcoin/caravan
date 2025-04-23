@@ -651,5 +651,4 @@ export * from "./custom";
 export * from "./hermit";
 export * from "./ledger";
 export * from "./trezor";
-export * from "./policy";
 export * from "./types";

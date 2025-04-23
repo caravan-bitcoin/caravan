@@ -7,9 +7,9 @@ import {
   KeyOrigin,
   validateMultisigPolicyTemplate,
   getPolicyTemplateFromWalletConfig,
-  braidDetailsToWalletConfig,
   MultisigWalletPolicy,
 } from "./policy";
+import {braidDetailsToWalletConfig} from "./utils"
 import { POLICY_FIXTURE } from "./fixtures";
 import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
 
