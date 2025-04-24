@@ -987,7 +987,6 @@ export class PsbtV2 extends PsbtV2Maps {
 
     this.inputMaps.push(map);
     this.updateGlobalInputCount();
-    
   }
 
   public addOutput({
@@ -1044,7 +1043,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
 
     this.outputMaps.push(map);
-    this.updateGlobalOutputCount();    
+    this.updateGlobalOutputCount();
   }
 
   /**
@@ -1068,7 +1067,6 @@ export class PsbtV2 extends PsbtV2Maps {
     const newInputs = this.inputMaps.filter((_, i) => i !== index);
     this.inputMaps = newInputs;
     this.updateGlobalInputCount();
-
   }
 
   /**
@@ -1427,7 +1425,7 @@ export class PsbtV2 extends PsbtV2Maps {
     bw.writeU8(this.inputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
   }
-  
+
   /**
    * Updates the PSBT_GLOBAL_OUTPUT_COUNT field in the global map.
    */
