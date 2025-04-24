@@ -12,7 +12,7 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "istanbul",
-      reporter: ["text", "json"],
+      reporter: ["text"],
     },
   },
 });
