@@ -3,7 +3,7 @@
  * output and amounts.
  */
 
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 
 import { validateAddress } from "./addresses";
 import { ZERO } from "./utils";
@@ -82,7 +82,7 @@ const DUST_LIMIT_SATS = "546";
 export function validateOutputAmount(
   amountSats,
   maxSats?: number | string,
-  minSats: number | string | BigNumber = DUST_LIMIT_SATS
+  minSats: number | string | BigNumber = DUST_LIMIT_SATS,
 ) {
   let a, its;
   try {
