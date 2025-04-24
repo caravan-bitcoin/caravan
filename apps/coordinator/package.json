@@ -110,7 +110,7 @@
     "@mui/styles": "^5.5.0",
     "@trezor/transport": "^1.1.15",
     "@vitejs/plugin-react": "^3.1.0",
-    "axios": "^1.7.4",
+    "axios": "^1.8.2",
     "base58check": "^2.0.0",
     "bignumber.js": "^9.0.0",
     "bip32": "^2.0.4",
