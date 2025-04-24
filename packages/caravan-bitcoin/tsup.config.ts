@@ -4,11 +4,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   esbuildPlugins: [
-    nodeModulesPolyfillPlugin({
-      globals: {
-        Buffer: true,
-      },
-    }),
+    nodeModulesPolyfillPlugin(),
     provideSelf(),
     provideNavigator(),
   ],

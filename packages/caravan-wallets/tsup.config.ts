@@ -9,9 +9,7 @@ export default defineConfig({
         process: false,
         util: true,
         crypto: true,
-      },
-      globals: {
-        Buffer: true,
+        buffer: true,
       },
     }),
     provideSelf(),
