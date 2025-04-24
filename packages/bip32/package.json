@@ -28,7 +28,7 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest watch",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run"
   },
@@ -40,9 +40,6 @@
   "devDependencies": {
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
-    "@inrupt/jest-jsdom-polyfills": "^3.2.1",
-    "@jest/globals": "^29.7.0",
-    "@types/jest": "^29.5.12",
     "@types/node": "^22.14.0",
     "eslint": "^8.56.0",
     "eslint-plugin-import": "^2.30.0",
