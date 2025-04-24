@@ -6,7 +6,7 @@
     "build:coordinator": "turbo build --filter=caravan-coordinator",
     "changeset": "changeset",
     "ci": "turbo run build lint test",
-    "dev": "turbo dev",
+    "dev": "turbo dev --concurrency 15",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "gen": "turbo gen run",
     "lint": "turbo lint",
@@ -27,6 +27,7 @@
     "prettier": "^3.1.1",
     "tsup": "^8.0.0",
     "turbo": "^2.0.3",
+    "vite-plugin-node-polyfills": "^0.23.0",
     "vitest": "^3.1.1"
   },
   "dependencies": {
