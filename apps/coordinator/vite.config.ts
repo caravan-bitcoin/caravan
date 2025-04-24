@@ -21,7 +21,9 @@ export default defineConfig({
     wasm(),
     react(),
     nodePolyfills({
-      protocolImports: true,
+      globals: {
+        Buffer: true,
+      },
     }),
   ],
   build: {
