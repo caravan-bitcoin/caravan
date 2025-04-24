@@ -7,7 +7,7 @@ import {
 
 /**
  * Loads a PSBT from a string or buffer, handling both PSBTv0 and PSBTv2 formats.
- * Uses only functionality from the @caravan/psbt package.
+ * Uses only functionality from the @caravan/psbt package removing dependency on the outdated use of @caravan/bitcoin
  *
  * @param {string|Buffer} psbtText - The PSBT as a string or buffer
  * @param {string} network - The Bitcoin network (mainnet, testnet, etc.)
