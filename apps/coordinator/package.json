@@ -63,7 +63,6 @@
     "standard-version": "^9.0.0",
     "typescript": "^5.0.2",
     "vite": "6.3.3",
-    "vite-plugin-node-polyfills": "^0.23.0",
     "vite-plugin-wasm": "^3.3.0"
   },
   "scripts": {
