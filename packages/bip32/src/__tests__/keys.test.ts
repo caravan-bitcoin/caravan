@@ -35,6 +35,22 @@ describe("getMaskedKeyOrigin", () => {
       rootFingerprint: "86bd941f",
     });
   });
+  it("should handle an xpub with depth 1", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth1Path = "m/45'";
+    const depth1Node = nodes[depth1Path];
+    if (!depth1Node) throw new Error("Depth 1 node not found in fixtures");
+    const masked = getMaskedKeyOrigin(depth1Node.tpub);
+    expect(masked).toEqual({
+      xpub: depth1Node.tpub,
+      bip32Path: "m/0", 
+      rootFingerprint: expect.any(String),
+    });
+  });
+  it("should throw an error for an invalid xpub", () => {
+    const invalidXpub = "invalid-xpub-str";
+    expect(() => getMaskedKeyOrigin(invalidXpub)).toThrow();
+  })
 });
 
 describe("isValidChildPubKey", () => {
@@ -132,6 +148,17 @@ describe("getRandomChildXpub", () => {
       rootFingerprint: child.fingerprint,
     });
     expect(mockPaths.secureSecretPath).toHaveBeenCalledWith(depth);
+  });
+
+  it("should handle mixed hardened/non-hardened paths", async () => {
+    const mixedOrigin: KeyOrigin = {
+      xpub: parent.xpub,
+      bip32Path: "m/44'/0/0",
+      rootFingerprint: parent.fingerprint,
+    };
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
+    const result = await getRandomChildXpub(mixedOrigin, 2);
+    expect(result.bip32Path).toBe("m/44'/0/0/0/0");
   });
 });
 

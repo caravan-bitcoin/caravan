@@ -11,6 +11,18 @@ describe("secureRandomInt", () => {
     }
   });
 
+  it("should return min when min equals max", () => {
+    const result = secureRandomInt(42, 42);
+    expect(result).toBe(42);
+  });
+
+  it("should handle maximum integer bounds", () => {
+    const max = 2 ** 31 - 1;
+    const result = secureRandomInt(max - 10, max);
+    expect(result).toBeGreaterThanOrEqual(max - 10);
+    expect(result).toBeLessThanOrEqual(max);
+  });
+
   it("returns a number within the default range when no arguments are provided", () => {
     const DEFAULT_MAX = 2 ** 31 - 1;
     for (let i = 0; i < 100; i++) {
