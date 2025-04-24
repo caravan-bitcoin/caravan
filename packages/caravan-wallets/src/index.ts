@@ -55,7 +55,7 @@ import {
   LegacyInput,
   LegacyOutput,
   BraidDetails,
-} from "@caravan/multisig";
+} from "./policy";
 import { Network } from "@caravan/bitcoin";
 import {
   convertLegacyInput,
@@ -652,3 +652,4 @@ export * from "./hermit";
 export * from "./ledger";
 export * from "./trezor";
 export * from "./types";
+export * from "./policy";
