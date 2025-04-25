@@ -6,17 +6,19 @@
  * @module keys
  */
 
-import { ECPair } from "bitcoinjs-lib-v5";
+import assert from "assert";
+
 import * as bip32 from "bip32";
+import { ECPair } from "bitcoinjs-lib-v5";
 import bs58check from "bs58check";
 import { Struct, BufferWriter, BufferReader } from "bufio";
-import assert from "assert";
-import { validateHex, toHexString, hash160 } from "./utils";
-import { bip32PathToSequence, validateBIP32Path } from "./paths";
+
 import { Network, networkData } from "./networks";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
+import { bip32PathToSequence, validateBIP32Path } from "./paths";
 import { BitcoinNetwork, KeyPrefix, KeyVersion } from "./types";
+import { validateHex, toHexString, hash160 } from "./utils";
 
 export const EXTENDED_PUBLIC_KEY_VERSIONS = {
   xpub: "0488b21e",
