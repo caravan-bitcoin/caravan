@@ -1,7 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-
+// @vitest-environment jsdom
 import {
   ROOT_FINGERPRINT,
   TEST_FIXTURES,
@@ -325,7 +322,12 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/1'/100'",
       };
-      const interaction = psbtInteractionBuilder(tx, keyDetails, false, tx.braidDetails.addressType);
+      const interaction = psbtInteractionBuilder(
+        tx,
+        keyDetails,
+        false,
+        tx.braidDetails.addressType
+      );
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));
@@ -343,7 +345,12 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/0'/100'",
       };
-      const interaction = psbtInteractionBuilder(tx, keyDetails, true, tx.braidDetails.addressType);
+      const interaction = psbtInteractionBuilder(
+        tx,
+        keyDetails,
+        true,
+        tx.braidDetails.addressType
+      );
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));

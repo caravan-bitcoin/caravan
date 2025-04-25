@@ -1,7 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-
+// @vitest-environment jsdom
 import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
