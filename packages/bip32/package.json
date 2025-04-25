@@ -31,7 +31,8 @@
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
-    "test": "vitest run --coverage",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run"
   },
