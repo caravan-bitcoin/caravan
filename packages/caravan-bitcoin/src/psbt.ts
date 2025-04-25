@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import { Psbt, Transaction } from "bitcoinjs-lib-v5";
 import { reverseBuffer } from "bitcoinjs-lib-v5/src/bufferutils.js";
 

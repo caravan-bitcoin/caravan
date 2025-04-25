@@ -3,7 +3,7 @@
  * multisig transaction signatures.
  */
 
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import bip66 from "bip66";
 import { ECPair, Transaction } from "bitcoinjs-lib-v5";
 

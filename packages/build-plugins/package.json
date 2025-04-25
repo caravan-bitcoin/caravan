@@ -16,12 +16,12 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.3"
   },
   "devDependencies": {
     "@caravan/typescript-config": "*",
     "@types/node": "^20.11.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.3",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   }
