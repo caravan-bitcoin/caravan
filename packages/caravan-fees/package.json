@@ -19,6 +19,7 @@
     "dev": "npm run build -- --watch",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src"

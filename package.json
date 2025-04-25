@@ -22,6 +22,7 @@
     "@caravan/typescript-config": "*",
     "@changesets/changelog-github": "^0.5.0",
     "@changesets/cli": "^2.27.1",
+    "@vitest/coverage-istanbul": "^3.1.2",
     "esbuild": "^0.25.0",
     "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "prettier": "^3.1.1",

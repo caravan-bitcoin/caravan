@@ -28,8 +28,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
+    "test": "vitest run src",
+    "test:coverage": "vitest run src --coverage",
+    "test:watch": "vitest src watch",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix src/",
     "ci": "npm run lint && npm run test",

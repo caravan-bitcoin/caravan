@@ -3,8 +3,7 @@
  * transaction fees.
  */
 
-import BigNumber from "bignumber.js";
-
+import { BigNumber } from "bignumber.js";
 
 import { P2SH, estimateMultisigP2SHTransactionVSize } from "./p2sh";
 import {
