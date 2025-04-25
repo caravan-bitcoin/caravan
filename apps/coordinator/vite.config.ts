@@ -20,6 +20,9 @@ export default defineConfig({
   plugins: [
     nodePolyfills({
       protocolImports: true,
+      globals: {
+        Buffer: true,
+      },
     }),
     wasm(),
     react(),
@@ -34,7 +37,6 @@ export default defineConfig({
         }
         warn(warning);
       },
-      external: ["buffer"],
     },
   },
   define: {
