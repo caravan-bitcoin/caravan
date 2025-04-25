@@ -35,17 +35,15 @@
     "test:watch": "jest --watch src",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
-  "dependencies": {
-    "@caravan/bitcoin": "*",
-    "ledger-bitcoin": "^0.2.0"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@caravan/bitcoin": "*",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
     "@types/jest": "^29.5.12",
-    "esbuild-plugin-polyfill-node": "^0.3.0",
     "jest": "^29.4.1",
     "jsdom": "24.0.0",
+    "ledger-bitcoin": "^0.2.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "tsup": "^8.0.2",

@@ -1,0 +1,6 @@
+import { defineConfig } from 'tsup';
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
+
+export default defineConfig({
+  esbuildPlugins: [nodeModulesPolyfillPlugin()],
+});
