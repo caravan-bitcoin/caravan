@@ -27,9 +27,8 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
-import { BitcoinNetwork } from "@caravan/bitcoin";
-import { WalletConfigKeyDerivation } from "./types";
+import { P2SH, P2SH_P2WSH, P2WSH, BitcoinNetwork } from "@caravan/bitcoin";
+import { WalletConfigKeyDerivation } from "@caravan/multisig";
 import {
   convertLegacyInput,
   convertLegacyOutput,

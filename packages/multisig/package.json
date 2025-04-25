@@ -17,9 +17,9 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "description": "A utility library for handling data related to caravan multisig wallet configurations",
@@ -32,8 +32,11 @@
     "test:watch": "jest --watch src",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand"
   },
-  "devDependencies": {
+  "dependencies": {
     "@caravan/bitcoin": "*",
+    "ledger-bitcoin": "^0.2.0"
+  },
+  "devDependencies": {
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
     "@types/jest": "^29.5.12",
