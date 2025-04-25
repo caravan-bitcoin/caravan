@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { MultisigWalletConfig } from "@caravan/descriptors";
 import { getWalletFromDescriptor, getChecksum } from "@caravan/descriptors";
-import { KeyOrigin } from "@caravan/multisig";
+import { KeyOrigin } from "@caravan/wallets";
 import {
   setRequiredSigners,
   setTotalSigners,

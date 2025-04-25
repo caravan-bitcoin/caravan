@@ -1,5 +1,5 @@
 import { encodeDescriptors } from "@caravan/descriptors";
-import { KeyOrigin } from "@caravan/multisig";
+import { KeyOrigin } from "@caravan/wallets";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { getWalletConfig } from "../selectors/wallet";

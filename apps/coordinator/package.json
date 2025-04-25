@@ -99,7 +99,6 @@
     "@caravan/clients": "*",
     "@caravan/descriptors": "^0.1.1",
     "@caravan/eslint-config": "*",
-    "@caravan/multisig": "*",
     "@caravan/psbt": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
