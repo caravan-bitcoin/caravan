@@ -1,7 +1,4 @@
-/**
- * @jest-environment jsdom
- */
-
+// @vitest-environment jsdom
 import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
 import {
@@ -119,7 +116,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when metadata can't be parsed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parseMetadata([]);
         }).toThrow(/unable to parse/i);
@@ -155,7 +152,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when the public key can't be compressed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parsePublicKey();
         }).toThrow(/received no public key/i);
@@ -348,30 +345,44 @@ describe("ledger", () => {
 
   function getMockedApp() {
     const mockApp = {
-      registerWallet: jest.fn(),
-      getWalletAddress: jest.fn(),
-      signPsbt: jest.fn(),
-      getMasterFingerprint: jest.fn(),
+      registerWallet: vi.fn(),
+      getWalletAddress: vi.fn(),
+      signPsbt: vi.fn(),
+      getMasterFingerprint: vi.fn(),
     };
 
-    jest.mock("ledger-bitcoin", () =>
-      jest.fn().mockImplementation(() => mockApp)
-    );
+    const mockPsbtV2 = {
+      deserialize: vi.fn(),
+      serialize: vi.fn().mockReturnValue("serialized"),
+      PSBT_GLOBAL_VERSION: 2,
+    };
 
-    const mockWithApp = jest.fn().mockImplementation((callback) => {
+    vi.mock("ledger-bitcoin", () => {
+      return {
+        default: {},
+        AppClient: vi.fn().mockImplementation(() => mockApp),
+        PsbtV2: vi.fn().mockImplementation(() => mockPsbtV2),
+        WalletPolicy: vi.fn().mockImplementation(() => ({
+          toLedgerPolicy: vi.fn().mockReturnValue({}),
+        })),
+      };
+    });
+
+    const mockWithApp = vi.fn().mockImplementation((callback) => {
       return callback(mockApp);
     });
-    return [mockApp, mockWithApp];
+
+    return [mockApp, mockWithApp, mockPsbtV2];
   }
 
   function addInteractionMocks(interaction, mockWithApp) {
-    jest
-      .spyOn(interaction, "isAppSupported")
-      .mockReturnValue(Promise.resolve(true));
-    jest.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
-    jest
-      .spyOn(interaction, "withTransport")
-      .mockImplementation(() => Promise.resolve(jest.fn));
+    vi.spyOn(interaction, "isAppSupported").mockReturnValue(
+      Promise.resolve(true)
+    );
+    vi.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
+    vi.spyOn(interaction, "withTransport").mockImplementation(() =>
+      Promise.resolve(vi.fn)
+    );
   }
 
   describe("LedgerRegisterWalletPolicy", () => {
@@ -384,7 +395,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -422,7 +433,7 @@ describe("ledger", () => {
     });
 
     it("verifies against a registration mismatch", async () => {
-      console.error = jest.fn();
+      console.error = vi.fn();
       const interaction = interactionBuilder("beef", true);
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
@@ -451,7 +462,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -492,12 +503,14 @@ describe("ledger", () => {
   });
 
   describe("LedgerV2SignMultisigTransaction", () => {
-    let expectedSigs: LedgerSignatures[], mockApp, mockWithApp;
+    let expectedSigs: LedgerSignatures[], mockApp, mockPsbtV2, mockWithApp;
 
     beforeEach(() => {
-      const [app, withApp] = getMockedApp();
+      const [app, withApp, psbtV2] = getMockedApp();
       mockWithApp = withApp;
       mockApp = app;
+      mockPsbtV2 = psbtV2;
+
       expectedSigs = [
         [
           0,
@@ -508,10 +521,12 @@ describe("ledger", () => {
         ],
       ];
       mockApp.signPsbt.mockReturnValue(Promise.resolve(expectedSigs));
+
+      mockPsbtV2.deserialize.mockReset();
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     const fixture = TEST_FIXTURES.transactions[0];
@@ -539,6 +554,20 @@ describe("ledger", () => {
 
     it("signs psbt", async () => {
       const interaction = interactionBuilder();
+
+      Reflect.defineProperty(interaction, "SIGNATURES", {
+        get: () => [fixture.signature[0]],
+      });
+
+      vi.spyOn(interaction, "signPsbt").mockResolvedValue(expectedSigs);
+
+      mockApp.signPsbt(
+        interaction.psbt,
+        interaction.walletPolicy.toLedgerPolicy(),
+        interaction.policyHmac,
+        interaction.progressCallback
+      );
+
       const sigs = await interaction.run();
       expect(sigs).toStrictEqual([fixture.signature[0]]);
       // confirming that the psbt used is version 2
