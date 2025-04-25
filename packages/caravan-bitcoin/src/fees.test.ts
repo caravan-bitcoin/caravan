@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 
 import {
   validateFeeRate,
@@ -19,7 +19,7 @@ describe("fees", () => {
       BigNumber.DEBUG = true;
       const feeRateSatsPerVbyte = null;
       expect(checkFeeRateError(feeRateSatsPerVbyte)).toBe(
-        FeeValidationError.INVALID_FEE_RATE
+        FeeValidationError.INVALID_FEE_RATE,
       );
       expect(validateFeeRate(feeRateSatsPerVbyte)).toMatch(/invalid fee rate/i);
       BigNumber.DEBUG = false;
@@ -28,7 +28,7 @@ describe("fees", () => {
     it("should return an error and message for an unparseable fee rate", () => {
       const feeRateSatsPerVbyte = "foo";
       expect(checkFeeRateError(feeRateSatsPerVbyte)).toBe(
-        FeeValidationError.INVALID_FEE_RATE
+        FeeValidationError.INVALID_FEE_RATE,
       );
       expect(validateFeeRate(feeRateSatsPerVbyte)).toMatch(/invalid fee rate/i);
     });
@@ -36,10 +36,10 @@ describe("fees", () => {
     it("should return an error and message for a negative fee rate", () => {
       const feeRateSatsPerVbyte = -1;
       expect(checkFeeRateError(feeRateSatsPerVbyte)).toBe(
-        FeeValidationError.FEE_RATE_CANNOT_BE_NEGATIVE
+        FeeValidationError.FEE_RATE_CANNOT_BE_NEGATIVE,
       );
       expect(validateFeeRate(feeRateSatsPerVbyte)).toMatch(
-        /cannot be negative/i
+        /cannot be negative/i,
       );
     });
 
@@ -52,7 +52,7 @@ describe("fees", () => {
     it("should return an error and message when the fee rate is too high", () => {
       const feeRateSatsPerVbyte = 10000;
       expect(checkFeeRateError(feeRateSatsPerVbyte)).toBe(
-        FeeValidationError.FEE_RATE_TOO_HIGH
+        FeeValidationError.FEE_RATE_TOO_HIGH,
       );
       expect(validateFeeRate(feeRateSatsPerVbyte)).toMatch(/too high/i);
     });
@@ -72,7 +72,7 @@ describe("fees", () => {
       const feeSats = null;
       const inputsTotalSats = 1000000;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INVALID_FEE
+        FeeValidationError.INVALID_FEE,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(/invalid fee/i);
       BigNumber.DEBUG = false;
@@ -83,10 +83,10 @@ describe("fees", () => {
       const feeSats = 10000;
       const inputsTotalSats = null;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INVALID_INPUT_AMOUNT
+        FeeValidationError.INVALID_INPUT_AMOUNT,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(
-        /invalid total input amount/i
+        /invalid total input amount/i,
       );
       BigNumber.DEBUG = false;
     });
@@ -95,7 +95,7 @@ describe("fees", () => {
       const feeSats = "foo";
       const inputsTotalSats = 1000000;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INVALID_FEE
+        FeeValidationError.INVALID_FEE,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(/invalid fee/i);
     });
@@ -104,10 +104,10 @@ describe("fees", () => {
       const feeSats = 10000;
       const inputsTotalSats = "foo";
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INVALID_INPUT_AMOUNT
+        FeeValidationError.INVALID_INPUT_AMOUNT,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(
-        /invalid total input amount/i
+        /invalid total input amount/i,
       );
     });
 
@@ -115,10 +115,10 @@ describe("fees", () => {
       const feeSats = -1;
       const inputsTotalSats = 1000000;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.FEE_CANNOT_BE_NEGATIVE
+        FeeValidationError.FEE_CANNOT_BE_NEGATIVE,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(
-        /cannot be negative/i
+        /cannot be negative/i,
       );
     });
 
@@ -126,10 +126,10 @@ describe("fees", () => {
       const feeSats = 10000;
       const inputsTotalSats = -1;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INPUT_AMOUNT_MUST_BE_POSITIVE
+        FeeValidationError.INPUT_AMOUNT_MUST_BE_POSITIVE,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(
-        /must be positive/i
+        /must be positive/i,
       );
     });
 
@@ -137,10 +137,10 @@ describe("fees", () => {
       const feeSats = 10000;
       const inputsTotalSats = 0;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.INPUT_AMOUNT_MUST_BE_POSITIVE
+        FeeValidationError.INPUT_AMOUNT_MUST_BE_POSITIVE,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(
-        /must be positive/i
+        /must be positive/i,
       );
     });
 
@@ -155,7 +155,7 @@ describe("fees", () => {
       const feeSats = 2500001;
       const inputsTotalSats = 10000000;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.FEE_TOO_HIGH
+        FeeValidationError.FEE_TOO_HIGH,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(/too high/i);
     });
@@ -164,7 +164,7 @@ describe("fees", () => {
       const feeSats = 100001;
       const inputsTotalSats = 100000;
       expect(checkFeeError(feeSats, inputsTotalSats)).toBe(
-        FeeValidationError.FEE_TOO_HIGH
+        FeeValidationError.FEE_TOO_HIGH,
       );
       expect(validateFee(feeSats, inputsTotalSats)).toMatch(/too high/i);
     });

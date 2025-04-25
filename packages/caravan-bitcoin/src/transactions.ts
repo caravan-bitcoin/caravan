@@ -5,7 +5,7 @@
 
 import assert from "assert";
 
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import {
   TransactionBuilder,
   Psbt,
@@ -59,7 +59,7 @@ export function unsignedMultisigTransaction(network, inputs, outputs) {
     const output = outputs[outputIndex];
     transactionBuilder.addOutput(
       output.address,
-      new BigNumber(output.amountSats).toNumber()
+      new BigNumber(output.amountSats).toNumber(),
     );
   }
   return transactionBuilder.buildIncomplete();
@@ -75,7 +75,7 @@ export function unsignedMultisigPSBT(
   network,
   inputs,
   outputs,
-  includeGlobalXpubs = false
+  includeGlobalXpubs = false,
 ) {
   const multisigInputError = validateMultisigInputs(inputs, true);
   assert(!multisigInputError.length, multisigInputError);
@@ -124,7 +124,7 @@ export function unsignedMultisigPSBT(
   }
 
   const psbtOutputs = outputs.map((output) =>
-    psbtOutputFormatter({ ...output })
+    psbtOutputFormatter({ ...output }),
   );
   psbt.addOutputs(psbtOutputs);
   const txn = psbt.data.globalMap.unsignedTx.toBuffer().toString("hex");
@@ -151,12 +151,12 @@ export function signedMultisigTransaction(
   network: any,
   inputs: any[],
   outputs: any[],
-  transactionSignatures?: string[][]
+  transactionSignatures?: string[][],
 ) {
   const unsignedTransaction = unsignedMultisigTransaction(
     network,
     inputs,
-    outputs
+    outputs,
   ); // validates inputs & outputs
   if (!transactionSignatures || transactionSignatures.length === 0) {
     throw new Error("At least one transaction signature is required.");
@@ -168,10 +168,10 @@ export function signedMultisigTransaction(
         throw new Error(
           `Insufficient input signatures for transaction signature ${
             transactionSignatureIndex + 1
-          }: require ${inputs.length}, received ${transactionSignature.length}.`
+          }: require ${inputs.length}, received ${transactionSignature.length}.`,
         );
       }
-    }
+    },
   );
 
   const signedTransaction = Transaction.fromHex(unsignedTransaction.toHex()); // FIXME inefficient?
@@ -187,7 +187,7 @@ export function signedMultisigTransaction(
       throw new Error(
         `Insufficient signatures for input  ${
           inputIndex + 1
-        }: require ${requiredSignatures},  received ${inputSignatures.length}.`
+        }: require ${requiredSignatures},  received ${inputSignatures.length}.`,
       );
     }
 
@@ -211,7 +211,7 @@ export function signedMultisigTransaction(
       }
       if (inputSignaturesByPublicKey[publicKey]) {
         throw new Error(
-          `Duplicate signature for input ${inputIndex + 1}: ${inputSignature}`
+          `Duplicate signature for input ${inputIndex + 1}: ${inputSignature}`,
         );
       }
       inputSignaturesByPublicKey[publicKey] = inputSignature;
@@ -223,7 +223,7 @@ export function signedMultisigTransaction(
     const sortedSignatures = publicKeys
       .map((publicKey) => inputSignaturesByPublicKey[publicKey])
       .filter((signature) =>
-        signature ? signatureNoSighashType(signature) : signature
+        signature ? signatureNoSighashType(signature) : signature,
       ); // FIXME why not filter out the empty sigs?
 
     if (multisigAddressType(input.multisig) === P2WSH) {
@@ -279,7 +279,7 @@ export function signedMultisigTransaction(
 
 function multisigWitnessField(multisig, sortedSignatures) {
   const witness = [""].concat(
-    sortedSignatures.map((s) => signatureNoSighashType(s) + "01")
+    sortedSignatures.map((s) => signatureNoSighashType(s) + "01"),
   );
   const witnessScript = multisigWitnessScript(multisig);
   witness.push(scriptToHex(witnessScript));

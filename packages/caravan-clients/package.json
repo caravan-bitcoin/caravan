@@ -22,6 +22,7 @@
     "lint:fix": "eslint --fix src",
     "ci": "npm run lint && npm run test",
     "test": "vitest run src",
+    "test:coverage": "vitest run src --coverage",
     "test:watch": "vitest watch src"
   },
   "keywords": [

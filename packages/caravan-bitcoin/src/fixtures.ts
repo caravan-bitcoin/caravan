@@ -21,7 +21,7 @@
  * @module fixtures
  */
 
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 
 import { braidConfig } from "./braid";
 import { sortInputs } from "./inputs";
@@ -480,7 +480,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/0",
             pubkey: Buffer.from(
               "02a8513d9931896d5d3afc8063148db75d8851fd1fc41b1098ba2a6a766db563d4",
-              "hex"
+              "hex",
             ),
           },
           {
@@ -488,7 +488,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/0",
             pubkey: Buffer.from(
               "03938dd09bf3dd29ddf41f264858accfa40b330c98e0ed27caf77734fac00139ba",
-              "hex"
+              "hex",
             ),
           },
         ],
@@ -498,7 +498,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/1",
             pubkey: Buffer.from(
               "0221ee4400a394e44b78592463eb07c9bae0cc9c2b11081be97df15cd561124e19",
-              "hex"
+              "hex",
             ),
           },
           {
@@ -506,7 +506,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/1",
             pubkey: Buffer.from(
               "03f31364b009d8019be56fa2569f336362e3e2b6a809623d87ffbef634ca6e1f27",
-              "hex"
+              "hex",
             ),
           },
         ],
@@ -516,7 +516,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/48349",
             pubkey: Buffer.from(
               "0308e27264d2b28b2e56104b36e562f69414027574998a53674b5db28a649f0f38",
-              "hex"
+              "hex",
             ),
           },
           {
@@ -524,7 +524,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/48349",
             pubkey: Buffer.from(
               "037a911b48783ca769ae273ebe71d3a14d7af2301063c25564155e8764fa77c981",
-              "hex"
+              "hex",
             ),
           },
         ],
@@ -536,7 +536,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/0",
             pubkey: Buffer.from(
               "02a8513d9931896d5d3afc8063148db75d8851fd1fc41b1098ba2a6a766db563d4",
-              "hex"
+              "hex",
             ),
           },
           {
@@ -544,7 +544,7 @@ const BRAIDS = [
             path: "m/45'/1'/100'/0/0",
             pubkey: Buffer.from(
               "03938dd09bf3dd29ddf41f264858accfa40b330c98e0ed27caf77734fac00139ba",
-              "hex"
+              "hex",
             ),
           },
         ],
@@ -1287,7 +1287,7 @@ const MULTISIGS = MULTISIGS_BASE.map((test) => {
     test.network,
     test.type,
     2,
-    ...test.publicKeys
+    ...test.publicKeys,
   );
   braidAwareMultisig = {
     ...multisig,
@@ -1392,7 +1392,7 @@ function singleMultisigTransaction(test) {
 }
 
 const TRANSACTIONS = MULTISIGS.map((test) =>
-  singleMultisigTransaction(test)
+  singleMultisigTransaction(test),
 ).concat([
   // {
   //   ...selectFirstUTXOFromEach(MULTISIGS.filter((test) => test.network === TESTNET)),
