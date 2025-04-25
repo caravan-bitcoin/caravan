@@ -107,7 +107,10 @@ everything.
 
 (Checkout the README for caravan/descriptors to make sure you can build the wasm dependencies.)
 
+Install [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) and run below commands in your terminal.
+
 ```shell
+$ nvm use
 $ npm install turbo --global
 $ git clone https://github.com/caravan-bitcoin/caravan.git
 $ cd caravan
