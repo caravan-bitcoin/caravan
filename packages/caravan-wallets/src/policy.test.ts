@@ -3,16 +3,15 @@
  */
 
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
-
-import { POLICY_FIXTURE } from "./fixtures";
 import {
   KeyOrigin,
   validateMultisigPolicyTemplate,
   getPolicyTemplateFromWalletConfig,
+  braidDetailsToWalletConfig,
   MultisigWalletPolicy,
 } from "./policy";
-import { BraidDetails, MultisigWalletConfig } from "./types";
-import { braidDetailsToWalletConfig } from "./utils"
+import { POLICY_FIXTURE } from "./fixtures";
+import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
 
 describe("validateMultisigPolicyTemplate", () => {
   it("throws error if script type is not supported", () => {

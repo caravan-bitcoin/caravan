@@ -52,8 +52,8 @@ import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
 import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
 import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
-import { DeviceError } from "./types";
-import { MultisigWalletPolicy, MultisigWalletConfig } from "@caravan/multisig";
+import { DeviceError, MultisigWalletConfig } from "./types";
+import { MultisigWalletPolicy } from "./policy";
 
 /**
  * Constant defining Ledger interactions.
