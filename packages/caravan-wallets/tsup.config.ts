@@ -8,8 +8,8 @@ export default defineConfig({
       modules: {
         process: false,
         util: true,
-        buffer: true,
         crypto: true,
+        buffer: true,
       },
     }),
     provideSelf(),

@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
-    "axios": "^1.7.4",
+    "axios": "^1.8.2",
     "bignumber.js": "^9.1.2"
   }
 }

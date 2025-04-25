@@ -1,11 +1,14 @@
 {
   "name": "@caravan/multisig",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "author": "unchained capital",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
