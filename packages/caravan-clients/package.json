@@ -22,6 +22,7 @@
     "lint:fix": "eslint --fix src",
     "ci": "npm run lint && npm run test",
     "test": "vitest run src",
+    "test:coverage": "vitest run src --coverage",
     "test:watch": "vitest watch src"
   },
   "keywords": [
@@ -48,7 +49,7 @@
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
-    "axios": "^1.7.4",
+    "axios": "^1.8.2",
     "bignumber.js": "^9.1.2"
   }
 }

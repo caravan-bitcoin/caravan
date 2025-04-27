@@ -1,4 +1,5 @@
 {
+  "extends": "@caravan/typescript-config/base.json",
   "compilerOptions": {
     // Target latest version of ECMAScript.
     "target": "esnext",

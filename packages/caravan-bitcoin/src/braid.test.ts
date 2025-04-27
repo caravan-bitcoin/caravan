@@ -1,4 +1,3 @@
-import { TEST_FIXTURES } from "./fixtures";
 import {
   Braid,
   braidAddressType,
@@ -16,6 +15,7 @@ import {
   generatePublicKeysAtPath,
   validateBip32PathForBraid,
 } from "./braid";
+import { TEST_FIXTURES } from "./fixtures";
 
 const BRAIDS = TEST_FIXTURES.braids;
 const MULTISIGS = TEST_FIXTURES.multisigs;
