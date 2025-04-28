@@ -1,10 +1,11 @@
+import BigNumber from "bignumber.js";
+
+import { Network } from "./networks";
 import {
   validateOutputs,
   validateOutput,
   validateOutputAmount,
 } from "./outputs";
-import { Network } from "./networks";
-import BigNumber from "bignumber.js";
 
 describe("outputs", () => {
   const validAddress = "2NE1LH35XT4YrdnEebk5oKMmRpGiYcUvpNR";
