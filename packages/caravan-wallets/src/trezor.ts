@@ -40,7 +40,7 @@ import { translatePSBT } from "@caravan/psbt";
 import TrezorConnectDefault, {
   TrezorConnect as TrezorConnectType,
 } from "@trezor/connect-web";
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import {
