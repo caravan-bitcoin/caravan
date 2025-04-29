@@ -10,8 +10,8 @@
  * or `IndirectKeystoreInteraction`.
  */
 
-import Bowser from "bowser";
 import { signatureNoSighashType } from "@caravan/bitcoin";
+import Bowser from "bowser";
 
 /**
  * Constant representing a keystore which is unsupported due to the

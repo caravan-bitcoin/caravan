@@ -1,7 +1,6 @@
 import { BCUREncoder, BCURDecoder } from "./bcur";
-
-import * as vendorEncodeUR from "./vendor/bcur/encodeUR";
 import * as vendorDecodeUR from "./vendor/bcur/decodeUR";
+import * as vendorEncodeUR from "./vendor/bcur/encodeUR";
 
 describe("BCUREncoder", () => {
   describe("parts", () => {
