@@ -43,6 +43,7 @@ import TrezorConnectDefault, {
 import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
+import { MULTISIG_ROOT } from "./constants";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -51,12 +52,6 @@ import {
   ERROR,
 } from "./interaction";
 
-import { MULTISIG_ROOT } from "./index";
-
-/**
- * Constant defining Trezor interactions.
- */
-export const TREZOR = "trezor";
 
 /**
  * What's going on with this TrezorConnect import?

@@ -61,7 +61,6 @@ import { DeviceError, MultisigWalletConfig } from "./types";
 /**
  * Constant defining Ledger interactions.
  */
-export const LEDGER = "ledger";
 
 export const LEDGER_V2 = "ledger_v2";
 

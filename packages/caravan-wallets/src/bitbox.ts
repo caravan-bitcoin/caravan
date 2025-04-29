@@ -34,7 +34,6 @@ import { MultisigWalletConfig } from "./types";
 /**
  * Constant defining BitBox interactions.
  */
-export const BITBOX = "bitbox";
 
 // Callback for showing the BitBox pairing code. It returns a function to hide it again.
 export type TShowPairingCode = (pairingCode: string) => (() => void) | null;

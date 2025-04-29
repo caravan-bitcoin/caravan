@@ -17,7 +17,6 @@ import {
 import { version } from "../package.json";
 
 import {
-  BITBOX,
   BitBoxGetMetadata,
   BitBoxExportPublicKey,
   BitBoxExportExtendedPublicKey,
@@ -26,25 +25,23 @@ import {
   BitBoxSignMultisigTransaction,
 } from "./bitbox";
 import {
-  COLDCARD,
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
+import { BITBOX, COLDCARD, LEDGER, HERMIT, TREZOR } from "./constants";
 import {
   CUSTOM,
   CustomExportExtendedPublicKey,
   CustomSignMultisigTransaction,
 } from "./custom";
 import {
-  HERMIT,
   HermitExportExtendedPublicKey,
   HermitSignMultisigTransaction,
 } from "./hermit";
 import { UNSUPPORTED, UnsupportedInteraction } from "./interaction";
 import {
-  LEDGER,
   LEDGER_V2,
   LedgerGetMetadata,
   LedgerExportPublicKey,
@@ -56,7 +53,6 @@ import {
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
 import {
-  TREZOR,
   TrezorGetMetadata,
   TrezorExportPublicKey,
   TrezorExportExtendedPublicKey,
@@ -70,7 +66,6 @@ import {
  */
 export const VERSION: string = version;
 
-export const MULTISIG_ROOT = "m/45'";
 
 /**
  * Keystores which support direct interactions.
@@ -640,11 +635,12 @@ export function ConfigAdapter({
     default:
       return new UnsupportedInteraction({
         code: "unsupported",
-        text: "This keystore is not supported when translating external spend configuration files.",
+        text: "This keystore is not supported when translating external spend configuration files."
       });
   }
 }
 
+export * from "./constants";
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
@@ -655,3 +651,5 @@ export * from "./ledger";
 export * from "./trezor";
 export * from "./policy";
 export * from "./types";
+
+export { version } from "../package.json";

@@ -29,7 +29,6 @@ import {
   ERROR,
 } from "./interaction";
 
-export const HERMIT = "hermit";
 
 function commandMessage(data) {
   return {

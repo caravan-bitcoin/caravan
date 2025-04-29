@@ -37,7 +37,6 @@ import {
 } from "./interaction";
 import { WalletConfigKeyDerivation } from "./types";
 
-export const COLDCARD = "coldcard";
 // Our constants use 'P2SH-P2WSH', their file uses 'P2SH_P2WSH' :\
 export const COLDCARD_BASE_BIP32_PATHS = {
   "m/45'": P2SH,
