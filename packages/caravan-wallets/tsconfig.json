@@ -15,6 +15,7 @@
     "strict": true,
     // Import non-ES modules as default imports.
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "noImplicitAny": false,
     // Ensure that .d.ts files are created by tsc, but not .js files
     "declaration": true,
