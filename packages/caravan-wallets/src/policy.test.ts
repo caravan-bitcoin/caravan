@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import {
   KeyOrigin,

@@ -22,9 +22,6 @@
     // Ensure that Babel can safely transpile files in the TypeScript project
     "isolatedModules": true,
     "outDir": "lib",
-    "types": [
-      "jest"
-    ],
     "skipLibCheck": true,
   },
   "include": [
