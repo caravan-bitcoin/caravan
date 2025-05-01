@@ -23,15 +23,6 @@ import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
 // import { getPsbtVersionNumber } from "@caravan/psbt";
 import { vi } from 'vitest';
 
-vi.mock("@caravan/bitcoin", async () => {
-  const actual = await vi.importActual("@caravan/bitcoin");
-  return {
-    ...actual,
-    getPsbtVersionNumber: vi.fn().mockReturnValue(2),
-  };
-});
-
-
 
 vi.mock("@caravan/psbt", () => ({
   translatePSBT: vi.fn().mockReturnValue({
@@ -647,6 +638,18 @@ describe("ledger", () => {
       console.log("before");
       const interaction = interactionBuilder();
       console.log("after");
+      Reflect.defineProperty(interaction, "SIGNATURES", {
+        get: () => [fixture.signature[0]],
+      });
+
+      vi.spyOn(interaction, "signPsbt").mockResolvedValue(expectedSigs);
+
+      mockApp.signPsbt(
+        interaction.psbt,
+        interaction.walletPolicy.toLedgerPolicy(),
+        interaction.policyHmac,
+        interaction.progressCallback
+      );
 
       const sigs = await interaction.run();
       expect(sigs).toStrictEqual([fixture.signature[0]]);
