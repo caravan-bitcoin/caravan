@@ -1,4 +1,3 @@
-import '@inrupt/jest-jsdom-polyfills';
 import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
