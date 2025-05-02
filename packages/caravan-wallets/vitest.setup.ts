@@ -1,5 +1,7 @@
 import { vi } from "vitest";
 
+
+global.Buffer = Buffer
 // vi.mock("@caravan/bitcoin", async () => {
 //   const actual = await vi.importActual("@caravan/bitcoin");
 //   return {

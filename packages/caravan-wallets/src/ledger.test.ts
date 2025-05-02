@@ -638,19 +638,7 @@ describe("ledger", () => {
       console.log("before");
       const interaction = interactionBuilder();
       console.log("after");
-      Reflect.defineProperty(interaction, "SIGNATURES", {
-        get: () => [fixture.signature[0]],
-      });
-
-      vi.spyOn(interaction, "signPsbt").mockResolvedValue(expectedSigs);
-
-      mockApp.signPsbt(
-        interaction.psbt,
-        interaction.walletPolicy.toLedgerPolicy(),
-        interaction.policyHmac,
-        interaction.progressCallback
-      );
-
+    
       const sigs = await interaction.run();
       expect(sigs).toStrictEqual([fixture.signature[0]]);
       // confirming that the psbt used is version 2
