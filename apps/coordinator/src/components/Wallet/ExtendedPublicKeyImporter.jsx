@@ -104,7 +104,7 @@ class ExtendedPublicKeyImporter extends React.Component {
       conversionMessage: "",
       showScanner: false,
       scanStatus: "",
-      errorTimeout: null
+      errorTimeout: null,
     };
     this.decoder = new BCURDecoder2();
   }
@@ -121,14 +121,14 @@ class ExtendedPublicKeyImporter extends React.Component {
     if (this.state.errorTimeout) {
       clearTimeout(this.state.errorTimeout);
     }
-    
+
     const timeout = setTimeout(() => {
       this.setState({ scanStatus: "", errorTimeout: null });
     }, 2000);
 
-    this.setState({ 
+    this.setState({
       scanStatus: error,
-      errorTimeout: timeout
+      errorTimeout: timeout,
     });
   };
 
@@ -253,11 +253,11 @@ class ExtendedPublicKeyImporter extends React.Component {
     const method = event.target.value;
     setMethod(number, method);
     setExtendedPublicKey(number, "");
-    
+
     // Reset scan status when changing methods
-    this.setState({ 
+    this.setState({
       scanStatus: "",
-      showScanner: method === SCAN_QR 
+      showScanner: method === SCAN_QR,
     });
 
     if (this.state.errorTimeout) {
@@ -619,47 +619,50 @@ class ExtendedPublicKeyImporter extends React.Component {
     if (!showScanner) return null;
 
     return (
-      <Box mt={2} sx={{
-        '& .scannerOverlay': {
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          width: '250px',
-          height: '250px',
-          transform: 'translate(-50%, -50%)',
-          border: '2px solid #00ff00',
-          animation: 'scan 2s infinite',
-          zIndex: 2
-        },
-        '@keyframes scan': {
-          '0%': {
-            borderColor: '#00ff00',
-            boxShadow: '0 0 0 0 rgba(0,255,0,0.4)'
+      <Box
+        mt={2}
+        sx={{
+          "& .scannerOverlay": {
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: "250px",
+            height: "250px",
+            transform: "translate(-50%, -50%)",
+            border: "2px solid #00ff00",
+            animation: "scan 2s infinite",
+            zIndex: 2,
           },
-          '50%': {
-            borderColor: '#00ff0080',
-            boxShadow: '0 0 0 3px rgba(0,255,0,0.1)' 
+          "@keyframes scan": {
+            "0%": {
+              borderColor: "#00ff00",
+              boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+            },
+            "50%": {
+              borderColor: "#00ff0080",
+              boxShadow: "0 0 0 3px rgba(0,255,0,0.1)",
+            },
+            "100%": {
+              borderColor: "#00ff00",
+              boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+            },
           },
-          '100%': {
-            borderColor: '#00ff00',
-            boxShadow: '0 0 0 0 rgba(0,255,0,0.4)'
-          }
-        }
-      }}>
+        }}
+      >
         <Box position="relative" width="100%" maxWidth="400px" margin="auto">
           <QrReader
             onResult={this.handleQRResult}
             constraints={{ facingMode: "environment" }}
-            containerStyle={{ 
-              width: '100%',
-              maxWidth: '400px',
-              height: '400px',
-              margin: 'auto'
+            containerStyle={{
+              width: "100%",
+              maxWidth: "400px",
+              height: "400px",
+              margin: "auto",
             }}
           />
           <div className="scannerOverlay" />
         </Box>
-        <Typography align="center" color="textSecondary" sx={{mt: 2}}>
+        <Typography align="center" color="textSecondary" sx={{ mt: 2 }}>
           {scanStatus}
         </Typography>
         <Box textAlign="center" mt={2}>
