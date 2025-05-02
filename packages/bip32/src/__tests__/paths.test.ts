@@ -67,14 +67,9 @@ describe("combineBip32Paths", () => {
   });
 });
 
-vi.mock("../utils", async () => {
-  const actual = await vi.importActual("../paths");
-  return {
-    __esModule: true,
-    ...actual,
-    secureRandomInt: vi.fn(() => 42),
-  };
-});
+vi.mock("../utils", () => ({
+  secureRandomInt: () => 42,
+}));
 
 describe("secureSecretPath", () => {
   it("should return a path of the desired depth", async () => {
