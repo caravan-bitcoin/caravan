@@ -51,6 +51,7 @@
     "babel-plugin-transform-inline-environment-variables": "^0.4.3",
     "eslint": "^8.34.0",
     "eslint-plugin-import": "^2.27.5",
+    "happy-dom": "^17.4.6",
     "husky": "^8.0.3",
     "jsdoc": "^4.0.0",
     "lint-staged": "^13.1.2",
