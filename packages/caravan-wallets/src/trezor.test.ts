@@ -23,6 +23,31 @@ import { ECPair, payments } from "bitcoinjs-lib";
 
 import TrezorConnect from "@trezor/connect-web";
 
+vi.mock('@caravan/psbt', () => ({
+  translatePSBT: vi.fn().mockImplementation((network: string) => {
+    const txIndex = network === Network.MAINNET ? 3 : 0;
+    const tx = TEST_FIXTURES.transactions[txIndex];
+    return {
+      unchainedInputs: tx.inputs.map((input: any) => ({
+        txid: input.txid,
+        index: input.index,
+        transactionHex: input.transactionHex,
+        amountSats: input.amountSats,
+        multisig: input.multisig,
+        braidAwareMultisig: input.braidAwareMultisig,
+      })),
+      unchainedOutputs: tx.outputs.map((output: any) => ({
+        address: output.address,
+        amountSats: output.amountSats,
+      })),
+      bip32Derivations: tx.bip32Paths.map((path: string, i: number) => ({
+        path,
+        pubkey: Buffer.from(tx.publicKeys[i], 'hex'),
+      })),
+    };
+  }),
+}));
+
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
     expect(

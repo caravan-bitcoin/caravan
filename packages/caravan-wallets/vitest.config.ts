@@ -1,3 +1,4 @@
+import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [],
@@ -5,7 +6,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     exclude: ["node_modules/**", "dist/**", "src/bitbox.ts"],
     globals: true,
-    environment: "jsdom",
+    environment: "node",
     testTimeout: 10000,
     setupFiles: "./vitest.setup.ts",
     typecheck: {
@@ -13,4 +14,10 @@ export default defineConfig({
       enabled: false,
     },
   },
+  resolve: {
+    alias: {
+      'bitbox-api': resolve(__dirname, 'src/bitbox.ts'),
+    },
+  },
+
 });
