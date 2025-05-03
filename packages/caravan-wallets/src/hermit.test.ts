@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { PENDING, INFO } from "./interaction";
 import {
   HermitExportExtendedPublicKey,
