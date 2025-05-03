@@ -70,7 +70,7 @@ import {
  */
 export const VERSION: string = version;
 
-export const MULTISIG_ROOT = "m/45'";
+export { MULTISIG_ROOT } from './constants';
 
 /**
  * Keystores which support direct interactions.

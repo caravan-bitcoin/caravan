@@ -1,4 +1,9 @@
 /**
+ * Constant defining Trezor interactions.
+ */
+export const TREZOR = "trezor";
+
+/**
  * Provides classes for interacting with Trezor hardware wallets.
  *
  * The base class provided is `TrezorInteraction` which wraps calls to [`TrezorConnect`]{@link https://github.com/trezor/connect}.  New interactions should subclass `TrezorInteraction`.
@@ -43,6 +48,7 @@ import TrezorConnectDefault, {
 import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
+import { MULTISIG_ROOT } from "./constants";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -51,12 +57,6 @@ import {
   ERROR,
 } from "./interaction";
 
-import { MULTISIG_ROOT } from "./index";
-
-/**
- * Constant defining Trezor interactions.
- */
-export const TREZOR = "trezor";
 
 /**
  * What's going on with this TrezorConnect import?
