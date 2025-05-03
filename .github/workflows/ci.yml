@@ -36,8 +36,8 @@ jobs:
         env:
           NODE_ENV: test
 
-      # - name: Run Tests with Coverage
-      #   run: npm run test:coverage
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
 
       # - name: Merge Coverage Reports
       #   run: npx lcov-result-merger 'apps/*/coverage/lcov.info packages/*/coverage/lcov.info' './coverage/lcov.info'
