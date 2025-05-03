@@ -67,7 +67,7 @@
     "dev": "npm run build -- --watch",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run",
     "docs": "./bin/build-docs.sh",
     "lint": "eslint src --ignore-pattern src/vendor",
     "lint:fix": "eslint src --ignore-pattern src/vendor --fix"
