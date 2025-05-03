@@ -19,5 +19,4 @@ export default defineConfig({
       'bitbox-api': resolve(__dirname, 'src/bitbox.ts'),
     },
   },
-
 });
