@@ -350,28 +350,11 @@ describe("ledger", () => {
       getMasterFingerprint: vi.fn(),
     };
 
-    const mockPsbtV2 = {
-      deserialize: vi.fn(),
-      serialize: vi.fn().mockReturnValue("serialized"),
-      PSBT_GLOBAL_VERSION: 2,
-    };
-
-    vi.mock("ledger-bitcoin", () => {
-      return {
-        default: {},
-        AppClient: vi.fn().mockImplementation(() => mockApp),
-        PsbtV2: vi.fn().mockImplementation(() => mockPsbtV2),
-        WalletPolicy: vi.fn().mockImplementation(() => ({
-          toLedgerPolicy: vi.fn().mockReturnValue({}),
-        })),
-      };
-    });
-
     const mockWithApp = vi.fn().mockImplementation((callback) => {
       return callback(mockApp);
     });
 
-    return [mockApp, mockWithApp, mockPsbtV2];
+    return [mockApp, mockWithApp];
   }
 
   function addInteractionMocks(interaction, mockWithApp) {
@@ -502,13 +485,12 @@ describe("ledger", () => {
   });
 
   describe("LedgerV2SignMultisigTransaction", () => {
-    let expectedSigs: LedgerSignatures[], mockApp, mockPsbtV2, mockWithApp;
+    let expectedSigs: LedgerSignatures[], mockApp, mockWithApp;
 
     beforeEach(() => {
-      const [app, withApp, psbtV2] = getMockedApp();
+      const [app, withApp] = getMockedApp();
       mockWithApp = withApp;
       mockApp = app;
-      mockPsbtV2 = psbtV2;
 
       expectedSigs = [
         [
@@ -520,8 +502,6 @@ describe("ledger", () => {
         ],
       ];
       mockApp.signPsbt.mockReturnValue(Promise.resolve(expectedSigs));
-
-      mockPsbtV2.deserialize.mockReset();
     });
 
     afterEach(() => {
@@ -553,19 +533,6 @@ describe("ledger", () => {
 
     it("signs psbt", async () => {
       const interaction = interactionBuilder();
-
-      Reflect.defineProperty(interaction, "SIGNATURES", {
-        get: () => [fixture.signature[0]],
-      });
-
-      vi.spyOn(interaction, "signPsbt").mockResolvedValue(expectedSigs);
-
-      mockApp.signPsbt(
-        interaction.psbt,
-        interaction.walletPolicy.toLedgerPolicy(),
-        interaction.policyHmac,
-        interaction.progressCallback
-      );
 
       const sigs = await interaction.run();
       expect(sigs).toStrictEqual([fixture.signature[0]]);
