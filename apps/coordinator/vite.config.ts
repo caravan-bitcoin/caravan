@@ -18,11 +18,14 @@ export default defineConfig({
     },
   },
   plugins: [
-    wasm(),
-    react(),
     nodePolyfills({
       protocolImports: true,
+      globals: {
+        Buffer: true,
+      },
     }),
+    wasm(),
+    react(),
   ],
   build: {
     target: "esnext", // browsers can handle the latest ES features
