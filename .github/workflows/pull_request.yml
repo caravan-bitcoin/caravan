@@ -1,46 +1,39 @@
-name: Test
+name: PR Workflow
 
-on: 
-  push:
-    branches: [main]
+on:
   pull_request:
-    branches: [main]
-  workflow_dispatch: 
+    branches: ['**']
 
 jobs:
-  ci:
+  Code-Quality:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: ["20.x"]
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20.x'
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run CI Tasks
-        run: |
-          npx turbo run ci
-        env:
-          NODE_ENV: test
+      - name: Lint
+        run: npm run lint
 
-      # - name: Run Tests with Coverage
-      #   run: npm run test:coverage
+      - name: Type Check
+        run: npm run typecheck
 
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
+        
+
+      # will uncomment once the normal workflow start working smoothly
       # - name: Merge Coverage Reports
       #   run: npx lcov-result-merger 'apps/*/coverage/lcov.info packages/*/coverage/lcov.info' './coverage/lcov.info'
+
 
       # - name: Upload to Codecov
       #   uses: codecov/codecov-action@v4
