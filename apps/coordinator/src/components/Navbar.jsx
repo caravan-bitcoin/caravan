@@ -64,6 +64,7 @@ const Navbar = () => {
 
   const menuItems = [
     { href: "/wallet", title: "Wallet" },
+    { href: "/health", title: "Health" },
     { href: "/address", title: "Create Address" },
     { href: "/script", title: "Script Explorer" },
     { href: "/hermit-psbt", title: "Hermit PSBT Interface" },

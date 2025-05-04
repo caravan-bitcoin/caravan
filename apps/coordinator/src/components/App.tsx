@@ -23,6 +23,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import ErrorBoundary from "./ErrorBoundary";
 import ErrorNotification from "./ErrorNotification";
+import HealthDashboard from "./Health";
 
 const App = () => (
   <ThemeProvider theme={theme}>
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/script" component={ScriptExplorer} />
                 <Route path="/hermit-psbt" component={HermitPsbtInterface} />
                 <Route path="/wallet" component={Wallet} />
+                <Route path="/health" component={HealthDashboard} />
                 <Route path="/help" component={Help} />
                 <Route path="/" component={Help} />
               </Switch>
