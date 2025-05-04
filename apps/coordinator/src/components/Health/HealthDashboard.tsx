@@ -15,14 +15,14 @@ import {
   AccountBalanceWalletOutlined,
 } from "@mui/icons-material";
 import FeeDashboard from "./FeeDashboard";
-// import PrivacyDashboard from "./PrivacyDashboard";
+import PrivacyDashboard from "./PrivacyDashboard";
 // import UTXOExplorer from "./UTXOExplorer";
 import { getWalletConfig } from "../../selectors/wallet";
 
 // Define tab values as constants
 const FEE_TAB = 0;
-// const PRIVACY_TAB = 1;
-// const UTXO_TAB = 2;
+const PRIVACY_TAB = 1;
+const UTXO_TAB = 2;
 
 const HealthDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(FEE_TAB);
@@ -103,13 +103,13 @@ const HealthDashboard: React.FC = () => {
                 {activeTab === FEE_TAB && <FeeDashboard />}
               </Box>
 
-              {/* <Box
+              <Box
                 role="tabpanel"
                 hidden={activeTab !== PRIVACY_TAB}
                 id="privacy-panel"
               >
                 {activeTab === PRIVACY_TAB && <PrivacyDashboard />}
-              </Box> */}
+              </Box>
 
               {/* <Box
                 role="tabpanel"
