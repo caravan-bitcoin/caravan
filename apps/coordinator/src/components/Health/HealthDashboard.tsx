@@ -16,7 +16,7 @@ import {
 } from "@mui/icons-material";
 import FeeDashboard from "./FeeDashboard";
 import PrivacyDashboard from "./PrivacyDashboard";
-// import UTXOExplorer from "./UTXOExplorer";
+import UTXOExplorer from "./UTXOExplorer";
 import { getWalletConfig } from "../../selectors/wallet";
 
 // Define tab values as constants
@@ -111,13 +111,13 @@ const HealthDashboard: React.FC = () => {
                 {activeTab === PRIVACY_TAB && <PrivacyDashboard />}
               </Box>
 
-              {/* <Box
+              <Box
                 role="tabpanel"
                 hidden={activeTab !== UTXO_TAB}
                 id="utxo-panel"
               >
                 {activeTab === UTXO_TAB && <UTXOExplorer />}
-              </Box> */}
+              </Box>
             </>
           )}
         </>
