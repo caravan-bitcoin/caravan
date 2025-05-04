@@ -75,9 +75,9 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src/",
     "predeploy": "npm run build",
     "start": "HTTPS=true npm run preview",
-    "test": "__GIT_SHA__=`git rev-parse --short HEAD` jest",
-    "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` jest --watch",
-    "test:ci": "CI=true jest --coverage",
+    "test": "__GIT_SHA__=`git rev-parse --short HEAD` vitest",
+    "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` vitest --watch",
+    "test:ci": "CI=true vitest --coverage",
     "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },

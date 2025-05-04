@@ -1,5 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen } from "../../utils/test-utils";
+import { vi } from "vitest";
 
 import EditableName from "../EditableName";
 
@@ -11,7 +12,7 @@ describe("EditableName", () => {
   let spy;
 
   beforeEach(() => {
-    spy = jest.fn();
+    spy = vi.fn();
     const element = render(
       <EditableName number={0} name={nameValue} setName={spy} />,
     );
