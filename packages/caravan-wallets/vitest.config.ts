@@ -6,9 +6,6 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     exclude: ['node_modules/**', "lib/**"],
-    alias: {
-      'bitbox-api': 'vitest',
-    },
     coverage: {
       provider: "istanbul",
       reporter: ["text"],
