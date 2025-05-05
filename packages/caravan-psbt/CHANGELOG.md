@@ -1,5 +1,21 @@
 # @caravan/psbt
 
+## 1.9.4
+
+### Patch Changes
+
+- [#259](https://github.com/caravan-bitcoin/caravan/pull/259) [`e713be4`](https://github.com/caravan-bitcoin/caravan/commit/e713be4583123a53e835dc2e60d673e27c376846) Thanks [@bucko13](https://github.com/bucko13)! - update build dependencies to newer versions and fix polyfills
+
+- Updated dependencies [[`e713be4`](https://github.com/caravan-bitcoin/caravan/commit/e713be4583123a53e835dc2e60d673e27c376846)]:
+  - @caravan/bitcoin@0.3.2
+  - @caravan/bip32@1.0.1
+
+## 1.9.3
+
+### Patch Changes
+
+- [#229](https://github.com/caravan-bitcoin/caravan/pull/229) [`7bf47bf`](https://github.com/caravan-bitcoin/caravan/commit/7bf47bfc8ea8b5ec78c4ff562e4fcc9e72ec508c) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Replaced the setters with the private functions so that the output and input count always stays in sync with the actual counts in the PSBT.
+
 ## 1.9.2
 
 ### Patch Changes

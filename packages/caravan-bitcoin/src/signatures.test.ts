@@ -1,12 +1,12 @@
 import {
-  validateMultisigSignature,
-} from './signatures';
-import {
   TEST_FIXTURES,
 } from "./fixtures";
+import {
+  validateMultisigSignature,
+} from './signatures';
 
 // FIXME: transactionbuilder is deprecating, but we know this. remove this after addressing.
-console.warn = jest.fn();
+console.warn = vi.fn();
 
 describe('signatures', () => {
 

@@ -1,12 +1,13 @@
-import { TransactionAnalyzer } from "./transactionAnalyzer";
-import { BtcTransactionTemplate } from "./btcTransactionTemplate";
+import { BigNumber } from "bignumber.js";
+
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
+import { BtcTransactionTemplate } from "./btcTransactionTemplate";
+import { TransactionAnalyzer } from "./transactionAnalyzer";
 import { FeeBumpStrategy, CPFPOptions, UTXO } from "./types";
 import { createOutputScript } from "./utils";
-import BigNumber from "bignumber.js";
 
 /**
  * Creates a Child-Pays-for-Parent (CPFP) transaction to accelerate the confirmation

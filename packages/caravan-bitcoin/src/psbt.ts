@@ -1,6 +1,8 @@
+import { BigNumber } from "bignumber.js";
 import { Psbt, Transaction } from "bitcoinjs-lib-v5";
 import { reverseBuffer } from "bitcoinjs-lib-v5/src/bufferutils.js";
-import { toHexString } from "./utils";
+
+import { generateBip32DerivationByIndex, generateBraid } from "./braid";
 import {
   generateMultisigFromHex,
   multisigAddressType,
@@ -8,13 +10,12 @@ import {
   multisigRedeemScript,
   multisigWitnessScript,
 } from "./multisig";
-import { bip32PathToSequence } from "./paths";
-import BigNumber from "bignumber.js";
-import { P2SH } from "./p2sh";
-import { P2WSH } from "./p2wsh";
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
-import { generateBip32DerivationByIndex, generateBraid } from "./braid";
 import { networkData } from "./networks";
+import { P2SH } from "./p2sh";
+import { P2SH_P2WSH } from "./p2sh_p2wsh";
+import { P2WSH } from "./p2wsh";
+import { bip32PathToSequence } from "./paths";
+import { toHexString } from "./utils";
 
 /**
  * This module provides functions for interacting with PSBTs, see BIP174

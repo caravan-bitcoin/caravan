@@ -1,4 +1,5 @@
 import { Network } from "@caravan/bitcoin";
+
 import { FeeBumpStrategy } from "../types";
 
 export const transactionAnalyzerFixtures = {

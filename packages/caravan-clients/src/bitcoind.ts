@@ -2,9 +2,10 @@
 /*
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
-import axios, { AxiosBasicCredentials } from "axios";
-import BigNumber from "bignumber.js";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import axios, { AxiosBasicCredentials } from "axios";
+import { BigNumber } from "bignumber.js";
+
 import {
   RPCResponse,
   ListUnspentResponse,

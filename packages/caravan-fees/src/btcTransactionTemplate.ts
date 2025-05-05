@@ -1,16 +1,17 @@
+import { Network } from "@caravan/bitcoin";
+import { PsbtV2 } from "@caravan/psbt";
+import { BigNumber } from "bignumber.js";
+
 import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "./btcTransactionComponents";
-import { Network } from "@caravan/bitcoin";
-import { PsbtV2 } from "@caravan/psbt";
-import { Satoshis, TransactionTemplateOptions, ScriptType } from "./types";
-import BigNumber from "bignumber.js";
 import {
   DEFAULT_DUST_THRESHOLD_IN_SATS,
   ABSURDLY_HIGH_ABS_FEE,
   ABSURDLY_HIGH_FEE_RATE,
 } from "./constants";
+import { Satoshis, TransactionTemplateOptions, ScriptType } from "./types";
 import {
   createOutputScript,
   estimateTransactionVsize,

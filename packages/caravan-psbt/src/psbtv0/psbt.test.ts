@@ -1,7 +1,3 @@
-/**
- * @jest-environment  jsdom
- */
-
 import {
   generateMultisigFromHex,
   getRelativeBIP32Path,

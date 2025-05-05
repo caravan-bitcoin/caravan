@@ -1,3 +1,10 @@
+import { braidConfig } from "./braid";
+import { ROOT_FINGERPRINT, TEST_FIXTURES } from "./fixtures";
+import {
+  generateMultisigFromHex,
+  generateMultisigFromPublicKeys,
+} from "./multisig";
+import { P2WSH } from "./p2wsh";
 import {
   addSignaturesToPSBT,
   autoLoadPSBT,
@@ -7,13 +14,6 @@ import {
   psbtOutputFormatter,
   translatePSBT,
 } from "./psbt";
-import { ROOT_FINGERPRINT, TEST_FIXTURES } from "./fixtures";
-import {
-  generateMultisigFromHex,
-  generateMultisigFromPublicKeys,
-} from "./multisig";
-import { braidConfig } from "./braid";
-import { P2WSH } from "./p2wsh";
 
 const MULTISIGS = TEST_FIXTURES.multisigs;
 const TRANSACTIONS = TEST_FIXTURES.transactions;

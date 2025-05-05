@@ -1,13 +1,15 @@
+import { provideSelf } from "@caravan/build-plugins";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import { defineConfig } from "tsup";
-import { polyfillNode } from "esbuild-plugin-polyfill-node";
 
 export default defineConfig({
   esbuildPlugins: [
-    polyfillNode({
-      globals: {
+    nodeModulesPolyfillPlugin({
+      modules: {
         process: true,
         global: true,
       },
     }),
+    provideSelf(),
   ],
 });

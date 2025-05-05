@@ -2,13 +2,14 @@
 /*
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
-import axios from "axios";
-import BigNumber from "bignumber.js";
 import {
   satoshisToBitcoins,
   blockExplorerAPIURL,
   Network,
 } from "@caravan/bitcoin";
+import axios from "axios";
+import { BigNumber } from "bignumber.js";
+
 import {
   BlockExplorerUTXOResponse,
   BlockExplorerAddressResponse,

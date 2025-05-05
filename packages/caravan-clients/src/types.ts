@@ -1,5 +1,5 @@
-import BigNumber from "bignumber.js";
 import { AxiosBasicCredentials } from "axios";
+import { BigNumber } from "bignumber.js";
 
 export interface UTXO {
   txid: string;
@@ -87,6 +87,22 @@ export interface RawTransactionData {
   vsize?: number;
   weight: number;
   fee: number;
+  amount?: number;
+  details?: {
+    address: string;
+    category:
+      | "send"
+      | "receive"
+      | "generate"
+      | "immature"
+      | "orphan"
+      | "unknown";
+    amount: number; // Amount (negative for outgoing)
+    vout: number; // Output index
+    fee?: number; // Fee amount (if category is "send")
+    abandoned?: boolean; // If the transaction was abandoned
+    label?: string; // Address label if any
+  }[];
   category?:
     | "send"
     | "receive"

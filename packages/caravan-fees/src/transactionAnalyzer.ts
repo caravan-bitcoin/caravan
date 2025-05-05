@@ -1,5 +1,12 @@
-import { Transaction } from "bitcoinjs-lib-v6";
 import { Network } from "@caravan/bitcoin";
+import { BigNumber } from "bignumber.js";
+import { Transaction } from "bitcoinjs-lib-v6";
+
+import {
+  BtcTxComponent,
+  BtcTxInputTemplate,
+  BtcTxOutputTemplate,
+} from "./btcTransactionComponents";
 import {
   UTXO,
   AnalyzerOptions,
@@ -10,13 +17,7 @@ import {
   FeeRateSatsPerVByte,
   TxAnalysis,
 } from "./types";
-import {
-  BtcTxComponent,
-  BtcTxInputTemplate,
-  BtcTxOutputTemplate,
-} from "./btcTransactionComponents";
 import { getOutputAddress, estimateTransactionVsize } from "./utils";
-import BigNumber from "bignumber.js";
 
 // added type for validation of Analyzer Options
 interface ValidatedAnalyzerOptions {

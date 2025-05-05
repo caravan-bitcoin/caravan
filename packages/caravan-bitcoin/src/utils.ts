@@ -3,7 +3,7 @@
  * (Satoshis, BTC) and hex strings.
  */
 
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import { crypto } from "bitcoinjs-lib-v5";
 
 // Without this, BigNumber will report strings as exponentials. 16 places covers

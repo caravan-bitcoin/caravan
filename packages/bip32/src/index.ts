@@ -1,6 +1,11 @@
 export type { KeyOrigin } from "./types";
 
-export { secureSecretPath, combineBip32Paths, getUnmaskedPath } from "./paths";
+export {
+  secureSecretPath,
+  combineBip32Paths,
+  getUnmaskedPath,
+  getRelativeBip32Sequence,
+} from "./paths";
 
 export {
   isValidChildPubKey,

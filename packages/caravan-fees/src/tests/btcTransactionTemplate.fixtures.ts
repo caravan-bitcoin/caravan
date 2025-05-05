@@ -140,7 +140,7 @@ export interface TestInput {
   value: string;
   sequence?: number;
   prevTxHex?: string;
-  witnessUtxo?: any;
+  witnessUtxo?: { script: Buffer; value: number };
 }
 
 export interface TestFixture {

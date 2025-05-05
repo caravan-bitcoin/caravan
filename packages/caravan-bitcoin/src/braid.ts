@@ -5,23 +5,25 @@
  * view the traditional use of the word 'wallet' as a collection of Braids.
  */
 
-import { Struct } from "bufio";
 import assert from "assert";
-import {
-  bip32PathToSequence,
-  validateBIP32Index,
-  validateBIP32Path,
-} from "./paths";
-import { Network } from "./networks";
-import {
-  MULTISIG_ADDRESS_TYPES,
-  generateMultisigFromPublicKeys,
-} from "./multisig";
+
+import { Struct } from "bufio";
+
 import {
   validateExtendedPublicKey,
   deriveChildPublicKey,
   extendedPublicKeyRootFingerprint,
 } from "./keys";
+import {
+  MULTISIG_ADDRESS_TYPES,
+  generateMultisigFromPublicKeys,
+} from "./multisig";
+import { Network } from "./networks";
+import {
+  bip32PathToSequence,
+  validateBIP32Index,
+  validateBIP32Path,
+} from "./paths";
 
 // In building the information objects that PSBTs want, one must include information
 // about the root fingerprint for the device. If that information is unknown, just fill

@@ -1,6 +1,5 @@
-import { P2SH } from "./p2sh";
-import { P2WSH } from "./p2wsh";
-import { scriptToHex } from "./script";
+import { braidConfig } from "./braid";
+import { TEST_FIXTURES } from "./fixtures";
 import {
   generateMultisigFromHex,
   generateMultisigFromPublicKeys,
@@ -14,8 +13,9 @@ import {
   multisigAddress,
   multisigBraidDetails,
 } from "./multisig";
-import { TEST_FIXTURES } from "./fixtures";
-import { braidConfig } from "./braid";
+import { P2SH } from "./p2sh";
+import { P2WSH } from "./p2wsh";
+import { scriptToHex } from "./script";
 
 const MULTISIGS = TEST_FIXTURES.multisigs;
 

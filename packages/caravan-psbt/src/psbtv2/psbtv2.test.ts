@@ -1,5 +1,4 @@
 import { PsbtV2, getPsbtVersionNumber } from "./";
-import { test, jest } from "@jest/globals";
 import { silenceDescribe } from "react-silence";
 
 import { KeyType, PsbtGlobalTxModifiableBits } from "./types";
@@ -973,9 +972,9 @@ describe("PsbtV2.isReadyForSigner", () => {
   });
 
   it("Returns not ready for Signer when the psbt has already finalized inputs", () => {
-    jest
-      .spyOn(psbt, "isReadyForTransactionExtractor", "get")
-      .mockReturnValue(true);
+    vi.spyOn(psbt, "isReadyForTransactionExtractor", "get").mockReturnValue(
+      true,
+    );
     expect(psbt.isReadyForSigner).toBe(false);
   });
 
@@ -1245,7 +1244,7 @@ describe("PsbtV2.addPartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else addSig will fail since
     // the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1307,7 +1306,7 @@ describe("PsbtV2.removePartialSig", () => {
 
   beforeEach(() => {
     psbt = new PsbtV2();
-    psbt.handleSighashType = jest.fn();
+    psbt.handleSighashType = vi.fn();
     // This has to be added so inputs can be added else removeSig will fail
     // since the input at the index does not exist.
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS"];
@@ -1795,3 +1794,63 @@ describe("PsbtV2.toV0", () => {
     },
   );
 });
+
+describe("PsbtV2 addInput", () => {
+  let psbt: PsbtV2;
+  const updateGlobalInputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalInputCount",
+  );
+  beforeEach(() => {
+    vi.clearAllMocks();
+    psbt = new PsbtV2();
+  });
+  it("should call updateGlobalInputCount", () => {
+    // Add inputs to the PSBT
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0), // Dummy txid
+      outputIndex: 0,
+    });
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1), // Dummy txid
+      outputIndex: 1,
+    });
+    // Verify the global input count
+    const inputCount = psbt.PSBT_GLOBAL_INPUT_COUNT;
+    expect(inputCount).toBeDefined();
+    expect(inputCount).toBe(2);
+    // Once, for creation and once for each call to addInput
+    expect(updateGlobalInputCountSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("PsbtV2 addOutput", () => {
+  let psbt: PsbtV2;
+  const updateGlobalOutputCountSpy = vi.spyOn(
+    PsbtV2.prototype as any,
+    "updateGlobalOutputCount",
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    psbt = new PsbtV2();
+  });
+
+  it("should call updateGlobalOutputCount", () => {
+    psbt.addOutput({
+      amount: 1000,
+      script: Buffer.alloc(25, 0),
+    });
+    psbt.addOutput({
+      amount: 2000,
+      script: Buffer.alloc(25, 1),
+    });
+
+    const outputCount = psbt.PSBT_GLOBAL_OUTPUT_COUNT;
+    expect(outputCount).toBeDefined();
+    expect(outputCount).toBe(2);
+    // Once during creation + once per addOutput
+    expect(updateGlobalOutputCountSpy).toHaveBeenCalledTimes(3);
+  });
+});
+
