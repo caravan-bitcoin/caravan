@@ -54,4 +54,16 @@ describe("Testing Footer Component", () => {
     );
     expect(copyrightText).toBeInTheDocument();
   });
+
+  test("display the version and commit SHA", () => {
+    const versionReg = new RegExp(
+      `v${mockAppVersion.replace(/\./g, "\\.")} commit: ${mockGitSha}`,
+      "i",
+    );
+    console.log("versionreg", versionReg);
+
+    const versionText = screen.getByText(versionReg);
+
+    expect(versionText).toBeInTheDocument();
+  });
 });
