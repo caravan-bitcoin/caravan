@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.1
+
+### Patch Changes
+
+- [#237](https://github.com/caravan-bitcoin/caravan/pull/237) [`b690aff`](https://github.com/caravan-bitcoin/caravan/commit/b690afffbe3d7de16d6832f011da664bb5893454) Thanks [@amitx13](https://github.com/amitx13)! - Fixed Bitcoin client bug that blocks users from importing a wallet
+
 ## 1.7.0
 
 ### Minor Changes
