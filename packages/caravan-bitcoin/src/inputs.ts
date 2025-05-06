@@ -3,8 +3,8 @@
  * transaction inputs.
  */
 
-import { validateHex } from "./utils";
 import { multisigBraidDetails } from "./multisig";
+import { validateHex } from "./utils";
 
 /**
  * Represents a transaction input.

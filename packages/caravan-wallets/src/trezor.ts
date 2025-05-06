@@ -119,9 +119,15 @@ const ENV_TREZOR_BLOCKBOOK_URL =
   env_variables.VITE_TREZOR_BLOCKBOOK_URL;
 
 const TREZOR_CONNECT_URL =
-  ENV_TREZOR_CONNECT_URL || `https://${window.location.hostname}:8088/`;
+  ENV_TREZOR_CONNECT_URL ||
+  (typeof window === "undefined"
+    ? ""
+    : `https://${window?.location.hostname}:8088/`);
 const TREZOR_BLOCKBOOK_URL =
-  ENV_TREZOR_BLOCKBOOK_URL || `http://${window.location.hostname}:3035/`;
+  ENV_TREZOR_BLOCKBOOK_URL ||
+  (typeof window === "undefined"
+    ? ""
+    : `http://${window?.location.hostname}:3035/`);
 
 const TREZOR_DEV =
   env_variables.TREZOR_DEV ||

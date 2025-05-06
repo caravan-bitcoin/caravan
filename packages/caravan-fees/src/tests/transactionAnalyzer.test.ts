@@ -1,6 +1,8 @@
+import { BigNumber } from "bignumber.js";
+
 import { TransactionAnalyzer } from "../transactionAnalyzer";
+
 import { transactionAnalyzerFixtures } from "./transactionAnalyzer.fixtures";
-import BigNumber from "bignumber.js";
 
 describe("TransactionAnalyzer", () => {
   transactionAnalyzerFixtures.validTransactions.forEach((fixture) => {

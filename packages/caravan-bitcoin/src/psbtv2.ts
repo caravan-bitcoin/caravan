@@ -9,12 +9,12 @@
  * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki
  */
 
-import { BufferReader, BufferWriter } from "bufio";
 import { Psbt } from "bitcoinjs-lib-v5";
+import { BufferReader, BufferWriter } from "bufio";
 
-import { validateHex, validBase64 } from "./utils";
 import { validateBIP32Path } from "./paths";
 import { PSBT_MAGIC_BYTES } from "./psbt";
+import { validateHex, validBase64 } from "./utils";
 
 /*
 Global Types
