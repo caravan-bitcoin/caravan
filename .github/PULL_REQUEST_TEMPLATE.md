@@ -34,6 +34,8 @@ Fixes #<!--Add related issue number here.-->
 - [ ] I have run the test suite locally, and all tests pass.
 - [ ] I have written tests for all new changes/features
 - [ ] I have followed the project's coding style and conventions.
+- [ ] I have created a changeset to document my changes (`` npm run changeset ``)
+
 
 
 
@@ -42,5 +44,7 @@ Fixes #<!--Add related issue number here.-->
 <!--Add extra information about this PR here-->
 
 **Have you read the [contributing guide](https://github.com/caravan-bitcoin/caravan/blob/main/apps/coordinator/CONTRIBUTING.md)?**
+
+**For information on creating and using changesets, please refer to our [documentation on changesets](https://github.com/caravan-bitcoin/caravan?tab=readme-ov-file#changesets)**.
 
 <!--Yes or No-->
