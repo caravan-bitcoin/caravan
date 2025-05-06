@@ -45,6 +45,6 @@ Fixes #<!--Add related issue number here.-->
 
 **Have you read the [contributing guide](https://github.com/caravan-bitcoin/caravan/blob/main/apps/coordinator/CONTRIBUTING.md)?**
 
-**For information on creating and using changesets, please refer to our [documentation on changesets](https://github.com/caravan-bitcoin/caravan?tab=readme-ov-file#changesets)**.
-
 <!--Yes or No-->
+
+**For information on creating and using changesets, please refer to our [documentation on changesets](https://github.com/caravan-bitcoin/caravan?tab=readme-ov-file#changesets)**.
