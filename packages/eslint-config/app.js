@@ -35,6 +35,7 @@ module.exports = {
     'react/jsx-props-no-spreading': 'off',
     'react/jsx-no-bind': 'off',
     'react/forbid-prop-types': 'off',
+    'react/react-in-jsx-scope': 'off',
   },
   settings: {
     'import/core-modules': ['test-utils'],
