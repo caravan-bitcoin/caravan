@@ -9,7 +9,14 @@ import {
   Network,
   P2SH,
 } from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCURDecoder2,
+} from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -38,6 +45,7 @@ import {
 } from "../../actions/extendedPublicKeyImporterActions";
 import ColdcardExtendedPublicKeyImporter from "../Coldcard/ColdcardExtendedPublicKeyImporter";
 import HermitExtendedPublicKeyImporter from "../Hermit/HermitExtendedPublicKeyImporter";
+import { QrReader } from "react-qr-reader";
 
 const TEXT = "text";
 
@@ -54,7 +62,10 @@ class ExtendedPublicKeyImporter extends React.Component {
     this.state = {
       disableChangeMethod: false,
       conversionMessage: "",
+      showScanner: false,
+      scanStatus: "Idle",
     };
+    this.decoder = new BCURDecoder2();
   }
 
   title = () => {
@@ -91,9 +102,18 @@ class ExtendedPublicKeyImporter extends React.Component {
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
+        <Box mt={2}>
+          <Button
+            variant="contained"
+            onClick={() => this.setState({ showScanner: true })}
+          >
+            Scan QR Code
+          </Button>
+        </Box>
         <FormControl style={{ width: "100%" }}>
           {this.renderImportByMethod()}
         </FormControl>
+        {this.renderScanner()}
       </div>
     );
   };
@@ -215,11 +235,16 @@ class ExtendedPublicKeyImporter extends React.Component {
         </div>
       );
     }
+    // Add m/ prefix to display if not already present
+    const displayPath = extendedPublicKeyImporter.bip32Path.startsWith("m/")
+      ? extendedPublicKeyImporter.bip32Path
+      : `m/${extendedPublicKeyImporter.bip32Path}`;
+
     return (
       <div className="mt-4">
         <p>The BIP32 path for this extended public key is:</p>
         <div className="text-center">
-          <Copyable text={extendedPublicKeyImporter.bip32Path} showIcon />
+          <Copyable text={displayPath} showIcon />
         </div>
         <p className="mt-4">
           You will need this BIP32 path to sign for this key later.{" "}
@@ -231,8 +256,12 @@ class ExtendedPublicKeyImporter extends React.Component {
 
   validateAndSetBIP32Path = (bip32Path, callback, errback, options) => {
     const { number, setBIP32Path } = this.props;
-    const error = validateBIP32Path(bip32Path, options);
-    setBIP32Path(number, bip32Path);
+    // Ensure path has m/ prefix for storage
+    const normalizedPath = bip32Path.startsWith("m/")
+      ? bip32Path
+      : `m/${bip32Path}`;
+    const error = validateBIP32Path(normalizedPath, options);
+    setBIP32Path(number, normalizedPath);
     if (error) {
       errback(error);
     } else {
@@ -357,6 +386,184 @@ class ExtendedPublicKeyImporter extends React.Component {
     } else {
       setExtendedPublicKeyRootXfp(number, rootFingerprint);
     }
+  };
+
+  handleQRResult = (result) => {
+    const text = typeof result === "string" ? result : result?.text;
+
+    if (!text || typeof text !== "string") {
+      console.error("No valid string result from QR scanner:", result);
+      return;
+    }
+
+    console.log("QR text scanned:", text);
+
+    try {
+      // Handle legacy [xfp/path]xpub format first
+      const legacyRegex =
+        /\[([a-fA-F0-9]{8})(\/[^\]]+)?\]([A-Za-z0-9]+pub[a-zA-Z0-9]+)$/;
+      const match = text.match(legacyRegex);
+
+      if (match) {
+        const xfp = match[1].toUpperCase();
+        const path = match[2]?.slice(1) ?? "";
+        const xpub = match[3];
+
+        this.validateAndSetExtendedPublicKey(xpub, (error) => {
+          if (error) {
+            this.setState({ scanStatus: "❌ " + error, showScanner: false });
+          } else {
+            this.setState({ scanStatus: "✅ Done", showScanner: false });
+          }
+        });
+
+        if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
+        if (path)
+          this.validateAndSetBIP32Path(
+            path,
+            () => {},
+            () => {},
+          );
+        return;
+      }
+
+      // Handle UR format using BCURDecoder2
+      this.decoder.receivePart(text);
+      this.setState({ scanStatus: this.decoder.getProgress() });
+      if (!this.decoder.isComplete()) return;
+
+      const error = this.decoder.getError();
+      if (error) {
+        this.setState({ scanStatus: "❌ " + error, showScanner: false });
+        this.decoder.reset();
+        return;
+      }
+
+      const decodedData = this.decoder.getDecodedData();
+      console.log("Decoded data:", decodedData);
+      if (!decodedData) {
+        this.setState({
+          scanStatus: "❌ Failed to decode QR data",
+          showScanner: false,
+        });
+        this.decoder.reset();
+        return;
+      }
+
+      // Extract and parse xpub from decoded data
+      let xpub;
+      xpub = decodedData.xpub;
+
+      if (!xpub) {
+        this.setState({
+          scanStatus: "❌ Invalid xpub format in QR code",
+          showScanner: false,
+        });
+        this.decoder.reset();
+        return;
+      }
+
+      const { xfp, path } = decodedData;
+
+      this.validateAndSetExtendedPublicKey(xpub, (error) => {
+        if (error) {
+          this.setState({ scanStatus: "❌ " + error, showScanner: false });
+        } else {
+          this.setState({
+            scanStatus: "✅ Successfully imported xpub",
+            showScanner: false,
+          });
+        }
+      });
+
+      if (xfp) {
+        this.validateAndSetRootFingerprint(xfp, (error) => {
+          if (error) console.warn("Error setting fingerprint:", error);
+        });
+      }
+
+      if (path) {
+        this.validateAndSetBIP32Path(
+          path,
+          () => {},
+          (error) => {
+            if (error) console.warn("Error setting BIP32 path:", error);
+          },
+        );
+      }
+
+      this.decoder.reset();
+    } catch (err) {
+      console.error("Error while handling QR:", err);
+      const message = err?.message || String(err);
+      this.setState({ scanStatus: "❌ " + message, showScanner: false });
+      this.decoder.reset();
+    }
+  };
+
+  handleScanFingerprint = async (fingerprint) => {
+    this.setState({
+      scanStatus: "",
+      showScanner: false,
+      fingerprintScanned: fingerprint,
+    });
+  };
+
+  handleBIP32PathChange = (event) => {
+    const path = event.target.value;
+    this.validateAndSetBIP32Path(
+      path,
+      () => {},
+      () => {},
+    );
+  };
+
+  handleScanError = () => {
+    // Prevent error from killing scanner
+    this.setState({
+      scanStatus: "❌ Failed to decode QR data",
+      showScanner: false,
+    });
+  };
+
+  handleScanInvalid = () => {
+    this.setState({
+      scanStatus: "❌ Invalid xpub format in QR code",
+      showScanner: false,
+    });
+  };
+
+  handleScanSuccess = () => {
+    this.setState({
+      scanStatus: "✅ Successfully imported xpub",
+      showScanner: false,
+    });
+  };
+
+  handleCloseDialog = () => {
+    this.setState({ dialogOpen: false });
+  };
+
+  renderScanner = () => {
+    const { showScanner, scanStatus } = this.state;
+    if (!showScanner) return null;
+
+    return (
+      <Box mt={2}>
+        <QrReader
+          onResult={this.handleQRResult}
+          constraints={{ facingMode: "environment" }}
+          containerStyle={{ width: "100%" }}
+        />
+        <p>{scanStatus}</p>
+        <Button
+          variant="contained"
+          onClick={() => this.setState({ showScanner: false })}
+        >
+          Close Scanner
+        </Button>
+      </Box>
+    );
   };
 
   render() {

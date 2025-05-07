@@ -646,6 +646,7 @@ export function ConfigAdapter({
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
+export * from "./bcur2";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
