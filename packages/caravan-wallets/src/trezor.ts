@@ -54,7 +54,7 @@ import { MULTISIG_ROOT } from "./index";
 /**
  * Constant defining Trezor interactions.
  */
-export const TREZOR = "trezor";
+// export const TREZOR = "trezor";
 
 /**
  * What's going on with this TrezorConnect import?

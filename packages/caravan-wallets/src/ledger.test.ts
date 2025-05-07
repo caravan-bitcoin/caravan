@@ -1,8 +1,12 @@
 /**
- * @jest-environment jsdom
+ * @vi-environment jsdom
  */
 
-import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
+import {
+  TEST_FIXTURES,
+  ROOT_FINGERPRINT,
+  Network,
+} from "@caravan/bitcoin";
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
 import {
   LedgerGetMetadata,
@@ -16,6 +20,89 @@ import {
   LedgerSignatures,
 } from "./ledger";
 import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
+// import { getPsbtVersionNumber } from "@caravan/psbt";
+import { vi } from 'vitest';
+
+
+vi.mock("@caravan/psbt", () => ({
+  translatePSBT: vi.fn().mockReturnValue({
+    unchainedInputs: [
+      {
+        txid: "8d276c76b3550b145e44d35c5833bae175e0351b4a5c57dc1740387e78f57b11",
+        index: 0,
+        transactionHex:
+          "0200000001abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890000000006a47304402206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b02206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b012103abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abffffffff01a0860100000000001976a914abcdef1234567890abcdef1234567890abcdef1288ac00000000",
+        amountSats: "1234000",
+        multisig: {
+          braidDetails: JSON.stringify({
+            network: "TESTNET",
+            addressType: "P2SH",
+            extendedPublicKeys: [],
+            requiredSigners: 2,
+            index: "0",
+          }),
+          address: "2N8hwPqW2QvHog3fG5f2qJUbWvU3N8Y7r",
+          redeem: {
+            output: Buffer.from(
+              "522103abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678902103fedcba0987654321fedcba0987654321fedcba0987654321fedcba098765432152ae",
+              "hex"
+            ),
+          },
+        },
+      },
+      {
+        txid: "8d276c76b3550b145e44d35c5833bae175e0351b4a5c57dc1740387e78f57b11",
+        index: 1,
+        transactionHex:
+          "0200000001abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890000000006a47304402206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b02206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b012103abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abffffffff01a0860100000000001976a914abcdef1234567890abcdef1234567890abcdef1288ac00000000",
+        amountSats: "1234000",
+        multisig: {
+          braidDetails: JSON.stringify({
+            network: "TESTNET",
+            addressType: "P2SH",
+            extendedPublicKeys: [],
+            requiredSigners: 2,
+            index: "0",
+          }),
+          address: "2N8hwPqW2QvHog3fG5f2qJUbWvU3N8Y7r",
+          redeem: {
+            output: Buffer.from(
+              "522103abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678902103fedcba0987654321fedcba0987654321fedcba0987654321fedcba098765432152ae",
+              "hex"
+            ),
+          },
+        },
+      },
+      {
+        txid: "8d276c76b3550b145e44d35c5833bae175e0351b4a5c57dc1740387e78f57b11",
+        index: 2,
+        transactionHex:
+          "0200000001abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890000000006a47304402206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b02206b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b4b8b012103abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abffffffff01a0860100000000001976a914abcdef1234567890abcdef1234567890abcdef1288ac00000000",
+        amountSats: "1234000",
+        multisig: {
+          braidDetails: JSON.stringify({
+            network: "TESTNET",
+            addressType: "P2SH",
+            extendedPublicKeys: [],
+            requiredSigners: 2,
+            index: "0",
+          }),
+          address: "2N8hwPqW2QvHog3fG5f2qJUbWvU3N8Y7r",
+          redeem: {
+            output: Buffer.from(
+              "522103abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678902103fedcba0987654321fedcba0987654321fedcba0987654321fedcba098765432152ae",
+              "hex"
+            ),
+          },
+        },
+      },
+    ],
+    unchainedOutputs: [],
+    bip32Derivations: [
+      { path: "m/45'/1'/100'", pubkey: Buffer.from("deadbeef", "hex") },
+    ],
+  }),
+}));
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
@@ -119,7 +206,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when metadata can't be parsed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parseMetadata([]);
         }).toThrow(/unable to parse/i);
@@ -155,7 +242,7 @@ describe("ledger", () => {
       });
 
       it("throws and logs an error when the public key can't be compressed", () => {
-        console.error = jest.fn();
+        console.error = vi.fn();
         expect(() => {
           interactionBuilder().parsePublicKey();
         }).toThrow(/received no public key/i);
@@ -297,7 +384,8 @@ describe("ledger", () => {
       path: "m/45'/1'/100'",
     };
     function psbtInteractionBuilder() {
-      return new LedgerSignMultisigTransaction({
+      // console.log("tx.psbt", tx.psbt);
+      const interaction = new LedgerSignMultisigTransaction({
         network: tx.network,
         inputs: [],
         outputs: [],
@@ -305,6 +393,7 @@ describe("ledger", () => {
         psbt: tx.psbt,
         keyDetails,
       });
+      return interaction;
     }
 
     itHasAppMessages(psbtInteractionBuilder);
@@ -348,30 +437,33 @@ describe("ledger", () => {
 
   function getMockedApp() {
     const mockApp = {
-      registerWallet: jest.fn(),
-      getWalletAddress: jest.fn(),
-      signPsbt: jest.fn(),
-      getMasterFingerprint: jest.fn(),
+      registerWallet: vi.fn(),
+      getWalletAddress: vi.fn(),
+      signPsbt: vi.fn(),
+      getMasterFingerprint: vi.fn(),
     };
+    vi.mock("ledger-bitcoin", async () => {
+      const actual = await vi.importActual("ledger-bitcoin");
+      return {
+        ...actual,
+        default: vi.fn().mockImplementation(() => mockApp),
+      };
+    });
 
-    jest.mock("ledger-bitcoin", () =>
-      jest.fn().mockImplementation(() => mockApp)
-    );
-
-    const mockWithApp = jest.fn().mockImplementation((callback) => {
+    const mockWithApp = vi.fn().mockImplementation((callback) => {
       return callback(mockApp);
     });
     return [mockApp, mockWithApp];
   }
 
   function addInteractionMocks(interaction, mockWithApp) {
-    jest
-      .spyOn(interaction, "isAppSupported")
-      .mockReturnValue(Promise.resolve(true));
-    jest.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
-    jest
-      .spyOn(interaction, "withTransport")
-      .mockImplementation(() => Promise.resolve(jest.fn));
+    vi.spyOn(interaction, "isAppSupported").mockReturnValue(
+      Promise.resolve(true)
+    );
+    vi.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
+    vi.spyOn(interaction, "withTransport").mockImplementation(() =>
+      Promise.resolve(vi.fn)
+    );
   }
 
   describe("LedgerRegisterWalletPolicy", () => {
@@ -384,7 +476,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -422,7 +514,7 @@ describe("ledger", () => {
     });
 
     it("verifies against a registration mismatch", async () => {
-      console.error = jest.fn();
+      console.error = vi.fn();
       const interaction = interactionBuilder("beef", true);
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
@@ -451,7 +543,7 @@ describe("ledger", () => {
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     function interactionBuilder(
@@ -494,7 +586,7 @@ describe("ledger", () => {
   describe("LedgerV2SignMultisigTransaction", () => {
     let expectedSigs: LedgerSignatures[], mockApp, mockWithApp;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       const [app, withApp] = getMockedApp();
       mockWithApp = withApp;
       mockApp = app;
@@ -508,10 +600,11 @@ describe("ledger", () => {
         ],
       ];
       mockApp.signPsbt.mockReturnValue(Promise.resolve(expectedSigs));
+
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     const fixture = TEST_FIXTURES.transactions[0];
@@ -522,6 +615,10 @@ describe("ledger", () => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       progressCallback = () => {}
     ) {
+      console.log("fixture.psbt:", psbt);
+      if (!psbt || typeof psbt !== "string") {
+        throw new Error(`Invalid PSBT: ${psbt}`);
+      }
       let interaction;
       const options = {
         policyHmac,
@@ -538,7 +635,10 @@ describe("ledger", () => {
     }
 
     it("signs psbt", async () => {
+      console.log("before");
       const interaction = interactionBuilder();
+      console.log("after");
+    
       const sigs = await interaction.run();
       expect(sigs).toStrictEqual([fixture.signature[0]]);
       // confirming that the psbt used is version 2
