@@ -465,12 +465,6 @@ const LandingPage = () => {
             className={classes.gridImage}
             loading="lazy"
           />
-          <img
-            src="/images/landing/brave.png"
-            alt="Brave Browser"
-            className={classes.gridImage}
-            loading="lazy"
-          />
         </div>
       </section>
 
