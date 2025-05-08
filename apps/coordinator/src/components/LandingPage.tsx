@@ -5,6 +5,9 @@ import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
 import LockIcon from "@mui/icons-material/Lock";
 import LayersIcon from "@mui/icons-material/Layers";
+import ShieldIcon from "@mui/icons-material/Shield";
+import DevicesIcon from "@mui/icons-material/Devices";
+import StorageIcon from "@mui/icons-material/Storage";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "../../../../assets/images/caravan-logo-transparent.png";
 
@@ -331,12 +334,12 @@ const LandingPage = () => {
       <section className={classes.heroSection}>
         <h1 className={classes.title}>
           Secure your bitcoin with <span className="highlight">Caravan</span>, a
-          stateless multisig coordinator
+          fully open-source stateless multisig coordinator
         </h1>
         <h2 className={classes.subtitle}>
-          Caravan simplifies multisig custody by coordinating your transaction
-          without storing your keys. Gain security and control over your
-          bitcoin.
+          Caravan simplifies multisig custody by coordinating your transactions
+          without storing your keys. Self-custody your bitcoin with enhanced
+          security, privacy, and protection against single points of failure.
         </h2>
         <div className={classes.buttonContainer}>
           <Link to="/setup">
@@ -383,6 +386,11 @@ const LandingPage = () => {
             alt="Chrome"
             className={classes.gridImage}
           />
+          <img
+            src="/images/landing/brave.png"
+            alt="Brave"
+            className={classes.gridImage}
+          />
         </div>
       </section>
 
@@ -394,15 +402,13 @@ const LandingPage = () => {
             </h3>
             <p className={classes.contentDescription}>
               Caravan makes bitcoin multisig custody easier and safer through
-              transparency and standards. Caravan is a coordination software for
-              multisig addresses and wallets. Caravan can be used to build a
-              multisig wallet derived from xpubs, or individual multisig
-              addresses derived from pubkeys. In both cases, in order to
-              transact from the wallet or address, you must also have your
-              private keys and BIP32 paths. Caravan is stateless. It does not
-              itself store any data outside your current browser session. You
-              must safekeep the wallet details (xpubs, BIP32 paths) and
-              addresses (redeem scripts, BIP32 paths) that you create.
+              transparency and standards. Create common setups like 2-of-3 or
+              3-of-5 multisig wallets for different security needs. Caravan
+              supports both wallet coordination derived from xpubs and
+              individual multisig addresses derived from pubkeys. Being fully
+              open-source and stateless, Caravan stores no data outside your
+              current browser session, giving you complete control over your
+              funds while protecting your privacy.
             </p>
           </div>
           <div className={classes.imageSection}>
@@ -422,32 +428,35 @@ const LandingPage = () => {
             </div>
           </div>
           <div className={classes.descriptionSection}>
-            <h3 className={classes.contentTitle}>Keys</h3>
+            <h3 className={classes.contentTitle}>Keys & Recovery</h3>
             <p className={classes.contentDescription}>
               All bitcoin is ultimately protected by private keys. Your private
               key may live on a piece of paper, a hardware wallet, some software
               on a laptop, or even just in your mind. Caravan, being stateless,
               does not store or ask for your private key but it can talk to
-              hardware devices or software applications which do. Caravan
-              supports entering public keys and signatures via text, so any
-              wallet which can export such data can be made compatible with
-              Caravan.
+              hardware devices or software applications which do. With multisig,
+              you're protected against the loss of any single key, creating a
+              robust disaster recovery setup. Caravan supports P2SH, P2WSH, and
+              P2TR address formats, and works with all major hardware wallets
+              and key management systems.
             </p>
           </div>
         </div>
 
         <div className={classes.fullWidthBox}>
           <div className={classes.descriptionSection}>
-            <h3 className={classes.contentTitle}>Consensus</h3>
+            <h3 className={classes.contentTitle}>Privacy & Consensus</h3>
             <p className={classes.contentDescription}>
               In order to look up wallet addresses and their balances, and
               broadcast transactions, Caravan requires knowledge of the
               constantly changing bitcoin network. Running a full bitcoin node
               is the most private way to determine the current state of the
-              bitcoin network. Caravan can be easily configured to use your own
-              node for consensus information and broadcasting transactions. If
-              you don&apos;t want to or cannot run your own full node, Caravan
-              defaults to using the freely available API at mempool.space.
+              bitcoin network and prevents third-party services from tracking
+              your wallet activity. Caravan can be easily configured to use your
+              own node for consensus information and broadcasting transactions.
+              If you don&apos;t want to or cannot run your own full node,
+              Caravan defaults to using the freely available API at
+              mempool.space.
             </p>
           </div>
           <div className={classes.imageSection}>
@@ -471,7 +480,8 @@ const LandingPage = () => {
             <h3 className={classes.featureTitle}>Security</h3>
             <p className={classes.featureDescription}>
               Minimize attack vectors with Caravan&apos;s stateless design and
-              multisig coordination for enhanced Bitcoin security.
+              multisig coordination. Protect against exchange failures, theft,
+              and single points of compromise.
             </p>
           </div>
 
@@ -482,7 +492,8 @@ const LandingPage = () => {
             <h3 className={classes.featureTitle}>Transparency</h3>
             <p className={classes.featureDescription}>
               Maintain complete control over your private keys with open
-              standards and user-managed key storage.
+              standards and user-managed key storage. As a fully open-source
+              solution, the code can be verified by anyone.
             </p>
           </div>
 
@@ -494,7 +505,45 @@ const LandingPage = () => {
             <p className={classes.featureDescription}>
               Enjoy seamless integration with hardware wallets, software
               applications, and a user-friendly interface for effortless
-              multisig management.
+              multisig management across desktop and compatible mobile browsers.
+            </p>
+          </div>
+        </div>
+
+        <div className={classes.featureContainer}>
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
+              <ShieldIcon fontSize="large" />
+            </div>
+            <h3 className={classes.featureTitle}>Use Cases</h3>
+            <p className={classes.featureDescription}>
+              Perfect for business treasuries, family savings, inheritance
+              planning, and high-security personal holdings. Configure your
+              security to match your specific needs.
+            </p>
+          </div>
+
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
+              <DevicesIcon fontSize="large" />
+            </div>
+            <h3 className={classes.featureTitle}>Cross-Device</h3>
+            <p className={classes.featureDescription}>
+              Works seamlessly across desktop browsers and compatible mobile
+              devices. Create and manage your multisig setup from anywhere with
+              a compatible browser.
+            </p>
+          </div>
+
+          <div className={classes.featureItem}>
+            <div className={classes.featureIcon}>
+              <StorageIcon fontSize="large" />
+            </div>
+            <h3 className={classes.featureTitle}>Self-Custody</h3>
+            <p className={classes.featureDescription}>
+              Take full control of your bitcoin without relying on third-party
+              custodians. True financial sovereignty with enhanced security
+              through multisig technology.
             </p>
           </div>
         </div>
@@ -516,8 +565,8 @@ const LandingPage = () => {
           <p>
             Manage your bitcoin with increased security and control.
             Caravan&apos;s user-friendly interface guides you through creating,
-            recovering, and managing multisig wallets. Take charge of your
-            Bitcoin today!
+            recovering, and managing multisig wallets. Protect against key loss,
+            theft, and exchange insolvency with true self-custody.
           </p>
           <Link to="/setup">
             <Button className={classes.yellowButton} variant="contained">
@@ -540,7 +589,7 @@ const LandingPage = () => {
             Caravan
           </Button>
           <p style={{ alignSelf: "center", color: "gray" }}>
-            Multisig made easy. Manage your Bitcoin together with Caravan.
+            Multisig made easy. Manage your bitcoin statelessly with Caravan.
           </p>
           <p style={{ alignSelf: "center" }}>
             &copy; Copyright 2025 by Unchained Capital
@@ -590,6 +639,14 @@ const LandingPage = () => {
           >
             Source code
           </a>
+          <a
+            href="https://bitcoiner.guide/multisig/"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Multisig Guide
+          </a>
         </div>
         <div className={classes.footerColumn}>
           <h4 className={classes.footerTitle}>Developer&apos;s corner</h4>
@@ -600,6 +657,14 @@ const LandingPage = () => {
             rel="noopener noreferrer"
           >
             GitHub
+          </a>
+          <a
+            href="https://github.com/caravan-bitcoin/caravan/blob/main/CONTRIBUTING.md"
+            className={classes.footerLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Contributing
           </a>
         </div>
         <div className={classes.footerColumn}>
