@@ -1,4 +1,5 @@
 import { TEST_FIXTURES, Network } from "@caravan/bitcoin";
+
 import { KeyOrigin, MultisigWalletPolicy } from "./policy";
 
 const paths = ["m/48'/1'/100'/1'", "m/48'/1'/100'/2'"];

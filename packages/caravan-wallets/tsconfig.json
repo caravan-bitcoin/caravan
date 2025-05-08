@@ -1,4 +1,5 @@
 {
+  "extends": "@caravan/typescript-config/base.json",
   "compilerOptions": {
     // be explicit about the root directory of the project
     "rootDir": "./src",
@@ -14,6 +15,7 @@
     "strict": true,
     // Import non-ES modules as default imports.
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "noImplicitAny": false,
     // Ensure that .d.ts files are created by tsc, but not .js files
     "declaration": true,
@@ -21,9 +23,6 @@
     // Ensure that Babel can safely transpile files in the TypeScript project
     "isolatedModules": true,
     "outDir": "lib",
-    "types": [
-      "jest"
-    ],
     "skipLibCheck": true,
   },
   "include": [

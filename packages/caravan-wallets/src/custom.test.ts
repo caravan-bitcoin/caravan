@@ -1,14 +1,11 @@
-/**
- * @jest-environment jsdom
- */
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 
 import {
   CustomExportExtendedPublicKey,
   CustomSignMultisigTransaction,
 } from "./custom";
-import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
-import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
 import { customFixtures } from "./fixtures/custom.fixtures";
+import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 

@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import {
   ROOT_FINGERPRINT,
   TEST_FIXTURES,
@@ -9,8 +5,10 @@ import {
   networkData,
   Network,
 } from "@caravan/bitcoin";
-import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
+import TrezorConnect from "@trezor/connect-web";
+import { ECPair, payments } from "bitcoinjs-lib";
 
+import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
 import {
   trezorCoin,
   TrezorInteraction,
@@ -22,9 +20,7 @@ import {
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
 } from "./trezor";
-import { ECPair, payments } from "bitcoinjs-lib";
 
-import TrezorConnect from "@trezor/connect-web";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {

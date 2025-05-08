@@ -19,6 +19,8 @@
  * * HermitSignMultisigTransaction
  */
 import { parseSignaturesFromPSBT } from "@caravan/bitcoin";
+
+import { BCUREncoder } from "./bcur";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -26,7 +28,6 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { BCUREncoder } from "./bcur";
 
 export const HERMIT = "hermit";
 

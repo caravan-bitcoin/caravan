@@ -1,7 +1,21 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
+import { Network } from "@caravan/bitcoin";
+import {
+  braidDetailsToWalletConfig,
+  MultisigWalletConfig,
+  LegacyInput,
+  LegacyOutput,
+  BraidDetails,
+} from "@caravan/multisig";
+import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
+
 import { version } from "../package.json";
-import { UNSUPPORTED, UnsupportedInteraction } from "./interaction";
+
 import {
   BITBOX,
   BitBoxGetMetadata,
@@ -28,6 +42,7 @@ import {
   HermitExportExtendedPublicKey,
   HermitSignMultisigTransaction,
 } from "./hermit";
+import { UNSUPPORTED, UnsupportedInteraction } from "./interaction";
 import {
   LEDGER,
   LEDGER_V2,
@@ -49,26 +64,13 @@ import {
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
 } from "./trezor";
-import {
-  braidDetailsToWalletConfig,
-  MultisigWalletConfig,
-  LegacyInput,
-  LegacyOutput,
-  BraidDetails,
-} from "@caravan/multisig";
-import { Network } from "@caravan/bitcoin";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-} from "@caravan/psbt";
 
 /**
  * Current @caravan/wallets version.
  */
 export const VERSION: string = version;
 
-export const MULTISIG_ROOT = "m/45'";
+export { MULTISIG_ROOT } from './constants';
 
 /**
  * Keystores which support direct interactions.

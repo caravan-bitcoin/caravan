@@ -319,7 +319,7 @@ Developers implementing these kinds of interactions should subclass
 
 ### Testing
 
-Unit tests are implemented in Jest and can be run via
+Unit tests are implemented in Vitest and can be run via
 
 ```
 $ npm test

@@ -16,17 +16,18 @@ import {
   BitcoinNetwork,
 } from "@caravan/bitcoin";
 import {
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
+
+import {
   IndirectKeystoreInteraction,
   PENDING,
   ACTIVE,
   INFO,
   ERROR,
 } from "./interaction";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-} from "@caravan/psbt";
 
 export const CUSTOM = "custom";
 
