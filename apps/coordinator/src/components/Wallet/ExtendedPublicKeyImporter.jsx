@@ -1,15 +1,8 @@
+// React and third party imports
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import {
-  validateBIP32Path,
-  validateRootFingerprint,
-  convertExtendedPublicKey,
-  validateExtendedPublicKey,
-  Network,
-  P2SH,
-} from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import { QrReader } from "react-qr-reader";
 import {
   Card,
   CardHeader,
@@ -20,8 +13,29 @@ import {
   FormHelperText,
   Box,
   TextField,
+  Typography,
 } from "@mui/material";
 import { withStyles } from "@mui/styles";
+
+// Project imports
+import {
+  validateBIP32Path,
+  validateRootFingerprint,
+  convertExtendedPublicKey,
+  validateExtendedPublicKey,
+  Network,
+  P2SH,
+} from "@caravan/bitcoin";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCURDecoder2,
+} from "@caravan/wallets";
+
+// Local imports
 import Copyable from "../Copyable";
 import DirectExtendedPublicKeyImporter from "./DirectExtendedPublicKeyImporter";
 import TextExtendedPublicKeyImporter from "./TextExtendedPublicKeyImporter";
@@ -39,12 +53,46 @@ import {
 import ColdcardExtendedPublicKeyImporter from "../Coldcard/ColdcardExtendedPublicKeyImporter";
 import HermitExtendedPublicKeyImporter from "../Hermit/HermitExtendedPublicKeyImporter";
 
+// Constants
 const TEXT = "text";
+const SCAN_QR = "scan_qr";
 
+// Styles
 const useStyles = () => ({
   xpub: {
     lineHeight: ".8rem",
     overflowWrap: "break-word",
+  },
+  scannerOverlay: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "250px",
+    height: "250px",
+    transform: "translate(-50%, -50%)",
+    border: "2px solid #00ff00",
+    animation: "scan 2s infinite",
+    zIndex: 2,
+  },
+  "@keyframes scan": {
+    "0%": {
+      borderColor: "#00ff00",
+      boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+    },
+    "50%": {
+      borderColor: "#00ff0080",
+      boxShadow: "0 0 0 3px rgba(0,255,0,0.1)",
+    },
+    "100%": {
+      borderColor: "#00ff00",
+      boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+    },
+  },
+  scannerContainer: {
+    width: "100%",
+    maxWidth: "400px",
+    height: "400px",
+    margin: "auto",
   },
 });
 
@@ -54,8 +102,35 @@ class ExtendedPublicKeyImporter extends React.Component {
     this.state = {
       disableChangeMethod: false,
       conversionMessage: "",
+      showScanner: false,
+      scanStatus: "",
+      errorTimeout: null,
     };
+    this.decoder = new BCURDecoder2();
   }
+
+  // Clear any existing error timeouts
+  componentWillUnmount() {
+    if (this.state.errorTimeout) {
+      clearTimeout(this.state.errorTimeout);
+    }
+  }
+
+  // Helper to show temporary errors
+  showTemporaryError = (error) => {
+    if (this.state.errorTimeout) {
+      clearTimeout(this.state.errorTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      this.setState({ scanStatus: "", errorTimeout: null });
+    }, 2000);
+
+    this.setState({
+      scanStatus: error,
+      errorTimeout: timeout,
+    });
+  };
 
   title = () => {
     const { number, extendedPublicKeyImporter, setName } = this.props;
@@ -89,6 +164,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
+            <MenuItem value={SCAN_QR}>Scan QR Code</MenuItem>
           </TextField>
         </FormControl>
         <FormControl style={{ width: "100%" }}>
@@ -106,6 +182,10 @@ class ExtendedPublicKeyImporter extends React.Component {
       defaultBIP32Path,
     } = this.props;
     const { method } = extendedPublicKeyImporter;
+
+    if (method === SCAN_QR) {
+      return this.renderScanner();
+    }
 
     if (method === BITBOX || method === TREZOR || method === LEDGER) {
       return (
@@ -170,8 +250,19 @@ class ExtendedPublicKeyImporter extends React.Component {
 
   handleMethodChange = (event) => {
     const { number, setMethod, setExtendedPublicKey } = this.props;
-    setMethod(number, event.target.value);
+    const method = event.target.value;
+    setMethod(number, method);
     setExtendedPublicKey(number, "");
+
+    // Reset scan status when changing methods
+    this.setState({
+      scanStatus: "",
+      showScanner: method === SCAN_QR,
+    });
+
+    if (this.state.errorTimeout) {
+      clearTimeout(this.state.errorTimeout);
+    }
   };
 
   disableChangeMethod = () => {
@@ -215,11 +306,16 @@ class ExtendedPublicKeyImporter extends React.Component {
         </div>
       );
     }
+    // Add m/ prefix to display if not already present
+    const displayPath = extendedPublicKeyImporter.bip32Path.startsWith("m/")
+      ? extendedPublicKeyImporter.bip32Path
+      : `m/${extendedPublicKeyImporter.bip32Path}`;
+
     return (
       <div className="mt-4">
         <p>The BIP32 path for this extended public key is:</p>
         <div className="text-center">
-          <Copyable text={extendedPublicKeyImporter.bip32Path} showIcon />
+          <Copyable text={displayPath} showIcon />
         </div>
         <p className="mt-4">
           You will need this BIP32 path to sign for this key later.{" "}
@@ -231,8 +327,12 @@ class ExtendedPublicKeyImporter extends React.Component {
 
   validateAndSetBIP32Path = (bip32Path, callback, errback, options) => {
     const { number, setBIP32Path } = this.props;
-    const error = validateBIP32Path(bip32Path, options);
-    setBIP32Path(number, bip32Path);
+    // Ensure path has m/ prefix for storage
+    const normalizedPath = bip32Path.startsWith("m/")
+      ? bip32Path
+      : `m/${bip32Path}`;
+    const error = validateBIP32Path(normalizedPath, options);
+    setBIP32Path(number, normalizedPath);
     if (error) {
       errback(error);
     } else {
@@ -359,6 +459,224 @@ class ExtendedPublicKeyImporter extends React.Component {
     }
   };
 
+  handleQRResult = (result) => {
+    const text = typeof result === "string" ? result : result?.text;
+
+    if (!text || typeof text !== "string") {
+      console.error("No valid string result from QR scanner:", result);
+      return;
+    }
+
+    console.log("QR text scanned:", text);
+
+    try {
+      // Handle legacy [xfp/path]xpub format first
+      const legacyRegex =
+        /\[([a-fA-F0-9]{8})(\/[^\]]+)?\]([A-Za-z0-9]+pub[a-zA-Z0-9]+)$/;
+      const match = text.match(legacyRegex);
+
+      if (match) {
+        const xfp = match[1].toUpperCase();
+        const path = match[2]?.slice(1) ?? "";
+        const xpub = match[3];
+
+        this.validateAndSetExtendedPublicKey(xpub, (error) => {
+          if (error) {
+            this.showTemporaryError("❌ " + error);
+          } else {
+            this.showTemporaryError("✅ Successfully imported");
+            this.resetToDefaultMethod();
+          }
+        });
+
+        if (xfp) this.validateAndSetRootFingerprint(xfp, () => {});
+        if (path)
+          this.validateAndSetBIP32Path(
+            path,
+            () => {},
+            () => {},
+          );
+        return;
+      }
+
+      // Handle UR format using BCURDecoder2
+      this.decoder.receivePart(text);
+      this.setState({ scanStatus: this.decoder.getProgress() });
+      if (!this.decoder.isComplete()) return;
+
+      const error = this.decoder.getError();
+      if (error) {
+        this.showTemporaryError("❌ " + error);
+        this.decoder.reset();
+        return;
+      }
+
+      const decodedData = this.decoder.getDecodedData();
+      console.log("Decoded data:", decodedData);
+      if (!decodedData) {
+        this.showTemporaryError("❌ Failed to decode QR data");
+        this.decoder.reset();
+        return;
+      }
+
+      // Extract and parse xpub from decoded data
+      let xpub;
+      xpub = decodedData.xpub;
+
+      if (!xpub) {
+        this.showTemporaryError("❌ Invalid xpub format in QR code");
+        this.decoder.reset();
+        return;
+      }
+
+      const { xfp, path } = decodedData;
+
+      this.validateAndSetExtendedPublicKey(xpub, (error) => {
+        if (error) {
+          this.showTemporaryError("❌ " + error);
+        } else {
+          this.showTemporaryError("✅ Successfully imported");
+          this.resetToDefaultMethod();
+        }
+      });
+
+      if (xfp) {
+        this.validateAndSetRootFingerprint(xfp, (error) => {
+          if (error) console.warn("Error setting fingerprint:", error);
+        });
+      }
+
+      if (path) {
+        this.validateAndSetBIP32Path(
+          path,
+          () => {},
+          (error) => {
+            if (error) console.warn("Error setting BIP32 path:", error);
+          },
+        );
+      }
+
+      this.decoder.reset();
+    } catch (err) {
+      console.error("Error while handling QR:", err);
+      const message = err?.message || String(err);
+      this.showTemporaryError("❌ " + message);
+      this.decoder.reset();
+    }
+  };
+
+  handleScanFingerprint = async (fingerprint) => {
+    this.setState({
+      scanStatus: "",
+      showScanner: false,
+      fingerprintScanned: fingerprint,
+    });
+  };
+
+  handleBIP32PathChange = (event) => {
+    const path = event.target.value;
+    this.validateAndSetBIP32Path(
+      path,
+      () => {},
+      () => {},
+    );
+  };
+
+  handleScanError = () => {
+    // Prevent error from killing scanner
+    this.setState({
+      scanStatus: "❌ Failed to decode QR data",
+      showScanner: false,
+    });
+  };
+
+  handleScanInvalid = () => {
+    this.setState({
+      scanStatus: "❌ Invalid xpub format in QR code",
+      showScanner: false,
+    });
+  };
+
+  handleScanSuccess = () => {
+    this.setState({
+      scanStatus: "✅ Successfully imported xpub",
+      showScanner: false,
+    });
+  };
+
+  handleCloseDialog = () => {
+    this.setState({ dialogOpen: false });
+  };
+
+  resetToDefaultMethod = () => {
+    const { number, setMethod } = this.props;
+    setMethod(number, ""); // Set to empty string to show "Select Method"
+    this.setState({ showScanner: false });
+  };
+
+  renderScanner = () => {
+    const { showScanner, scanStatus } = this.state;
+    if (!showScanner) return null;
+
+    return (
+      <Box
+        mt={2}
+        sx={{
+          "& .scannerOverlay": {
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: "250px",
+            height: "250px",
+            transform: "translate(-50%, -50%)",
+            border: "2px solid #00ff00",
+            animation: "scan 2s infinite",
+            zIndex: 2,
+          },
+          "@keyframes scan": {
+            "0%": {
+              borderColor: "#00ff00",
+              boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+            },
+            "50%": {
+              borderColor: "#00ff0080",
+              boxShadow: "0 0 0 3px rgba(0,255,0,0.1)",
+            },
+            "100%": {
+              borderColor: "#00ff00",
+              boxShadow: "0 0 0 0 rgba(0,255,0,0.4)",
+            },
+          },
+        }}
+      >
+        <Box position="relative" width="100%" maxWidth="400px" margin="auto">
+          <QrReader
+            onResult={this.handleQRResult}
+            constraints={{ facingMode: "environment" }}
+            containerStyle={{
+              width: "100%",
+              maxWidth: "400px",
+              height: "400px",
+              margin: "auto",
+            }}
+          />
+          <div className="scannerOverlay" />
+        </Box>
+        <Typography align="center" color="textSecondary" sx={{ mt: 2 }}>
+          {scanStatus}
+        </Typography>
+        <Box textAlign="center" mt={2}>
+          <Button
+            variant="contained"
+            onClick={() => this.setState({ showScanner: false })}
+          >
+            Close Scanner
+          </Button>
+        </Box>
+      </Box>
+    );
+  };
+
   render() {
     const { extendedPublicKeyImporter, finalizedNetwork, network } = this.props;
     const hasConflict =
@@ -374,7 +692,7 @@ class ExtendedPublicKeyImporter extends React.Component {
       }
     }
     return (
-      <Card>
+      <Card data-testid="extended-key-importer">
         <CardHeader title={this.title()} />
         <CardContent>
           {hasConflict && <Conflict message={conflictMessage} />}
