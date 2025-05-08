@@ -41,7 +41,6 @@ import {
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
 import {
-  TREZOR,
   TrezorGetMetadata,
   TrezorExportPublicKey,
   TrezorExportExtendedPublicKey,
@@ -69,6 +68,11 @@ import {
 export const VERSION: string = version;
 
 export const MULTISIG_ROOT = "m/45'";
+
+/**
+ * Constant defining Trezor interactions.
+ */
+export const TREZOR = "trezor";
 
 /**
  * Keystores which support direct interactions.
