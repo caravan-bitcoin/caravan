@@ -67,12 +67,9 @@ describe("combineBip32Paths", () => {
   });
 });
 
-jest.mock("../utils", () => {
-  return {
-    __esModule: true,
-    secureRandomInt: jest.fn(() => 42),
-  };
-});
+vi.mock("../utils", () => ({
+  secureRandomInt: () => 42,
+}));
 
 describe("secureSecretPath", () => {
   it("should return a path of the desired depth", async () => {

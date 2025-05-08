@@ -1,13 +1,15 @@
+import { BigNumber } from "bignumber.js";
+
+import * as bitcoind from "./bitcoind";
+import { WalletTransactionResponse } from "./types";
 import {
   callBitcoindWallet,
   bitcoindWalletInfo,
   bitcoindImportDescriptors,
   bitcoindGetAddressStatus,
   bitcoindListUnspent,
+  bitcoindGetWalletTransaction,
 } from "./wallet";
-
-import * as bitcoind from "./bitcoind";
-import BigNumber from "bignumber.js";
 
 describe("Wallet Functions", () => {
   const baseUrl = "http://localhost:8332";
@@ -20,12 +22,12 @@ describe("Wallet Functions", () => {
   const expectedWalletPath = `${baseUrl}/wallet/${walletName}`;
 
   beforeEach(() => {
-    mockCallBitcoind = jest.fn();
-    jest.spyOn(bitcoind, "callBitcoind").mockImplementation(mockCallBitcoind);
+    mockCallBitcoind = vi.fn();
+    vi.spyOn(bitcoind, "callBitcoind").mockImplementation(mockCallBitcoind);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("callBitcoindWallet", () => {
@@ -151,7 +153,7 @@ describe("Wallet Functions", () => {
     });
 
     it("should throw an error if no result", async () => {
-      const consoleErrorMock = jest.spyOn(console, "error");
+      const consoleErrorMock = vi.spyOn(console, "error");
       consoleErrorMock.mockImplementation(() => {});
       mockCallBitcoind.mockResolvedValue({ result: undefined });
       const address = "address";
@@ -260,6 +262,151 @@ describe("Wallet Functions", () => {
           time: getTransactionResponse.blocktime,
         },
       ]);
+    });
+  });
+
+  describe("bitcoindGetWalletTransaction", () => {
+    const txid =
+      "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    const includeWatchonly = true;
+    const verbose = true;
+
+    it("should call callBitcoindWallet with gettransaction and correct parameters", async () => {
+      // Sample response based on Bitcoin Core's gettransaction RPC
+      const mockResponse = {
+        result: {
+          amount: -0.12345678,
+          fee: -0.0001,
+          confirmations: 6,
+          blockhash:
+            "000000000000000000000000000000000000000000000000000000000000000a",
+          blockheight: 680000,
+          blockindex: 1,
+          blocktime: 1631234567,
+          txid,
+          walletconflicts: [],
+          time: 1631234560,
+          timereceived: 1631234562,
+          "bip125-replaceable": "no",
+          details: [
+            {
+              address: "bc1qxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              category: "send",
+              amount: -0.12345678,
+              vout: 0,
+              fee: -0.0001,
+              abandoned: false,
+            },
+          ],
+          hex: "0200000000010100000000000000000000000000000000000000000000000000000000000000000000000000ffffffff01000000000000000000160014000000000000000000000000000000000000000000000000",
+          decoded: {
+            txid,
+            hash: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            version: 2,
+            size: 110,
+            vsize: 110,
+            weight: 440,
+            locktime: 0,
+            vin: [
+              {
+                txid: "0000000000000000000000000000000000000000000000000000000000000000",
+                vout: 0,
+                scriptSig: {
+                  asm: "",
+                  hex: "",
+                },
+                sequence: 4294967295,
+              },
+            ],
+            vout: [
+              {
+                value: 0.12345678,
+                n: 0,
+                scriptPubKey: {
+                  asm: "0 0000000000000000000000000000000000000000",
+                  hex: "00140000000000000000000000000000000000000000",
+                  type: "witness_v0_keyhash",
+                  address: "bc1qxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                },
+              },
+            ],
+          },
+        } as WalletTransactionResponse,
+      };
+
+      mockCallBitcoind.mockResolvedValue(mockResponse);
+
+      const result = await bitcoindGetWalletTransaction({
+        url: baseUrl,
+        auth,
+        walletName,
+        txid,
+        includeWatchonly,
+        verbose,
+      });
+
+      expect(mockCallBitcoind).toHaveBeenCalledWith(
+        expectedWalletPath,
+        auth,
+        "gettransaction",
+        [txid, includeWatchonly, verbose],
+      );
+
+      expect(result).toEqual(mockResponse.result);
+    });
+
+    it("should throw error if result is undefined", async () => {
+      mockCallBitcoind.mockResolvedValue({ result: undefined });
+
+      await expect(
+        bitcoindGetWalletTransaction({
+          url: baseUrl,
+          auth,
+          walletName,
+          txid,
+        }),
+      ).rejects.toThrow(
+        `Error: invalid response from ${baseUrl} for transaction ${txid}`,
+      );
+    });
+
+    it("should use correct defaults for optional parameters", async () => {
+      mockCallBitcoind.mockResolvedValue({ result: {} });
+
+      await bitcoindGetWalletTransaction({
+        url: baseUrl,
+        auth,
+        walletName,
+        txid,
+      });
+
+      // Default values: includeWatchonly=true, verbose=true
+      expect(mockCallBitcoind).toHaveBeenCalledWith(
+        expectedWalletPath,
+        auth,
+        "gettransaction",
+        [txid, true, true],
+      );
+    });
+
+    it("should accept custom values for optional parameters", async () => {
+      mockCallBitcoind.mockResolvedValue({ result: {} });
+
+      await bitcoindGetWalletTransaction({
+        url: baseUrl,
+        auth,
+        walletName,
+        txid,
+        includeWatchonly: false,
+        verbose: false,
+      });
+
+      expect(mockCallBitcoind).toHaveBeenCalledWith(
+        expectedWalletPath,
+        auth,
+        "gettransaction",
+        [txid, false, false],
+      );
     });
   });
 });

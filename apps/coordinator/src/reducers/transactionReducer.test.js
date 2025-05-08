@@ -41,7 +41,6 @@ describe("Test transactionReducer", () => {
       expect(r.chosen).toBe(true);
     });
   });
-
   describe("Test SET_REQUIRED_SIGNERS action", () => {
     it("should properly set the number of required signers", () => {
       [1, 2, 3, 4, 5, 6, 7].forEach((m) => {
@@ -60,7 +59,6 @@ describe("Test transactionReducer", () => {
       });
     });
   });
-
   describe("Test SET_TOTAL_SIGNERS action", () => {
     it("should properly set the number of total signers", () => {
       [2, 3, 4, 5, 6, 7].forEach((m) => {
@@ -77,7 +75,6 @@ describe("Test transactionReducer", () => {
       });
     });
   });
-
   describe("Test SET_INPUTS action", () => {
     it("should properly set inputs", () => {
       const sats = "40000";
@@ -101,7 +98,6 @@ describe("Test transactionReducer", () => {
       expect(r.inputsTotalSats).toStrictEqual(BigNumber(sats));
     });
   });
-
   describe("Test ADD_OUTPUT action", () => {
     it("should properly add an empty output", () => {
       const expected = {
@@ -123,7 +119,6 @@ describe("Test transactionReducer", () => {
       expect(r.outputs).toEqual([expected]);
     });
   });
-
   describe("Test SET_OUTPUT_ADDRESS action", () => {
     it("should properly set output address", () => {
       const initial = initialOutputState();
@@ -141,7 +136,6 @@ describe("Test transactionReducer", () => {
       );
       expect(r.outputs[0].address).toEqual(address);
     });
-
     it("should properly reject duplicate output address", () => {
       const initial = initialOutputState();
       const address = "2MzZgrQq6Qa7U1p24eNx6N2wrpCr8bEpdeH";
@@ -160,7 +154,6 @@ describe("Test transactionReducer", () => {
       );
       expect(r.outputs[1].addressError).toEqual("Duplicate output address.");
     });
-
     it("should properly reject output address equal to input address", () => {
       const initial = initialOutputState();
       const address = "2MzZgrQq6Qa7U1p24eNx6N2wrpCr8bEpdeH";
@@ -183,7 +176,6 @@ describe("Test transactionReducer", () => {
       );
     });
   });
-
   describe("Test SET_OUTPUT_AMOUNT action", () => {
     it("should properly set output amount", () => {
       const initial = initialOutputState();
@@ -201,7 +193,6 @@ describe("Test transactionReducer", () => {
       expect(r.outputs[0].amountSats).toEqual("1234");
     });
   });
-
   describe("Test DELETE_OUTPUT action", () => {
     it("should properly remove an output and update fee", () => {
       const initial = [initialOutputState(), initialOutputState()];
@@ -225,7 +216,6 @@ describe("Test transactionReducer", () => {
       expect(r.fee).toEqual("0.00000159");
     });
   });
-
   describe("Test SET_FEE_RATE action", () => {
     it("should properly set fee rate and update fee", () => {
       const r = reducer(
@@ -249,15 +239,12 @@ describe("Test transactionReducer", () => {
         m: r.requiredSigners,
         n: r.totalSigners,
       });
-
       // test txid for reference:
       // e5d35e77a9177e52eb2e908d133faa3c8f9dc0d5a947f25568a55f711f0ee87b
       const expectedRate = satoshisToBitcoins(estimatedSize * r.feeRate);
-
       expect(r.fee).toEqual(expectedRate);
     });
   });
-
   describe("Test SET_FEE action", () => {
     it("should properly set fee and update fee rate", () => {
       const r = reducer(
@@ -275,11 +262,9 @@ describe("Test transactionReducer", () => {
           value: "0.00000504",
         },
       );
-
       expect(r.fee).toEqual("0.00000504");
     });
   });
-
   describe("Test FINALIZE_OUTPUTS action", () => {
     it("should properly finalize outputs", () => {
       const action = {
@@ -317,7 +302,6 @@ describe("Test transactionReducer", () => {
       expect(r.finalizedOutputs).toBe(action.value);
     });
   });
-
   describe("Test RESET_OUTPUTS action", () => {
     it("should properly reset outputs", () => {
       const r = reducer(
@@ -336,7 +320,6 @@ describe("Test transactionReducer", () => {
       expect(r.balanceError).toEqual("");
     });
   });
-
   describe("Test SET_ADDRESS_TYPE action", () => {
     it("should properly set address type", () => {
       const r = reducer(
@@ -351,7 +334,6 @@ describe("Test transactionReducer", () => {
       expect(r.addressType).toEqual("P2WSH");
     });
   });
-
   describe("Test SET_NETWORK action", () => {
     it("should properly set network", () => {
       const r = reducer(
@@ -366,7 +348,6 @@ describe("Test transactionReducer", () => {
       expect(r.network).toEqual("TESTNET");
     });
   });
-
   describe("Test SET_TXID action", () => {
     it("should properly set network", () => {
       const txid =

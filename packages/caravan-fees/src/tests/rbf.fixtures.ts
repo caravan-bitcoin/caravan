@@ -1,4 +1,5 @@
 import { Network } from "@caravan/bitcoin";
+
 import { UTXO, SCRIPT_TYPES } from "../types";
 
 export const rbfFixtures = {

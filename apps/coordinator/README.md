@@ -231,10 +231,15 @@ file is included with the `caravan` source code called `bitcoind.proxy` which wi
 proxy. The testnet proxy is included, but is commented out.
 
 ```bash
-# MacOS
+# MacOS Intel
 mkdir -p /usr/local/etc/nginx/sites-available
 cp bitcoind.proxy /usr/local/etc/nginx/sites-available/
 ln -s /usr/local/etc/nginx/sites-available/bitcoind.proxy /usr/local/etc/nginx/servers/bitcoind.proxy
+
+# MacOS Silicon
+mkdir -p /opt/homebrew/etc/nginx/sites-available
+cp bitcoind.proxy /opt/homebrew/etc/nginx/sites-available/
+ln -s /opt/homebrew/etc/nginx/sites-available/bitcoind.proxy /opt/homebrew/etc/nginx/servers/bitcoind.proxy
 
 # Debian Linux
 sudo mkdir -p /etc/nginx/sites-available

@@ -1,24 +1,33 @@
 import { Network, satoshisToBitcoins } from "@caravan/bitcoin";
+import axios from "axios";
+import { BigNumber } from "bignumber.js";
+import { Mocked, MockInstance } from "vitest";
+
+import * as bitcoind from "./bitcoind";
 import {
   BlockchainClient,
   ClientType,
   ClientBase,
   BlockchainClientError,
+  transformWalletTransactionToRawTransactionData,
 } from "./client";
-import * as bitcoind from "./bitcoind";
+import {
+  UTXO,
+  RawTransactionData,
+  TransactionDetails,
+  WalletTransactionResponse,
+} from "./types";
 import * as wallet from "./wallet";
-import BigNumber from "bignumber.js";
-import { UTXO } from "./types";
-import axios from "axios";
-jest.mock("axios");
+
+vi.mock("axios");
 
 describe("ClientBase", () => {
   const mockHost = "https://example.com";
   const mockData = { foo: "bar" };
-  let mockedAxios: jest.Mocked<typeof axios>;
+  let mockedAxios: Mocked<typeof axios>;
   beforeEach(() => {
-    jest.resetAllMocks();
-    mockedAxios = axios as jest.Mocked<typeof axios>;
+    vi.resetAllMocks();
+    mockedAxios = axios as Mocked<typeof axios>;
   });
 
   it("should make a GET request", async () => {
@@ -145,8 +154,9 @@ describe("BlockchainClient", () => {
   describe("broadcastTransaction", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API
-      const mockResponse = { success: true };
-      const mockBitcoindSendRawTransaction = jest.spyOn(
+      const mockResponse =
+        "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d";
+      const mockBitcoindSendRawTransaction = vi.spyOn(
         bitcoind,
         "bitcoindSendRawTransaction",
       );
@@ -174,7 +184,7 @@ describe("BlockchainClient", () => {
     it("should broadcast a transaction (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockResponse = "txid";
-      const mockPost = jest.fn().mockResolvedValue(mockResponse);
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -195,7 +205,7 @@ describe("BlockchainClient", () => {
     it("should broadcast a transaction (BLOCKSTREAM client)", async () => {
       // Mock the response from the API
       const mockResponse = "txid";
-      const mockPost = jest.fn().mockResolvedValue(mockResponse);
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.BLOCKSTREAM,
@@ -216,14 +226,14 @@ describe("BlockchainClient", () => {
   });
 
   describe("getTransactionHex", () => {
-    let mockCallBitcoind: jest.SpyInstance;
+    let mockCallBitcoind: MockInstance;
 
     beforeEach(() => {
-      mockCallBitcoind = jest.spyOn(bitcoind, "callBitcoind");
+      mockCallBitcoind = vi.spyOn(bitcoind, "callBitcoind");
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it("should get the transaction hex for a given txid (PRIVATE client)", async () => {
@@ -283,7 +293,7 @@ describe("BlockchainClient", () => {
     it("should get the transaction hex for a given txid (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockResponse = "transactionHex";
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -305,7 +315,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the transaction hex (MEMPOOL client)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch transaction hex");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -336,7 +346,7 @@ describe("BlockchainClient", () => {
     it("should get UTXO details for a given UTXO (MEMPOOL client)", async () => {
       // Mock the response from the API
       const mockTransactionResult = "transactionHex";
-      const mockGetTransactionHex = jest
+      const mockGetTransactionHex = vi
         .fn()
         .mockResolvedValue(mockTransactionResult);
 
@@ -398,9 +408,9 @@ describe("BlockchainClient", () => {
           time: "string",
         },
       ];
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
-        .mockResolvedValue(Promise.resolve(mockUnspent));
+        .mockResolvedValue(mockUnspent);
 
       // Create a new instance of BlockchainClient with ClientType.PRIVATE
       const blockchainClient = new BlockchainClient({
@@ -429,11 +439,11 @@ describe("BlockchainClient", () => {
     it("should handle the case when the address is not found (PRIVATE client)", async () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Address not found");
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
-      const mockIsWalletAddressNotFoundError = jest
+      const mockIsWalletAddressNotFoundError = vi
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(true);
 
@@ -464,10 +474,10 @@ describe("BlockchainClient", () => {
     it("should handle other errors when fetching UTXOs (PRIVATE client)", async () => {
       // Mock the error from bitcoindListUnspent
       const mockError = new Error("Failed to fetch UTXOs");
-      const mockIsWalletAddressNotFoundError = jest
+      const mockIsWalletAddressNotFoundError = vi
         .spyOn(bitcoind, "isWalletAddressNotFoundError")
         .mockReturnValue(false);
-      const mockBitcoindListUnspent = jest
+      const mockBitcoindListUnspent = vi
         .spyOn(wallet, "bitcoindListUnspent")
         .mockRejectedValue(mockError);
 
@@ -498,7 +508,7 @@ describe("BlockchainClient", () => {
 
     it("should fetch UTXOs using the Get method (MEMPOOL client)", async () => {
       const mockTransactionResult = "transactionHex";
-      const mockGetTransactionHex = jest
+      const mockGetTransactionHex = vi
         .fn()
         .mockResolvedValue(mockTransactionResult);
 
@@ -517,7 +527,7 @@ describe("BlockchainClient", () => {
           status: { confirmed: true, block_time: 42 },
         },
       ];
-      const mockGet = jest.fn().mockResolvedValue(mockUtxos);
+      const mockGet = vi.fn().mockResolvedValue(mockUtxos);
 
       // Create a new instance of BlockchainClient with ClientType.MEMPOOL
       const blockchainClient = new BlockchainClient({
@@ -548,7 +558,7 @@ describe("BlockchainClient", () => {
     it("should handle errors when fetching UTXOs (MEMPOOL client)", async () => {
       // Mock the error from the Get method
       const mockError = new Error("Failed to fetch UTXOs");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
 
       // Create a new instance of BlockchainClient with ClientType.MEMPOOL
       const blockchainClient = new BlockchainClient({
@@ -580,7 +590,7 @@ describe("BlockchainClient", () => {
         confirmed: true,
         balance: 500,
       };
-      const mockBitcoindGetAddressStatus = jest.spyOn(
+      const mockBitcoindGetAddressStatus = vi.spyOn(
         wallet,
         "bitcoindGetAddressStatus",
       );
@@ -608,7 +618,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the status for a given address (PRIVATE CLIENT)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
-      const mockBitcoindGetAddressStatus = jest.spyOn(
+      const mockBitcoindGetAddressStatus = vi.spyOn(
         wallet,
         "bitcoindGetAddressStatus",
       );
@@ -659,7 +669,7 @@ describe("BlockchainClient", () => {
           tx_count: 0,
         },
       };
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -690,7 +700,7 @@ describe("BlockchainClient", () => {
     it("should throw an error when failing to get the status for a given address (MEMPOOL client)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch address status");
-      const mockGet = jest.fn().mockRejectedValue(mockError);
+      const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -725,7 +735,7 @@ describe("BlockchainClient", () => {
     it("should get the fee estimate for a given number of blocks (PRIVATE client)", async () => {
       // Mock the response from the API
       const mockResponse = 10;
-      const mockEstimateSmartFee = jest.spyOn(
+      const mockEstimateSmartFee = vi.spyOn(
         bitcoind,
         "bitcoindEstimateSmartFee",
       );
@@ -753,7 +763,7 @@ describe("BlockchainClient", () => {
     it("should get the fee estimate for a given number of blocks (BLOCKSTREAM client)", async () => {
       // Mock the response from the API
       const mockResponse = [5, 10, 15];
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.BLOCKSTREAM,
@@ -780,7 +790,7 @@ describe("BlockchainClient", () => {
         hourFee: 5,
         economyFee: 2,
       } as Record<string, number>;
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -826,11 +836,11 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import and rescan", async () => {
-      const mockImportDescriptors = jest.spyOn(
+      const mockImportDescriptors = vi.spyOn(
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -852,11 +862,11 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import without rescan", async () => {
-      const mockImportDescriptors = jest.spyOn(
+      const mockImportDescriptors = vi.spyOn(
         wallet,
         "bitcoindImportDescriptors",
       );
-      mockImportDescriptors.mockResolvedValue({});
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -890,8 +900,8 @@ describe("BlockchainClient", () => {
     });
 
     it("calls bitcoindImportDescriptors with descriptors to import", async () => {
-      const mockImportDescriptors = jest.spyOn(wallet, "bitcoindWalletInfo");
-      mockImportDescriptors.mockResolvedValue({});
+      const mockImportDescriptors = vi.spyOn(wallet, "bitcoindWalletInfo");
+      mockImportDescriptors.mockResolvedValue({ result: null, id: 0 });
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
@@ -907,33 +917,37 @@ describe("BlockchainClient", () => {
   describe("getAddressTransactions", () => {
     it("should get the all the transactions for a given address in PRIVATE network MAINNET", async () => {
       // Mock the response from the API
-      const mockResponseListTransaction = [
-        {
-          address:
-            "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
-          parent_descs: [
-            "wsh(sortedmulti(1,tpubDFnYXDztf7GxeGVpPsgYaqbfE6mCsvVzCGKhtafJU3pbF8r8cuGQgp81puJcjuBdsMhk1oUHdhNbsrPcn8SHjktJ45pzJNhAd1BY3jRdzvj/0/*,tpubDDwMB2bTZPY5Usnyqn7PN1cYmNWNghRxtY968LCA2DRr4HM93JqkLd5uEHXQb2rRLjHrkccguYRxyDkQi71mBuZ7XAfLH29918Gu9vKVmhy/0/*))#dw99d0sw",
-          ],
-          category: "receive",
-          amount: 15.0,
-          label: "",
-          vout: 0,
-          confirmations: 22,
-          blockhash:
-            "1ab9eed7ff3b824dfdee22560e8fc826f2bac0ca835c992b8659b1c834721ffa",
-          blockheight: 1181,
-          blockindex: 1,
-          blocktime: 1718291897,
-          txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
-          wtxid:
-            "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
-          walletconflicts: [],
-          time: 1718291888,
-          timereceived: 1718291888,
-          "bip125-replaceable": "no",
-        },
-      ];
-      const mockBitcoindListTransaction = jest.spyOn(bitcoind, "callBitcoind");
+      const mockResponseListTransaction = {
+        result: [
+          {
+            address:
+              "bcrt1qymrajrm0wq5uvwlmj26lxkpchxge7rsf0qt3tfrvpcwcvxsmrp3qq60fu7",
+            parent_descs: [
+              "wsh(sortedmulti(1,tpubDFnYXDztf7GxeGVpPsgYaqbfE6mCsvVzCGKhtafJU3pbF8r8cuGQgp81puJcjuBdsMhk1oUHdhNbsrPcn8SHjktJ45pzJNhAd1BY3jRdzvj/0/*,tpubDDwMB2bTZPY5Usnyqn7PN1cYmNWNghRxtY968LCA2DRr4HM93JqkLd5uEHXQb2rRLjHrkccguYRxyDkQi71mBuZ7XAfLH29918Gu9vKVmhy/0/*))#dw99d0sw",
+            ],
+            category: "receive",
+            amount: 15.0,
+            label: "",
+            vout: 0,
+            confirmations: 22,
+            blockhash:
+              "1ab9eed7ff3b824dfdee22560e8fc826f2bac0ca835c992b8659b1c834721ffa",
+            blockheight: 1181,
+            blockindex: 1,
+            blocktime: 1718291897,
+            txid: "c24617439089a088adb813b5c14238a9354db2f1f6a2224a36a8d7fe095b793d",
+            wtxid:
+              "341610613a8fcde8933322dc20f35f2635f37cc926c11001a446f604effb73a4",
+            walletconflicts: [],
+            time: 1718291888,
+            timereceived: 1718291888,
+            "bip125-replaceable": "no",
+          },
+        ],
+        id: 0,
+      };
+
+      const mockBitcoindListTransaction = vi.spyOn(bitcoind, "callBitcoind");
       mockBitcoindListTransaction.mockResolvedValue(
         mockResponseListTransaction,
       );
@@ -1000,7 +1014,7 @@ describe("BlockchainClient", () => {
         ],
       };
 
-      const mockBitcoindGetAddressTransactions = jest.spyOn(
+      const mockBitcoindGetAddressTransactions = vi.spyOn(
         bitcoind,
         "bitcoindRawTxData",
       );
@@ -1079,7 +1093,7 @@ describe("BlockchainClient", () => {
           avgFee_100: 0,
         },
       ];
-      const mockGet = jest.fn().mockResolvedValue(mockResponse);
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.MEMPOOL,
@@ -1122,6 +1136,604 @@ describe("BlockchainClient", () => {
           `Failed to get feerate percentile block: ${mockError.message}`,
         ),
       );
+    });
+  });
+
+  describe("getTransaction", () => {
+    // https://unchained.mempool.space/tx/3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84
+    const mockTxid =
+      "3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84";
+
+    const mockRawTransactionData: RawTransactionData = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "3044022055831f73fc755df0e3ab4b29fdae593312f9c395fac3c11e4d26d559dbe7e3f202201971c090da1721e41bbb8b7719d48f3117c0595a3495ca8d2359d1ac72d4b0a201",
+            "033688c799699d3d9ed7fffccb5c59960d8788ecdf81258a0dffd813d02b93f94a",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "0014d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 d2232960c4503fd79650c541b0b95cbcf212f0a2",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1q6g3jjcxy2qla09jsc4qmpw2uhnep9u9z6rjvhf",
+            value: 130.00123744,
+          },
+        },
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293, // 0xfffffffd
+          witness: [
+            "304402202fdcd389d3cf70e8c3d8ead029b4257adb21a5ee3841445ad97f45875f36e60b0220537741d6e3e333dcb9e4d83f79a1e90a055d206d4ecdb3a30c5169df8b20414001",
+            "0313f50b92e4f73cf0e0de9375b29d4f275a400149d9609b09cf334989171cfa26",
+          ],
+          scriptSig: "",
+          prevout: {
+            scriptpubkey: "00140c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_asm:
+              "OP_0 OP_PUSHBYTES_20 0c3052d82af2863f479643ab82a38ab03f63b265",
+            scriptpubkey_type: "v0_p2wpkh",
+            scriptpubkey_address: "bc1qpsc99kp272rr73ukgw4c9gu2kqlk8vn9j73833",
+            value: 0.202756,
+          },
+        },
+      ],
+      vout: [
+        {
+          scriptpubkey: "76a914a9808a3da3a4574b7eae1c6f4f19160f927fb9e088ac",
+          scriptpubkey_asm:
+            "OP_DUP OP_HASH160 OP_PUSHBYTES_20 a9808a3da3a4574b7eae1c6f4f19160f927fb9e0 OP_EQUALVERIFY OP_CHECKSIG",
+          scriptpubkey_type: "p2pkh",
+          scriptpubkey_address: "1GTFBY3qMXTQFeYoP9XjVKXbbANZewrrd6",
+          value: 20398739,
+        },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      status: {
+        confirmed: true,
+        block_height: 861058,
+        block_hash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        block_time: 1694567537,
+      },
+    };
+
+    // Expected normalized transaction data
+    const expectedTransactionDetails: TransactionDetails = {
+      txid: mockTxid,
+      version: 1,
+      locktime: 861057,
+      vin: [
+        {
+          txid: "38f23f45d16a9123145e463e06e7d7d46b8de1b72e6f65c002f4461d83582e87",
+          vout: 0,
+          sequence: 4294967293,
+        },
+        {
+          txid: "8d28825d476cb9509d161eaee8704ec99d61f16155495fe9903467cc6276eb5a",
+          vout: 0,
+          sequence: 4294967293,
+        },
+      ],
+      vout: [
+        {
+          value: mockRawTransactionData.vout[0].value,
+          scriptPubkey: mockRawTransactionData.vout[0].scriptpubkey,
+          scriptPubkeyAddress:
+            mockRawTransactionData.vout[0].scriptpubkey_address,
+        },
+      ],
+      size: 342,
+      weight: 720,
+      fee: 0.00000605,
+      isReceived: false,
+      status: {
+        confirmed: true,
+        blockHeight: 861058,
+        blockHash:
+          "00000000000000000001acff14c863ebcbdece2efece45bafb5a8c99f2ea393c",
+        blockTime: 1694567537,
+      },
+    };
+
+    describe("client type specific behavior", () => {
+      let client: BlockchainClient;
+
+      afterEach(() => {
+        vi.resetAllMocks();
+      });
+
+      describe("PRIVATE client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.PRIVATE,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockBitcoindRawTxData = vi.spyOn(bitcoind, "bitcoindRawTxData");
+          mockBitcoindRawTxData.mockResolvedValue(mockRawTransactionData);
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockBitcoindRawTxData).toHaveBeenCalledWith({
+            url: client.bitcoindParams.url,
+            auth: client.bitcoindParams.auth,
+            txid: mockTxid,
+          });
+          expect(result).toEqual(expectedTransactionDetails);
+        });
+      });
+
+      describe("BLOCKSTREAM client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.BLOCKSTREAM,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = vi.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
+      });
+
+      describe("MEMPOOL client", () => {
+        beforeEach(() => {
+          client = new BlockchainClient({
+            type: ClientType.MEMPOOL,
+            network: Network.MAINNET,
+          });
+        });
+
+        it("should fetch and normalize transaction data", async () => {
+          const mockGet = vi.fn().mockResolvedValue(mockRawTransactionData);
+          client.Get = mockGet;
+
+          const result = await client.getTransaction(mockTxid);
+
+          expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+          expect(result).toEqual({
+            ...expectedTransactionDetails,
+            vout: [
+              {
+                ...expectedTransactionDetails.vout[0],
+                value: satoshisToBitcoins(mockRawTransactionData.vout[0].value),
+              },
+            ],
+          });
+        });
+      });
+    });
+
+    describe("error handling", () => {
+      it("should throw an error for invalid client type", async () => {
+        const client = new BlockchainClient({
+          type: "INVALID" as ClientType,
+          network: Network.MAINNET,
+        });
+
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          "Invalid client type",
+        );
+      });
+
+      it("should handle errors when fetching transaction details", async () => {
+        const mockError = new Error("Failed to fetch transaction");
+        const mockGet = vi.fn().mockRejectedValue(mockError);
+
+        const client = new BlockchainClient({
+          type: ClientType.BLOCKSTREAM,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        await expect(client.getTransaction(mockTxid)).rejects.toThrow(
+          `Failed to get transaction: ${mockError.message}`,
+        );
+      });
+    });
+  });
+  describe("transformWalletTransactionToRawTransactionData", () => {
+    it("should correctly transform wallet transaction to raw transaction data", () => {
+      const walletTx: WalletTransactionResponse = {
+        amount: -1.5,
+        fee: -0.00025,
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blockheight: 123456,
+        blocktime: 1631234567,
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        hex: "01000000...",
+        walletconflicts: [],
+        time: 1631234560,
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
+        timereceived: 1631234562,
+        "bip125-replaceable": "no",
+        decoded: {
+          txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          hash: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          version: 2,
+          size: 225,
+          vsize: 225,
+          weight: 900,
+          locktime: 0,
+          vin: [
+            {
+              txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              vout: 1,
+              scriptSig: { asm: "", hex: "" },
+              sequence: 4294967295,
+            },
+          ],
+          vout: [
+            {
+              value: 1.4997,
+              n: 0,
+              scriptPubKey: {
+                asm: "OP_DUP OP_HASH160 ...",
+                hex: "76a914...",
+                type: "pubkeyhash",
+                address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+              },
+            },
+          ],
+        },
+      };
+
+      const result = transformWalletTransactionToRawTransactionData(walletTx);
+
+      expect(result).toEqual({
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        amount: -1.5,
+        version: 2,
+        locktime: 0,
+        size: 225,
+        vsize: 225,
+        weight: 900,
+        fee: 25000, // Converted from -0.00025 BTC to 25000 sats and made positive
+        vin: [
+          {
+            txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            vout: 1,
+            sequence: 4294967295,
+          },
+        ],
+        vout: [
+          {
+            value: 1.4997,
+            scriptpubkey: "76a914...",
+            scriptpubkey_address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          },
+        ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blocktime: 1631234567,
+        category: "send",
+        status: {
+          confirmed: true,
+          block_height: 123456,
+          block_hash:
+            "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+          block_time: 1631234567,
+        },
+        hex: "01000000...",
+      });
+    });
+
+    it("should throw an error when decoded data is missing", () => {
+      const walletTx = {
+        amount: -1.5,
+        fee: -0.00025,
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        // No decoded field
+      };
+
+      expect(() =>
+        transformWalletTransactionToRawTransactionData(walletTx as any),
+      ).toThrow("Transaction decoded data is missing");
+    });
+
+    it("should handle missing fee value", () => {
+      const walletTx = {
+        amount: -1.5,
+        // No fee field
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blockheight: 123456,
+        blocktime: 1631234567,
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        decoded: {
+          txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          version: 2,
+          size: 225,
+          weight: 900,
+          locktime: 0,
+          vin: [
+            {
+              txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              vout: 1,
+              sequence: 4294967295,
+            },
+          ],
+          vout: [
+            {
+              value: 1.4997,
+              n: 0,
+              scriptPubKey: {
+                hex: "76a914...",
+                addresses: ["1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"],
+              },
+            },
+          ],
+        },
+      };
+
+      const result = transformWalletTransactionToRawTransactionData(
+        walletTx as any,
+      );
+
+      // Fee should be 0 when missing
+      expect(result.fee).toBe(0);
+    });
+  });
+
+  describe("getWalletTransaction", () => {
+    let mockGetWalletTransaction: MockInstance;
+
+    beforeEach(() => {
+      mockGetWalletTransaction = vi.spyOn(
+        wallet,
+        "bitcoindGetWalletTransaction",
+      );
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("should throw error for non-private clients", async () => {
+      const blockstreamClient = new BlockchainClient({
+        type: ClientType.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+
+      await expect(
+        blockstreamClient.getWalletTransaction("txid123"),
+      ).rejects.toThrow(
+        "Wallet transactions are only available for private Bitcoin nodes",
+      );
+
+      const mempoolClient = new BlockchainClient({
+        type: ClientType.MEMPOOL,
+        network: Network.MAINNET,
+      });
+
+      await expect(
+        mempoolClient.getWalletTransaction("txid123"),
+      ).rejects.toThrow(
+        "Wallet transactions are only available for private Bitcoin nodes",
+      );
+    });
+
+    it("should throw error when wallet name is missing", async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          // No walletName provided
+        },
+      });
+
+      await expect(client.getWalletTransaction("txid123")).rejects.toThrow(
+        "Wallet name is required for wallet transaction lookups",
+      );
+    });
+
+    it("should retrieve and transform wallet transaction data", async () => {
+      // Sample wallet transaction response
+      const mockWalletTxData: WalletTransactionResponse = {
+        amount: -1.5,
+        fee: -0.00025,
+        confirmations: 6,
+        blockhash:
+          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        blockheight: 123456,
+        blocktime: 1631234567,
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        hex: "01000000...",
+        walletconflicts: [],
+        time: 1631234560,
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
+        timereceived: 1631234562,
+        "bip125-replaceable": "no",
+        decoded: {
+          txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          hash: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          version: 2,
+          size: 225,
+          vsize: 225,
+          weight: 900,
+          locktime: 0,
+          vin: [
+            {
+              txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+              vout: 1,
+              scriptSig: { asm: "", hex: "" },
+              sequence: 4294967295,
+            },
+          ],
+          vout: [
+            {
+              value: 1.4997,
+              n: 0,
+              scriptPubKey: {
+                asm: "OP_DUP OP_HASH160 ...",
+                hex: "76a914...",
+                type: "pubkeyhash",
+                address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+              },
+            },
+          ],
+        },
+      };
+
+      // Expected normalized data
+      const expectedTransactionDetails = {
+        txid: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        version: 2,
+        locktime: 0,
+        vin: [
+          {
+            txid: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            vout: 1,
+            sequence: 4294967295,
+          },
+        ],
+        vout: [
+          {
+            value: 1.4997,
+            scriptPubkey: "76a914...",
+            scriptPubkeyAddress: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          },
+        ],
+        details: [
+          {
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+            category: "send",
+            amount: -1.5,
+            vout: 0,
+            fee: -0.0025,
+            abandoned: false,
+          },
+        ],
+        size: 225,
+        vsize: 225,
+        weight: 900,
+        amount: -1.5,
+        fee: 25000, // Fee is in satoshis for PRIVATE client
+        isReceived: false,
+        status: {
+          confirmed: true,
+          blockHeight: 123456,
+          blockHash:
+            "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+          blockTime: 1631234567,
+        },
+      };
+
+      mockGetWalletTransaction.mockResolvedValue(mockWalletTxData);
+
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "wallet",
+        },
+      });
+
+      const result = await client.getWalletTransaction("txid123");
+
+      expect(mockGetWalletTransaction).toHaveBeenCalledWith({
+        url: client.bitcoindParams.url,
+        auth: client.bitcoindParams.auth,
+        walletName: client.bitcoindParams.walletName,
+        txid: "txid123",
+      });
+
+      expect(result).toEqual(expectedTransactionDetails);
+    });
+
+    it("should handle errors from bitcoindGetWalletTransaction", async () => {
+      const mockError = new Error("Transaction not found in wallet");
+      mockGetWalletTransaction.mockRejectedValue(mockError);
+
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "wallet",
+        },
+      });
+
+      await expect(client.getWalletTransaction("txid123")).rejects.toThrow(
+        `Failed to get wallet transaction: ${mockError.message}`,
+      );
+
+      expect(mockGetWalletTransaction).toHaveBeenCalledWith({
+        url: client.bitcoindParams.url,
+        auth: client.bitcoindParams.auth,
+        walletName: client.bitcoindParams.walletName,
+        txid: "txid123",
+      });
     });
   });
 });

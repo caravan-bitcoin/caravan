@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.7.1
+
+### Patch Changes
+
+- [#237](https://github.com/caravan-bitcoin/caravan/pull/237) [`b690aff`](https://github.com/caravan-bitcoin/caravan/commit/b690afffbe3d7de16d6832f011da664bb5893454) Thanks [@amitx13](https://github.com/amitx13)! - Fixed Bitcoin client bug that blocks users from importing a wallet
+
+## 1.7.0
+
+### Minor Changes
+
+- [#225](https://github.com/caravan-bitcoin/caravan/pull/225) [`049d730`](https://github.com/caravan-bitcoin/caravan/commit/049d730f0dc1bac7ba854f26192ca79afa03afe9) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Value Column Integration for Transaction Table
+
+### Patch Changes
+
+- Updated dependencies [[`049d730`](https://github.com/caravan-bitcoin/caravan/commit/049d730f0dc1bac7ba854f26192ca79afa03afe9)]:
+  - @caravan/clients@0.4.1
+
+## 1.6.0
+
+### Minor Changes
+
+- [#168](https://github.com/caravan-bitcoin/caravan/pull/168) [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add a new Transactions tab to the wallet interface that provides users with a detailed view of their transaction history.
+
+### Patch Changes
+
+- [#205](https://github.com/caravan-bitcoin/caravan/pull/205) [`19bff49`](https://github.com/caravan-bitcoin/caravan/commit/19bff491cdcc8ccb9e092c76c75d826dd33e3c87) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - UI cleanup: Remove redundant header and focus on pending transactions
+
+- Updated dependencies [[`b3d3033`](https://github.com/caravan-bitcoin/caravan/commit/b3d3033f807bf41c270af890ba8459ff31263ac0), [`accc093`](https://github.com/caravan-bitcoin/caravan/commit/accc0937159691e7be5b0b68c389ee6594423aa4)]:
+  - @caravan/psbt@1.9.0
+  - @caravan/clients@0.3.2
+
+## 1.5.3
+
+### Patch Changes
+
+- [#185](https://github.com/caravan-bitcoin/caravan/pull/185) [`a20a0dc`](https://github.com/caravan-bitcoin/caravan/commit/a20a0dc5d1f0b4cd7edbeb27842a6e9fb4a178bf) Thanks [@robertshuford](https://github.com/robertshuford)! - Add better multi-platform support for coordinator Dockerfile
+
+- Updated dependencies [[`c220696`](https://github.com/caravan-bitcoin/caravan/commit/c220696fa16c9663995835a96a5a56c88977cc8e)]:
+  - @caravan/clients@0.3.0
+
+## 1.5.2
+
+### Patch Changes
+
+- [#183](https://github.com/caravan-bitcoin/caravan/pull/183) [`4402ea1`](https://github.com/caravan-bitcoin/caravan/commit/4402ea13c9b2328c21f35f4164c4f207b20e7d1e) Thanks [@bucko13](https://github.com/bucko13)! - bump trezor connect dependency
+
+- Updated dependencies [[`4402ea1`](https://github.com/caravan-bitcoin/caravan/commit/4402ea13c9b2328c21f35f4164c4f207b20e7d1e)]:
+  - @caravan/wallets@0.5.1
+
+## 1.5.1
+
+### Patch Changes
+
+- [#174](https://github.com/caravan-bitcoin/caravan/pull/174) [`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375) Thanks [@bucko13](https://github.com/bucko13)! - fix dependencies for caravan-psbt on caravan-bitcoin
+
+- Updated dependencies [[`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375)]:
+  - @caravan/psbt@1.7.1
+
 ## 1.5.0
 
 ### Minor Changes

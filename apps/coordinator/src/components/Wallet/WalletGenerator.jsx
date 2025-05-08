@@ -79,7 +79,12 @@ class WalletGenerator extends React.Component {
       configuring,
     } = this.props;
     const { unknownClient } = this.state;
-    if (client.type === "unknown" && prevProps.client.type === "public") {
+    if (
+      client.type === "unknown" &&
+      (prevProps.client.type === "public" ||
+        prevProps.client.type === ClientType.MEMPOOL ||
+        prevProps.client.type === ClientType.BLOCKSTREAM)
+    ) {
       this.setState({ unknownClient: true });
     } else if (configuring && client.type !== "unknown" && unknownClient) {
       // re-initializes the state if we're in the configuring stage.
@@ -366,7 +371,11 @@ class WalletGenerator extends React.Component {
     if (this.extendedPublicKeyCount() === totalSigners) {
       if (generating && !configuring) {
         return (
-          <WalletControl addNode={this.addNode} updateNode={this.updateNode} />
+          <WalletControl
+            addNode={this.addNode}
+            updateNode={this.updateNode}
+            refreshNodes={this.refreshNodes}
+          />
         );
       }
       if (!hasConflict) {

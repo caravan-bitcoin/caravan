@@ -1,5 +1,57 @@
 # @caravan/psbt
 
+## 1.9.4
+
+### Patch Changes
+
+- [#259](https://github.com/caravan-bitcoin/caravan/pull/259) [`e713be4`](https://github.com/caravan-bitcoin/caravan/commit/e713be4583123a53e835dc2e60d673e27c376846) Thanks [@bucko13](https://github.com/bucko13)! - update build dependencies to newer versions and fix polyfills
+
+- Updated dependencies [[`e713be4`](https://github.com/caravan-bitcoin/caravan/commit/e713be4583123a53e835dc2e60d673e27c376846)]:
+  - @caravan/bitcoin@0.3.2
+  - @caravan/bip32@1.0.1
+
+## 1.9.3
+
+### Patch Changes
+
+- [#229](https://github.com/caravan-bitcoin/caravan/pull/229) [`7bf47bf`](https://github.com/caravan-bitcoin/caravan/commit/7bf47bfc8ea8b5ec78c4ff562e4fcc9e72ec508c) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Replaced the setters with the private functions so that the output and input count always stays in sync with the actual counts in the PSBT.
+
+## 1.9.2
+
+### Patch Changes
+
+- [#239](https://github.com/caravan-bitcoin/caravan/pull/239) [`84de228`](https://github.com/caravan-bitcoin/caravan/commit/84de2287ccbfe9033b5bde46c23cb1b50c41face) Thanks [@joelangeway](https://github.com/joelangeway)! - Adds a fix for importing @caravan/psbt on the server side.
+
+## 1.9.1
+
+### Patch Changes
+
+- [#233](https://github.com/caravan-bitcoin/caravan/pull/233) [`ae1971e`](https://github.com/caravan-bitcoin/caravan/commit/ae1971ed3f0f83095c92b5f86f0d58fa1fafa882) Thanks [@bucko13](https://github.com/bucko13)! - use peer deps to enforce minimum caravan-bitcoin dependency
+
+## 1.9.0
+
+### Minor Changes
+
+- [#199](https://github.com/caravan-bitcoin/caravan/pull/199) [`b3d3033`](https://github.com/caravan-bitcoin/caravan/commit/b3d3033f807bf41c270af890ba8459ff31263ac0) Thanks [@Shadouts](https://github.com/Shadouts)! - Fixes PsbtV2.isReadyForConstructor by not requiring that PSBT_GLOBAL_FALLBACK_LOCKTIME be set. This field is not required on a psbtv2 per BIP370.
+
+## 1.8.0
+
+### Minor Changes
+
+- [#188](https://github.com/caravan-bitcoin/caravan/pull/188) [`941235e`](https://github.com/caravan-bitcoin/caravan/commit/941235e4c9cfff5e33dbb676a079a71d6a6eaee6) Thanks [@Shadouts](https://github.com/Shadouts)! - allowTxnVersion1 option added to PsbtV2 constructor.
+
+## 1.7.1
+
+### Patch Changes
+
+- [#174](https://github.com/caravan-bitcoin/caravan/pull/174) [`3689269`](https://github.com/caravan-bitcoin/caravan/commit/3689269ae1d35678cb4257f1f68b5fc6bd161375) Thanks [@bucko13](https://github.com/bucko13)! - fix dependencies for caravan-psbt on caravan-bitcoin
+
+## 1.7.0
+
+### Minor Changes
+
+- [#158](https://github.com/caravan-bitcoin/caravan/pull/158) [`2a2e674`](https://github.com/caravan-bitcoin/caravan/commit/2a2e6748694301cf83806b173cd2dbea365a3089) Thanks [@Shadouts](https://github.com/Shadouts)! - PsbtV2.toV0 method added
+
 ## 1.6.0
 
 ### Minor Changes

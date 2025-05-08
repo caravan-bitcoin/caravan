@@ -1,7 +1,7 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { isWalletAddressNotFoundError } from "./bitcoind";
-import { callBitcoind } from "./bitcoind";
-import BigNumber from "bignumber.js";
+import { BigNumber } from "bignumber.js";
+
+import { isWalletAddressNotFoundError, callBitcoind } from "./bitcoind";
 
 export class BitcoindWalletClientError extends Error {
   constructor(message) {
@@ -32,6 +32,7 @@ export function callBitcoindWallet({
 
   if (walletName)
     url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
+  //@ts-expect-error Will Fix this
   return callBitcoind(url.toString(), auth, method, params);
 }
 
@@ -173,6 +174,7 @@ export async function bitcoindListUnspent({
 > {
   try {
     const addressParam = addresses || [address];
+    //@ts-expect-error Will Fix this
     const resp: {
       result: ListUnspentResponse[];
     } = await callBitcoindWallet({
@@ -211,6 +213,53 @@ export async function bitcoindListUnspent({
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error("There was a problem:", (e as Error).message);
+    throw e;
+  }
+}
+
+/**
+ * Gets detailed information about a wallet transaction
+ *
+ * This function uses the "gettransaction" RPC call which includes fee information
+ * for wallet transactions, unlike getrawtransaction which requires txindex=1 and
+ * doesn't include fee data.
+ *
+ * @see https://developer.bitcoin.org/reference/rpc/gettransaction.html
+ *
+ * @param options - Connection details and transaction ID
+ * @returns Detailed transaction data with fee information
+ */
+export async function bitcoindGetWalletTransaction({
+  url,
+  auth,
+  walletName,
+  txid,
+  includeWatchonly = true,
+  verbose = true,
+}: BaseBitcoindParams & {
+  txid: string;
+  includeWatchonly?: boolean;
+  verbose?: boolean;
+}): Promise<any> {
+  try {
+    const response = await callBitcoindWallet({
+      baseUrl: url,
+      walletName,
+      auth,
+      method: "gettransaction",
+      params: [txid, includeWatchonly, verbose],
+    });
+
+    if (typeof response?.result === "undefined") {
+      throw new BitcoindWalletClientError(
+        `Error: invalid response from ${url} for transaction ${txid}`,
+      );
+    }
+
+    return response.result;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Error getting wallet transaction:", (e as Error).message);
     throw e;
   }
 }
