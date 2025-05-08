@@ -523,10 +523,11 @@ const LandingPage = () => {
               key may live on a piece of paper, a hardware wallet, some software
               on a laptop, or even just in your mind. Caravan, being stateless,
               does not store or ask for your private key but it can talk to
-              hardware devices which do. With multisig, you're protected against
-              the loss of any single key, creating a robust disaster recovery
-              setup. Caravan supports P2SH, P2WSH, and P2TR address formats, and
-              works with all major hardware wallets and key management systems.
+              hardware devices which do. With multisig, you&apos;re protected
+              against the loss of any single key, creating a robust disaster
+              recovery setup. Caravan supports P2SH, P2WSH, and P2TR address
+              formats, and works with all major hardware wallets and key
+              management systems.
             </p>
           </div>
         </div>
@@ -622,8 +623,8 @@ const LandingPage = () => {
             <p className={classes.featureDescription}>
               Seamless integration with industry-leading hardware wallets
               including Ledger, Trezor, and Coldcard. Protect your keys with
-              dedicated hardware security while using Caravan's coordination
-              capabilities.
+              dedicated hardware security while using Caravan&apos;s
+              coordination capabilities.
             </p>
           </div>
 
