@@ -8,7 +8,7 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import DevicesIcon from "@mui/icons-material/Devices";
 import StorageIcon from "@mui/icons-material/Storage";
 import { Link, useLocation } from "react-router-dom";
-import Logo from "../../../../assets/images/caravan-logo-transparent.webp";
+import Logo from "../../public/images/caravan-logo-transparent.webp";
 import { useStyles } from "./LandingPage.styles";
 
 const LandingPage = () => {
