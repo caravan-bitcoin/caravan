@@ -70,36 +70,52 @@ const LandingPage = () => {
           loading="lazy"
         />
         <div className={classes.imageGrid}>
-          <img
-            src="/images/landing/trezor.webp"
-            alt="Trezor Hardware Wallet"
-            className={classes.gridImage}
-            loading="lazy"
-          />
-          <img
-            src="/images/landing/ledger.webp"
-            alt="Ledger Hardware Wallet"
-            className={classes.gridImage}
-            loading="lazy"
-          />
-          <img
-            src="/images/landing/coldcard.webp"
-            alt="Coldcard Hardware Wallet"
-            className={classes.gridImage}
-            loading="lazy"
-          />
-          <img
-            src="/images/landing/firefox.webp"
-            alt="Firefox Browser"
-            className={classes.gridImage}
-            loading="lazy"
-          />
-          <img
-            src="/images/landing/chrome.webp"
-            alt="Chrome Browser"
-            className={classes.gridImage}
-            loading="lazy"
-          />
+          <div className={classes.imageRow}>
+            <img
+              src="/images/landing/trezor.webp"
+              alt="Trezor Hardware Wallet"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+            <img
+              src="/images/landing/ledger.webp"
+              alt="Ledger Hardware Wallet"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+            <img
+              src="/images/landing/coldcard.webp"
+              alt="Coldcard Hardware Wallet"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+            <img
+              src="/images/landing/bitbox.webp"
+              alt="Bitbox Hardware Wallet"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+          </div>
+          <div className={classes.imageRow}>
+            <img
+              src="/images/landing/firefox.webp"
+              alt="Firefox Browser"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+            <img
+              src="/images/landing/chrome.webp"
+              alt="Chrome Browser"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+            <img
+              src="/images/landing/brave.webp"
+              alt="Brave Browser"
+              className={classes.gridImage}
+              loading="lazy"
+            />
+          </div>
         </div>
       </section>
 
@@ -223,9 +239,11 @@ const LandingPage = () => {
             </div>
             <h3 className={classes.featureTitle}>Flexibility</h3>
             <p className={classes.featureDescription}>
-              Enjoy seamless integration with hardware wallets, software
-              applications, and a user-friendly interface for effortless
-              multisig management across desktop and compatible mobile browsers.
+              Import and export wallet configurations or descriptors compatible
+              with popular software like Sparrow and Electrum. Connect to your
+              own bitcoin node for maximum sovereignty or use lightweight
+              options like mempool.space and Blockstream for convenient access
+              anywhere.
             </p>
           </div>
         </div>
@@ -237,10 +255,9 @@ const LandingPage = () => {
             </div>
             <h3 className={classes.featureTitle}>Advanced Features</h3>
             <p className={classes.featureDescription}>
-              Support for blinded xpubs to enhance privacy, BIP174 PSBT
-              compatibility, and scriptable descriptors for advanced
-              configurations. All backed by industry-standard BIP
-              implementations.
+              Support for blinded xpubs to enhance privacy, PSBTv2
+              compatibility, and descriptors for advanced configurations. All
+              backed by industry-standard BIP implementations.
             </p>
           </div>
 
@@ -251,8 +268,8 @@ const LandingPage = () => {
             <h3 className={classes.featureTitle}>Hardware Support</h3>
             <p className={classes.featureDescription}>
               Seamless integration with industry-leading hardware wallets
-              including Ledger, Trezor, and Coldcard. Protect your keys with
-              dedicated hardware security while using Caravan&apos;s
+              including Ledger, Trezor, Coldcard, and Bitbox. Protect your keys
+              with dedicated hardware security while using Caravan&apos;s
               coordination capabilities.
             </p>
           </div>

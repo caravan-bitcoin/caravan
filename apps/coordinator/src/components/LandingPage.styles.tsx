@@ -310,17 +310,31 @@ export const useStyles = makeStyles(() =>
       },
     },
     imageGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(5, 1fr)",
-      gap: "20px",
-      maxWidth: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "50px",
+      width: "90%",
+      maxWidth: "1400px",
+      margin: "0 auto",
       paddingTop: "60px",
       paddingBottom: "20px",
+    },
+    imageRow: {
+      display: "flex",
+      justifyContent: "center",
+      gap: "40px",
+      width: "100%",
+      "@media (min-width: 1400px)": {
+        gap: "80px",
+      },
       "@media (max-width: 1024px)": {
-        gridTemplateColumns: "repeat(2, 1fr)",
+        flexWrap: "wrap",
+        gap: "20px",
       },
       "@media (max-width: 600px)": {
-        gridTemplateColumns: "1fr",
+        flexDirection: "column",
+        alignItems: "center",
       },
     },
     gridImage: {
