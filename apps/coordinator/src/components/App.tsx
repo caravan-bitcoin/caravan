@@ -8,7 +8,6 @@ import {
 } from "react-router-dom";
 
 // Components
-import Container from "@mui/material/Container";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { SnackbarProvider } from "notistack";
