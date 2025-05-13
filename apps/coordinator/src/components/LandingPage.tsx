@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from "react";
-import { makeStyles, createStyles } from "@mui/styles";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import MultipleStopIcon from "@mui/icons-material/MultipleStop";
@@ -9,372 +8,8 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import DevicesIcon from "@mui/icons-material/Devices";
 import StorageIcon from "@mui/icons-material/Storage";
 import { Link, useLocation } from "react-router-dom";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png";
-
-const useStyles = makeStyles(() =>
-  createStyles({
-    heroSection: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "column",
-      background: "white",
-      color: "white",
-      textAlign: "center",
-      paddingTop: "70px",
-      paddingBottom: "70px",
-      "& .highlight": {
-        color: "#1976d2",
-      },
-    },
-    title: {
-      fontSize: "4rem",
-      width: "70%",
-      margin: 0,
-      color: "#333",
-      lineHeight: "1.2",
-      fontWeight: "600",
-      "@media (max-width: 768px)": {
-        fontSize: "2.5rem",
-        width: "90%",
-      },
-    },
-    subtitle: {
-      fontSize: "1.5rem",
-      fontWeight: 300,
-      width: "60%",
-      margin: "30px 0",
-      color: "#555",
-      lineHeight: "1.5",
-      "@media (max-width: 768px)": {
-        fontSize: "1.2rem",
-        width: "90%",
-      },
-    },
-    ctaButton: {
-      backgroundColor: "#1976d2 !important",
-      color: "#fff !important",
-      padding: "12px 24px !important",
-      fontSize: "1.2rem !important",
-      borderRadius: "6px !important",
-      boxShadow: "0 2px 10px rgba(25, 118, 210, 0.2) !important",
-      transition: "all 0.3s ease-in-out !important",
-      "&:hover": {
-        backgroundColor: "#fff !important",
-        color: "#1976d2 !important",
-        outline: "#1976d2 solid 1px !important",
-        transform: "translateY(-2px) !important",
-        boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3) !important",
-      },
-    },
-    secondaryButton: {
-      backgroundColor: "#fff !important",
-      color: "#1976d2 !important",
-      padding: "12px 24px !important",
-      fontSize: "1.2rem !important",
-      border: "1px solid #1976d2 !important",
-      borderRadius: "6px !important",
-      transition: "all 0.3s ease-in-out !important",
-      "&:hover": {
-        backgroundColor: "#1976d2 !important",
-        color: "#fff !important",
-        transform: "translateY(-2px) !important",
-        boxShadow: "0 4px 12px rgba(25, 118, 210, 0.2) !important",
-      },
-    },
-    yellowButton: {
-      backgroundColor: "#ea9c0d !important",
-      color: "#333 !important",
-      padding: "12px 24px !important",
-      fontSize: "1.2rem !important",
-      borderRadius: "6px !important",
-      boxShadow: "0 2px 10px rgba(234, 156, 13, 0.3) !important",
-      transition: "all 0.3s ease-in-out !important",
-      "&:hover": {
-        backgroundColor: "#fff !important",
-        color: "#ea9c0d !important",
-        border: "1px solid #ea9c0d !important",
-        transform: "translateY(-2px) !important",
-      },
-    },
-    contentSection: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "column",
-      background: "linear-gradient(135deg, #1976d2, #0d47a1)",
-      color: "white",
-      textAlign: "center",
-      padding: "80px 0",
-      borderRadius: "10px",
-      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.1)",
-      margin: "20px 0",
-      "& .highlight": {
-        color: "#1976d2",
-      },
-    },
-    contentTitle: {
-      fontSize: "2.2rem",
-      color: "#fff",
-      textAlign: "left",
-      width: "80%",
-      margin: "20px auto",
-      fontWeight: "600",
-      "@media (max-width: 1200px)": {
-        fontSize: "1.5rem",
-        width: "90%",
-      },
-    },
-    contentDescription: {
-      color: "#fff",
-      width: "80%",
-      margin: "0 auto",
-      textAlign: "left",
-      fontSize: "1.5rem",
-      lineHeight: "1.6",
-      "@media (max-width: 1200px)": {
-        fontSize: "1.2rem",
-        width: "90%",
-      },
-    },
-    fullWidthBox: {
-      display: "flex",
-      flexDirection: "row",
-      width: "100%",
-      marginBottom: "40px",
-      "@media (max-width: 1400px)": {
-        flexDirection: "column",
-      },
-    },
-    imageSection: {
-      flex: 2,
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: "20px",
-      padding: "20px",
-      "@media (max-width: 1400px)": {
-        marginRight: 0,
-        padding: "20px",
-        order: 2,
-      },
-    },
-    descriptionSection: {
-      flex: 1,
-      padding: "20px",
-      "@media (max-width: 1400px)": {
-        order: 1,
-      },
-    },
-    featuresSection: {
-      padding: "100px 0",
-      background: "#fff",
-      textAlign: "center",
-      width: "100%",
-      "& h2": {
-        fontSize: "2.5rem",
-        marginBottom: "10px",
-        color: "#333",
-      },
-      "& h4": {
-        fontSize: "1.2rem",
-        marginBottom: "50px",
-        color: "#666",
-      },
-    },
-    featureContainer: {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "flex-start",
-      margin: "40px auto",
-      gap: "100px",
-      maxWidth: "1200px",
-      padding: "0 20px",
-      "@media (max-width: 768px)": {
-        flexDirection: "column",
-        margin: "20px auto",
-        gap: "40px",
-        padding: "0 20px",
-      },
-    },
-    featureItem: {
-      flex: 1,
-      padding: "30px",
-      maxWidth: "350px",
-      borderRadius: "8px",
-      transition: "transform 0.3s ease, box-shadow 0.3s ease",
-      "&:hover": {
-        transform: "translateY(-10px)",
-        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
-      },
-      "@media (max-width: 768px)": {
-        maxWidth: "100%",
-      },
-    },
-    featureIcon: {
-      fontSize: "3rem",
-      color: "#1976d2",
-      textAlign: "left",
-      margin: "0 0 15px 0",
-    },
-    featureTitle: {
-      marginTop: "20px",
-      fontSize: "1.5rem",
-      color: "#333",
-      textAlign: "left",
-      fontWeight: "600",
-    },
-    featureDescription: {
-      color: "#666",
-      textAlign: "left",
-      lineHeight: "1.6",
-      marginTop: "10px",
-    },
-    ctaSection: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "column",
-      background: "#fff",
-      color: "white",
-      textAlign: "center",
-      padding: "80px 0",
-      "& .highlight": {
-        color: "#1976d2",
-      },
-    },
-    footer: {
-      padding: "60px 0",
-      background: "#fff",
-      color: "#000",
-      textAlign: "left",
-      display: "grid",
-      gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
-      gap: "20px",
-      borderTop: "1px solid #eee",
-      "@media (max-width: 768px)": {
-        gridTemplateColumns: "1fr",
-        textAlign: "center",
-        padding: "40px 20px",
-      },
-    },
-    footerColumn: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      textAlign: "center",
-    },
-    footerTitle: {
-      marginBottom: "15px",
-      color: "#333",
-      fontWeight: "600",
-    },
-    footerLink: {
-      color: "#555",
-      textDecoration: "none",
-      marginBottom: "10px",
-      transition: "color 0.2s ease",
-      "&:hover": {
-        color: "#1976d2",
-        textDecoration: "none",
-      },
-    },
-    logoButton: {
-      backgroundColor: "transparent !important",
-      color: "#1976d2 !important",
-      padding: "10px 20px !important",
-      fontSize: "2rem !important",
-      outline: "none !important",
-      boxShadow: "none !important",
-      fontWeight: "bold !important",
-      display: "flex !important",
-      alignItems: "center !important",
-      minWidth: "fit-content !important",
-      "& img": {
-        width: "75px !important",
-        height: "60px !important",
-        marginBottom: "10px !important",
-      },
-    },
-    buttonContainer: {
-      display: "flex",
-      justifyContent: "space-between",
-      width: "400px",
-      flexWrap: "wrap",
-      margin: "20px 0 30px",
-      gap: "15px",
-      "@media (max-width: 500px)": {
-        width: "100%",
-        justifyContent: "center",
-      },
-    },
-    mainImage: {
-      marginTop: "80px",
-      maxWidth: "50%",
-      height: "auto",
-      transition: "transform 0.5s ease",
-      "&:hover": {
-        transform: "scale(1.02)",
-      },
-      "@media (max-width: 768px)": {
-        maxWidth: "90%",
-      },
-    },
-    imageGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(5, 1fr)",
-      gap: "20px",
-      maxWidth: "100%",
-      paddingTop: "60px",
-      paddingBottom: "20px",
-      "@media (max-width: 1024px)": {
-        gridTemplateColumns: "repeat(2, 1fr)",
-      },
-      "@media (max-width: 600px)": {
-        gridTemplateColumns: "1fr",
-      },
-    },
-    gridImage: {
-      height: "80px",
-      width: "auto",
-      padding: "10px",
-      transition: "transform 0.3s ease",
-      "&:hover": {
-        transform: "scale(1.1)",
-      },
-    },
-    responsiveImage: {
-      backgroundColor: "#FFE7BB",
-      padding: "20px",
-      borderRadius: "12px",
-      width: "100%",
-      boxShadow: "0 8px 20px rgba(0, 0, 0, 0.08)",
-      transition: "transform 0.3s ease",
-      "&:hover": {
-        transform: "translateY(-5px)",
-      },
-      "& img": {
-        width: "100%",
-        height: "auto",
-        maxHeight: "700px",
-        minHeight: "500px",
-        borderRadius: "10px",
-        objectFit: "contain",
-        "@media (max-width: 1200px)": {
-          maxHeight: "500px",
-          minHeight: "350px",
-        },
-        "@media (max-width: 700px)": {
-          maxHeight: "300px",
-          minHeight: "200px",
-        },
-      },
-      "@media (max-width: 1400px)": {
-        padding: "20px",
-      },
-    },
-  }),
-);
+import Logo from "../../../../assets/images/caravan-logo-transparent.webp";
+import { useStyles } from "./LandingPage.styles";
 
 const LandingPage = () => {
   const classes = useStyles();
@@ -429,38 +64,38 @@ const LandingPage = () => {
           </Button>
         </div>
         <img
-          src="/images/landing/caravan-balance.png"
+          src="/images/landing/caravan-balance.webp"
           alt="Caravan Balance Interface"
           className={classes.mainImage}
           loading="lazy"
         />
         <div className={classes.imageGrid}>
           <img
-            src="/images/landing/trezor.png"
+            src="/images/landing/trezor.webp"
             alt="Trezor Hardware Wallet"
             className={classes.gridImage}
             loading="lazy"
           />
           <img
-            src="/images/landing/ledger.png"
+            src="/images/landing/ledger.webp"
             alt="Ledger Hardware Wallet"
             className={classes.gridImage}
             loading="lazy"
           />
           <img
-            src="/images/landing/coldcard.png"
+            src="/images/landing/coldcard.webp"
             alt="Coldcard Hardware Wallet"
             className={classes.gridImage}
             loading="lazy"
           />
           <img
-            src="/images/landing/firefox.png"
+            src="/images/landing/firefox.webp"
             alt="Firefox Browser"
             className={classes.gridImage}
             loading="lazy"
           />
           <img
-            src="/images/landing/chrome.png"
+            src="/images/landing/chrome.webp"
             alt="Chrome Browser"
             className={classes.gridImage}
             loading="lazy"
@@ -492,7 +127,7 @@ const LandingPage = () => {
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
               <img
-                src="/images/landing/stateless.png"
+                src="/images/landing/stateless.webp"
                 alt="Stateless Architecture Diagram"
                 loading="lazy"
               />
@@ -504,7 +139,7 @@ const LandingPage = () => {
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
               <img
-                src="/images/landing/xpubs.png"
+                src="/images/landing/xpubs.webp"
                 alt="XPubs Key Management"
                 loading="lazy"
               />
@@ -545,7 +180,7 @@ const LandingPage = () => {
           <div className={classes.imageSection}>
             <div className={classes.responsiveImage}>
               <img
-                src="/images/landing/consensus.png"
+                src="/images/landing/consensus.webp"
                 alt="Consensus Network Diagram"
                 loading="lazy"
               />
@@ -690,7 +325,9 @@ const LandingPage = () => {
           </p>
         </div>
         <div className={classes.footerColumn}>
-          <h4 className={classes.footerTitle}>Getting started</h4>
+          <h4 className={classes.footerTitle} style={{ fontWeight: 700 }}>
+            Getting started
+          </h4>
           <Link
             to="/"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
@@ -706,7 +343,9 @@ const LandingPage = () => {
           </Link>
         </div>
         <div className={classes.footerColumn}>
-          <h4 className={classes.footerTitle}>Resources</h4>
+          <h4 className={classes.footerTitle} style={{ fontWeight: 700 }}>
+            Resources
+          </h4>
           <a
             href="https://unchained.com/blog/"
             className={classes.footerLink}
@@ -745,7 +384,9 @@ const LandingPage = () => {
           </a>
         </div>
         <div className={classes.footerColumn}>
-          <h4 className={classes.footerTitle}>Developer&apos;s corner</h4>
+          <h4 className={classes.footerTitle} style={{ fontWeight: 700 }}>
+            Developer&apos;s corner
+          </h4>
           <a
             href="https://github.com/caravan-bitcoin/caravan/issues"
             className={classes.footerLink}
@@ -766,7 +407,9 @@ const LandingPage = () => {
           </a>
         </div>
         <div className={classes.footerColumn}>
-          <h4 className={classes.footerTitle}>Social</h4>
+          <h4 className={classes.footerTitle} style={{ fontWeight: 700 }}>
+            Social
+          </h4>
           <a
             href="https://twitter.com/unchainedcom"
             className={classes.footerLink}
