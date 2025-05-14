@@ -32,8 +32,7 @@
     "vitest": "^3.1.1"
   },
   "dependencies": {
-    "@ledgerhq/hw-transport-webusb": "6.27.12",
-    "styled-components": "^6.1.13"
+    "@ledgerhq/hw-transport-webusb": "6.27.12"
   },
   "engines": {
     "node": ">=20"
