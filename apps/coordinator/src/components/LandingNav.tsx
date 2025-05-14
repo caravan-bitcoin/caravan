@@ -1,7 +1,7 @@
 import React from "react";
 import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png";
+import Logo from "../../public/images/caravan-logo-transparent.webp";
 import { useStyles } from "./LandingNav.styles";
 
 const Navbar = () => {
