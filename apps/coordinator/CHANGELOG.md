@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.1
+
+### Patch Changes
+
+- [#288](https://github.com/caravan-bitcoin/caravan/pull/288) [`fd3ff96`](https://github.com/caravan-bitcoin/caravan/commit/fd3ff96cb6bd1a89f9f0fa46aafd68ea0737d7b1) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Version bump to fix import error in build script
+
 ## 1.8.0
 
 ### Minor Changes
