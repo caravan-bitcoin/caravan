@@ -13,7 +13,6 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
   },
   title: {
-    fontSize: "2rem",
     color: "#212529",
   },
   balance: {
@@ -41,7 +40,7 @@ const WalletInfoCard = ({
         <Grid container direction="row" alignItems="center">
           {editable ? (
             <Grid item>
-              <Typography variant="h1" className={classes.title}>
+              <Typography variant="h4" className={classes.title}>
                 <EditableName number={0} name={walletName} setName={setName} />
               </Typography>
             </Grid>
@@ -52,7 +51,7 @@ const WalletInfoCard = ({
                   <BitcoinIcon network={network} />
                 </Grid>
                 <Grid item>
-                  <Typography variant="h1" className={classes.title}>
+                  <Typography variant="h4" className={classes.title}>
                     {walletName}
                   </Typography>
                 </Grid>
