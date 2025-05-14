@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0
+
+### Minor Changes
+
+- [#142](https://github.com/caravan-bitcoin/caravan/pull/142) [`331f462`](https://github.com/caravan-bitcoin/caravan/commit/331f462713c6ab186a2d50f90e4c4a0609e459a1) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - This brings quick and easy UI changes to make the app more inviting with sleeker design
+
 ## 1.7.1
 
 ### Patch Changes
