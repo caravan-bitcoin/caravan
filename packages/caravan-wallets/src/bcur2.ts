@@ -10,8 +10,18 @@ interface DecodedData {
 
 export class BCURDecoder2 {
   private processor: URProcessor;
+
   private error: string | null = null;
+
   private progress: string = "Idle";
+
+  setProgress(value: string): void {
+    this.progress = value;
+  }
+
+  setError(value: string): void {
+    this.error = value;
+  }
 
   constructor(network: BitcoinNetwork = Network.MAINNET) {
     this.processor = new URProcessor(network);

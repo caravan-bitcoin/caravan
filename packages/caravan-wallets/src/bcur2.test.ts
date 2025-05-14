@@ -1,6 +1,5 @@
 import { Network } from "@caravan/bitcoin";
 import { BCURDecoder2 } from "./bcur2";
-import { CryptoHDKey, CryptoAccount } from "@keystonehq/bc-ur-registry";
 import { URProcessor } from "./vendor/bcur2/process";
 
 // Mock the vendor URProcessor
@@ -206,7 +205,7 @@ describe("BCURDecoder2", () => {
     describe("getProgress", () => {
       it("should return current progress string", () => {
         const mockProgress = "Processing QR parts: 75%";
-        decoder["progress"] = mockProgress;
+        decoder.setProgress(mockProgress);
         expect(decoder.getProgress()).toBe(mockProgress);
       });
     });
@@ -218,7 +217,7 @@ describe("BCURDecoder2", () => {
 
       it("should return error message when error exists", () => {
         const errorMessage = "Test error";
-        decoder["error"] = errorMessage;
+        decoder.setError(errorMessage);
         expect(decoder.getError()).toBe(errorMessage);
       });
     });
