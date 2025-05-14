@@ -20,7 +20,7 @@ import ScriptIcon from "@mui/icons-material/Code";
 import CreateIcon from "@mui/icons-material/Create";
 import TestIcon from "@mui/icons-material/CheckCircle";
 import HelpIcon from "@mui/icons-material/Help";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png";
+import Logo from "../../public/images/caravan-logo-transparent.webp";
 
 const useStyles = makeStyles((theme) =>
   createStyles({
