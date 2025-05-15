@@ -1,13 +1,11 @@
 import { makeStyles, createStyles } from "@mui/styles";
-import { Theme } from "@mui/material/styles";
+import type { Theme } from "@mui/material";
 
-// Using the theme parameter to integrate with MUI's theming system
 export const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
       flexGrow: 1,
       width: "100%",
-      // Using theme values and chaining selectors for higher specificity
       "&.MuiAppBar-root": {
         backgroundColor: "#FFFFFF",
         boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
@@ -19,7 +17,7 @@ export const useStyles = makeStyles((theme: Theme) =>
     toolbar: {
       padding: "0 20px",
       display: "flex",
-      justifyContent: "space-between", // This ensures proper spacing between elements
+      justifyContent: "space-between",
       width: "100%",
       "@media (min-width: 1200px)": {
         padding: "0 40px",
