@@ -28,6 +28,12 @@ const getClientDetails = (state) => {
     "walletName": "${state.client.walletName}"
   }`;
   }
+  if (state.client.type === "public") {
+    return `{
+    "type": "public",
+    "provider": "${state.client.provider}"
+  }`;
+  }
   return `{
     "type": "${state.client.type}"
   }`;
