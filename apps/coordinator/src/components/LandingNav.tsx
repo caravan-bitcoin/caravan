@@ -1,7 +1,7 @@
 import React from "react";
 import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom";
-import Logo from "../../../../assets/images/caravan-logo-transparent.png";
+import Logo from "../../public/images/landing/caravan_combo.webp";
 import { useStyles } from "./LandingNav.styles";
 
 const Navbar = () => {
@@ -27,23 +27,23 @@ const Navbar = () => {
   return (
     <AppBar position="sticky" className={classes.root} elevation={0}>
       <Toolbar className={classes.toolbar}>
-        <Link to="/" className={classes.logoLink}>
-          <Button
-            className={classes.logoButton}
-            style={{ textTransform: "none" }}
-            variant="contained"
-            aria-label="Go to homepage"
-            startIcon={
+        <Box>
+          <Link to="/" className={classes.logoLink}>
+            <Button
+              className={classes.logoButton}
+              style={{ textTransform: "none" }}
+              variant="contained"
+              aria-label="Go to homepage"
+            >
               <img
                 src={Logo}
                 alt="Caravan Logo"
                 className={classes.logoImage}
               />
-            }
-          >
-            Caravan
-          </Button>
-        </Link>
+            </Button>
+          </Link>
+        </Box>
+
         <Box className={classes.menuContainer}>
           <Button
             className={classes.menuButton}
@@ -75,18 +75,21 @@ const Navbar = () => {
               style={{ textTransform: "none" }}
               aria-label="Go to test suite"
             >
-              Test Suite
+              Test suite
             </Button>
           </Link>
         </Box>
-        <Link to="/setup" style={{ textDecoration: "none" }}>
-          <Button
-            className={classes.getStartedButton}
-            aria-label="Get started with Caravan"
-          >
-            Get Started
-          </Button>
-        </Link>
+
+        <Box>
+          <Link to="/setup" style={{ textDecoration: "none" }}>
+            <Button
+              className={classes.getStartedButton}
+              aria-label="Get started with Caravan"
+            >
+              Get started
+            </Button>
+          </Link>
+        </Box>
       </Toolbar>
     </AppBar>
   );

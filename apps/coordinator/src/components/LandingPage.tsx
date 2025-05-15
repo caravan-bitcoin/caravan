@@ -8,7 +8,7 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import DevicesIcon from "@mui/icons-material/Devices";
 import StorageIcon from "@mui/icons-material/Storage";
 import { Link, useLocation } from "react-router-dom";
-import Logo from "../../public/images/caravan-logo-transparent.webp";
+import Logo from "../../public/images/landing/caravan_combo.webp";
 import { useStyles } from "./LandingPage.styles";
 
 const LandingPage = () => {
@@ -51,7 +51,7 @@ const LandingPage = () => {
               variant="contained"
               aria-label="Get started with Caravan"
             >
-              Get Started
+              Get started
             </Button>
           </Link>
           <Button
@@ -60,7 +60,7 @@ const LandingPage = () => {
             onClick={scrollToContent}
             aria-label="Learn more about Caravan"
           >
-            Learn More
+            Learn more
           </Button>
         </div>
         <img
@@ -69,52 +69,100 @@ const LandingPage = () => {
           className={classes.mainImage}
           loading="lazy"
         />
-        <div className={classes.imageGrid}>
-          <div className={classes.imageRow}>
-            <img
-              src="/images/landing/trezor.webp"
-              alt="Trezor Hardware Wallet"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-            <img
-              src="/images/landing/ledger.webp"
-              alt="Ledger Hardware Wallet"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-            <img
-              src="/images/landing/coldcard.webp"
-              alt="Coldcard Hardware Wallet"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-            <img
-              src="/images/landing/bitbox.webp"
-              alt="Bitbox Hardware Wallet"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-          </div>
-          <div className={classes.imageRow}>
-            <img
-              src="/images/landing/firefox.webp"
-              alt="Firefox Browser"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-            <img
-              src="/images/landing/chrome.webp"
-              alt="Chrome Browser"
-              className={classes.gridImage}
-              loading="lazy"
-            />
-            <img
-              src="/images/landing/brave.webp"
-              alt="Brave Browser"
-              className={classes.gridImage}
-              loading="lazy"
-            />
+
+        <div className={classes.compatibilitySection}>
+          <h2 className={classes.compatibilityTitle}>
+            Compatible with your favorite tools
+          </h2>
+          <p className={classes.compatibilityDescription}>
+            Caravan works seamlessly with industry-leading hardware wallets,
+            browsers, and other bitcoin coordination tools.
+          </p>
+
+          <div className={classes.compatibilityGrid}>
+            <div className={classes.compatibilityCard}>
+              <h3 className={classes.cardTitle}>Hardware wallet support</h3>
+              <div className={classes.cardLogos}>
+                <img
+                  src="/images/landing/trezor.webp"
+                  alt="Trezor Hardware Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/ledger.webp"
+                  alt="Ledger Hardware Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/coldcard.webp"
+                  alt="Coldcard Hardware Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/bitbox.webp"
+                  alt="Bitbox Hardware Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            <div className={classes.compatibilityCard}>
+              <h3 className={classes.cardTitle}>Browser compatibility</h3>
+              <div className={classes.cardLogos}>
+                <img
+                  src="/images/landing/firefox.webp"
+                  alt="Firefox Browser"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/chrome.webp"
+                  alt="Chrome Browser"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/brave.webp"
+                  alt="Brave Browser"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            <div className={classes.compatibilityCard}>
+              <h3 className={classes.cardTitle}>Interoperable coordinators</h3>
+              <div className={classes.cardLogos}>
+                <img
+                  src="/images/landing/unchained.webp"
+                  alt="Unchained"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/sparrow.webp"
+                  alt="Sparrow Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/bitcoin_core.png"
+                  alt="Bitcoin Core"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+                <img
+                  src="/images/landing/electrum.png"
+                  alt="Electrum Wallet"
+                  className={classes.cardLogo}
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -127,7 +175,7 @@ const LandingPage = () => {
         <div className={classes.fullWidthBox}>
           <div className={classes.descriptionSection}>
             <h3 className={classes.contentTitle}>
-              Stateless Multisig Coordinator
+              Stateless multisig coordinator
             </h3>
             <p className={classes.contentDescription}>
               Caravan makes bitcoin multisig custody easier and safer through
@@ -162,7 +210,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className={classes.descriptionSection}>
-            <h3 className={classes.contentTitle}>Keys & Recovery</h3>
+            <h3 className={classes.contentTitle}>Keys & recovery</h3>
             <p className={classes.contentDescription}>
               All bitcoin is ultimately protected by private keys. Your private
               key may live on a piece of paper, a hardware wallet, some software
@@ -179,7 +227,7 @@ const LandingPage = () => {
 
         <div className={classes.fullWidthBox}>
           <div className={classes.descriptionSection}>
-            <h3 className={classes.contentTitle}>Privacy & Consensus</h3>
+            <h3 className={classes.contentTitle}>Privacy & consensus</h3>
             <p className={classes.contentDescription}>
               In order to look up wallet addresses and their balances, and
               broadcast transactions, Caravan requires knowledge of the
@@ -240,10 +288,10 @@ const LandingPage = () => {
             <h3 className={classes.featureTitle}>Flexibility</h3>
             <p className={classes.featureDescription}>
               Import and export wallet configurations or descriptors compatible
-              with popular software like Sparrow and Electrum. Connect to your
-              own bitcoin node for maximum sovereignty or use lightweight
-              options like mempool.space and Blockstream for convenient access
-              anywhere.
+              with popular software like Unchained, Sparrow, and Electrum.
+              Connect to your own bitcoin node for maximum sovereignty or use
+              lightweight options like mempool.space and Blockstream for
+              convenient access anywhere.
             </p>
           </div>
         </div>
@@ -253,7 +301,7 @@ const LandingPage = () => {
             <div className={classes.featureIcon}>
               <ShieldIcon fontSize="large" aria-hidden="true" />
             </div>
-            <h3 className={classes.featureTitle}>Advanced Features</h3>
+            <h3 className={classes.featureTitle}>Advanced features</h3>
             <p className={classes.featureDescription}>
               Support for blinded xpubs to enhance privacy, PSBTv2
               compatibility, and descriptors for advanced configurations. All
@@ -265,7 +313,7 @@ const LandingPage = () => {
             <div className={classes.featureIcon}>
               <DevicesIcon fontSize="large" aria-hidden="true" />
             </div>
-            <h3 className={classes.featureTitle}>Hardware Support</h3>
+            <h3 className={classes.featureTitle}>Hardware support</h3>
             <p className={classes.featureDescription}>
               Seamless integration with industry-leading hardware wallets
               including Ledger, Trezor, Coldcard, and Bitbox. Protect your keys
@@ -278,7 +326,7 @@ const LandingPage = () => {
             <div className={classes.featureIcon}>
               <StorageIcon fontSize="large" aria-hidden="true" />
             </div>
-            <h3 className={classes.featureTitle}>Self-Custody</h3>
+            <h3 className={classes.featureTitle}>Self-custody</h3>
             <p className={classes.featureDescription}>
               Take full control of your bitcoin without relying on third-party
               custodians. True financial sovereignty with enhanced security
@@ -318,20 +366,53 @@ const LandingPage = () => {
 
       <footer className={classes.footer}>
         <div className={classes.footerColumn}>
-          <Button
-            className={classes.logoButton}
-            style={{ textTransform: "none" }}
-            variant="contained"
-            startIcon={
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              margin: "20px 0",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "10px",
+              }}
+            >
               <img
                 src={Logo}
                 alt="Caravan Logo"
-                style={{ width: 75, height: 60 }}
+                style={{ width: "180px", height: "auto" }}
               />
-            }
-          >
-            Caravan
-          </Button>
+              <span
+                style={{
+                  margin: "0 15px",
+                  fontSize: "16px",
+                  fontWeight: "300",
+                  color: "#000",
+                }}
+              >
+                <span style={{ fontSize: "24px" }}>×</span>
+              </span>
+              <img
+                src="/images/landing/unchained.webp"
+                alt="Unchained Logo"
+                style={{ width: "180px", height: "auto" }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: "14px",
+                color: "#000",
+                fontWeight: "normal",
+              }}
+            >
+              Created and supported by Unchained
+            </span>
+          </div>
           <p style={{ alignSelf: "center", color: "gray" }}>
             Multisig made easy. Manage your bitcoin statelessly with Caravan.
           </p>
@@ -397,7 +478,7 @@ const LandingPage = () => {
             rel="noopener noreferrer"
             aria-label="Learn about Bitcoin multisig"
           >
-            Multisig Guide
+            Multisig guide
           </a>
         </div>
         <div className={classes.footerColumn}>
