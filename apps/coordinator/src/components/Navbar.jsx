@@ -10,7 +10,6 @@ import {
   ListItemIcon,
   Box,
 } from "@mui/material";
-import { makeStyles, createStyles } from "@mui/styles";
 import { Link } from "react-router-dom";
 import HomeIcon from "@mui/icons-material/Home";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -20,61 +19,8 @@ import ScriptIcon from "@mui/icons-material/Code";
 import CreateIcon from "@mui/icons-material/Create";
 import TestIcon from "@mui/icons-material/CheckCircle";
 import HelpIcon from "@mui/icons-material/Help";
-import Logo from "../../public/images/caravan-logo-transparent.webp";
-
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    root: {
-      height: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      backgroundColor: "#00478E !important",
-    },
-    menuButton: {
-      marginRight: theme.spacing(2),
-    },
-    title: {
-      flexGrow: 1,
-    },
-    menuItem: {
-      paddingTop: theme.spacing(2),
-      paddingBottom: theme.spacing(2),
-      paddingX: theme.spacing(3),
-    },
-    menuLink: {
-      color: "#fff !important",
-      textDecoration: "none !important",
-    },
-    bottomList: {
-      marginTop: "auto",
-      backgroundColor: "#00478E",
-      color: "#fff",
-    },
-    toolbar: {
-      padding: 0,
-      backgroundColor: "#00478E",
-    },
-    icon: {
-      color: "#fff !important",
-    },
-    logoButton: {
-      backgroundColor: "#00478E !important",
-      color: "#fff !important",
-      padding: "10px 20px !important",
-      fontSize: "2rem !important",
-      outline: "none !important",
-      boxShadow: "none !important",
-      fontWeight: "bold !important",
-      textTransform: "none !important",
-      width: "100% !important",
-      justifyContent: "flex-start !important",
-      "&:focus": {
-        outline: "none !important",
-        boxShadow: "none !important",
-      },
-    },
-  }),
-);
+import Logo from "../../public/images/landing/logo_mark_white.webp";
+import { useStyles } from "./Navbar.styles";
 
 const NavItem = ({ href, title, icon, classes }) => {
   return (
@@ -102,15 +48,12 @@ const NavbarHeader = ({ classes }) => (
   <AppBar position="static">
     <Toolbar className={classes.toolbar}>
       <Button
-        className={classes.logoButton}
+        className={`${classes.logoButton} logoButton`}
         variant="contained"
         component={Link}
         to="/"
-        startIcon={
-          <img src={Logo} alt="Logo" style={{ width: 75, height: 60 }} />
-        }
       >
-        Caravan
+        <img src={Logo} alt="Logo" style={{ width: 97, height: 77 }} />
       </Button>
     </Toolbar>
   </AppBar>
@@ -132,7 +75,7 @@ const NavbarActive = ({ classes }) => {
       flexDirection="column"
       alignItems="flex-start"
       width="100%"
-      backgroundColor="#00478E"
+      bgcolor="#00478E"
       color="#fff"
     >
       <List style={{ width: "100%" }}>
@@ -155,7 +98,7 @@ NavbarActive.propTypes = {
 };
 
 const NavbarEmpty = () => (
-  <Box flexGrow={1} style={{ backgroundColor: "#00478E" }} />
+  <Box flexGrow={1} sx={{ backgroundColor: "#00478E" }} />
 );
 
 const Navbar = () => {
