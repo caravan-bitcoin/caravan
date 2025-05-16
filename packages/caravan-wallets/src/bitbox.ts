@@ -16,20 +16,20 @@ import {
   MultisigAddressType,
 } from "@caravan/bitcoin";
 import {
-  ACTIVE,
-  PENDING,
-  INFO,
-  DirectKeystoreInteraction,
-} from "./interaction";
-
-import { MultisigWalletConfig } from "./types";
-
-import {
   BtcCoin,
   BtcMultisigScriptType,
   BtcScriptConfig,
   PairedBitBox,
 } from 'bitbox-api';
+
+import {
+  ACTIVE,
+  PENDING,
+  INFO,
+  DirectKeystoreInteraction,
+} from "./interaction";
+import { MultisigWalletConfig } from "./types";
+
 
 /**
  * Constant defining BitBox interactions.

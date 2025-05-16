@@ -10,8 +10,8 @@ import {
   Network,
   validateExtendedPublicKeyForNetwork,
 } from "@caravan/bitcoin";
-import { WalletPolicy } from "ledger-bitcoin";
 import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
+import { WalletPolicy } from "ledger-bitcoin";
 
 export class KeyOrigin {
   readonly xfp: string;
