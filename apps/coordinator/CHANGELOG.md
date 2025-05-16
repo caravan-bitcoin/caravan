@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.2
+
+### Patch Changes
+
+- [#291](https://github.com/caravan-bitcoin/caravan/pull/291) [`b54344b`](https://github.com/caravan-bitcoin/caravan/commit/b54344bf47dcf964c4a11e62784c0ecaf6fffb36) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Changes include new logo, compatibility section, and removing bad practices
+
 ## 1.8.1
 
 ### Patch Changes
