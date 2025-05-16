@@ -18,8 +18,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 
 import theme from "./theme";
-import "./styles.css";
-import "./overrides.css";
 import Help from "./Help";
 import Setup from "./Setup";
 import LandingPage from "./LandingPage";

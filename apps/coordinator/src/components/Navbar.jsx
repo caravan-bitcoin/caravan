@@ -19,9 +19,8 @@ import ScriptIcon from "@mui/icons-material/Code";
 import CreateIcon from "@mui/icons-material/Create";
 import TestIcon from "@mui/icons-material/CheckCircle";
 import HelpIcon from "@mui/icons-material/Help";
-import Logo from "../../public/images/landing/caravan_combo_white.webp";
+import Logo from "../../public/images/landing/logo_mark_white.webp";
 import { useStyles } from "./Navbar.styles";
-import "./overrides.css";
 
 const NavItem = ({ href, title, icon, classes }) => {
   return (
@@ -54,7 +53,7 @@ const NavbarHeader = ({ classes }) => (
         component={Link}
         to="/"
       >
-        <img src={Logo} alt="Logo" style={{ width: 240, height: 60 }} />
+        <img src={Logo} alt="Logo" style={{ width: 97, height: 77 }} />
       </Button>
     </Toolbar>
   </AppBar>

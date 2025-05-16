@@ -105,8 +105,8 @@ export const useStyles = makeStyles((theme: Theme) =>
       alignItems: "center",
     },
     logoImage: {
-      width: 240,
-      height: 60,
+      width: 97,
+      height: 77,
       transition: "transform 0.2s ease",
       "&:hover": {
         transform: "scale(1.05)",

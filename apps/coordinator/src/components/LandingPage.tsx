@@ -8,7 +8,7 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import DevicesIcon from "@mui/icons-material/Devices";
 import StorageIcon from "@mui/icons-material/Storage";
 import { Link, useLocation } from "react-router-dom";
-import Logo from "../../public/images/landing/caravan_combo.webp";
+import Logo from "../../public/images/landing/logo_mark.webp";
 import { useStyles } from "./LandingPage.styles";
 
 const LandingPage = () => {
@@ -150,13 +150,13 @@ const LandingPage = () => {
                   loading="lazy"
                 />
                 <img
-                  src="/images/landing/bitcoin_core.png"
+                  src="/images/landing/bitcoin_core.webp"
                   alt="Bitcoin Core"
                   className={classes.cardLogo}
                   loading="lazy"
                 />
                 <img
-                  src="/images/landing/electrum.png"
+                  src="/images/landing/electrum.webp"
                   alt="Electrum Wallet"
                   className={classes.cardLogo}
                   loading="lazy"
@@ -385,7 +385,7 @@ const LandingPage = () => {
               <img
                 src={Logo}
                 alt="Caravan Logo"
-                style={{ width: "180px", height: "auto" }}
+                style={{ width: "120px", height: "auto" }}
               />
               <span
                 style={{
