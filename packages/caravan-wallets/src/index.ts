@@ -41,7 +41,6 @@ import {
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
 import {
-  TREZOR,
   TrezorGetMetadata,
   TrezorExportPublicKey,
   TrezorExportExtendedPublicKey,
@@ -49,6 +48,7 @@ import {
   TrezorConfirmMultisigAddress,
   TrezorSignMessage,
 } from "./trezor";
+export const TREZOR = "trezor";
 import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
@@ -79,7 +79,6 @@ export const DIRECT_KEYSTORES = {
   LEDGER,
   LEDGER_V2,
 } as const;
-
 /**
  * Keystores which support indirect interactions.
  */

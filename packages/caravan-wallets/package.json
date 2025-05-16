@@ -71,9 +71,9 @@
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
-    "test": "jest src",
-    "test:watch": "jest --watch src",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/jest --runInBand",
+    "test": "vitest src",
+    "test:watch": "vitest --watch src",
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest --runInBand",
     "docs": "./bin/build-docs.sh",
     "lint": "eslint src --ignore-pattern src/vendor"
   },
