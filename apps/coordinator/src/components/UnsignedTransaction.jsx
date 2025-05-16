@@ -8,6 +8,8 @@ import Copyable from "./Copyable";
 const UnsignedTransaction = ({ unsignedTransaction, unsignedPSBT }) => {
   const [showUnsignedTransaction, setShowUnsignedTransaction] = useState(false);
 
+  console.log("UnsignedTransaction render - PSBT present:", !!unsignedPSBT);
+
   const handleShowUnsignedTransaction = () => {
     setShowUnsignedTransaction(true);
   };
@@ -19,6 +21,10 @@ const UnsignedTransaction = ({ unsignedTransaction, unsignedPSBT }) => {
   const renderUnsignedTransaction = () => {
     if (showUnsignedTransaction) {
       const hex = unsignedTransaction.toHex();
+      console.log("Showing transaction hex and PSBT:", {
+        hexLength: hex.length,
+        hasPSBT: !!unsignedPSBT,
+      });
       return (
         <div>
           <small>
