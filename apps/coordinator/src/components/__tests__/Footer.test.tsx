@@ -41,7 +41,6 @@ describe("Testing Footer Component", () => {
     const logoLink = screen.getByRole("link", {
       name: /unchained capital logo/i,
     });
-    console.log("logolink", logoLink);
 
     expect(logoLink).toBeInTheDocument();
 
@@ -60,7 +59,6 @@ describe("Testing Footer Component", () => {
       `v${mockAppVersion.replace(/\./g, "\\.")} commit: ${mockGitSha}`,
       "i",
     );
-    console.log("versionreg", versionReg);
 
     const versionText = screen.getByText(versionReg);
 
