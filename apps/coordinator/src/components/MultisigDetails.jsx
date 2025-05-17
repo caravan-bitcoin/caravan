@@ -14,7 +14,7 @@ import {
 } from "@caravan/bitcoin";
 import { Typography, Grid, Box, Chip } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
-import { externalLink } from "utils/ExternalLink";
+import { externalLink } from "../utils/ExternalLink";
 
 // Components
 import Copyable from "./Copyable";

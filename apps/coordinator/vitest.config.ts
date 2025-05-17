@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ["src/components/__tests__/Navbar.test.tsx"],
+    include: ["src/components/__tests__/MultisigDetails.test.jsx"],
     exclude: ["node_modules/**", "dist/**"],
     globals: true,
     environment: "jsdom",
