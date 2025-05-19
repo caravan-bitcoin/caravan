@@ -13,7 +13,6 @@
  * * LedgerSignMultisigTransaction
  * * LedgerSignMessage
  */
-
 import {
   bip32PathToSequence,
   hardenedBIP32Index,
@@ -38,7 +37,16 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
+import { LegacyInput } from "@caravan/multisig";
 import { translatePSBT } from "@caravan/psbt";
+import LedgerBtc from "@ledgerhq/hw-app-btc";
+import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
+import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
+import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
+import TransportU2F from "@ledgerhq/hw-transport-u2f";
+import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
+import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
+
 import {
   ACTIVE,
   PENDING,
@@ -47,13 +55,8 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
-
-import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
-import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
-import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
-import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
-import { DeviceError, MultisigWalletConfig } from "./types";
 import { MultisigWalletPolicy } from "./policy";
+import { DeviceError, MultisigWalletConfig } from "./types";
 
 /**
  * Constant defining Ledger interactions.
@@ -62,10 +65,6 @@ export const LEDGER = "ledger";
 
 export const LEDGER_V2 = "ledger_v2";
 
-import TransportU2F from "@ledgerhq/hw-transport-u2f";
-import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
-import LedgerBtc from "@ledgerhq/hw-app-btc";
-import { LegacyInput } from "@caravan/multisig";
 
 /**
  * Constant representing the action of pushing the left button on a

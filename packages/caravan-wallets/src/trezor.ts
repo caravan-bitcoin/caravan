@@ -1,4 +1,7 @@
-/* eslint-disable max-lines*/
+/**
+ * Constant defining Trezor interactions.
+ */
+export const TREZOR = "trezor";
 
 /**
  * Provides classes for interacting with Trezor hardware wallets.
@@ -23,7 +26,6 @@
  * * TrezorSignMultisigTransaction
  * * TrezorConfirmMultisigAddress
  */
-import BigNumber from "bignumber.js";
 import {
   bip32PathToSequence,
   multisigAddress,
@@ -40,8 +42,13 @@ import {
   Network,
 } from "@caravan/bitcoin";
 import { translatePSBT } from "@caravan/psbt";
+import TrezorConnectDefault, {
+  TrezorConnect as TrezorConnectType,
+} from "@trezor/connect-web";
+import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
+import { MULTISIG_ROOT } from "./constants";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -49,12 +56,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { MULTISIG_ROOT } from "./index";
 
-/**
- * Constant defining Trezor interactions.
- */
-export const TREZOR = "trezor";
 
 /**
  * What's going on with this TrezorConnect import?
@@ -65,10 +67,6 @@ export const TREZOR = "trezor";
  * the exports.default value and instead falls back to the tsbuild.__exportStar exports. When
  * this happens we need to pull the `TrezorConnect` object from the default property of the module.
  */
-import TrezorConnectDefault, {
-  TrezorConnect as TrezorConnectType,
-} from "@trezor/connect-web";
-
 let TrezorConnect: TrezorConnectType & { default?: TrezorConnectType } =
   TrezorConnectDefault;
 
