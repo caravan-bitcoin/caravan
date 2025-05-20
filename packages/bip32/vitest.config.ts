@@ -7,10 +7,6 @@ export default defineConfig({
     globals: true,
     environment: "node",
     testTimeout: 10000,
-    typecheck: {
-        tsconfig: './tsconfig.json',
-        enabled: false
-    }
     coverage: {
       provider: "istanbul",
       reporter: "text",
