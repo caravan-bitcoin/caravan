@@ -43,7 +43,6 @@ describe("getMaskedKeyOrigin", () => {
     if (!depth1Node) throw new Error("Depth 1 node not found in fixtures");
     const parentFingerprint = ExtendedPublicKey.fromBase58(depth1Node.tpub).parentFingerprint?.toString(16);
     const masked = getMaskedKeyOrigin(depth1Node.tpub);
-    console.log("Masked key origin", masked);
     expect(masked).toEqual({
       xpub: depth1Node.tpub,
       bip32Path: "m/0", 

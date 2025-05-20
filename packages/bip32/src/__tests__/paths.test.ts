@@ -1,10 +1,12 @@
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
+
 import {
   combineBip32Paths,
   getRelativeBip32Sequence,
   getUnmaskedPath,
   secureSecretPath,
 } from "../paths";
+
 import { KeyOrigin } from "../types";
 
 vi.mock("../utils", () => ({
