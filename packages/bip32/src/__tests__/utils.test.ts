@@ -12,15 +12,18 @@ describe("secureRandomInt", () => {
   });
 
   it("should return min when min equals max", () => {
+    /* This test verifies the edge case where the random range is a single number.
+    Here, (max - min + 1) is 1 so the modulo operation (randomValue % 1)
+    will always result in 0, so this will always return out min value */
     const result = secureRandomInt(42, 42);
     expect(result).toBe(42);
   });
 
   it("should handle maximum integer bounds", () => {
-    const max = 2 ** 31 - 1;
-    const result = secureRandomInt(max - 10, max);
-    expect(result).toBeGreaterThanOrEqual(max - 10);
-    expect(result).toBeLessThanOrEqual(max);
+    const DEFAULT_MAX = 2 ** 31 - 1;
+    const result = secureRandomInt(DEFAULT_MAX - 10, DEFAULT_MAX);
+    expect(result).toBeGreaterThanOrEqual(DEFAULT_MAX - 10);
+    expect(result).toBeLessThanOrEqual(DEFAULT_MAX);
   });
 
   it("returns a number within the default range when no arguments are provided", () => {
