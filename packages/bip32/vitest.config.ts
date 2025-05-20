@@ -11,5 +11,9 @@ export default defineConfig({
         tsconfig: './tsconfig.json',
         enabled: false
     }
+    coverage: {
+      provider: "istanbul",
+      reporter: "text",
+    },
   },
 });

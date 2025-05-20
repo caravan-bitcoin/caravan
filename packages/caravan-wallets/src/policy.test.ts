@@ -1,8 +1,7 @@
-/**
- * @jest-environment jsdom
- */
-
 import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
+import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
+
+import { POLICY_FIXTURE } from "./fixtures";
 import {
   KeyOrigin,
   validateMultisigPolicyTemplate,
@@ -10,8 +9,6 @@ import {
   braidDetailsToWalletConfig,
   MultisigWalletPolicy,
 } from "./policy";
-import { POLICY_FIXTURE } from "./fixtures";
-import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
 
 describe("validateMultisigPolicyTemplate", () => {
   it("throws error if script type is not supported", () => {
@@ -141,6 +138,41 @@ describe("KeyOrigin", () => {
     expect(new KeyOrigin(options).toString()).toEqual(
       "[76223a6e/48'/1'/0'/2']tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
     );
+  });
+
+  describe("fromString", () => {
+    const testKeyOrigin =
+      "[76223a6e/48'/1'/0'/2']tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF";
+
+    it("can parse a key origin from a string", () => {
+      const keyOrigin = KeyOrigin.fromString(testKeyOrigin);
+      expect(keyOrigin.xfp).toEqual("76223a6e");
+      expect(keyOrigin.xfp).toEqual("76223a6e");
+      expect(keyOrigin.bip32Path).toEqual("m/48'/1'/0'/2'");
+      expect(keyOrigin.xpub).toEqual(
+        "tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
+      );
+      expect(keyOrigin.network).toEqual(Network.TESTNET);
+      expect(keyOrigin.toString()).toEqual(testKeyOrigin);
+    });
+
+    it("throws an error if the key origin is invalid", () => {
+      expect(() => KeyOrigin.fromString("invalid")).toThrow();
+      expect(() =>
+        KeyOrigin.fromString(
+          "[76223a6e/48'/1'/0'/2']rpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
+        )
+      ).toThrow("Invalid key origin string");
+    });
+
+    it("can parse a key origin from a string with a network", () => {
+      const keyOrigin = KeyOrigin.fromString(testKeyOrigin, Network.REGTEST);
+      expect(keyOrigin.xfp).toEqual("76223a6e");
+      expect(keyOrigin.xfp).toEqual("76223a6e");
+      expect(keyOrigin.bip32Path).toEqual("m/48'/1'/0'/2'");
+      expect(keyOrigin.network).toEqual(Network.REGTEST);
+      expect(keyOrigin.toString()).toEqual(testKeyOrigin);
+    });
   });
 });
 
