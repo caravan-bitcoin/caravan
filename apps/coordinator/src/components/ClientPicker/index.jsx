@@ -11,7 +11,7 @@ import {
   Radio,
   RadioGroup,
 } from "@mui/material";
-import { ClientType } from "@caravan/clients";
+import { ClientType, PublicBitcoinProvider } from "@caravan/clients";
 
 // Components
 
@@ -25,6 +25,7 @@ import {
   SET_CLIENT_URL_ERROR,
   SET_CLIENT_USERNAME_ERROR,
   SET_CLIENT_PASSWORD_ERROR,
+  SET_CLIENT_PROVIDER,
 } from "../../actions/clientActions";
 
 import PrivateClientSettings from "./PrivateClientSettings";
@@ -45,6 +46,7 @@ const ClientPicker = ({
   usernameError,
   passwordError,
   privateNotes,
+  setProvider,
 }) => {
   const [urlEdited, setUrlEdited] = useState(false);
   const [connectError, setConnectError] = useState("");
@@ -66,11 +68,23 @@ const ClientPicker = ({
   };
 
   const handleTypeChange = async (event) => {
-    const clientType = event.target.value;
-    if (clientType === "private" && !urlEdited) {
-      setUrl(`http://localhost:${network === "mainnet" ? 8332 : 18332}`);
+    const value = event.target.value;
+    if (value === ClientType.PRIVATE) {
+      if (!urlEdited) {
+        setUrl(`http://localhost:${network === "mainnet" ? 8332 : 18332}`);
+      }
+      setType(ClientType.PRIVATE);
+    } else {
+      setType(ClientType.PUBLIC);
+      // Set the provider based on selection
+      const provider =
+        value === "mempool"
+          ? PublicBitcoinProvider.MEMPOOL
+          : PublicBitcoinProvider.BLOCKSTREAM;
+      if (setProvider) {
+        setProvider(provider);
+      }
     }
-    setType(clientType);
   };
 
   const handleUrlChange = async (event) => {
@@ -123,34 +137,40 @@ const ClientPicker = ({
           <FormControl component="fieldset">
             <RadioGroup>
               <FormControlLabel
-                id={ClientType.MEMPOOL}
+                id={PublicBitcoinProvider.MEMPOOL}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value={ClientType.MEMPOOL}
+                value={PublicBitcoinProvider.MEMPOOL}
                 label={<strong>Mempool.space</strong>}
                 onChange={handleTypeChange}
-                checked={client.type === ClientType.MEMPOOL}
+                checked={
+                  client.type === ClientType.PUBLIC &&
+                  client.provider === PublicBitcoinProvider.MEMPOOL
+                }
               />
               <FormControlLabel
-                id={ClientType.BLOCKSTREAM}
+                id={PublicBitcoinProvider.BLOCKSTREAM}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value={ClientType.BLOCKSTREAM}
+                value={PublicBitcoinProvider.BLOCKSTREAM}
                 label={<strong>Blockstream.info</strong>}
                 onChange={handleTypeChange}
-                checked={client.type === ClientType.BLOCKSTREAM}
+                checked={
+                  client.type === ClientType.PUBLIC &&
+                  client.provider === PublicBitcoinProvider.BLOCKSTREAM
+                }
               />
               <FormControlLabel
-                id="private"
+                id={ClientType.PRIVATE}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value="private"
+                value={ClientType.PRIVATE}
                 label="Private"
                 onChange={handleTypeChange}
-                checked={client.type === "private"}
+                checked={client.type === ClientType.PRIVATE}
               />
             </RadioGroup>
-            {client.type === "private" && (
+            {client.type === ClientType.PRIVATE && (
               <PrivateClientSettings
                 handleUrlChange={(event) => handleUrlChange(event)}
                 handleUsernameChange={(event) => handleUsernameChange(event)}
@@ -175,6 +195,7 @@ const ClientPicker = ({
 ClientPicker.propTypes = {
   client: PropTypes.shape({
     type: PropTypes.string.isRequired,
+    provider: PropTypes.string,
   }).isRequired,
   network: PropTypes.string.isRequired,
   privateNotes: PropTypes.shape({}),
@@ -189,6 +210,7 @@ ClientPicker.propTypes = {
   usernameError: PropTypes.string,
   setUsername: PropTypes.func.isRequired,
   setUsernameError: PropTypes.func.isRequired,
+  setProvider: PropTypes.func,
 };
 
 ClientPicker.defaultProps = {
@@ -218,5 +240,6 @@ export default connect(
     setUrlError: SET_CLIENT_URL_ERROR,
     setUsernameError: SET_CLIENT_USERNAME_ERROR,
     setPasswordError: SET_CLIENT_PASSWORD_ERROR,
+    setProvider: SET_CLIENT_PROVIDER,
   }),
 )(ClientPicker);
