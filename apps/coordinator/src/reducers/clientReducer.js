@@ -14,7 +14,7 @@ import {
 
 const initialState = {
   type: "public",
-  provider: "blockstream",
+  provider: "mempool",
   url: "",
   username: "",
   password: "",

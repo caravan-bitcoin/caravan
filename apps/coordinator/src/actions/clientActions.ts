@@ -46,16 +46,6 @@ const matchesClient = (
 ) => {
   const translatedType = getClientType(client);
   const translatedProvider = getClientProvider(client);
-  console.log("Matching client:", {
-    original: client,
-    translatedType,
-    translatedProvider,
-    blockchainClient: {
-      type: blockchainClient?.type,
-      provider: blockchainClient?.provider,
-      network: blockchainClient?.network,
-    },
-  });
   return (
     blockchainClient &&
     blockchainClient.network === network &&
@@ -69,7 +59,6 @@ const matchesClient = (
 };
 
 const getClientType = (client: ClientSettings): ClientType => {
-  console.log("Getting client type for:", client.type);
   switch (client.type) {
     case "public":
     case "mempool":
@@ -83,7 +72,6 @@ const getClientType = (client: ClientSettings): ClientType => {
 };
 
 export const getClientProvider = (client: ClientSettings) => {
-  console.log("Getting provider for:", client);
   if (
     client.type === "public" ||
     client.type === "mempool" ||
@@ -95,7 +83,7 @@ export const getClientProvider = (client: ClientSettings) => {
     } else if (client.provider === "mempool" || client.type === "mempool") {
       return PublicBitcoinProvider.MEMPOOL;
     }
-    return PublicBitcoinProvider.BLOCKSTREAM; // Default to Blockstream if not specified
+    return PublicBitcoinProvider.MEMPOOL; // Default to mempool if not specified
   }
   return undefined;
 };
@@ -123,11 +111,9 @@ export const setBlockchainClient = () => {
   ) => {
     const { network } = getState().settings;
     const { client } = getState();
-    console.log("Setting blockchain client:", { network, client });
 
     const clientType = getClientType(client);
     const provider = getClientProvider(client);
-    console.log("Creating new client with:", { clientType, provider });
     const newClient = new BlockchainClient({
       client,
       type: clientType,
