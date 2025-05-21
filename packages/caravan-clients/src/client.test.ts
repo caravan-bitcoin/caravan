@@ -161,6 +161,45 @@ describe("BlockchainClient", () => {
     }).toThrow("Invalid network");
   });
 
+  it("should default to blockstream for public client if no provider is specified", () => {
+    const client = new BlockchainClient({
+      type: ClientType.PUBLIC,
+      network: Network.MAINNET,
+    });
+    expect(client.provider).toEqual(PublicBitcoinProvider.BLOCKSTREAM);
+    expect(client.host).toEqual("https://blockstream.info/api");
+  });
+
+  it("should handle backwards compatibility for mempool type", () => {
+    const client = new BlockchainClient({
+      type: ClientType.MEMPOOL as any, // Cast to any to simulate old config
+      network: Network.MAINNET,
+    });
+    expect(client.type).toEqual(ClientType.PUBLIC);
+    expect(client.provider).toEqual(PublicBitcoinProvider.MEMPOOL);
+    expect(client.host).toEqual("https://unchained.mempool.space/api");
+  });
+
+  it("should handle backwards compatibility for blockstream type", () => {
+    const client = new BlockchainClient({
+      type: ClientType.BLOCKSTREAM as any, // Cast to any to simulate old config
+      network: Network.MAINNET,
+    });
+    expect(client.type).toEqual(ClientType.PUBLIC);
+    expect(client.provider).toEqual(PublicBitcoinProvider.BLOCKSTREAM);
+    expect(client.host).toEqual("https://blockstream.info/api");
+  });
+
+  it("should throw an error if provider is set for private client", () => {
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PRIVATE,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+    }).toThrow("Provider cannot be set for private client type");
+  });
+
   describe("broadcastTransaction", () => {
     it("should broadcast a transaction (PRIVATE client)", async () => {
       // Mock the response from the API

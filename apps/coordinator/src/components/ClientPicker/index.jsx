@@ -137,10 +137,10 @@ const ClientPicker = ({
           <FormControl component="fieldset">
             <RadioGroup>
               <FormControlLabel
-                id="mempool"
+                id={PublicBitcoinProvider.MEMPOOL}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value="mempool"
+                value={PublicBitcoinProvider.MEMPOOL}
                 label={<strong>Mempool.space</strong>}
                 onChange={handleTypeChange}
                 checked={
@@ -149,10 +149,10 @@ const ClientPicker = ({
                 }
               />
               <FormControlLabel
-                id="blockstream"
+                id={PublicBitcoinProvider.BLOCKSTREAM}
                 control={<Radio color="primary" />}
                 name="clientType"
-                value="blockstream"
+                value={PublicBitcoinProvider.BLOCKSTREAM}
                 label={<strong>Blockstream.info</strong>}
                 onChange={handleTypeChange}
                 checked={
