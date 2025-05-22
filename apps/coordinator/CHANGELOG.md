@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.8.2
+
+### Patch Changes
+
+- [#291](https://github.com/caravan-bitcoin/caravan/pull/291) [`b54344b`](https://github.com/caravan-bitcoin/caravan/commit/b54344bf47dcf964c4a11e62784c0ecaf6fffb36) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Changes include new logo, compatibility section, and removing bad practices
+
+## 1.8.1
+
+### Patch Changes
+
+- [#288](https://github.com/caravan-bitcoin/caravan/pull/288) [`fd3ff96`](https://github.com/caravan-bitcoin/caravan/commit/fd3ff96cb6bd1a89f9f0fa46aafd68ea0737d7b1) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Version bump to fix import error in build script
+
+## 1.8.0
+
+### Minor Changes
+
+- [#142](https://github.com/caravan-bitcoin/caravan/pull/142) [`331f462`](https://github.com/caravan-bitcoin/caravan/commit/331f462713c6ab186a2d50f90e4c4a0609e459a1) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - This brings quick and easy UI changes to make the app more inviting with sleeker design
+
+## 1.7.1
+
+### Patch Changes
+
+- [#237](https://github.com/caravan-bitcoin/caravan/pull/237) [`b690aff`](https://github.com/caravan-bitcoin/caravan/commit/b690afffbe3d7de16d6832f011da664bb5893454) Thanks [@amitx13](https://github.com/amitx13)! - Fixed Bitcoin client bug that blocks users from importing a wallet
+
+## 1.7.0
+
+### Minor Changes
+
+- [#225](https://github.com/caravan-bitcoin/caravan/pull/225) [`049d730`](https://github.com/caravan-bitcoin/caravan/commit/049d730f0dc1bac7ba854f26192ca79afa03afe9) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Value Column Integration for Transaction Table
+
+### Patch Changes
+
+- Updated dependencies [[`049d730`](https://github.com/caravan-bitcoin/caravan/commit/049d730f0dc1bac7ba854f26192ca79afa03afe9)]:
+  - @caravan/clients@0.4.1
+
 ## 1.6.0
 
 ### Minor Changes

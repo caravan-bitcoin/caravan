@@ -7,9 +7,11 @@ import {
   validateExtendedPublicKey,
   validateRootFingerprint,
   getMaskedDerivation,
+  Network,
+  validateExtendedPublicKeyForNetwork,
 } from "@caravan/bitcoin";
-import { WalletPolicy } from "ledger-bitcoin";
 import { BraidDetails, MultisigWalletConfig } from "@caravan/multisig";
+import { WalletPolicy } from "ledger-bitcoin";
 
 export class KeyOrigin {
   readonly xfp: string;
@@ -17,6 +19,8 @@ export class KeyOrigin {
   readonly bip32Path: string;
 
   readonly xpub: string;
+
+  readonly network: Network;
 
   constructor({ xfp, bip32Path, xpub, network }) {
     // throws an error if not valid
@@ -32,6 +36,7 @@ export class KeyOrigin {
     const xpubError = validateExtendedPublicKey(xpub, network);
     if (xpubError) throw new Error(xpubError);
     this.xpub = xpub;
+    this.network = network;
   }
 
   /**
@@ -47,7 +52,35 @@ export class KeyOrigin {
     return `[${this.xfp}${path}]${this.xpub}`;
   }
 
-  // TODO: Needs a way to turn a serialized key origin to instance of class
+  static fromString(str: string, _network?: Network) {
+    let network = _network;
+    const match = str.match(
+      /^\[([0-9a-f]{8})((?:\/[0-9]+'?)+)\](((?:x|t)pub)[A-Za-z0-9]+)$/
+    );
+    if (!match) {
+      throw new Error("Invalid key origin string");
+    }
+    const xpub = match[3];
+    const prefix = match[3].slice(0, 4);
+
+    if (network) {
+      const error = validateExtendedPublicKeyForNetwork(xpub, network);
+      if (error) throw new Error(error);
+    } else if (!network && prefix === "xpub") {
+      network = Network.MAINNET;
+    } else if (!network && prefix === "tpub") {
+      network = Network.TESTNET;
+    } else {
+      throw new Error("Invalid network");
+    }
+
+    return new KeyOrigin({
+      xfp: match[1],
+      bip32Path: `m${match[2]}`,
+      xpub,
+      network,
+    });
+  }
 }
 
 export type MultisigScriptType = "sh" | "wsh" | "tr";

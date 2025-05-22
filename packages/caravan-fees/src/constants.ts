@@ -33,7 +33,6 @@ export const RBF_SEQUENCE = 0xffffffff - 2;
 /**
  * Maximum allowable fee rate in satoshis per virtual byte (sat/vB).
  *
- * @constant
  * @type {string}
  * @default "1000"
  *
@@ -55,7 +54,6 @@ export const ABSURDLY_HIGH_FEE_RATE = "1000";
 /**
  * Maximum allowable absolute fee in satoshis.
  *
- * @constant
  * @type {string}
  * @default "2500000"
  *

@@ -10,8 +10,8 @@
  * or `IndirectKeystoreInteraction`.
  */
 
-import Bowser from "bowser";
 import { signatureNoSighashType } from "@caravan/bitcoin";
+import Bowser from "bowser";
 
 /**
  * Constant representing a keystore which is unsupported due to the
@@ -45,13 +45,12 @@ export const WARNING = "warning";
 export const ERROR = "error";
 
 /**
- * Enumeration of possible keystore states ([PENDING]{@link module:interaction.PENDING}|[ACTIVE]{@link module:interaction.ACTIVE}|[UNSUPPORTED]{@link module:interaction.UNSUPPORTED}).
- *
+ * Enumeration of possible keystore states: PENDING, ACTIVE, or UNSUPPORTED
  */
 export const STATES = [PENDING, ACTIVE, UNSUPPORTED];
 
 /**
- * Enumeration of possible message levels ([INFO]{@link module:interaction.INFO}|[WARNING]{@link module:interaction.WARNING}|[ERROR]{@link module:interaction.ERROR}).
+ * Enumeration of possible message levels: INFO, WARNING, or ERROR
  */
 export const LEVELS = [INFO, WARNING, ERROR];
 
@@ -417,9 +416,7 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
 
   /**
    * Sets the `this.direct` property to `true`.  This property can be
-   * utilized when introspecting on interaction classes..
-   *
-   * @constructor
+   * utilized when introspecting on interaction classes.
    */
   constructor() {
     super();

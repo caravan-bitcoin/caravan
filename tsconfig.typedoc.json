@@ -11,8 +11,25 @@
       "noEmit": false,
       "outDir": "temp",
       "baseUrl": ".",
+      "resolveJsonModule": true,
     "paths": {
-        "src/*": ["packages/caravan-psbt/src/*"]
+      "src/*": ["packages/caravan-psbt/src/*"],
+      "@caravan/bitcoin": ["packages/caravan-bitcoin/src"],
+      "@caravan/bitcoin/*": ["packages/caravan-bitcoin/src/*"],
+      "@caravan/clients": ["packages/caravan-clients/src"],
+      "@caravan/clients/*": ["packages/caravan-clients/src/*"],
+      "@caravan/fees": ["packages/caravan-fees/src"],
+      "@caravan/fees/*": ["packages/caravan-fees/src/*"],
+      "@caravan/health": ["packages/caravan-health/src"],
+      "@caravan/health/*": ["packages/caravan-health/src/*"],
+      "@caravan/psbt": ["packages/caravan-psbt/src"],
+      "@caravan/psbt/*": ["packages/caravan-psbt/src/*"],
+      "@caravan/wallets": ["packages/caravan-wallets/src"],
+      "@caravan/wallets/*": ["packages/caravan-wallets/src/*"],
+      "@caravan/bip32": ["packages/bip32/src"],
+      "@caravan/bip32/*": ["packages/bip32/src/*"],
+      "@caravan/multisig": ["packages/multisig/src"],
+      "@caravan/multisig/*": ["packages/multisig/src/*"] 
     }
     },
     "include": ["packages/**/index.ts"],

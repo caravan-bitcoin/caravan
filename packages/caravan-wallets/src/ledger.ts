@@ -13,7 +13,6 @@
  * * LedgerSignMultisigTransaction
  * * LedgerSignMessage
  */
-
 import {
   bip32PathToSequence,
   hardenedBIP32Index,
@@ -38,7 +37,16 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
+import { LegacyInput } from "@caravan/multisig";
 import { translatePSBT } from "@caravan/psbt";
+import LedgerBtc from "@ledgerhq/hw-app-btc";
+import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
+import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
+import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
+import TransportU2F from "@ledgerhq/hw-transport-u2f";
+import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
+import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
+
 import {
   ACTIVE,
   PENDING,
@@ -47,13 +55,8 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
-
-import { splitTransaction } from "@ledgerhq/hw-app-btc/lib/splitTransaction.js";
-import { serializeTransactionOutputs } from "@ledgerhq/hw-app-btc/lib/serializeTransaction.js";
-import { getAppAndVersion } from "@ledgerhq/hw-app-btc/lib/getAppAndVersion.js";
-import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
-import { DeviceError, MultisigWalletConfig } from "./types";
 import { MultisigWalletPolicy } from "./policy";
+import { DeviceError, MultisigWalletConfig } from "./types";
 
 /**
  * Constant defining Ledger interactions.
@@ -62,10 +65,6 @@ export const LEDGER = "ledger";
 
 export const LEDGER_V2 = "ledger_v2";
 
-import TransportU2F from "@ledgerhq/hw-transport-u2f";
-import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
-import LedgerBtc from "@ledgerhq/hw-app-btc";
-import { LegacyInput } from "@caravan/multisig";
 
 /**
  * Constant representing the action of pushing the left button on a
@@ -735,7 +734,8 @@ abstract class LedgerExportHDNode extends LedgerBitcoinInteraction {
 }
 
 /**
- * Returns the public key at a given BIP32 path.
+ * A class for exporting public keys from a Ledger hardware wallet.
+ * Allows retrieving the public key at a given BIP32 path.
  *
  * @example
  * import {LedgerExportPublicKey} from "@caravan/wallets";
@@ -827,9 +827,12 @@ export class LedgerExportExtendedPublicKey extends LedgerExportHDNode {
   readonly isV2Supported = true;
 
   /**
-   * @param {string} bip32Path path
-   * @param {string} network bitcoin network
-   * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
+   * Create a new LedgerExportExtendedPublicKey interaction
+   * Creates an interaction for exporting an extended public key from a Ledger device.
+   * @param options - Constructor parameters
+   * @param options.bip32Path - The BIP32 path to export
+   * @param options.network - The bitcoin network to use
+   * @param options.includeXFP - Whether to include root fingerprint in result
    */
   constructor({ bip32Path, network, includeXFP }) {
     super({ bip32Path });
