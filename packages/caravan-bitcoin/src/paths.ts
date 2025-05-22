@@ -94,9 +94,11 @@ export function bip32SequenceToPath(sequence) {
  *   `unhardened` paths.
  *
  * @param {string} pathString - BIP32 derivation path string
- * @param {Object} [options] - additional options
- * @param {string} [options.mode] - "hardened" or "unhardened"
- * @returns {string} empty if valid or corresponding validation message if not
+ * @param {Object} [options] - Additional options 
+ * @param {"hardened"|"unhardened"} [options.mode] - The validation mode to use:
+ *   - If "hardened": all path segments must be hardened with ' suffix
+ *   - If "unhardened": no path segments can be hardened
+ * @returns {string} Empty string if valid, or error message if invalid
  * @example
  * import {validateBIP32Path} from "@caravan/bitcoin";
  * console.log(validateBIP32Path("")); // "BIP32 path cannot be blank."
