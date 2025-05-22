@@ -734,8 +734,7 @@ abstract class LedgerExportHDNode extends LedgerBitcoinInteraction {
 }
 
 /**
- * A class for exporting public keys from a Ledger hardware wallet.
- * Allows retrieving the public key at a given BIP32 path.
+ * Returns the public key at a given BIP32 path.
  *
  * @example
  * import {LedgerExportPublicKey} from "@caravan/wallets";
@@ -827,12 +826,9 @@ export class LedgerExportExtendedPublicKey extends LedgerExportHDNode {
   readonly isV2Supported = true;
 
   /**
-   * Create a new LedgerExportExtendedPublicKey interaction
-   * Creates an interaction for exporting an extended public key from a Ledger device.
-   * @param options - Constructor parameters
-   * @param options.bip32Path - The BIP32 path to export
-   * @param options.network - The bitcoin network to use
-   * @param options.includeXFP - Whether to include root fingerprint in result
+   * @param {string} bip32Path path
+   * @param {string} network bitcoin network
+   * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
   constructor({ bip32Path, network, includeXFP }) {
     super({ bip32Path });

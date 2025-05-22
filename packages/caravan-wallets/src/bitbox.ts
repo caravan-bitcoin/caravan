@@ -312,13 +312,8 @@ export class BitBoxExportPublicKey extends BitBoxInteraction {
   includeXFP: boolean;
 
   /**
-   * Create a new BitBoxExportPublicKey interaction
-   * Creates an interaction for exporting a public key from a BitBox device.
-   * @param options - Constructor parameters
-   * @param options.showPairingCode - Optional callback for showing pairing code
-   * @param options.network - Bitcoin network to use
-   * @param options.bip32Path - The BIP32 path to export
-   * @param options.includeXFP - Whether to include root fingerprint in result 
+   * @param {string} bip32Path path
+   * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
   constructor({ showPairingCode, network, bip32Path, includeXFP }: {
     showPairingCode?: TShowPairingCode;
@@ -367,13 +362,9 @@ export class BitBoxExportExtendedPublicKey extends BitBoxInteraction {
   includeXFP: boolean;
 
   /**
-   * Create a new BitBoxExportExtendedPublicKey interaction
-   * Creates an interaction for exporting an extended public key (xpub) from a BitBox device.
-   * @param options - Constructor parameters
-   * @param options.showPairingCode - Optional callback for showing pairing code
-   * @param options.bip32Path - The BIP32 path to export
-   * @param options.network - The bitcoin network to use
-   * @param options.includeXFP - Whether to include root fingerprint in result
+   * @param {string} bip32Path path
+   * @param {string} network bitcoin network
+   * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
   constructor({ showPairingCode, bip32Path, network, includeXFP }: {
     showPairingCode?: TShowPairingCode;

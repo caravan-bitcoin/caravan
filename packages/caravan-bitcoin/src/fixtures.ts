@@ -1440,12 +1440,12 @@ const TRANSACTIONS = MULTISIGS.map((test) =>
  * - `keys` - given the multisig nature of these fixtures, they involve keys from multiple sources
  * -   `open_source` - open source fixtures
  * -     `bip39Phrase` -- the BIP39 seed phrase used for all other fixtures
- * -     `nodes` -- an object mapping BIP32 paths to the corresponding HD nodes derived from the BIP39 seed phrase above.
+ * -     `nodes` -- an object mapping BIP32 paths to the corresponding [HD node]{@link module:fixtures.HDNode} derived from the BIP39 seed phrase above.
  * -   `unchained` - unchained fixtures
- * -     `nodes` -- an object mapping BIP32 paths to the corresponding HD nodes derived from unchained seed phrase (not shared).
- * - `multisigs` -- an array of multisig addresses derived from the HD nodes above.
- * - `braids` -- an array of braids derived from the open_source + unchained HD nodes above.
- * - `transactions` -- an array of transactions from the multisig address above.
+ * -     `nodes` -- an object mapping BIP32 paths to the corresponding [HD node]{@link module:fixtures.HDNode} derived from unchained seed phrase (not shared).
+ * - `multisigs` -- an array of [multisig addresses]{@link module:fixtures.MultisigAddress} derived from the HD nodes above.
+ * - `braids` -- an array of [braids]{@link module.braid.Braid} derived from the open_source + unchained HD nodes above.
+ * - `transactions` -- an array of [transactions]{@link module:fixtures.MultisigTransaction} from the multisig address above.
  *
  * @example
  * import {TEST_FIXTURES} from "@caravan/bitcoin";
@@ -1486,37 +1486,42 @@ export const TEST_FIXTURES = {
  *
  * Not all HD node fixtures have all properties below.
  *
- * @typedef {Object} HDNode
- * @property {string} pub - The (compressed) public key in hex
- * @property {string} xpub - The extended public key formatted for mainnet
- * @property {string} tpub - The extended public key formatted for testnet
+ * @typedef HDNode
+ * @type {Object}
+ * @property {string} pub - the (compressed) public key in hex
+ * @property {string} xpub - the extended public key formatted for mainnet
+ * @property {string} tpub - the extended public key formatted for testnet
  */
 
 /**
- * A multisig address fixture. At least one of the public
+ * A multisig address fixture.  At least one of the public
  * keys in the redeem/witness script for each address is derived from
  * the BIP39 seed phrase fixture.
  *
- * @typedef {Object} MultisigAddress
- * @property {string} network - Bitcoin network
- * @property {string} type - Multisig address type
- * @property {string} description - Describes the multisig address
- * @property {string} bip32Path - BIP32 derivation path
- * @property {string} publicKey - (Compressed) public key in hex
- * @property {string[]} publicKeys - (Compressed) public keys in hex (order matters)
- * @property {string} multisigScriptHex - Multisig script in hex (redeem/witness script as appropriate)
- * @property {string} multisigScriptOps - Multisig script in opcodes
- * @property {string} redeemScriptHex - Redeem script in hex (missing for P2WSH)
- * @property {string} redeemScriptOps - Redeem script in opcodes (missing for P2WSH)
- * @property {string} witnessScriptHex - Witness script in hex (missing for P2SH)
- * @property {string} witnessScriptOps - Witness script in opcodes (missing for P2SH)
- * @property {string} address - Bitcoin address
- * @property {string} scriptHex - Script in hex
- * @property {string} scriptOps - Script in opcodes
- * @property {Object} multisig - Multisig object for address
- * @property {Object[]} utxos - UTXOs at this address
- * @property {string} psbt - Unsigned PSBT of the transaction
- * @property {string} psbtPartiallySigned - PSBT with partial signatures for open source words
+ * @typedef MultisigAddress
+ * @type {Object}
+ * @property {module:networks.NETWORKS} network - bitcoin network
+ * @property {module:multisig.MULTISIG_ADDRESS_TYPES} type - multisig address type
+ * @property {string} description - describes the multisig address
+ * @property {string} bip32Path - BIP32 derivation path to the public key used in this address from the BIP39 seed phrase fixture
+ * @property {string} publicKey - (compressed) public key (in hex) corresponding to BIP32 path
+ * @property {string[]} publicKeys - (compressed) public keys (in hex) (order matters)
+ * @property {string} multisigScriptHex - multisig script in hex (redeem/witneess script as appropriate)
+ * @property {string} multisigScriptOps - multisig script in opcodes (redeem/witneess script as appropriate)
+ * @property {string} redeemScriptHex - redeem script in hex (missing for P2WSH)
+ * @property {string} redeemScriptOps - redeem script in opcodes (missing for P2WSH)
+ * @property {string} witnessScriptHex - witness script in hex (missing for P2SH)
+ * @property {string} witnessScriptOps - witness script in opcodes (missing for P2SH)
+ * @property {string} address - bitcoin address
+ * @property {string} scriptHex - script in hex
+ * @property {string} scriptOps - script in opcodes
+ * @property {module:multisig.Multisig} multisig - `Multisig` object for address
+ * @property {module:transactions.UTXO[]} utxos - UTXOs at this address
+ * @property {module.braid.Braid} braidDetails - details to construct the braid where this Multisig address resides
+ * @property {module.braid.Braid} changeBraidDetails - details to construct the change braid where the Change Multisig address resides (if needed)
+ * @property {string} psbt - unsigned psbt of the Transaction
+ * @property {string} psbtPartiallySigned - psbt that has a single set of signatures inside for the open source words
+ *
  */
 
 /**
