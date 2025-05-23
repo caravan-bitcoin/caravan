@@ -3,9 +3,8 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
-  networkData,
-  autoLoadPSBT,
 } from "@caravan/bitcoin";
+import { loadPsbt } from "../utils/psbtUtils";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 
 import { DUST_IN_BTC } from "../utils/constants";
@@ -16,6 +15,7 @@ export const SET_REQUIRED_SIGNERS = "SET_REQUIRED_SIGNERS";
 export const SET_TOTAL_SIGNERS = "SET_TOTAL_SIGNERS";
 
 export const SET_INPUTS = "SET_INPUTS";
+export const SET_ENABLE_RBF = "SET_ENABLE_RBF";
 
 export const ADD_OUTPUT = "ADD_OUTPUT";
 export const SET_OUTPUT_ADDRESS = "SET_OUTPUT_ADDRESS";
@@ -304,7 +304,8 @@ export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    // Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
@@ -390,7 +391,8 @@ export function importHermitPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
@@ -418,10 +420,18 @@ export function importLegacyPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
     return psbt;
+  };
+}
+
+export function setRBF(enabled) {
+  return {
+    type: SET_ENABLE_RBF,
+    value: enabled,
   };
 }

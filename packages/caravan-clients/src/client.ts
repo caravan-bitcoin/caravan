@@ -21,7 +21,6 @@ import {
   TransactionDetails,
   RawTransactionData,
   ListTransactionsItem,
-  TransactionResponse,
   WalletTransactionResponse,
 } from "./types";
 import {
@@ -30,6 +29,7 @@ import {
   bitcoindListUnspent,
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
+  callBitcoindWallet,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -566,12 +566,26 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind<TransactionResponse>(
-          this.bitcoindParams.url,
-          this.bitcoindParams.auth,
-          "gettransaction",
-          [txid],
-        );
+        // Check if wallet name is provided for private clients
+        if (!this.bitcoindParams.walletName) {
+          throw new Error(
+            "Wallet name is required for private client transaction lookups",
+          );
+        }
+
+        const response = (await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "gettransaction",
+          params: [txid, true, true], // [txid, include_watchonly, verbose]
+        })) as any;
+
+        if (response?.result?.hex) {
+          return response.result.hex;
+        }
+
+        throw new Error("Transaction not found in wallet or missing hex data");
       }
       return await this.Get(`/tx/${txid}/hex`);
     } catch (error: any) {

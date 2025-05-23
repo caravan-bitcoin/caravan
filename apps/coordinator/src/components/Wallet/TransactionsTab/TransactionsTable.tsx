@@ -229,7 +229,8 @@ const TransactionTableRow: React.FC<{
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onCopySuccess: () => void;
-}> = ({ tx, network, onClickTransaction, onCopySuccess }) => (
+  renderActions?: (tx: TransactionT) => React.ReactNode;
+}> = ({ tx, network, onClickTransaction, onCopySuccess, renderActions }) => (
   <TableRow>
     <TableCell>
       <Box display="flex" alignItems="center">
@@ -286,20 +287,24 @@ const TransactionTableRow: React.FC<{
       />
     </TableCell>
     <TableCell>
-      {network && (
-        <Tooltip title="View in your preferred block explorer">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Let parent handle block explorer navigation
-              onClickTransaction?.(tx.txid);
-            }}
-          >
-            <OpenInNew fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
+      <Box display="flex" alignItems="center" gap={1}>
+        {network && (
+          <Tooltip title="View in your preferred block explorer">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Let parent handle block explorer navigation
+                onClickTransaction?.(tx.txid);
+              }}
+            >
+              <OpenInNew fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        {/* Render custom actions if provided */}
+        {renderActions && renderActions(tx)}
+      </Box>
     </TableCell>
   </TableRow>
 );
@@ -311,6 +316,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   sortDirection,
   network,
   onClickTransaction,
+  renderActions,
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -339,6 +345,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   network={network}
                   onClickTransaction={onClickTransaction}
                   onCopySuccess={() => setSnackbarOpen(true)}
+                  renderActions={renderActions}
                 />
               ))
             )}
