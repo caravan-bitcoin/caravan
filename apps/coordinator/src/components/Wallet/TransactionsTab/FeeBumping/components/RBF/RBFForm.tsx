@@ -1,10 +1,5 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useCallback, useMemo, useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   Button,
@@ -12,7 +7,6 @@ import {
   FormControl,
   FormControlLabel,
   Grid,
-  InputAdornment,
   Paper,
   Radio,
   RadioGroup,
@@ -25,8 +19,27 @@ import {
   Chip,
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
-import { FeeBumpRecommendation, FeePriority } from "../../types";
+import { FeePriority } from "../../types";
 import { formatFee } from "../../utils";
+import {
+  setRbfType,
+  setCancelAddress,
+  setChangeAddress,
+  setFeeBumpRate,
+  setFeeBumpPriority,
+} from "../../../../../../actions/feeBumpingActions";
+import {
+  getFeeBumpRecommendation,
+  getSelectedFeeRate,
+  getSelectedFeePriority,
+  getRbfType,
+  getCancelAddress,
+  getChangeAddress,
+  getMinimumFeeRate,
+  getEstimatedNewFee,
+  getFeeDifference,
+  getIsRbfFormValid,
+} from "../../../../../../selectors/feeBumping";
 
 const FEE_LEVELS = {
   LOW: "low",
@@ -49,13 +62,8 @@ const FEE_LEVEL_COLORS = {
 };
 
 interface RBFFormProps {
-  recommendation: FeeBumpRecommendation;
   originalFeeRate: number;
   originalFee: string;
-  selectedFeeRate: number;
-  selectedPriority: FeePriority;
-  onFeeRateChange: (feeRate: number) => void;
-  onPriorityChange?: (priority: FeePriority) => void;
   onSubmit: (options: {
     isCancel: boolean;
     cancelAddress?: string;
@@ -65,55 +73,33 @@ interface RBFFormProps {
 }
 
 export const RBFForm: React.FC<RBFFormProps> = ({
-  recommendation,
   originalFeeRate,
   originalFee,
-  selectedFeeRate,
-  selectedPriority,
-  onFeeRateChange,
-  onPriorityChange,
   onSubmit,
   isCreating = false,
 }) => {
-  // States for form fields
-  const [rbfType, setRbfType] = useState<"accelerate" | "cancel">("accelerate");
-  const [cancelAddress, setCancelAddress] = useState<string>("");
-  const [changeAddress, setChangeAddress] = useState<string>("");
-  const [addressError, setAddressError] = useState<string>("");
+  const dispatch = useDispatch();
 
-  // State for fee selection
-  const [feeLevel, setFeeLevel] = useState<string>(
+  // Get all state from Redux - no more props!
+  const recommendation = useSelector(getFeeBumpRecommendation);
+  const selectedFeeRate = useSelector(getSelectedFeeRate);
+  const selectedPriority = useSelector(getSelectedFeePriority);
+  const rbfType = useSelector(getRbfType);
+  const cancelAddress = useSelector(getCancelAddress);
+  const changeAddress = useSelector(getChangeAddress);
+  const minimumFeeRate = useSelector(getMinimumFeeRate);
+  const estimatedNewFee = useSelector(getEstimatedNewFee);
+  const feeDifference = useSelector(getFeeDifference);
+  const isFormValid = useSelector(getIsRbfFormValid);
+
+  // Local state for fee level selection (UI state only)
+  const [currentFeeLevel, setCurrentFeeLevel] = useState<string>(
     PRIORITY_TO_FEE_LEVEL[selectedPriority] || FEE_LEVELS.MEDIUM,
   );
-  const [customFeeRate, setCustomFeeRate] = useState<number>(selectedFeeRate);
-
-  // Refs to prevent infinite renders
-  const isInitialRender = useRef(true);
-  const isUpdatingFeeLevel = useRef(false);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Calculate min and max fee rates
-  // Min fee rate must be at least 1 higher than original (per RBF rules)
-  const minFeeRate = Math.max(originalFeeRate + 1, 1);
-
-  // Calculate max fee rate - use network recommendations with safety margin
-  const maxFeeRate = useMemo(() => {
-    // Use the highest of our calculated values
-    const highestRecommended = Math.max(
-      recommendation.suggestedRBFFeeRate || 0,
-      recommendation.networkFeeEstimates?.highPriority || 0,
-    );
-
-    return Math.max(
-      originalFeeRate + 1,
-      highestRecommended,
-      100, // Minimum ceiling of 100 sat/vB
-    );
-  }, [originalFeeRate, recommendation]);
 
   // Calculate fee levels based on network estimates
   const feeLevels = useMemo(() => {
-    const networkEstimates = recommendation.networkFeeEstimates;
+    const networkEstimates = recommendation?.networkFeeEstimates;
 
     // If we have network estimates, use them for accurate fee levels
     if (networkEstimates) {
@@ -135,158 +121,101 @@ export const RBFForm: React.FC<RBFFormProps> = ({
     };
   }, [originalFeeRate, recommendation]);
 
-  // Calculate estimated new fee based on transaction size and selected fee rate
-  const estimatedNewFee = useMemo(() => {
-    const txVsize = recommendation.vsize || 250; // Use default if not available
-    return Math.ceil(txVsize * selectedFeeRate).toString();
-  }, [selectedFeeRate, recommendation]);
+  // Calculate max fee rate
+  const maxFeeRate = useMemo(() => {
+    const highestRecommended = Math.max(
+      recommendation?.suggestedRBFFeeRate || 0,
+      recommendation?.networkFeeEstimates?.highPriority || 0,
+    );
 
-  // Update parent component
-  const updateParentWithDebounce = useCallback(
-    (newFeeLevel: string, newFeeRate: number) => {
-      // Clear any existing timeout to avoid multiple updates
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
+    return Math.max(
+      originalFeeRate + 1,
+      highestRecommended,
+      100, // Maximum ceiling of 100 sat/vB
+    );
+  }, [originalFeeRate, recommendation]);
 
-      // Mark that we're in the process of updating
-      isUpdatingFeeLevel.current = true;
-
-      // Set a debounced update
-      updateTimeoutRef.current = setTimeout(() => {
-        // For custom fee level, just update the fee rate
-        if (newFeeLevel === FEE_LEVELS.CUSTOM) {
-          onFeeRateChange(newFeeRate);
-        }
-        // For predefined levels, update priority first, then fee rate if needed ( else there is a conflict)
-        else if (feeLevels[newFeeLevel]) {
-          const calculatedFeeRate = Math.ceil(feeLevels[newFeeLevel]);
-
-          // Determine new priority
-          let newPriority: FeePriority = selectedPriority;
-          if (newFeeLevel === FEE_LEVELS.LOW) {
-            newPriority = FeePriority.LOW;
-          } else if (newFeeLevel === FEE_LEVELS.MEDIUM) {
-            newPriority = FeePriority.MEDIUM;
-          } else if (newFeeLevel === FEE_LEVELS.HIGH) {
-            newPriority = FeePriority.HIGH;
-          }
-
-          // Update priority if it changed and update callback exists
-          if (onPriorityChange && newPriority !== selectedPriority) {
-            onPriorityChange(newPriority);
-          }
-
-          // Update fee rate if different from current
-          if (calculatedFeeRate !== selectedFeeRate) {
-            onFeeRateChange(calculatedFeeRate);
-          }
-        }
-
-        // Reset updating flag
-        isUpdatingFeeLevel.current = false;
-        updateTimeoutRef.current = null;
-      }, 100); // 100ms debounce
-    },
-    [
-      feeLevels,
-      onFeeRateChange,
-      onPriorityChange,
-      selectedFeeRate,
-      selectedPriority,
-    ],
-  );
-
-  // Sync local customFeeRate with selectedFeeRate prop changes (coming from parent)
+  // Update local fee level when priority changes from Redux
   useEffect(() => {
-    // Don't update if we're in the middle of our own update process
-    if (!isUpdatingFeeLevel.current) {
-      setCustomFeeRate(selectedFeeRate);
-    }
-  }, [selectedFeeRate]);
-
-  // Set initial fee level based on priority
-  useEffect(() => {
-    if (isInitialRender.current && selectedPriority) {
-      setFeeLevel(PRIORITY_TO_FEE_LEVEL[selectedPriority]);
-      isInitialRender.current = false;
+    const priorityFeeLevel = PRIORITY_TO_FEE_LEVEL[selectedPriority];
+    if (priorityFeeLevel) {
+      setCurrentFeeLevel(priorityFeeLevel);
     }
   }, [selectedPriority]);
 
   // Handle RBF type change
   const handleRbfTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRbfType(event.target.value as "accelerate" | "cancel");
-    setAddressError("");
+    dispatch(setRbfType(event.target.value as "accelerate" | "cancel"));
   };
 
   // Handle fee level change
   const handleFeeLevelChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const newFeeLevel = event.target.value;
-      setFeeLevel(newFeeLevel);
+      setCurrentFeeLevel(newFeeLevel); // To update  update the local UI state
 
-      // Calculate the fee rate for this level
-      let newFeeRate = customFeeRate;
-      if (newFeeLevel !== FEE_LEVELS.CUSTOM && feeLevels[newFeeLevel]) {
-        newFeeRate = Math.ceil(feeLevels[newFeeLevel]);
+      if (newFeeLevel === FEE_LEVELS.CUSTOM) {
+        // For custom, don't change the fee rate - user will set it manually
+        return;
       }
 
-      // Update parent with debounce
-      updateParentWithDebounce(newFeeLevel, newFeeRate);
+      // For predefined levels, update priority and fee rate
+      let newPriority: FeePriority = selectedPriority;
+      if (newFeeLevel === FEE_LEVELS.LOW) {
+        newPriority = FeePriority.LOW;
+      } else if (newFeeLevel === FEE_LEVELS.MEDIUM) {
+        newPriority = FeePriority.MEDIUM;
+      } else if (newFeeLevel === FEE_LEVELS.HIGH) {
+        newPriority = FeePriority.HIGH;
+      }
+
+      if (feeLevels[newFeeLevel]) {
+        const newFeeRate = Math.ceil(feeLevels[newFeeLevel]);
+        dispatch(setFeeBumpPriority(newPriority));
+        dispatch(setFeeBumpRate(newFeeRate));
+      }
     },
-    [feeLevels, customFeeRate, updateParentWithDebounce],
+    [feeLevels, selectedPriority, dispatch],
   );
 
   // Handle slider change
   const handleSliderChange = useCallback(
     (_event: Event, newValue: number | number[]) => {
       const value = newValue as number;
-      setCustomFeeRate(value);
-      setFeeLevel(FEE_LEVELS.CUSTOM);
-
-      // Update parent with debounce
-      updateParentWithDebounce(FEE_LEVELS.CUSTOM, value);
+      setCurrentFeeLevel(FEE_LEVELS.CUSTOM); // Switch to custom when using slider
+      dispatch(setFeeBumpRate(value));
     },
-    [updateParentWithDebounce],
+    [dispatch],
   );
 
   // Handle custom fee input change
   const handleInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const value = parseInt(event.target.value);
-      if (!isNaN(value) && value >= minFeeRate) {
-        setCustomFeeRate(value);
-        setFeeLevel(FEE_LEVELS.CUSTOM);
-
-        // Update parent with debounce
-        updateParentWithDebounce(FEE_LEVELS.CUSTOM, value);
+      if (!isNaN(value) && value >= minimumFeeRate) {
+        setCurrentFeeLevel(FEE_LEVELS.CUSTOM); // Switch to custom when using slider
+        dispatch(setFeeBumpRate(value));
       }
     },
-    [minFeeRate, updateParentWithDebounce],
+    [minimumFeeRate, dispatch],
   );
 
   // Handle address input changes
   const handleCancelAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setCancelAddress(event.target.value);
-    setAddressError("");
+    dispatch(setCancelAddress(event.target.value));
   };
 
   const handleChangeAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setChangeAddress(event.target.value);
-    setAddressError("");
+    dispatch(setChangeAddress(event.target.value));
   };
 
   // Handle form submission
   const handleSubmit = () => {
-    // Validate form
-    if (rbfType === "cancel" && !cancelAddress) {
-      setAddressError("Please enter a cancel address");
-      return;
-    }
+    if (!isFormValid) return;
 
     onSubmit({
       isCancel: rbfType === "cancel",
@@ -296,8 +225,16 @@ export const RBFForm: React.FC<RBFFormProps> = ({
     });
   };
 
-  // Calculate fee difference
-  const feeDifference = parseInt(estimatedNewFee) - parseInt(originalFee);
+  // Check if current fee rate matches any predefined level
+  const isCustomFeeRate = !Object.values(feeLevels).some(
+    (level) => Math.ceil(level) === selectedFeeRate,
+  );
+
+  // Show custom slider if:
+  // 1. Custom is explicitly selected, OR
+  // 2. The current fee rate doesn't match any preset level
+  const showCustomSlider =
+    currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -361,10 +298,11 @@ export const RBFForm: React.FC<RBFFormProps> = ({
             variant="outlined"
             value={cancelAddress}
             onChange={handleCancelAddressChange}
-            error={!!addressError}
+            error={rbfType === "cancel" && !cancelAddress.trim()}
             helperText={
-              addressError ||
-              "Enter an address where you want to send all funds"
+              rbfType === "cancel" && !cancelAddress.trim()
+                ? "Cancel address is required"
+                : "Enter an address where you want to send all funds"
             }
             sx={{ mb: 1 }}
           />
@@ -414,7 +352,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
             Current fee rate: {originalFeeRate.toFixed(1)} sat/vB
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Minimum required: {minFeeRate.toFixed(1)} sat/vB (per RBF rules)
+            Minimum required: {minimumFeeRate.toFixed(1)} sat/vB (per RBF rules)
           </Typography>
         </Box>
 
@@ -424,7 +362,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
             row
             aria-label="fee-level"
             name="fee-level"
-            value={feeLevel}
+            value={currentFeeLevel}
             onChange={handleFeeLevelChange}
           >
             <FormControlLabel
@@ -494,9 +432,9 @@ export const RBFForm: React.FC<RBFFormProps> = ({
                 <Box>
                   <Typography variant="body2">
                     Custom
-                    {feeLevel === FEE_LEVELS.CUSTOM && (
+                    {currentFeeLevel === FEE_LEVELS.CUSTOM && (
                       <Chip
-                        label={`${customFeeRate} sat/vB`}
+                        label={`${selectedFeeRate} sat/vB`}
                         size="small"
                         sx={{ ml: 1 }}
                         style={{
@@ -513,32 +451,43 @@ export const RBFForm: React.FC<RBFFormProps> = ({
         </FormControl>
 
         {/* Custom fee slider */}
-        {feeLevel === FEE_LEVELS.CUSTOM && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
+        {showCustomSlider && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Slider
-              value={customFeeRate}
+              value={selectedFeeRate}
               onChange={handleSliderChange}
               aria-labelledby="fee-rate-slider"
-              min={minFeeRate}
+              min={Math.round(minimumFeeRate * 1000) / 1000}
               max={maxFeeRate}
               step={1}
-              valueLabelDisplay="auto"
+              marks={[
+                {
+                  value: Math.round(minimumFeeRate),
+                  label: `${minimumFeeRate}`,
+                },
+                {
+                  value: Math.floor((minimumFeeRate + maxFeeRate) / 2),
+                  label: `${Math.floor((minimumFeeRate + maxFeeRate) / 2)}`,
+                },
+                { value: maxFeeRate, label: `${maxFeeRate}` },
+              ]}
+              valueLabelDisplay="on"
               sx={{ flexGrow: 1 }}
             />
+
+            {/* Numeric input synced to the slider */}
             <TextField
-              value={customFeeRate}
+              value={selectedFeeRate}
               onChange={handleInputChange}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">sat/vB</InputAdornment>
-                ),
-              }}
               type="number"
-              inputProps={{
-                min: minFeeRate,
-                step: 1,
+              InputProps={{
+                inputProps: {
+                  min: minimumFeeRate.toFixed(2),
+                  max: maxFeeRate.toFixed(2),
+                  step: 1,
+                },
               }}
-              sx={{ width: "120px" }}
+              sx={{ width: 100 }}
             />
           </Box>
         )}
@@ -563,7 +512,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
               Estimated new fee:
             </Typography>
             <Typography variant="body1">
-              {formatFee(estimatedNewFee)}
+              {formatFee(estimatedNewFee.toString())}
             </Typography>
           </Grid>
           <Grid item xs={4}>
