@@ -6,6 +6,7 @@ import braidReducer from "./braidReducer";
 import quorumReducer from "./quorumReducer";
 import addressReducer from "./addressReducer";
 import walletReducer from "./walletReducer";
+import feeBumpingReducer from "./feeBumpingReducer";
 
 import ownershipReducer from "./ownershipReducer";
 import signatureImportersReducer from "./signatureImportersReducer";
@@ -42,6 +43,7 @@ const appReducer = combineReducers({
   testSuiteRun: testSuiteRunReducer,
   keystore: keystoreReducer,
   errorNotification: errorNotificationReducer,
+  feeBumping: feeBumpingReducer,
 });
 
 const rootReducer = (state: any, action: any) => {
