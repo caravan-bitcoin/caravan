@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import {
   Box,
   Button,
@@ -19,11 +20,19 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { useFeeBumping } from "../hooks/useFeeBumping";
+import { useRBF } from "../hooks/useRBF";
 import { FeeStrategySelector } from "./FeeStrategySelector";
 import { RBFForm } from "./RBF/RBFForm";
 import { TransactionComparison } from "./TransactionComparison";
 import { FeeBumpStatus, FeePriority } from "../types";
 import { downloadFile } from "../../../../../utils";
+import {
+  getFeeBumpStatus,
+  getFeeBumpError,
+  getFeeBumpRecommendation,
+  getSelectedFeeBumpStrategy,
+  getFeeBumpResult,
+} from "../../../../../selectors/feeBumping";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -54,22 +63,16 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   // Track whether the PSBT has been downloaded
   const [downloadClicked, setDownloadClicked] = useState(false);
 
-  const {
-    status,
-    error,
-    recommendation,
-    selectedStrategy,
-    selectedFeeRate,
-    selectedPriority,
-    result,
-    isCreatingRBF,
-    setTransactionForBumping,
-    updateFeeRate,
-    updateFeePriority,
-    updateStrategy,
-    createFeeBumpedTransaction,
-    reset,
-  } = useFeeBumping();
+  // Get state from Redux instead of props
+  const status = useSelector(getFeeBumpStatus);
+  const error = useSelector(getFeeBumpError);
+  const recommendation = useSelector(getFeeBumpRecommendation);
+  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
+  const result = useSelector(getFeeBumpResult);
+
+  // Get hooks - no state management in hooks now ...
+  const { setTransactionForBumping, reset } = useFeeBumping();
+  const { createFeeBumpedTransaction, isCreating: isCreatingRBF } = useRBF();
 
   // Initialize the transaction for fee bumping when the modal opens
   useEffect(() => {
@@ -94,7 +97,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [open, transaction, reset]);
+  }, [open, transaction, txHex, setTransactionForBumping, reset]);
 
   // Handle step navigation ( Memoizing step changes to prevent re-renders)
   const handleNext = useCallback(() => {
@@ -166,11 +169,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     switch (step) {
       case 0: // Strategy selection step
         return recommendation ? (
-          <FeeStrategySelector
-            recommendation={recommendation}
-            selectedStrategy={selectedStrategy}
-            onStrategyChange={updateStrategy}
-          />
+          <FeeStrategySelector />
         ) : (
           <Box sx={{ py: 2, textAlign: "center" }}>
             <LinearProgress />
@@ -201,13 +200,8 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         if (selectedStrategy === FeeBumpStrategy.RBF) {
           return (
             <RBFForm
-              recommendation={recommendation!}
               originalFeeRate={calculateOriginalFeeRate()}
               originalFee={transaction.fee.toString()}
-              selectedFeeRate={selectedFeeRate}
-              selectedPriority={selectedPriority}
-              onFeeRateChange={updateFeeRate}
-              onPriorityChange={updateFeePriority}
               onSubmit={handleSubmitRBF}
               isCreating={isCreatingRBF}
             />
