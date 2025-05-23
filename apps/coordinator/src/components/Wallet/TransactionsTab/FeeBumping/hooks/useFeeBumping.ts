@@ -1,58 +1,55 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { FeeBumpStrategy } from "@caravan/fees";
-import {
-  FeeBumpResult,
-  FeeBumpStatus,
-  FeeBumpRecommendation,
-  FeePriority,
-} from "../types";
+import { FeeBumpStatus, FeeBumpRecommendation, FeePriority } from "../types";
 import { analyzeTransaction, extractUtxosForFeeBumping } from "../utils";
-import { useRBF } from "./useRBF";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 import { BlockchainClient } from "@caravan/clients";
+import {
+  setFeeBumpTransaction,
+  setFeeBumpStatus,
+  setFeeBumpError,
+  setFeeBumpRecommendation,
+  setFeeBumpStrategy,
+  setFeeBumpRate,
+  setFeeBumpPriority,
+  resetFeeBumpState,
+} from "../../../../../actions/feeBumpingActions";
+import {
+  getFeeBumpTransaction,
+  getFeeBumpTxHex,
+  getFeeBumpRecommendation,
+  getSelectedFeeBumpStrategy,
+  getSelectedFeeRate,
+  getSelectedFeePriority,
+  getFeeBumpResult,
+  getFeeBumpStatus,
+  getFeeBumpError,
+} from "../../../../../selectors/feeBumping";
 
 /**
- * Hook for handling transaction fee bumping with comprehensive wallet integration
+ * Hook for handling transaction fee bumping with FeeBumping Redux State...
  *
  * This hook provides the core functionality for fee bumping in the Caravan wallet:
  * 1. Analyzes transactions to determine if RBF or CPFP is possible
  * 2. Gets real-time fee estimates from the blockchain using the `smart-fee` method
  * 3. Creates fee-bumped transactions (RBF or CPFP)
- * 4. Manages the fee bumping process state
  *
- * It fully integrates with the wallet state and blockchain client to provide
- * accurate UTXO information and fee estimates.
+ * It only provides functions to perform operations that update the Redux state.
  */
 export const useFeeBumping = () => {
-  // Using useRef to Break Circular Dependencies Cycles
-  const transactionRef = useRef(null);
-  const txHexRef = useRef("");
-
   const dispatch = useDispatch();
-  // Transaction state
-  const [transaction, setTransaction] = useState<any | null>(null);
-  const [txHex, setTxHex] = useState<string>("");
 
-  // Fee bumping process state
-  const [status, setStatus] = useState<FeeBumpStatus>(FeeBumpStatus.IDLE);
-  const [error, setError] = useState<string | null>(null);
-
-  // Analysis and recommendations
-  const [recommendation, setRecommendation] =
-    useState<FeeBumpRecommendation | null>(null);
-
-  // User selections
-  const [selectedStrategy, setSelectedStrategy] = useState<FeeBumpStrategy>(
-    FeeBumpStrategy.NONE,
-  );
-  const [selectedFeeRate, setSelectedFeeRate] = useState<number>(0);
-  const [selectedPriority, setSelectedPriority] = useState<FeePriority>(
-    FeePriority.MEDIUM,
-  );
-
-  // Result of the fee bumping operation
-  const [result, setResult] = useState<FeeBumpResult | null>(null);
+  // Get all state from Redux selectors
+  const transaction = useSelector(getFeeBumpTransaction);
+  const txHex = useSelector(getFeeBumpTxHex);
+  const status = useSelector(getFeeBumpStatus);
+  const error = useSelector(getFeeBumpError);
+  const recommendation = useSelector(getFeeBumpRecommendation);
+  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
+  const selectedFeeRate = useSelector(getSelectedFeeRate);
+  const selectedPriority = useSelector(getSelectedFeePriority);
+  const result = useSelector(getFeeBumpResult);
 
   // Get wallet configuration from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -65,12 +62,6 @@ export const useFeeBumping = () => {
   // Get wallet nodes
   const depositNodes = useSelector((state: any) => state.wallet.deposits.nodes);
   const changeNodes = useSelector((state: any) => state.wallet.change.nodes);
-
-  const {
-    createAcceleratedRBF,
-    createCancelRBF,
-    isCreating: isCreatingRBF,
-  } = useRBF();
 
   /**
    * Analyzes a transaction to determine fee bumping options
@@ -92,8 +83,8 @@ export const useFeeBumping = () => {
     ) => {
       if (!tx) return;
       try {
-        setStatus(FeeBumpStatus.ANALYZING);
-        setError(null);
+        dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
+        dispatch(setFeeBumpError(null));
 
         // Get blockchain client
         const blockchainClient = dispatch(
@@ -102,9 +93,6 @@ export const useFeeBumping = () => {
         if (!blockchainClient) {
           throw new Error("Blockchain client not available");
         }
-
-        txHexRef.current = initialTxHex;
-        setTxHex(initialTxHex);
 
         // Extract UTXOs for fee bumping
         const availableUtxos = await extractUtxosForFeeBumping(
@@ -152,30 +140,17 @@ export const useFeeBumping = () => {
           ),
         };
 
-        setRecommendation(feeBumpRecommendation);
-
-        // Set default strategy and fee rate based on analysis
-        // Prefer RBF if available as it's typically more efficient
-        if (feeBumpRecommendation.canRBF) {
-          setSelectedStrategy(FeeBumpStrategy.RBF);
-          setSelectedFeeRate(feeBumpRecommendation.suggestedRBFFeeRate!);
-        } else if (feeBumpRecommendation.canCPFP) {
-          setSelectedStrategy(FeeBumpStrategy.CPFP);
-          setSelectedFeeRate(feeBumpRecommendation.suggestedCPFPFeeRate!);
-        } else {
-          setSelectedStrategy(FeeBumpStrategy.NONE);
-          setSelectedFeeRate(feeBumpRecommendation.currentFeeRate!);
-        }
-
-        setStatus(FeeBumpStatus.READY);
+        dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
+        dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
       } catch (error) {
         console.error("Error analyzing transaction:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Unknown error analyzing transaction",
+        dispatch(
+          setFeeBumpError(
+            error instanceof Error
+              ? error.message
+              : "Unknown error analyzing transaction",
+          ),
         );
-        setStatus(FeeBumpStatus.ERROR);
       }
     },
     [
@@ -206,13 +181,11 @@ export const useFeeBumping = () => {
       priority: FeePriority = FeePriority.MEDIUM,
       initialTxHex: string = "",
     ) => {
-      // Store in ref to avoid dependency problems
-      transactionRef.current = tx;
-      setTransaction(tx);
-      setSelectedPriority(priority);
-      await analyzeTx(transactionRef.current, initialTxHex, priority);
+      dispatch(setFeeBumpTransaction(tx, initialTxHex));
+      dispatch(setFeeBumpPriority(priority));
+      await analyzeTx(tx, initialTxHex, priority);
     },
-    [analyzeTx],
+    [analyzeTx, dispatch],
   );
 
   /**
@@ -220,15 +193,12 @@ export const useFeeBumping = () => {
    *
    * @param feeRate - New fee rate in sat/vB
    */
-  const updateFeeRate = useCallback((feeRate: number) => {
-    // Only update if the value is actually changing
-    setSelectedFeeRate((prev) => {
-      if (prev === feeRate || (feeRate < 1 && prev === 1)) {
-        return prev; // No change
-      }
-      return feeRate < 1 ? 1 : feeRate;
-    });
-  }, []);
+  const updateFeeRate = useCallback(
+    (feeRate: number) => {
+      dispatch(setFeeBumpRate(feeRate));
+    },
+    [dispatch],
+  );
 
   /**
    * Updates the fee priority and recalculates the recommended fee rate
@@ -241,21 +211,9 @@ export const useFeeBumping = () => {
         console.warn("Cannot update fee priority: No transaction selected");
         return;
       }
-
-      // Only update if the priority is actually changing
-      setSelectedPriority((prev) => {
-        if (prev === priority) {
-          return prev; // No change
-        }
-        return priority;
-      });
-
-      // Only re-analyze if the priority changed
-      if (selectedPriority !== priority) {
-        await analyzeTx(transaction, txHex, priority);
-      }
+      dispatch(setFeeBumpPriority(priority));
     },
-    [transaction, analyzeTx],
+    [transaction, analyzeTx, txHex, dispatch],
   );
 
   /**
@@ -269,19 +227,9 @@ export const useFeeBumping = () => {
         console.warn("Cannot select NONE as a strategy");
         return;
       }
-
-      setSelectedStrategy(strategy);
-
-      // Update fee rate based on the selected strategy
-      if (recommendation) {
-        if (strategy === FeeBumpStrategy.RBF) {
-          setSelectedFeeRate(recommendation.suggestedRBFFeeRate!);
-        } else if (strategy === FeeBumpStrategy.CPFP) {
-          setSelectedFeeRate(recommendation.suggestedCPFPFeeRate!);
-        }
-      }
+      dispatch(setFeeBumpStrategy(strategy));
     },
-    [recommendation],
+    [dispatch],
   );
 
   /**
@@ -295,95 +243,95 @@ export const useFeeBumping = () => {
    * @param options - Options for the fee-bumped transaction
    * @returns Promise resolving to the fee bump result containing the PSBT
    */
-  const createFeeBumpedTransaction = useCallback(
-    async (
-      options: {
-        isCancel?: boolean;
-        cancelAddress?: string;
-        changeAddress?: string;
-      } = {},
-    ) => {
-      if (!transaction || !txHex || !recommendation) {
-        setError("No transaction selected for fee bumping");
-        return null;
-      }
+  // const createFeeBumpedTransaction = useCallback(
+  //   async (
+  //     options: {
+  //       isCancel?: boolean;
+  //       cancelAddress?: string;
+  //       changeAddress?: string;
+  //     } = {},
+  //   ) => {
+  //     if (!transaction || !txHex || !recommendation) {
+  //       setError("No transaction selected for fee bumping");
+  //       return null;
+  //     }
 
-      if (selectedFeeRate <= 0) {
-        setError("Fee rate must be greater than 0");
-        return null;
-      }
+  //     if (selectedFeeRate <= 0) {
+  //       setError("Fee rate must be greater than 0");
+  //       return null;
+  //     }
 
-      try {
-        setStatus(FeeBumpStatus.CREATING);
-        setError(null);
+  //     try {
+  //       setStatus(FeeBumpStatus.CREATING);
+  //       setError(null);
 
-        let psbtBase64: string;
+  //       let psbtBase64: string;
 
-        // Create the appropriate type of fee-bumped transaction
-        if (selectedStrategy === FeeBumpStrategy.RBF) {
-          if (options.isCancel && options.cancelAddress) {
-            // Create cancel RBF transaction
-            psbtBase64 = await createCancelRBF({
-              transaction,
-              originalTxHex: txHex,
-              feeRate: selectedFeeRate,
-              cancelAddress: options.cancelAddress,
-            });
-          } else {
-            // Create accelerated RBF transaction
-            psbtBase64 = await createAcceleratedRBF({
-              transaction,
-              originalTxHex: txHex,
-              feeRate: selectedFeeRate,
-              changeAddress: options.changeAddress,
-            });
-          }
-        } else if (selectedStrategy === FeeBumpStrategy.CPFP) {
-          // CPFP not implemented in this version we'll add it's hook here
-          throw new Error("CPFP not implemented in this version");
-        } else {
-          throw new Error("Invalid fee bumping strategy");
-        }
+  //       // Create the appropriate type of fee-bumped transaction
+  //       if (selectedStrategy === FeeBumpStrategy.RBF) {
+  //         if (options.isCancel && options.cancelAddress) {
+  //           // Create cancel RBF transaction
+  //           psbtBase64 = await createCancelRBF({
+  //             transaction,
+  //             originalTxHex: txHex,
+  //             feeRate: selectedFeeRate,
+  //             cancelAddress: options.cancelAddress,
+  //           });
+  //         } else {
+  //           // Create accelerated RBF transaction
+  //           psbtBase64 = await createAcceleratedRBF({
+  //             transaction,
+  //             originalTxHex: txHex,
+  //             feeRate: selectedFeeRate,
+  //             changeAddress: options.changeAddress,
+  //           });
+  //         }
+  //       } else if (selectedStrategy === FeeBumpStrategy.CPFP) {
+  //         // CPFP not implemented in this version we'll add it's hook here
+  //         throw new Error("CPFP not implemented in this version");
+  //       } else {
+  //         throw new Error("Invalid fee bumping strategy");
+  //       }
 
-        // Calculate the estimated new fee
-        const txVsize = transaction.vsize || transaction.size;
-        const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
+  //       // Calculate the estimated new fee
+  //       const txVsize = transaction.vsize || transaction.size;
+  //       const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
 
-        // Set the result
-        const result: FeeBumpResult = {
-          psbtBase64,
-          newFee: estimatedNewFee,
-          newFeeRate: selectedFeeRate,
-          strategy: selectedStrategy,
-          isCancel: options.isCancel || false,
-          priority: selectedPriority,
-          createdAt: new Date().toISOString(),
-        };
-        setResult(result);
-        setStatus(FeeBumpStatus.SUCCESS);
-        return result;
-      } catch (err) {
-        console.error("Error creating fee-bumped transaction:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unknown error creating fee-bumped transaction",
-        );
-        setStatus(FeeBumpStatus.ERROR);
-        return null;
-      }
-    },
-    [
-      transaction,
-      txHex,
-      recommendation,
-      selectedStrategy,
-      selectedFeeRate,
-      selectedPriority,
-      createAcceleratedRBF,
-      createCancelRBF,
-    ],
-  );
+  //       // Set the result
+  //       const result: FeeBumpResult = {
+  //         psbtBase64,
+  //         newFee: estimatedNewFee,
+  //         newFeeRate: selectedFeeRate,
+  //         strategy: selectedStrategy,
+  //         isCancel: options.isCancel || false,
+  //         priority: selectedPriority,
+  //         createdAt: new Date().toISOString(),
+  //       };
+  //       setResult(result);
+  //       setStatus(FeeBumpStatus.SUCCESS);
+  //       return result;
+  //     } catch (err) {
+  //       console.error("Error creating fee-bumped transaction:", err);
+  //       setError(
+  //         err instanceof Error
+  //           ? err.message
+  //           : "Unknown error creating fee-bumped transaction",
+  //       );
+  //       setStatus(FeeBumpStatus.ERROR);
+  //       return null;
+  //     }
+  //   },
+  //   [
+  //     transaction,
+  //     txHex,
+  //     recommendation,
+  //     selectedStrategy,
+  //     selectedFeeRate,
+  //     selectedPriority,
+  //     createAcceleratedRBF,
+  //     createCancelRBF,
+  //   ],
+  // );
 
   /**
    * Resets the fee bumping state
@@ -392,25 +340,12 @@ export const useFeeBumping = () => {
    * and returns the hook to its initial state.
    */
   const reset = useCallback(() => {
-    setTransaction(null);
-    setTxHex("");
-    setStatus(FeeBumpStatus.IDLE);
-    setError(null);
-    setRecommendation(null);
-    setSelectedStrategy(FeeBumpStrategy.NONE);
-    setSelectedFeeRate(0);
-    setResult(null);
-  }, []);
-
-  // Update status when RBF creation is in progress
-  useEffect(() => {
-    if (isCreatingRBF && status === FeeBumpStatus.READY) {
-      setStatus(FeeBumpStatus.CREATING);
-    }
-  }, [isCreatingRBF, status]);
+    dispatch(resetFeeBumpState());
+  }, [dispatch]);
 
   // Return the hook's API
   return {
+    // State (from Redux)
     transaction,
     txHex,
     status,
@@ -420,12 +355,14 @@ export const useFeeBumping = () => {
     selectedFeeRate,
     selectedPriority,
     result,
-    isCreatingRBF,
+
+    // Operations (dispatch Redux actions)
+    // isCreatingRBF,
     setTransactionForBumping,
     updateFeeRate,
     updateFeePriority,
     updateStrategy,
-    createFeeBumpedTransaction,
+    // createFeeBumpedTransaction,
     reset,
   };
 };
