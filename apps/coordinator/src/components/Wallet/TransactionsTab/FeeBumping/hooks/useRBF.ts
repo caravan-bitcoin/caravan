@@ -9,6 +9,22 @@ import {
 } from "@caravan/fees";
 import { getChangeOutputIndex, extractUtxosForFeeBumping } from "../utils";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
+import { FeeBumpResult, FeeBumpStatus } from "../types";
+import {
+  setFeeBumpStatus,
+  setFeeBumpError,
+  setFeeBumpResult,
+} from "../../../../../actions/feeBumpingActions";
+import {
+  getFeeBumpTransaction,
+  getFeeBumpTxHex,
+  getSelectedFeeRate,
+  getSelectedFeePriority,
+  getCancelAddress,
+  getChangeAddress,
+  getRbfType,
+  getSelectedFeeBumpStrategy,
+} from "../../../../../selectors/feeBumping";
 
 /**
  * Hook for RBF (Replace-By-Fee) operations with comprehensive wallet integration
@@ -18,14 +34,24 @@ import { updateBlockchainClient } from "../../../../../actions/clientActions";
  * 1. Accelerated RBF - keeps same outputs but increases fee
  * 2. Cancel RBF - redirects all funds to a new address
  *
- * It fully integrates with the wallet state to provide accurate UTXO information
- * and change address detection.
+ * This hook only manages the loading state locally since it's specific to the operation.
+ * All other state is managed by Redux.
  */
 export const useRBF = () => {
   const dispatch = useDispatch();
-  // Track loading and error states
+
+  // We now only manage loading locally since it's operation-specific rest is redux managed
   const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Get all state from Redux
+  const transaction = useSelector(getFeeBumpTransaction);
+  const txHex = useSelector(getFeeBumpTxHex);
+  const selectedFeeRate = useSelector(getSelectedFeeRate);
+  const selectedPriority = useSelector(getSelectedFeePriority);
+  const cancelAddress = useSelector(getCancelAddress);
+  const changeAddress = useSelector(getChangeAddress);
+  const rbfType = useSelector(getRbfType);
+  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
 
   // Get wallet settings from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -36,7 +62,7 @@ export const useRBF = () => {
   const totalSigners = useSelector((state: any) => state.settings.totalSigners);
 
   // Get the next change address from the wallet
-  const changeAddress = useSelector(
+  const defaultChangeAddress = useSelector(
     (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
   );
 
@@ -72,19 +98,14 @@ export const useRBF = () => {
    * @returns Promise resolving to the base64-encoded PSBT
    */
   const createAcceleratedRBF = useCallback(
-    async ({
-      transaction,
-      originalTxHex,
-      feeRate,
-      changeAddress: userProvidedChangeAddress,
-    }: {
-      transaction: any;
-      originalTxHex: string;
-      feeRate: number;
-      changeAddress?: string;
-    }) => {
+    async (options?: { changeAddress?: string }) => {
+      if (!transaction || !txHex) {
+        throw new Error("No transaction data available");
+      }
+
       setIsCreating(true);
-      setError(null);
+      dispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
+      dispatch(setFeeBumpError(null));
 
       try {
         // Get blockchain client
@@ -132,6 +153,9 @@ export const useRBF = () => {
         // 3. Default wallet change address
         let changeOptions = {};
 
+        const userProvidedChangeAddress =
+          options?.changeAddress || changeAddress;
+
         if (userProvidedChangeAddress) {
           // Priority 1: User explicitly provided a change address in the RBF form
           console.log(
@@ -144,9 +168,9 @@ export const useRBF = () => {
           console.log("Using detected change index:", changeIndex);
           changeOptions = { changeIndex };
           // Priority 2: Use the wallet's default change address
-        } else if (changeAddress) {
+        } else if (defaultChangeAddress) {
           console.log("Using default wallet change address:", changeAddress);
-          changeOptions = { changeAddress };
+          changeOptions = { changeAddress: defaultChangeAddress };
         } else {
           // No valid change destination found
           throw new Error(
@@ -155,10 +179,10 @@ export const useRBF = () => {
         }
 
         // Create RBF options
-        const options: AcceleratedRbfOptions = {
-          originalTx: originalTxHex,
+        const rbfOptions: AcceleratedRbfOptions = {
+          originalTx: txHex,
           network,
-          targetFeeRate: feeRate,
+          targetFeeRate: selectedFeeRate,
           absoluteFee: transaction.fee.toString(),
           availableInputs,
           requiredSigners,
@@ -171,23 +195,52 @@ export const useRBF = () => {
           reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
         };
 
+        console.log(
+          "UTXOs used for fee bumping: createAcceleratedRbfTransaction",
+          availableInputs.map((input) => `${input.txid}:${input.vout}`),
+        );
+
         // Create the accelerated RBF transaction
-        const psbtBase64 = createAcceleratedRbfTransaction(options);
+        const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
+
+        // Calculate estimated new fee
+        const txVsize = transaction.vsize || transaction.size;
+        const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
+
+        // Create result
+        const result: FeeBumpResult = {
+          psbtBase64,
+          newFee: estimatedNewFee,
+          newFeeRate: selectedFeeRate,
+          strategy: selectedStrategy,
+          isCancel: false,
+          priority: selectedPriority,
+          createdAt: new Date().toISOString(),
+        };
+
+        dispatch(setFeeBumpResult(result));
 
         return psbtBase64;
       } catch (error) {
         console.error("Error creating accelerated RBF transaction:", error);
-        setError(
+        const errorMessage =
           error instanceof Error
             ? error.message
-            : "Unknown error creating RBF transaction",
-        );
+            : "Unknown error creating RBF transaction";
+        dispatch(setFeeBumpError(errorMessage));
         throw error;
       } finally {
         setIsCreating(false);
       }
     },
     [
+      transaction,
+      txHex,
+      selectedFeeRate,
+      selectedPriority,
+      selectedStrategy,
+      changeAddress,
+      defaultChangeAddress,
       dispatch,
       network,
       addressType,
@@ -199,6 +252,7 @@ export const useRBF = () => {
       getScriptType,
     ],
   );
+
   /**
    * Creates a cancel RBF transaction that redirects all funds to a new address
    *
@@ -216,19 +270,19 @@ export const useRBF = () => {
    * @see https://bitcoinops.org/en/topics/replace-by-fee/
    */
   const createCancelRBF = useCallback(
-    async ({
-      transaction,
-      originalTxHex,
-      feeRate,
-      cancelAddress,
-    }: {
-      transaction: any;
-      originalTxHex: string;
-      feeRate: number;
-      cancelAddress: string;
-    }) => {
+    async (options?: { cancelAddress?: string }) => {
+      if (!transaction || !txHex) {
+        throw new Error("No transaction data available");
+      }
+
+      const addressToUse = options?.cancelAddress || cancelAddress;
+      if (!addressToUse) {
+        throw new Error("Cancel address is required");
+      }
+
       setIsCreating(true);
-      setError(null);
+      dispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
+      dispatch(setFeeBumpError(null));
 
       try {
         // Get blockchain client
@@ -257,38 +311,65 @@ export const useRBF = () => {
         const scriptType = getScriptType();
 
         const options = {
-          originalTx: originalTxHex,
+          originalTx: txHex,
           network,
-          targetFeeRate: feeRate,
+          targetFeeRate: selectedFeeRate,
           absoluteFee: transaction.fee.toString(),
           availableInputs,
           requiredSigners,
           totalSigners,
           scriptType,
           dustThreshold: "546", // Default dust threshold
-          cancelAddress,
+          cancelAddress: addressToUse,
           strict: false, // Less strict validation for better user experience
           fullRBF: false, // Only use signals RBF by default
           reuseAllInputs: false, // For cancel transactions, we don't need to reuse all inputs
         };
+        console.log(
+          "UTXOs used for fee bumping: createCancelRbfTransaction",
+          availableInputs.map((input) => `${input.txid}:${input.vout}`),
+        );
 
         // Create the cancel RBF transaction
         const psbtBase64 = createCancelRbfTransaction(options);
 
+        // Calculate estimated new fee
+        const txVsize = transaction.vsize || transaction.size;
+        const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
+
+        // Create result
+        const result: FeeBumpResult = {
+          psbtBase64,
+          newFee: estimatedNewFee,
+          newFeeRate: selectedFeeRate,
+          strategy: selectedStrategy,
+          isCancel: true,
+          priority: selectedPriority,
+          createdAt: new Date().toISOString(),
+        };
+
+        dispatch(setFeeBumpResult(result));
+
         return psbtBase64;
       } catch (error) {
         console.error("Error creating cancel RBF transaction:", error);
-        setError(
+        const errorMessage =
           error instanceof Error
             ? error.message
-            : "Unknown error creating cancel RBF transaction",
-        );
+            : "Unknown error creating cancel RBF transaction";
+        dispatch(setFeeBumpError(errorMessage));
         throw error;
       } finally {
         setIsCreating(false);
       }
     },
     [
+      transaction,
+      txHex,
+      selectedFeeRate,
+      selectedPriority,
+      selectedStrategy,
+      cancelAddress,
       dispatch,
       network,
       requiredSigners,
@@ -299,11 +380,37 @@ export const useRBF = () => {
     ],
   );
 
+  /**
+   * Creates a fee-bumped transaction based on RBF type
+   */
+  const createFeeBumpedTransaction = useCallback(
+    async (
+      customOptions: {
+        isCancel?: boolean;
+        cancelAddress?: string;
+        changeAddress?: string;
+      } = {},
+    ) => {
+      const isCancel = customOptions.isCancel ?? rbfType === "cancel";
+
+      if (isCancel) {
+        return await createCancelRBF({
+          cancelAddress: customOptions.cancelAddress,
+        });
+      } else {
+        return await createAcceleratedRBF({
+          changeAddress: customOptions.changeAddress,
+        });
+      }
+    },
+    [rbfType, createCancelRBF, createAcceleratedRBF],
+  );
+
   // Return the hook's API
   return {
     createAcceleratedRBF,
     createCancelRBF,
+    createFeeBumpedTransaction,
     isCreating,
-    error,
   };
 };
