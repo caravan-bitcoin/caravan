@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import {
   Box,
   Paper,
@@ -21,10 +22,14 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { FeeBumpResult } from "../types";
 import { formatFee } from "../utils";
+import {
+  getFeeBumpTransaction,
+  getFeeBumpResult,
+} from "../../../../../selectors/feeBumping";
 
 interface TransactionComparisonProps {
-  originalTx: any;
-  result: FeeBumpResult;
+  originalTx?: any; // Made optional since we can get from Redux
+  result?: FeeBumpResult; // Made optional since we can get from Redux
 }
 
 /**
@@ -39,9 +44,17 @@ interface TransactionComparisonProps {
  * It helps users understand exactly what changes the fee bump will make.
  */
 export const TransactionComparison: React.FC<TransactionComparisonProps> = ({
-  originalTx,
-  result,
+  originalTx: propOriginalTx,
+  result: propResult,
 }) => {
+  // Get state from Redux if not provided as props (for backward compatibility)
+  const reduxOriginalTx = useSelector(getFeeBumpTransaction);
+  const reduxResult = useSelector(getFeeBumpResult);
+
+  // Use props if provided, otherwise fall back to Redux state
+  const originalTx = propOriginalTx || reduxOriginalTx;
+  const result = propResult || reduxResult;
+
   if (!originalTx || !result) {
     return null;
   }
