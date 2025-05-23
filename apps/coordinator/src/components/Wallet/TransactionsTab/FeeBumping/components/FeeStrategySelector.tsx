@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   FormControl,
@@ -17,14 +18,12 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { FeeBumpStrategy } from "@caravan/fees";
-import { FeeBumpRecommendation } from "../types";
 import { formatFee } from "../utils";
-
-interface FeeStrategySelectorProps {
-  recommendation: FeeBumpRecommendation;
-  selectedStrategy: FeeBumpStrategy;
-  onStrategyChange: (strategy: FeeBumpStrategy) => void;
-}
+import { setFeeBumpStrategy } from "../../../../../actions/feeBumpingActions";
+import {
+  getFeeBumpRecommendation,
+  getSelectedFeeBumpStrategy,
+} from "../../../../../selectors/feeBumping";
 
 /**
  * Component for selecting a fee bumping strategy (RBF or CPFP)
@@ -33,13 +32,15 @@ interface FeeStrategySelectorProps {
  * RBF and CPFP strategies with explanations, current network information,
  * and recommendations based on transaction analysis.
  */
-export const FeeStrategySelector: React.FC<FeeStrategySelectorProps> = ({
-  recommendation,
-  selectedStrategy,
-  onStrategyChange,
-}) => {
+export const FeeStrategySelector: React.FC = () => {
+  const dispatch = useDispatch();
+
+  // Get state from Redux
+  const recommendation = useSelector(getFeeBumpRecommendation);
+  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onStrategyChange(event.target.value as FeeBumpStrategy);
+    dispatch(setFeeBumpStrategy(event.target.value as FeeBumpStrategy));
   };
 
   if (!recommendation) {
@@ -69,7 +70,7 @@ export const FeeStrategySelector: React.FC<FeeStrategySelectorProps> = ({
             "Creates a new transaction that spends outputs from the original with a higher fee",
           icon: <ChildCareIcon fontSize="large" />,
           learnMoreUrl: "https://bitcoinops.org/en/topics/cpfp/",
-          disabled: !recommendation.canCPFP || true, // Force disable CPFP for now
+          disabled: !recommendation.canCPFP || true, // Force disable CPFP for now as we'll add it later
           disabledReason: !recommendation.canCPFP
             ? "This transaction doesn't have suitable outputs for CPFP"
             : "CPFP support is coming in a future update",
