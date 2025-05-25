@@ -33,6 +33,7 @@ import {
   getSelectedFeeBumpStrategy,
   getFeeBumpResult,
 } from "../../../../../selectors/feeBumping";
+import { Transaction } from "../../types";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -47,7 +48,7 @@ import {
 interface AccelerationModalProps {
   open: boolean;
   onClose: () => void;
-  transaction: any; // The transaction to accelerate
+  transaction: Transaction; // The transaction to accelerate
   txHex?: string; // Raw transaction hex (optional, will be fetched if not provided)
 }
 
