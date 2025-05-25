@@ -1,5 +1,5 @@
-import { scriptToOps, scriptToHex } from "./script";
 import { TEST_FIXTURES } from "./fixtures";
+import { scriptToOps, scriptToHex } from "./script";
 
 describe("scripts", () => {
   describe("scriptToOps", () => {

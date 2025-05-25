@@ -1,6 +1,7 @@
-import bs58check from "bs58check";
 import bs58 from "bs58";
+import bs58check from "bs58check";
 
+import { TEST_FIXTURES } from "./fixtures";
 import {
   validateExtendedPublicKey,
   validatePublicKey,
@@ -19,11 +20,7 @@ import {
   validateExtendedPublicKeyForNetwork,
   getMaskedDerivation,
 } from "./keys";
-
 import { Network } from "./networks";
-
-import { TEST_FIXTURES } from "./fixtures";
-
 import { P2SH } from "./p2sh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
