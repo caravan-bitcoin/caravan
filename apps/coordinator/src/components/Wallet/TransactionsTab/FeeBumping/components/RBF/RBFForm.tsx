@@ -41,6 +41,15 @@ import {
   getIsRbfFormValid,
 } from "../../../../../../selectors/feeBumping";
 
+export type RbfType = "accelerate" | "cancel";
+
+export const RBF_TYPES = {
+  ACCELERATE: "accelerate",
+  CANCEL: "cancel",
+} as const;
+
+export type RbfTypeValues = (typeof RBF_TYPES)[keyof typeof RBF_TYPES];
+
 const FEE_LEVELS = {
   LOW: "low",
   MEDIUM: "medium",
@@ -48,11 +57,19 @@ const FEE_LEVELS = {
   CUSTOM: "custom",
 };
 
+type FeeLevelType = (typeof FEE_LEVELS)[keyof typeof FEE_LEVELS];
+
 const PRIORITY_TO_FEE_LEVEL = {
   [FeePriority.LOW]: FEE_LEVELS.LOW,
   [FeePriority.MEDIUM]: FEE_LEVELS.MEDIUM,
   [FeePriority.HIGH]: FEE_LEVELS.HIGH,
 };
+
+const FEE_LEVEL_TO_PRIORITY_MAP = {
+  [FEE_LEVELS.LOW]: FeePriority.LOW,
+  [FEE_LEVELS.MEDIUM]: FeePriority.MEDIUM,
+  [FEE_LEVELS.HIGH]: FeePriority.HIGH,
+} as const;
 
 const FEE_LEVEL_COLORS = {
   [FEE_LEVELS.LOW]: "#4caf50", // Green
@@ -93,7 +110,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
   const isFormValid = useSelector(getIsRbfFormValid);
 
   // Local state for fee level selection (UI state only)
-  const [currentFeeLevel, setCurrentFeeLevel] = useState<string>(
+  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
     PRIORITY_TO_FEE_LEVEL[selectedPriority] || FEE_LEVELS.MEDIUM,
   );
 
@@ -145,13 +162,14 @@ export const RBFForm: React.FC<RBFFormProps> = ({
 
   // Handle RBF type change
   const handleRbfTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(setRbfType(event.target.value as "accelerate" | "cancel"));
+    const value = event.target.value as RbfType;
+    dispatch(setRbfType(value));
   };
 
   // Handle fee level change
   const handleFeeLevelChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newFeeLevel = event.target.value;
+      const newFeeLevel = event.target.value as FeeLevelType;
       setCurrentFeeLevel(newFeeLevel); // To update  update the local UI state
 
       if (newFeeLevel === FEE_LEVELS.CUSTOM) {
@@ -160,14 +178,8 @@ export const RBFForm: React.FC<RBFFormProps> = ({
       }
 
       // For predefined levels, update priority and fee rate
-      let newPriority: FeePriority = selectedPriority;
-      if (newFeeLevel === FEE_LEVELS.LOW) {
-        newPriority = FeePriority.LOW;
-      } else if (newFeeLevel === FEE_LEVELS.MEDIUM) {
-        newPriority = FeePriority.MEDIUM;
-      } else if (newFeeLevel === FEE_LEVELS.HIGH) {
-        newPriority = FeePriority.HIGH;
-      }
+      const newPriority: FeePriority =
+        FEE_LEVEL_TO_PRIORITY_MAP[newFeeLevel] || selectedPriority;
 
       if (feeLevels[newFeeLevel]) {
         const newFeeRate = Math.ceil(feeLevels[newFeeLevel]);
@@ -218,10 +230,12 @@ export const RBFForm: React.FC<RBFFormProps> = ({
     if (!isFormValid) return;
 
     onSubmit({
-      isCancel: rbfType === "cancel",
-      cancelAddress: rbfType === "cancel" ? cancelAddress : undefined,
+      isCancel: rbfType === RBF_TYPES.CANCEL,
+      cancelAddress: rbfType === RBF_TYPES.CANCEL ? cancelAddress : undefined,
       changeAddress:
-        rbfType === "accelerate" && changeAddress ? changeAddress : undefined,
+        rbfType === RBF_TYPES.ACCELERATE && changeAddress
+          ? changeAddress
+          : undefined,
     });
   };
 
@@ -254,7 +268,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
             onChange={handleRbfTypeChange}
           >
             <FormControlLabel
-              value="accelerate"
+              value={RBF_TYPES.ACCELERATE}
               control={<Radio />}
               label={
                 <Box>
@@ -269,7 +283,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
               }
             />
             <FormControlLabel
-              value="cancel"
+              value={RBF_TYPES.CANCEL}
               control={<Radio />}
               label={
                 <Box>
@@ -287,7 +301,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
 
       <Divider sx={{ my: 2 }} />
 
-      {rbfType === "cancel" ? (
+      {rbfType === RBF_TYPES.CANCEL ? (
         <Box mb={3}>
           <Typography variant="subtitle1" gutterBottom fontWeight="medium">
             Cancel Address
@@ -298,9 +312,9 @@ export const RBFForm: React.FC<RBFFormProps> = ({
             variant="outlined"
             value={cancelAddress}
             onChange={handleCancelAddressChange}
-            error={rbfType === "cancel" && !cancelAddress.trim()}
+            error={rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()}
             helperText={
-              rbfType === "cancel" && !cancelAddress.trim()
+              rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()
                 ? "Cancel address is required"
                 : "Enter an address where you want to send all funds"
             }
@@ -462,8 +476,8 @@ export const RBFForm: React.FC<RBFFormProps> = ({
               step={1}
               marks={[
                 {
-                  value: Math.round(minimumFeeRate),
-                  label: `${minimumFeeRate}`,
+                  value: Math.round(minimumFeeRate * 1000) / 1000,
+                  label: `${Math.round(minimumFeeRate * 1000) / 1000}`,
                 },
                 {
                   value: Math.floor((minimumFeeRate + maxFeeRate) / 2),
@@ -551,7 +565,7 @@ export const RBFForm: React.FC<RBFFormProps> = ({
         >
           {isCreating
             ? "Creating Transaction..."
-            : `Create ${rbfType === "cancel" ? "Cancel" : "Accelerated"} Transaction`}
+            : `Create ${rbfType === RBF_TYPES.CANCEL ? "Cancel" : "Accelerated"} Transaction`}
         </Button>
       </Box>
     </Paper>
