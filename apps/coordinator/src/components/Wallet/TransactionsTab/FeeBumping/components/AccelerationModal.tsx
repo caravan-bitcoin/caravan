@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import {
   Box,
@@ -9,31 +9,29 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  LinearProgress,
   Step,
   StepLabel,
   Stepper,
   Typography,
-  Alert,
-  AlertTitle,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { useFeeBumping } from "../hooks/useFeeBumping";
 import { useRBF } from "../hooks/useRBF";
-import { FeeStrategySelector } from "./FeeStrategySelector";
-import { RBFForm } from "./RBF/RBFForm";
-import { TransactionComparison } from "./TransactionComparison";
 import { FeeBumpStatus, FeePriority } from "../types";
 import { downloadFile } from "../../../../../utils";
 import {
   getFeeBumpStatus,
-  getFeeBumpError,
   getFeeBumpRecommendation,
   getSelectedFeeBumpStrategy,
   getFeeBumpResult,
 } from "../../../../../selectors/feeBumping";
 import { Transaction } from "../../types";
+import {
+  StrategySelectionStep,
+  ConfigurationStep,
+  ReviewStep,
+} from "./FeeBumpSteps";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -52,6 +50,13 @@ interface AccelerationModalProps {
   txHex?: string; // Raw transaction hex (optional, will be fetched if not provided)
 }
 
+// Type for Step configuration with metadata
+interface StepConfig {
+  label: string;
+  component: React.ComponentType<any>;
+  props?: Record<string, any>;
+}
+
 export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   open,
   onClose,
@@ -66,7 +71,6 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
 
   // Get state from Redux instead of props
   const status = useSelector(getFeeBumpStatus);
-  const error = useSelector(getFeeBumpError);
   const recommendation = useSelector(getFeeBumpRecommendation);
   const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
   const result = useSelector(getFeeBumpResult);
@@ -74,6 +78,142 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   // Get hooks - no state management in hooks now ...
   const { setTransactionForBumping, reset } = useFeeBumping();
   const { createFeeBumpedTransaction, isCreating: isCreatingRBF } = useRBF();
+
+  // Handle step navigation ( Memoizing step changes to prevent re-renders)
+  const handleNext = useCallback(() => {
+    setActiveStep((prevStep) => prevStep + 1);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setActiveStep((prevStep) => prevStep - 1);
+  }, []);
+
+  // Handle form submission
+  const handleSubmitRBF = async (options: {
+    isCancel: boolean;
+    cancelAddress?: string;
+    changeAddress?: string;
+  }) => {
+    // Create the fee-bumped transaction with the specified options
+    await createFeeBumpedTransaction(options);
+    handleNext(); // Move to the next step when done
+  };
+
+  // Handle PSBT download
+  const handleDownloadPSBT = useCallback(() => {
+    if (result) {
+      // Use a descriptive filename based on the transaction type and priority
+      const priorityStr = result.priority.toLowerCase();
+      const txTypeStr = result.isCancel ? "cancel" : "accelerated";
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .substring(0, 19);
+
+      const filename = `${txTypeStr}_tx_${priorityStr}_${timestamp}.psbt`;
+
+      downloadFile(result.psbtBase64, filename);
+      setDownloadClicked(true);
+    }
+  }, [result]);
+
+  // Handle modal close with confirmation if PSBT not downloaded
+  const handleClose = useCallback(() => {
+    if (status === FeeBumpStatus.SUCCESS && !downloadClicked) {
+      // Warn the user if they try to close without downloading the PSBT
+      const confirm = window.confirm(
+        "You haven't downloaded the fee-bumped transaction. Are you sure you want to close?",
+      );
+      if (!confirm) {
+        return;
+      }
+    }
+    onClose();
+  }, [status, downloadClicked, onClose]);
+
+  // Get the steps for the stepper
+  const stepConfigs: StepConfig[] = useMemo(
+    () => [
+      {
+        label: "Select Strategy",
+        component: StrategySelectionStep,
+      },
+      {
+        label: "Configure Transaction",
+        component: ConfigurationStep,
+        props: {
+          transaction,
+          onSubmit: handleSubmitRBF,
+          isCreating: isCreatingRBF,
+        },
+      },
+      {
+        label: "Review and Download",
+        component: ReviewStep,
+        props: {
+          transaction,
+          onDownloadPSBT: handleDownloadPSBT,
+          downloadClicked,
+        },
+      },
+    ],
+    [
+      transaction,
+      handleSubmitRBF,
+      isCreatingRBF,
+      handleDownloadPSBT,
+      downloadClicked,
+    ],
+  );
+
+  const CurrentStepComponent = stepConfigs[activeStep]?.component;
+  const currentStepProps = stepConfigs[activeStep]?.props || {};
+
+  // Title logic - moved outside the return statement , so no nested conditionals now :)
+  const modalTitle = useMemo(() => {
+    if (!transaction) return "Fee Bump Transaction";
+
+    let title = "Fee Bump Transaction";
+
+    if (selectedStrategy === FeeBumpStrategy.RBF && activeStep > 0) {
+      if (result?.isCancel) {
+        title = "Cancel Transaction";
+      } else {
+        title = "Accelerate Transaction";
+      }
+    }
+
+    return title;
+  }, [transaction, selectedStrategy, activeStep, result]);
+
+  const transactionIdDisplay = useMemo(() => {
+    if (!transaction) return "";
+
+    return `${transaction.txid.substring(0, 8)}...${transaction.txid.substring(
+      transaction.txid.length - 8,
+    )}`;
+  }, [transaction]);
+
+  const buttonStates = useMemo(() => {
+    const isCreating = isCreatingRBF || status === FeeBumpStatus.CREATING;
+
+    return {
+      backDisabled: activeStep === 0 || isCreating,
+      nextDisabled:
+        !recommendation ||
+        status !== FeeBumpStatus.READY ||
+        selectedStrategy === FeeBumpStrategy.NONE,
+      showNext: activeStep === 0,
+      showClose: activeStep === stepConfigs.length - 1,
+    };
+  }, [
+    activeStep,
+    isCreatingRBF,
+    status,
+    recommendation,
+    selectedStrategy,
+    stepConfigs.length,
+  ]);
 
   // Initialize the transaction for fee bumping when the modal opens
   useEffect(() => {
@@ -100,204 +240,6 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     };
   }, [open, transaction, txHex, setTransactionForBumping, reset]);
 
-  // Handle step navigation ( Memoizing step changes to prevent re-renders)
-  const handleNext = useCallback(() => {
-    setActiveStep((prevStep) => prevStep + 1);
-  }, []);
-
-  const handleBack = useCallback(() => {
-    setActiveStep((prevStep) => prevStep - 1);
-  }, []);
-
-  // Handle form submission
-  const handleSubmitRBF = async (options: {
-    isCancel: boolean;
-    cancelAddress?: string;
-    changeAddress?: string;
-  }) => {
-    // Create the fee-bumped transaction with the specified options
-    await createFeeBumpedTransaction(options);
-    handleNext(); // Move to the next step when done
-  };
-
-  // Handle PSBT download
-  const handleDownloadPSBT = () => {
-    if (result) {
-      // Use a descriptive filename based on the transaction type and priority
-      const priorityStr = result.priority.toLowerCase();
-      const txTypeStr = result.isCancel ? "cancel" : "accelerated";
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .substring(0, 19);
-
-      const filename = `${txTypeStr}_tx_${priorityStr}_${timestamp}.psbt`;
-
-      downloadFile(result.psbtBase64, filename);
-      setDownloadClicked(true);
-    }
-  };
-
-  // Handle modal close with confirmation if PSBT not downloaded
-  const handleClose = () => {
-    if (status === FeeBumpStatus.SUCCESS && !downloadClicked) {
-      // Warn the user if they try to close without downloading the PSBT
-      const confirm = window.confirm(
-        "You haven't downloaded the fee-bumped transaction. Are you sure you want to close?",
-      );
-      if (!confirm) {
-        return;
-      }
-    }
-    onClose();
-  };
-
-  // Get the steps for the stepper
-  const getSteps = () => {
-    return ["Select Strategy", "Configure Transaction", "Review and Download"];
-  };
-
-  // Calculate the original fee rate for the transaction
-  const calculateOriginalFeeRate = () => {
-    if (!transaction) return 0;
-
-    const txSize = transaction.vsize || transaction.size;
-    return txSize ? transaction.fee / txSize : 0;
-  };
-
-  // Get the content for the current step
-  const getStepContent = (step: number) => {
-    switch (step) {
-      case 0: // Strategy selection step
-        return recommendation ? (
-          <FeeStrategySelector />
-        ) : (
-          <Box sx={{ py: 2, textAlign: "center" }}>
-            <LinearProgress />
-            <Typography sx={{ mt: 2 }}>
-              {status === FeeBumpStatus.ANALYZING
-                ? "Analyzing transaction and current network conditions..."
-                : "Loading transaction details..."}
-            </Typography>
-
-            {/* Show helpful tips while waiting */}
-            {status === FeeBumpStatus.ANALYZING && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                We&apos;re checking if your transaction can be fee-bumped and
-                getting current network fee rates...
-              </Typography>
-            )}
-
-            {error && (
-              <Alert severity="error" sx={{ mt: 2, textAlign: "left" }}>
-                <AlertTitle>Analysis Error</AlertTitle>
-                {error}
-              </Alert>
-            )}
-          </Box>
-        );
-
-      case 1: // Fee configuration step
-        if (selectedStrategy === FeeBumpStrategy.RBF) {
-          return (
-            <RBFForm
-              originalFeeRate={calculateOriginalFeeRate()}
-              originalFee={transaction.fee.toString()}
-              onSubmit={handleSubmitRBF}
-              isCreating={isCreatingRBF}
-            />
-          );
-        }
-        return (
-          <Alert severity="warning">
-            <AlertTitle>CPFP Support Coming Soon</AlertTitle>
-            Child-Pays-for-Parent (CPFP) support is coming in a future update.
-            Please use Replace-by-Fee (RBF) for now.
-          </Alert>
-        );
-
-      case 2: // Review and download step
-        return (
-          <Box>
-            {/* Show loading indicator while transaction is being created */}
-            {status === FeeBumpStatus.CREATING && (
-              <Box sx={{ py: 2, textAlign: "center" }}>
-                <LinearProgress />
-                <Typography sx={{ mt: 2 }}>
-                  Creating transaction and calculating optimal fees...
-                </Typography>
-              </Box>
-            )}
-
-            {/* Display any errors that occurred */}
-            {status === FeeBumpStatus.ERROR && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                <AlertTitle>Error Creating Transaction</AlertTitle>
-                {error ||
-                  "An unexpected error occurred while creating the transaction."}
-              </Alert>
-            )}
-
-            {/* Display transaction details and download button on success */}
-            {status === FeeBumpStatus.SUCCESS && result && (
-              <>
-                <TransactionComparison
-                  originalTx={transaction}
-                  result={result}
-                />
-
-                <Box sx={{ mt: 3, textAlign: "center" }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleDownloadPSBT}
-                    size="large"
-                    sx={{ mb: 2 }}
-                  >
-                    Download PSBT
-                  </Button>
-
-                  {downloadClicked && (
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                      <AlertTitle>PSBT Downloaded Successfully</AlertTitle>
-                      <Typography variant="body2">
-                        You can now sign the transaction using your hardware
-                        wallet or upload it to the Sign tab.
-                      </Typography>
-                    </Alert>
-                  )}
-
-                  <Box mt={3}>
-                    <Alert severity="info">
-                      <AlertTitle>Next Steps</AlertTitle>
-                      <Typography variant="body2" component="div">
-                        <ol style={{ paddingLeft: "1rem", margin: 0 }}>
-                          <li>
-                            Sign the PSBT using your hardware wallet or the Sign
-                            tab
-                          </li>
-                          <li>Broadcast the signed transaction</li>
-                          <li>
-                            The transaction will replace the original pending
-                            transaction
-                          </li>
-                        </ol>
-                      </Typography>
-                    </Alert>
-                  </Box>
-                </Box>
-              </>
-            )}
-          </Box>
-        );
-
-      default:
-        return "Unknown step";
-    }
-  };
-
-  const steps = getSteps();
-
   return (
     <Dialog
       open={open}
@@ -307,28 +249,14 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       aria-labelledby="acceleration-modal-title"
     >
       <DialogTitle id="acceleration-modal-title" sx={{ pb: 1 }}>
-        {transaction ? (
-          <>
-            {/* Title changes based on the strategy */}
-            {selectedStrategy === FeeBumpStrategy.RBF && activeStep > 0
-              ? result?.isCancel
-                ? "Cancel Transaction"
-                : "Accelerate Transaction"
-              : "Fee Bump Transaction"}
+        {modalTitle}
 
-            {/* Display a shortened transaction ID for reference */}
-            <Typography
-              variant="caption"
-              display="block"
-              color="text.secondary"
-            >
-              Transaction ID: {transaction.txid.substring(0, 8)}...
-              {transaction.txid.substring(transaction.txid.length - 8)}
-            </Typography>
-          </>
-        ) : (
-          "Fee Bump Transaction"
+        {transaction && (
+          <Typography variant="caption" display="block" color="text.secondary">
+            Transaction ID: {transactionIdDisplay}
+          </Typography>
         )}
+
         <IconButton
           aria-label="close"
           onClick={handleClose}
@@ -343,7 +271,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       <DialogContent>
         {/* Stepper to show current progress in the wizard */}
         <Stepper activeStep={activeStep} sx={{ pt: 2, pb: 4 }}>
-          {steps.map((label) => (
+          {stepConfigs.map(({ label }) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -351,7 +279,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         </Stepper>
 
         {/* Content changes based on the current step */}
-        {getStepContent(activeStep)}
+        {CurrentStepComponent && <CurrentStepComponent {...currentStepProps} />}
       </DialogContent>
 
       <Divider />
@@ -360,11 +288,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         {/* Back button */}
         <Button
           color="inherit"
-          disabled={
-            activeStep === 0 ||
-            isCreatingRBF ||
-            status === FeeBumpStatus.CREATING
-          }
+          disabled={buttonStates.backDisabled}
           onClick={handleBack}
         >
           Back
@@ -377,18 +301,14 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
           <Button
             variant="contained"
             onClick={handleNext}
-            disabled={
-              !recommendation ||
-              status !== FeeBumpStatus.READY ||
-              selectedStrategy === FeeBumpStrategy.NONE
-            }
+            disabled={buttonStates.nextDisabled}
           >
             Next
           </Button>
         )}
 
         {/* Close button (only on last step) */}
-        {activeStep === steps.length - 1 && (
+        {buttonStates.showClose && (
           <Button color="primary" variant="contained" onClick={handleClose}>
             Close
           </Button>
