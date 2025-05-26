@@ -17,6 +17,10 @@ import {
 import { version } from "../package.json";
 
 import {
+  BCUR2,
+  BCUR2ExportExtendedPublicKey,
+} from "./bcur2/bcur2-interactions";
+import {
   BITBOX,
   BitBoxGetMetadata,
   BitBoxExportPublicKey,
@@ -89,6 +93,7 @@ export const INDIRECT_KEYSTORES = {
   HERMIT,
   COLDCARD,
   CUSTOM,
+  BCUR2,
 } as const;
 
 /**
@@ -275,6 +280,11 @@ export function ExportExtendedPublicKey({
         bip32Path,
         network,
         includeXFP,
+      });
+    case BCUR2:
+      return new BCUR2ExportExtendedPublicKey({
+        bip32Path,
+        network,
       });
     default:
       return new UnsupportedInteraction({
@@ -648,6 +658,8 @@ export function ConfigAdapter({
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
+export * from "./bcur2/bcur2-interactions";
+export * from "./bcur2/bcur2";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
