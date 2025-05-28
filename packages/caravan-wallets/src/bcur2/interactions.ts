@@ -9,7 +9,7 @@ import { BitcoinNetwork, Network } from "@caravan/bitcoin";
 
 import { IndirectKeystoreInteraction, PENDING, ACTIVE, INFO } from "../interaction";
 
-import { BCURDecoder2 } from "./bcur2";
+import { BCURDecoder2 } from "./decoder";
 
 /** Constant defining BCUR2 interactions */
 export const BCUR2 = "bcur2";

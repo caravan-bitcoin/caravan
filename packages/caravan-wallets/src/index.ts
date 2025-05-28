@@ -19,7 +19,7 @@ import { version } from "../package.json";
 import {
   BCUR2,
   BCUR2ExportExtendedPublicKey,
-} from "./bcur2/bcur2-interactions";
+} from "./bcur2/interactions";
 import {
   BITBOX,
   BitBoxGetMetadata,
@@ -658,8 +658,8 @@ export function ConfigAdapter({
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
-export * from "./bcur2/bcur2-interactions";
-export * from "./bcur2/bcur2";
+export * from "./bcur2/interactions";
+export * from "./bcur2/decoder";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
