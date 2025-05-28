@@ -3,13 +3,18 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
+  bitcoinsToSatoshis,
 } from "@caravan/bitcoin";
 import {
   loadPsbt,
   extractSignaturesFromPSBT,
   mapSignaturesToImporters,
 } from "../utils/psbtUtils";
-import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
+import {
+  getSpendableSlices,
+  getConfirmedBalance,
+  getAllSlices,
+} from "../selectors/wallet";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -310,10 +315,196 @@ export function setMaxSpendOnOutput(outputIndex) {
   };
 }
 
+/// RBF UTIL FUNCTION
+
+/**
+ * Reverses a hex string by reversing pairs of characters (bytes)
+ * Example: "abcd1234" becomes "3412cdab"
+ */
+function reverseHexString(hexString) {
+  if (!hexString || hexString.length % 2 !== 0) {
+    return hexString;
+  }
+
+  const bytes = [];
+  for (let i = 0; i < hexString.length; i += 2) {
+    bytes.push(hexString.substr(i, 2));
+  }
+
+  return bytes.reverse().join("");
+}
+
+/**
+ * Gets pending transactions from the wallet and reconstructs UTXO details for RBF
+ * This approach works around Bitcoin Core's listunspent limitations by using
+ * pending transaction data to find UTXOs that are already spent in unconfirmed transactions.
+ *
+ * @param {Object} blockchainClient - Blockchain client instance
+ * @param {Object} state - Current Redux state containing wallet data
+ * @returns {Promise<Array>} Array of reconstructed UTXO objects with wallet metadata
+ */
+async function getUtxosFromPendingTransactions(blockchainClient, state) {
+  try {
+    // Get all wallet nodes (deposits + change)
+    const deposits = state.wallet.deposits;
+    const change = state.wallet.change;
+    const allSlices = getAllSlices(state);
+
+    // Collect transaction IDs from all UTXOs in the wallet
+    // This gives us all transactions that have created UTXOs for this wallet
+    const txids = new Set();
+
+    [...Object.values(deposits.nodes), ...Object.values(change.nodes)].forEach(
+      (node) => {
+        if (node && node.multisig && node.multisig.address) {
+          if (node.utxos && node.utxos.length > 0) {
+            // Add transaction IDs from active UTXOs
+            node.utxos.forEach((utxo) => {
+              if (utxo.txid) txids.add(utxo.txid);
+            });
+          }
+        }
+      },
+    );
+
+    // Fetch full transaction details for each transaction ID
+    const fetchTransactionDetails = async (txid) => {
+      try {
+        return await blockchainClient.getTransaction(txid);
+      } catch (err) {
+        console.error(`Error fetching tx ${txid}:`, err);
+        return null;
+      }
+    };
+
+    const txPromises = Array.from(txids).map((txid) =>
+      fetchTransactionDetails(txid),
+    );
+    const txDetails = await Promise.all(txPromises);
+
+    // Filter to get only pending (unconfirmed) transactions
+    const pendingTxs = txDetails
+      .filter((tx) => tx !== null)
+      .filter((tx) => !tx.status?.confirmed);
+
+    const reconstructedUtxos = [];
+
+    // For each pending transaction, get its full details to extract input UTXOs
+    for (const pendingTx of pendingTxs) {
+      try {
+        // Get full transaction details from Bitcoin Core
+        // This gives us the complete input,output information
+        const fullTxDetails = await blockchainClient.getTransaction(
+          pendingTx.txid,
+        );
+
+        // Process each input from the pending transaction
+        if (fullTxDetails.vin && Array.isArray(fullTxDetails.vin)) {
+          for (const input of fullTxDetails.vin) {
+            // Each input represents a UTXO that was spent in this pending transaction
+            // We need to reconstruct the original UTXO details
+
+            if (!input.txid || input.vout === undefined) {
+              console.warn(
+                `⚠️ Invalid input in transaction ${pendingTx.txid}:`,
+                input,
+              );
+              continue;
+            }
+
+            try {
+              // Get the original transaction that created this UTXO
+              // This tells us which address received the funds originally
+              const originalTx = await blockchainClient.getTransaction(
+                input.txid,
+              );
+
+              // Look at the specific output (vout) that was spent
+              const originalOutput = originalTx.vout?.[input.vout];
+              if (!originalOutput) {
+                console.warn(
+                  `⚠️ Could not find output ${input.vout} in transaction ${input.txid}`,
+                );
+                continue;
+              }
+
+              const outputAddress =
+                originalOutput.scriptPubkeyAddress ||
+                originalOutput.scriptPubKey?.address;
+              if (!outputAddress) {
+                console.warn(
+                  `⚠️ No address found for output ${input.txid}:${input.vout}`,
+                );
+                continue;
+              }
+
+              // Find the corresponding wallet slice for this address
+              // This gives us the multisig details, BIP32 path, etc.
+              const matchingSlice = allSlices.find(
+                (slice) => slice.multisig?.address === outputAddress,
+              );
+
+              if (!matchingSlice) {
+                console.log(
+                  `ℹ️ Address ${outputAddress} not found in wallet slices (might be external)`,
+                );
+                continue;
+              }
+
+              // Reconstruct the UTXO object with all necessary details for signing
+              const reconstructedUtxo = {
+                txid: input.txid,
+                index: input.vout,
+                // Convert amount from BTC to satoshis
+                amountSats: bitcoinsToSatoshis(originalOutput.value.toString()),
+                amount: originalOutput.value.toString(),
+                confirmed: originalTx.status?.confirmed || false,
+                // Add wallet-specific metadata needed for signing
+                multisig: matchingSlice.multisig,
+                bip32Path: matchingSlice.bip32Path,
+                change: matchingSlice.change,
+                // Additional metadata for debugging
+                _source: "pending_transaction",
+                _pendingTxid: pendingTx.txid,
+                _originalTxid: input.txid,
+              };
+
+              reconstructedUtxos.push(reconstructedUtxo);
+            } catch (txError) {
+              console.warn(
+                `⚠️ Failed to get details for input ${input.txid}:${input.vout}:`,
+                txError.message,
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `⚠️ Failed to analyze pending transaction ${pendingTx.txid}:`,
+          error.message,
+        );
+      }
+    }
+
+    return reconstructedUtxos;
+  } catch (error) {
+    console.error(`❌ Failed to get UTXOs from pending transactions:`, error);
+    throw error;
+  }
+}
+
 /**
  * Processes inputs from PSBT and matches them with wallet UTXOs.
+ * Handles both normal PSBTs and RBF PSBTs by using multiple strategies.
+ *
+ * Strategy 1: Check spendable slices (normal PSBT case)
+ * Strategy 2: Reconstruct UTXOs from pending transactions (RBF case)
+ *
+ * This approach is necessary because Bitcoin Core's listunspent doesn't reliably
+ * return UTXOs that are already spent in pending transactions, even with include_unsafe=true.
+ * Instead, we analyze pending transactions to find and reconstruct the UTXO details.
  */
-function processInputsFromPSBT(psbt, state) {
+async function processInputsFromPSBT(psbt, state) {
   const createInputIdentifier = (txid, index) => `${txid}:${index}`;
 
   const inputIdentifiers = new Set(
@@ -324,6 +515,8 @@ function processInputsFromPSBT(psbt, state) {
   );
 
   const inputs = [];
+
+  // Strategy 1: Try spendable slices first (normal PSBT case)
   getSpendableSlices(state).forEach((slice) => {
     Object.entries(slice.utxos).forEach(([, utxo]) => {
       const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
@@ -338,6 +531,55 @@ function processInputsFromPSBT(psbt, state) {
       }
     });
   });
+
+  // Strategy 2: If we didn't find all inputs, reconstruct from pending transactions (RBF case)
+  // This is the key innovation - instead of fighting with listunspent, we use pending
+  // transaction data to reconstruct the UTXO details we need
+  if (inputs.length < psbt.txInputs.length) {
+    const { blockchainClient } = state.client;
+    if (!blockchainClient) {
+      throw new Error("No blockchain client available for UTXO lookup");
+    }
+
+    // Get all UTXOs that we can reconstruct from pending transactions
+    const reconstructedUtxos = await getUtxosFromPendingTransactions(
+      blockchainClient,
+      state,
+    );
+
+    // Track which inputs we've already found to avoid duplicates
+    const foundInputIds = new Set(
+      inputs.map((inp) => createInputIdentifier(inp.txid, inp.index)),
+    );
+
+    // Match reconstructed UTXOs with the inputs we need
+    reconstructedUtxos.forEach((utxo) => {
+      const inputIdentifier = createInputIdentifier(
+        // For some reason, the txid returned by `getUtxosFromPendingTransactions` is in big-endian,
+        // while the one expected by the RBF PSBT builder should be in little-endian.
+        // However, in our case, the txid seems to already be in big-endian — so we reverse it here.
+        // This feels a bit hacky, but changing the original behavior would break normal PSBT imports,
+        // so we're keeping this localized workaround.
+        //
+        // The root cause might lie in how @caravan/fees constructs the PSBT,
+        // which in turn could be influenced by @caravan/psbt internals.
+        //
+        // If we have time later, it might be worth tracing the full data path and standardizing it,
+        // but for now, this keeps things working without breaking existing flows
+        reverseHexString(utxo.txid),
+        utxo.index,
+      );
+
+      // Only add if we need this input and haven't already found it
+      if (
+        inputIdentifiers.has(inputIdentifier) &&
+        !foundInputIds.has(inputIdentifier)
+      ) {
+        inputs.push(utxo);
+        foundInputIds.add(inputIdentifier);
+      }
+    });
+  }
 
   return inputs;
 }
@@ -370,7 +612,7 @@ function processOutputsFromPSBT(psbt, dispatch) {
 }
 
 export function importPSBT(psbtText) {
-  return (dispatch, getState) => {
+  return async (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
     try {
@@ -391,7 +633,7 @@ export function importPSBT(psbtText) {
       dispatch(setUnsignedPSBT(psbt.toBase64()));
 
       // ==== PROCESS INPUTS ====
-      const inputs = processInputsFromPSBT(psbt, state);
+      const inputs = await processInputsFromPSBT(psbt, state);
 
       if (inputs.length === 0) {
         throw new Error("PSBT does not contain any UTXOs from this wallet.");
