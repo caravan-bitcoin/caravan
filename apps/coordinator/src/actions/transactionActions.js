@@ -22,6 +22,10 @@ import {
   setSignatureImporterFinalized,
   setSignatureImporterComplete,
 } from "./signatureImporterActions";
+import {
+  updateChangeSliceAction,
+  updateDepositSliceAction,
+} from "./walletActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
 
@@ -336,6 +340,51 @@ function reverseHexString(hexString) {
 }
 
 /**
+ * Adds reconstructed UTXOs back to their wallet slices temporarily
+ * This allows finalizeOutputs to work normally for imported PSBTs
+ */
+function addReconstructedUtxosToSlices(reconstructedUtxos, dispatch) {
+  // Group UTXOs by their slice path
+  const utxosBySlice = {};
+  reconstructedUtxos.forEach((utxo) => {
+    const sliceKey = utxo.bip32Path;
+    if (!utxosBySlice[sliceKey]) {
+      utxosBySlice[sliceKey] = [];
+    }
+    utxosBySlice[sliceKey].push({
+      txid: utxo.txid,
+      index: utxo.index,
+      amountSats: utxo.amountSats,
+      amount: utxo.amount,
+      confirmed: utxo.confirmed,
+      time: utxo.time,
+      _isReconstructed: true, // Flag to track these are artificial
+      _sourceTransaction: utxo._pendingTxid,
+    });
+  });
+
+  // Update each slice with the reconstructed UTXOs
+  Object.entries(utxosBySlice).forEach(([bip32Path, utxos]) => {
+    const sliceUpdate = {
+      bip32Path,
+      utxos,
+      _hasReconstructedUtxos: true, // Flag the slice as modified
+    };
+
+    // Determine if this is a change or deposit slice and dispatch accordingly
+    const isChangeSlice = reconstructedUtxos.find(
+      (u) => u.bip32Path === bip32Path,
+    )?.change;
+
+    if (isChangeSlice) {
+      dispatch(updateChangeSliceAction(sliceUpdate));
+    } else {
+      dispatch(updateDepositSliceAction(sliceUpdate));
+    }
+  });
+}
+
+/**
  * Gets pending transactions from the wallet and reconstructs UTXO details for RBF
  * This approach works around Bitcoin Core's listunspent limitations by using
  * pending transaction data to find UTXOs that are already spent in unconfirmed transactions.
@@ -419,8 +468,9 @@ async function getUtxosFromPendingTransactions(blockchainClient, state) {
               const originalTx = await blockchainClient.getTransaction(
                 input.txid,
               );
-
-              // Look at the specific output (vout) that was spent
+              const txHex = await blockchainClient.getTransactionHex(
+                input.txid,
+              ); // Look at the specific output (vout) that was spent
               const originalOutput = originalTx.vout?.[input.vout];
               if (!originalOutput) {
                 console.warn(
@@ -460,6 +510,7 @@ async function getUtxosFromPendingTransactions(blockchainClient, state) {
                 amountSats: bitcoinsToSatoshis(originalOutput.value.toString()),
                 amount: originalOutput.value.toString(),
                 confirmed: originalTx.status?.confirmed || false,
+                transactionHex: txHex,
                 // Add wallet-specific metadata needed for signing
                 multisig: matchingSlice.multisig,
                 bip32Path: matchingSlice.bip32Path,
@@ -505,7 +556,7 @@ async function getUtxosFromPendingTransactions(blockchainClient, state) {
  * return UTXOs that are already spent in pending transactions, even with include_unsafe=true.
  * Instead, we analyze pending transactions to find and reconstruct the UTXO details.
  */
-async function processInputsFromPSBT(psbt, state) {
+async function processInputsFromPSBT(psbt, state, dispatch) {
   const createInputIdentifier = (txid, index) => `${txid}:${index}`;
 
   const inputIdentifiers = new Set(
@@ -553,6 +604,8 @@ async function processInputsFromPSBT(psbt, state) {
       inputs.map((inp) => createInputIdentifier(inp.txid, inp.index)),
     );
 
+    const newlyFoundUtxos = [];
+
     // Match reconstructed UTXOs with the inputs we need
     reconstructedUtxos.forEach((utxo) => {
       const inputIdentifier = createInputIdentifier(
@@ -577,9 +630,13 @@ async function processInputsFromPSBT(psbt, state) {
         !foundInputIds.has(inputIdentifier)
       ) {
         inputs.push(utxo);
+        newlyFoundUtxos.push(utxo);
         foundInputIds.add(inputIdentifier);
       }
     });
+    if (newlyFoundUtxos.length > 0) {
+      addReconstructedUtxosToSlices(newlyFoundUtxos, dispatch);
+    }
   }
 
   return inputs;
@@ -634,7 +691,7 @@ export function importPSBT(psbtText) {
       dispatch(setUnsignedPSBT(psbt.toBase64()));
 
       // ==== PROCESS INPUTS ====
-      const inputs = await processInputsFromPSBT(psbt, state);
+      const inputs = await processInputsFromPSBT(psbt, state, dispatch);
 
       if (inputs.length === 0) {
         throw new Error("PSBT does not contain any UTXOs from this wallet.");
@@ -644,8 +701,47 @@ export function importPSBT(psbtText) {
           `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
         );
       }
+      // Add reconstructed UTXOs back to wallet slices as we'll need them
+      const reconstructedUtxos = inputs.filter(
+        (input) => input._source === "pending_transaction",
+      );
+
+      if (reconstructedUtxos.length > 0) {
+        reconstructedUtxos.forEach((utxo) => {
+          // Mark it as reconstructed so we can clean it up later
+          const reconstructedUtxo = {
+            ...utxo,
+            _rbfReconstructed: true,
+            _originallyMissing: true,
+            _reconstructedAt: Date.now(),
+          };
+
+          // Add back to the appropriate slice
+          if (utxo.change) {
+            dispatch(
+              updateChangeSliceAction({
+                bip32Path: utxo.bip32Path,
+                utxos: [reconstructedUtxo], // Add this UTXO back
+                _rbfReconstruction: true,
+              }),
+            );
+          } else {
+            dispatch(
+              updateDepositSliceAction({
+                bip32Path: utxo.bip32Path,
+                utxos: [reconstructedUtxo], // Add this UTXO back
+                _rbfReconstruction: true,
+              }),
+            );
+          }
+        });
+      }
 
       dispatch(setInputs(inputs));
+
+      // **EXTRACT TXIDS from processed inputs - much cleaner!**
+      const inputTxids = inputs.map((input) => input.txid);
+      dispatch({ type: "SET_INPUT_TXIDS", value: inputTxids });
 
       // ==== PROCESS INPUTS ====
       const { outputsTotalSats } = processOutputsFromPSBT(psbt, dispatch);
