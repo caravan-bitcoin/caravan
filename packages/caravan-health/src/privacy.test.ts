@@ -2,6 +2,12 @@ import { PrivacyMetrics } from "./privacy";
 import { determineSpendType, getSpendTypeScore } from "./spendType";
 import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 
+const ADDR1 = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"; // P2WSH
+const ADDR2 = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"; // P2PKH
+const ADDR3 = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"; // P2PKH
+const ADDR4 = "1LuckyR1fFHEsXYyx5QK4UFzv3PEAepPMK"; // P2PKH
+const ADDR5 = "1LuckyR1fFHEsXYyx5QK4UFzv3PEAepMMO"; // P2PKH
+
 const transactions: Transaction[] = [
   // Perfect transaction: 1 input, 1 output
   {
@@ -10,7 +16,7 @@ const transactions: Transaction[] = [
     vout: [
       {
         scriptPubkeyHex: "hex1",
-        scriptPubkeyAddress: "addr1",  // We'll reference this in UTXOs
+        scriptPubkeyAddress: ADDR3,  // We'll reference this in UTXOs
         value: 0.1,
       },
     ],
@@ -32,22 +38,22 @@ const transactions: Transaction[] = [
     vout: [
       {
         scriptPubkeyHex: "hex2",
-        scriptPubkeyAddress: "addr2",  // We'll use in UTXOs
+        scriptPubkeyAddress: ADDR2,  // We'll use in UTXOs
         value: 0.2,
       },
       {
         scriptPubkeyHex: "hex2",
-        scriptPubkeyAddress: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        scriptPubkeyAddress: ADDR1,
         value: 0.2,
       },
       {
         scriptPubkeyHex: "hex2",
-        scriptPubkeyAddress: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        scriptPubkeyAddress: ADDR1,
         value: 0.2,
       },
       {
         scriptPubkeyHex: "hex2",
-        scriptPubkeyAddress: "addr2",
+        scriptPubkeyAddress: ADDR2,
         value: 0.2,
       },
     ],
@@ -66,22 +72,22 @@ const transactions: Transaction[] = [
     vout: [
       {
         scriptPubkeyHex: "hex3",
-        scriptPubkeyAddress: "addr1",  // reuse
+        scriptPubkeyAddress: ADDR3,  // reuse
         value: 0.05,
       },
       {
         scriptPubkeyHex: "hex3",
-        scriptPubkeyAddress: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",  // reuse
+        scriptPubkeyAddress: ADDR1,  // reuse
         value: 0.05,
       },
       {
         scriptPubkeyHex: "hex3",
-        scriptPubkeyAddress: "addr4",  // new
+        scriptPubkeyAddress: ADDR4,  // new
         value: 0.05,
       },
       {
         scriptPubkeyHex: "hex3",
-        scriptPubkeyAddress: "addr5",  // new
+        scriptPubkeyAddress: ADDR5,  // new
         value: 0.05,
       },
     ],
@@ -95,15 +101,21 @@ const transactions: Transaction[] = [
 ];
 
 const utxos: AddressUtxos = {
-  addr1: [
+  [ADDR1]: [
+    {
+      txid: "txid2",
+      vout: 1,
+      value: 0.2,
+      status: { confirmed: true, block_time: 1100 },
+    },
     {
       txid: "txid3",
-      vout: 0,
+      vout: 1,
       value: 0.05,
       status: { confirmed: true, block_time: 1200 },
     },
   ],
-  addr2: [
+  [ADDR2]: [
     {
       txid: "txid2",
       vout: 3,
@@ -111,21 +123,15 @@ const utxos: AddressUtxos = {
       status: { confirmed: true, block_time: 1100 },
     },
   ],
-  bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh: [
-    {
-      txid: "txid2",
-      vout: 1,
-      value: 0.2,
-      status: { confirmed: true, block_time: 1100 },
-    },
+  [ADDR3]: [
     {
       txid: "txid3",
-      vout: 1,
+      vout: 0,
       value: 0.05,
       status: { confirmed: true, block_time: 1200 },
     },
   ],
-  addr4: [
+  [ADDR4]: [
     {
       txid: "txid3",
       vout: 2,
@@ -133,7 +139,7 @@ const utxos: AddressUtxos = {
       status: { confirmed: true, block_time: 1200 },
     },
   ],
-  addr5: [
+  [ADDR5]: [
     {
       txid: "txid3",
       vout: 3,
@@ -329,21 +335,26 @@ describe("Privacy metric scoring", () => {
   });
 
   describe("Address Reuse Factor", () => {
+    // using UTXO's for those addresses which are never used in transactions before
     it("Returns 0 when no addresses are reused", () => {
       const uniqueUtxos: AddressUtxos = {
-        "unique1": [{ txid: "txunique1", vout: 0, value: 0.1, status: { confirmed: true, block_time: 1000 } }],
-        "unique2": [{ txid: "txunique2", vout: 0, value: 0.2, status: { confirmed: true, block_time: 1000 } }],
+        "unique_Addr1": [{ txid: "txunique1", vout: 0, value: 0.1, status: { confirmed: true, block_time: 1000 } }],
+        "unique_Addr2": [{ txid: "txunique2", vout: 0, value: 0.2, status: { confirmed: true, block_time: 1000 } }],
       };
       const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
       expect(metricUnique.addressReuseFactor()).toBe(0);
     });
+
+    // When some UTXO's corresponds to addresses which are used more than once in previous transactions
     it("Calculates ARF for half used addresses", () => {
       const arf = privacyMetric.addressReuseFactor();
       expect(arf).toBeCloseTo(0.833);
     });
-    it("Returns 1 when only one address is fully used", () => {
+
+    // When all UTXO's corresponds to addresses which are used more than once in previous transactions
+    it("Returns 1 when all addresses are used more than once", () => {
       const uniqueUtxos: AddressUtxos = {
-        "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": utxos["bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"]
+        [ADDR1]: utxos[ADDR1]
       };
       const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
       expect(metricUnique.addressReuseFactor()).toBe(1);
@@ -352,6 +363,8 @@ describe("Privacy metric scoring", () => {
 
   describe("Address Type Factor", () => {
     it.todo("Test with different combination of address types and networks");
+
+    // When wallet type not matches with any of used addresses
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
         "P2SH",
@@ -359,6 +372,8 @@ describe("Privacy metric scoring", () => {
       );
       expect(addressTypeFactor).toBe(1);
     });
+
+    // When some used address matches with wallet type (Here it is ADDR1)
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
         "P2WSH",
