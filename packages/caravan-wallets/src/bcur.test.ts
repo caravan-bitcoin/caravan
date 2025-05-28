@@ -1,16 +1,15 @@
 import { BCUREncoder, BCURDecoder } from "./bcur";
-
-import * as vendorEncodeUR from "./vendor/bcur/encodeUR";
 import * as vendorDecodeUR from "./vendor/bcur/decodeUR";
+import * as vendorEncodeUR from "./vendor/bcur/encodeUR";
 
 describe("BCUREncoder", () => {
   describe("parts", () => {
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
     it("it returns encoded UR parts", () => {
       const parts = ["a", "b"];
-      const encodeMock = jest
+      const encodeMock = vi
         .spyOn(vendorEncodeUR, "encodeUR")
         .mockReturnValue(parts);
       const encoder = new BCUREncoder("deadbeef", 250);
@@ -57,11 +56,11 @@ describe("BCURDecoder", () => {
 
   describe("receivePart", () => {
     beforeEach(() => {
-      decodeMock = jest.spyOn(vendorDecodeUR, "smartDecodeUR");
+      decodeMock = vi.spyOn(vendorDecodeUR, "smartDecodeUR");
     });
 
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     it("delegates to smartDecodeUR", () => {

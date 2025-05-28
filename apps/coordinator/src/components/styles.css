@@ -14,3 +14,13 @@
 .MuiMenu-list .MuiListItem-root {
   padding: 16px 40px;
 }
+
+.modern-link {
+  color: #00478e;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.modern-link:hover {
+  text-decoration: underline;
+}

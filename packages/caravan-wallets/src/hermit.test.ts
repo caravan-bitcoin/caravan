@@ -1,12 +1,8 @@
-/**
- * @jest-environment jsdom
- */
-
-import { PENDING, INFO } from "./interaction";
 import {
   HermitExportExtendedPublicKey,
   HermitSignMultisigTransaction,
 } from "./hermit";
+import { PENDING, INFO } from "./interaction";
 
 function itHasACommandMessage(interaction, command) {
   const message = interaction.messageFor({
