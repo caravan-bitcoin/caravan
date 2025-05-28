@@ -129,3 +129,20 @@ export function isChange(path) {
   if (indexes[0] === CHANGE_INDEX && indexes.length === 2) return true;
   return false;
 }
+
+/**
+ * Gets UTXOs for an address with unsafe UTXOs included (for RBF transactions)
+ * @param {string} address - Bitcoin address to get UTXOs for
+ * @param {Object} blockchainClient - Blockchain client instance
+ * @returns {Promise<{utxos: Array, usedUnsafe: boolean}>} UTXOs and flag indicating unsafe UTXOs were used
+ */
+export async function getSlicesForFeeBump(address, blockchainClient) {
+  try {
+    // unsafe UTXOs (for RBF)
+    const utxos = await blockchainClient.getAddressUtxos(address, true);
+    return { utxos, usedUnsafe: true };
+  } catch (unsafeError) {
+    console.error(`Failed to get any UTXOs for ${address}:`, unsafeError);
+    throw unsafeError;
+  }
+}
