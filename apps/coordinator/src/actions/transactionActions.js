@@ -5,6 +5,7 @@ import {
   satoshisToBitcoins,
   bitcoinsToSatoshis,
 } from "@caravan/bitcoin";
+import { estimateTransactionVsize } from "@caravan/fees";
 import {
   loadPsbt,
   extractSignaturesFromPSBT,
@@ -651,12 +652,29 @@ export function importPSBT(psbtText) {
 
       // Calculate and set fee
       state = getState(); //Now we get updated state after setting inputs
+      const { addressType, requiredSigners, totalSigners } = state.settings;
       const inputsTotalSats = BigNumber(
         state.spend.transaction.inputsTotalSats,
       );
       const feeSats = inputsTotalSats.minus(outputsTotalSats);
       const fee = satoshisToBitcoins(feeSats);
+      // Calculate transaction size to determine fee rate
+      // We use the same estimation logic that Caravan uses for fee calculation
+      const estimatedVSize = estimateTransactionVsize({
+        addressType,
+        numInputs: inputs.length,
+        numOutputs: psbt.txOutputs.length,
+        m: requiredSigners,
+        n: totalSigners,
+      });
+
+      // Calculate fee rate: fee (in satoshis) / transaction size (in vbytes)
+      const feeRateSatsPerVByte = feeSats.dividedBy(estimatedVSize);
+      const feeRate = feeRateSatsPerVByte.toFixed(2); // Round to 2 decimal places
+
+      // Set both fee and fee rate in the state
       dispatch(setFee(fee));
+      dispatch(setFeeRate(feeRate));
 
       // ==== Extract and import signatures ====
       try {
