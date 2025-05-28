@@ -223,6 +223,20 @@ export const getDepositableSlices = createSelector(getDepositSlices, (slices) =>
 );
 
 /**
+ * @description Returns a all slices of the wallet
+ */
+export const getAllSlices = createSelector(
+  [
+    (state) => state.wallet.deposits.nodes,
+    (state) => state.wallet.change.nodes,
+  ],
+  (depositNodes, changeNodes) => [
+    ...Object.values(depositNodes),
+    ...Object.values(changeNodes),
+  ],
+);
+
+/**
  * @description Returns a selector of the text needed to construct a wallet
  * details file.
  */
