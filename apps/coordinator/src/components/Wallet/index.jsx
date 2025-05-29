@@ -377,20 +377,20 @@ class CreateWallet extends React.Component {
 
     if (configuring)
       settings = (
-        <Grid item md={4}>
+        <Grid item xs={12} md={4}>
           <Box>
             <QuorumPicker />
           </Box>
-          <Box mt={2}>
+          <Box sx={{ mt: { xs: 1, md: 2 } }}>
             <AddressTypePicker />
           </Box>
-          <Box mt={2}>
+          <Box sx={{ mt: { xs: 1, md: 2 } }}>
             <NetworkPicker />
           </Box>
-          <Box mt={2}>
+          <Box sx={{ mt: { xs: 1, md: 2 } }}>
             <ClientPicker />
           </Box>
-          <Box mt={2}>
+          <Box sx={{ mt: { xs: 1, md: 2 } }}>
             <StartingAddressIndexPicker />
           </Box>
         </Grid>
@@ -470,9 +470,9 @@ class CreateWallet extends React.Component {
 
     return (
       <>
-        <Box mt={3}>
-          <Grid container spacing={3}>
-            <Grid item xs={10} md={6}>
+        <Box sx={{ mt: { xs: 2, md: 3 }, px: { xs: 1, sm: 0 } }}>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
+            <Grid item xs={12} sm={6} md={6}>
               <WalletInfoCard
                 editable={
                   !Object.keys(deposits.nodes).length ||
@@ -486,7 +486,7 @@ class CreateWallet extends React.Component {
                 style={{ fontSize: "inherit" }}
               />
             </Grid>
-            <Grid item xs={10} md={6}>
+            <Grid item xs={12} sm={6} md={6}>
               {(nodesLoaded || frozen) && (
                 <WalletActionsPanel
                   addresses={unknownAddresses}
@@ -510,20 +510,34 @@ class CreateWallet extends React.Component {
           <FormHelperText
             style={{ float: "right", padding: "11px", fontSize: "1.5em" }}
             error
+            sx={{
+              float: { xs: "none", md: "right" },
+              textAlign: { xs: "center", md: "right" },
+              p: { xs: 2, md: 1.5 },
+              fontSize: { xs: "1.2em", md: "1.5em" },
+              mt: { xs: 2, md: 0 },
+            }}
           >
             {walletLoadError}
           </FormHelperText>
         ) : (
           ""
         )}
-        <Box>
-          <Grid container spacing={3}>
+        <Box sx={{ px: { xs: 1, sm: 0 } }}>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
             <Grid item xs={12}>
-              <Grid container style={{ marginTop: "10px" }} spacing={3}>
-                <Grid item>{this.renderWalletImporter()}</Grid>
+              <Grid
+                container
+                style={{ marginTop: "10px" }}
+                spacing={{ xs: 2, md: 3 }}
+                sx={{ mt: { xs: 1, md: "10px" } }}
+              >
+                <Grid item xs={12} sm="auto">
+                  {this.renderWalletImporter()}
+                </Grid>
               </Grid>
             </Grid>
-            <Grid item md={configuring ? 8 : 12}>
+            <Grid item xs={12} md={configuring ? 8 : 12}>
               <ExtendedPublicKeyImporters
                 totalSigners={this.props.totalSigners}
                 configuring={this.props.configuring}
