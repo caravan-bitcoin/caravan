@@ -27,7 +27,7 @@ const Setup = () => {
       minHeight="100vh"
       mt={10}
       sx={{
-        mt: { xs: 4, sm: 6, md: 10 },
+        mt: { xs: 10, sm: 10, md: 10 },
         px: { xs: 2, sm: 3 },
       }}
     >
