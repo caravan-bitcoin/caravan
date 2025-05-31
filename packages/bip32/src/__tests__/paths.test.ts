@@ -6,7 +6,6 @@ import {
   getUnmaskedPath,
   secureSecretPath,
 } from "../paths";
-
 import { KeyOrigin } from "../types";
 
 vi.mock("../utils", () => ({
