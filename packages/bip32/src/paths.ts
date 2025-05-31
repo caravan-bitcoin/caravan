@@ -9,7 +9,7 @@ import { KeyOrigin } from "./types";
 import { secureRandomInt } from "./utils";
 
 /**
- * @description Returns a random BIP32 path of a given depth. The
+ * Returns a random BIP32 path of a given depth. The
  * randomness is generated using the Node.js crypto module.
  * Can be used for blinding an xpub.
  * Based on buidl's equivalent function:
