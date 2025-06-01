@@ -2,7 +2,7 @@ import os
 import re
 import sys
 
-def has_code_coverage_disable(file_path):
+def has_code_coverage_disabled(file_path):
     pattern = re.compile(r"/\*\s*istanbul\s+ignore.*?\*/|//\s*istanbul\s+ignore", re.IGNORECASE)
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -20,7 +20,7 @@ def check_files(dirs):
             for file in files:
                 if file.endswith((".ts", ".tsx")) and not file.endswith((".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")):
                     file_path = os.path.join(root, file)
-                    if has_code_coverage_disable(file_path):
+                    if has_code_coverage_disabled(file_path):
                         print(f"Coverage disable found in {file_path}")
                         found = True
     return found

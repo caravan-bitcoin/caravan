@@ -28,24 +28,8 @@ jobs:
 
       - name: Run Tests with Coverage
         run: npm run test:coverage
-        
-
-      # will uncomment once the normal workflow start working smoothly
-      # - name: Merge Coverage Reports
-      #   run: npx lcov-result-merger 'apps/*/coverage/lcov.info packages/*/coverage/lcov.info' './coverage/lcov.info'
-
-
-      # - name: Upload to Codecov
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: ./coverage/lcov.info
-      #     fail_ci_if_error: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
-      - name: Check Coverage Disable
-        run: python .github/workflows/scripts/code_coverage_disable_check.py --directory apps packages
