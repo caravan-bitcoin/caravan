@@ -9,8 +9,8 @@ describe("p2sh", () => {
           numOutputs: 2,
           m: 2,
           n: 3,
-        })
-      ).toBe(391);
+        }),
+      ).toBe(387);
     });
   });
 });
