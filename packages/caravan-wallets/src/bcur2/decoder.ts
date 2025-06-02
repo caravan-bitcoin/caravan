@@ -35,13 +35,13 @@ export class BCURDecoder2 {
 
   private progress: string = "Idle";
 
-  private network: BitcoinNetwork = Network.MAINNET;
+  private network: BitcoinNetwork = Network.TESTNET;
 
   /**
    * Creates a new BCUR2 decoder instance
    * @param {BitcoinNetwork} network - The Bitcoin network to use (mainnet or testnet)
    */
-  constructor(network: BitcoinNetwork = Network.MAINNET) {
+  constructor(network: BitcoinNetwork = Network.TESTNET) {
     this.decoder = new URRegistryDecoder();
     this.network = network;
   }
@@ -96,7 +96,7 @@ export class BCURDecoder2 {
         });
 
         const xpub = xpubObj.toBase58();
-
+        console.log("Constructed xpub:", xpub);
         if (!xpub) throw new Error("Failed to construct xpub from HDKey");
         return { type, xpub, xfp, path };
       }
