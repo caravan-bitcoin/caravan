@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+### Patch Changes
+
+- [#296](https://github.com/caravan-bitcoin/caravan/pull/296) [`ee24a45`](https://github.com/caravan-bitcoin/caravan/commit/ee24a453d20b37fc0fed1455dcde41ec2ddd6e09) Thanks [@chadchapnick](https://github.com/chadchapnick)! - adjust P2SH output vbyte estimation to account for fixed length script hash
+
 ## 0.3.2
 
 ### Patch Changes
