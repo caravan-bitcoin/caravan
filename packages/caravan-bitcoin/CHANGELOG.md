@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+### Patch Changes
+
+- [#300](https://github.com/caravan-bitcoin/caravan/pull/300) [`73754e4`](https://github.com/caravan-bitcoin/caravan/commit/73754e431ca7286de7d1c78305b5ebd9070a15d9) Thanks [@chadchapnick](https://github.com/chadchapnick)! - bump bignumber.js to 9.3.0
+
 ## 0.3.3
 
 ### Patch Changes
