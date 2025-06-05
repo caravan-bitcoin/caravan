@@ -12,6 +12,7 @@ import {
   INDIRECT_KEYSTORES,
   GetMetadata,
   KEYSTORE_TYPES,
+  BCUR2,
 } from "@caravan/wallets";
 
 import {
@@ -95,6 +96,7 @@ const KeystorePickerBase = ({
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD}>Coldcard</MenuItem>
               <MenuItem value={HERMIT}>Hermit</MenuItem>
+              <MenuItem value={BCUR2}>BCUR2</MenuItem>
             </TextField>
           </FormControl>
         </Grid>
