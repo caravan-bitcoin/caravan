@@ -2,116 +2,149 @@ import { PrivacyMetrics } from "./privacy";
 import { determineSpendType, getSpendTypeScore } from "./spendType";
 import { AddressUtxos, SpendType, Transaction, Network } from "./types";
 
+const ADDR1 = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"; // P2WSH
+const ADDR2 = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"; // P2PKH
+const ADDR3 = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"; // P2PKH
+const ADDR4 = "1LuckyR1fFHEsXYyx5QK4UFzv3PEAepPMK"; // P2PKH
+const ADDR5 = "1LuckyR1fFHEsXYyx5QK4UFzv3PEAepMMO"; // P2PKH
+
 const transactions: Transaction[] = [
-  // transactions[0] is a perfect spend transaction
+  // Perfect transaction: 1 input, 1 output
   {
     txid: "txid1",
-    vin: [
-      {
-        prevTxId: "prevTxId1",
-        vout: 0,
-        sequence: 0,
-      },
-    ],
+    vin: [{ prevTxId: "coinbase", vout: 0, sequence: 0 }],
     vout: [
       {
-        scriptPubkeyHex: "scriptPubkeyHex1",
-        scriptPubkeyAddress: "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+        scriptPubkeyHex: "hex1",
+        scriptPubkeyAddress: ADDR3,  // We'll reference this in UTXOs
         value: 0.1,
       },
     ],
-    size: 0,
-    weight: 0,
-    fee: 0,
-    isSend: true,
-    amount: 0,
-    block_time: 0,
+    size: 200,
+    weight: 800,
+    fee: 0.0001,
+    isSend: false,
+    amount: 0.1,
+    block_time: 1000,
   },
-  // transactions[1] is a coin join transaction
+
+  // CoinJoin style tx: 2 inputs, 4 outputs (2 different addresses repeated)
   {
     txid: "txid2",
     vin: [
-      {
-        prevTxId: "prevTxId2",
-        vout: 0,
-        sequence: 0,
-      },
-      {
-        prevTxId: "prevTxId2",
-        vout: 0,
-        sequence: 0,
-      },
+      { prevTxId: "txid1", vout: 0, sequence: 0 },  // spends txid1's output
+      { prevTxId: "coinbase", vout: 1, sequence: 0 },
     ],
     vout: [
       {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
+        scriptPubkeyHex: "hex2",
+        scriptPubkeyAddress: ADDR2,  // We'll use in UTXOs
         value: 0.2,
       },
       {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress:
-          "bc1qng72v5ceptk07htel0wcv6k27fkg6tmmd8887jr2l2yz5a5lnawqqeceya",
+        scriptPubkeyHex: "hex2",
+        scriptPubkeyAddress: ADDR1,
         value: 0.2,
       },
       {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress:
-          "bc1qng72v5ceptk07htel0wcv6k27fkg6tmmd8887jr2l2yz5a5lnawqqeceya",
+        scriptPubkeyHex: "hex2",
+        scriptPubkeyAddress: ADDR1,
         value: 0.2,
       },
       {
-        scriptPubkeyHex: "scriptPubkeyHex2",
-        scriptPubkeyAddress: "scriptPubkeyAddress2",
+        scriptPubkeyHex: "hex2",
+        scriptPubkeyAddress: ADDR2,
         value: 0.2,
       },
     ],
-    size: 0,
-    weight: 0,
-    fee: 0,
+    size: 300,
+    weight: 1200,
+    fee: 0.0005,
     isSend: true,
-    amount: 0,
-    block_time: 0,
+    amount: 0.8,
+    block_time: 1100,
+  },
+
+  // UTXO Fragmentation: 1 input, 4 outputs
+  {
+    txid: "txid3",
+    vin: [{ prevTxId: "txid2", vout: 0, sequence: 0 }],  // spends addr2
+    vout: [
+      {
+        scriptPubkeyHex: "hex3",
+        scriptPubkeyAddress: ADDR3,  // reuse
+        value: 0.05,
+      },
+      {
+        scriptPubkeyHex: "hex3",
+        scriptPubkeyAddress: ADDR1,  // reuse
+        value: 0.05,
+      },
+      {
+        scriptPubkeyHex: "hex3",
+        scriptPubkeyAddress: ADDR4,  // new
+        value: 0.05,
+      },
+      {
+        scriptPubkeyHex: "hex3",
+        scriptPubkeyAddress: ADDR5,  // new
+        value: 0.05,
+      },
+    ],
+    size: 400,
+    weight: 1600,
+    fee: 0.0002,
+    isSend: true,
+    amount: 0.2,
+    block_time: 1200,
   },
 ];
 
 const utxos: AddressUtxos = {
-  address1: [
+  [ADDR1]: [
     {
-      txid: "tx1",
-      vout: 0,
-      value: 0.1,
-      status: {
-        confirmed: true,
-        block_time: 1234,
-      },
-    },
-    {
-      txid: "tx2",
-      vout: 0,
+      txid: "txid2",
+      vout: 1,
       value: 0.2,
-      status: {
-        confirmed: true,
-        block_time: 1234,
-      },
+      status: { confirmed: true, block_time: 1100 },
     },
     {
-      txid: "tx3",
-      vout: 0,
-      value: 0.3,
-      status: {
-        confirmed: true,
-        block_time: 1234,
-      },
+      txid: "txid3",
+      vout: 1,
+      value: 0.05,
+      status: { confirmed: true, block_time: 1200 },
     },
+  ],
+  [ADDR2]: [
     {
-      txid: "tx4",
+      txid: "txid2",
+      vout: 3,
+      value: 0.2,
+      status: { confirmed: true, block_time: 1100 },
+    },
+  ],
+  [ADDR3]: [
+    {
+      txid: "txid3",
       vout: 0,
-      value: 0.4,
-      status: {
-        confirmed: true,
-        block_time: 1234,
-      },
+      value: 0.05,
+      status: { confirmed: true, block_time: 1200 },
+    },
+  ],
+  [ADDR4]: [
+    {
+      txid: "txid3",
+      vout: 2,
+      value: 0.05,
+      status: { confirmed: true, block_time: 1200 },
+    },
+  ],
+  [ADDR5]: [
+    {
+      txid: "txid3",
+      vout: 3,
+      value: 0.05,
+      status: { confirmed: true, block_time: 1200 },
     },
   ],
 };
@@ -282,33 +315,56 @@ describe("Privacy metric scoring", () => {
 
   describe("Transaction Topology Score", () => {
     it("Calculates the transaction topology score based on the spend type", () => {
+      // not a self payment
       const score: number = privacyMetric.getTopologyScore(transactions[0]);
-      expect(score).toBe(0.75);
+      expect(score).toBe(0.5);
 
       const score2: number = privacyMetric.getTopologyScore(transactions[1]);
       expect(score2).toBeCloseTo(0.416);
+
+      const score3: number = privacyMetric.getTopologyScore(transactions[2]);
+      expect(score3).toBeCloseTo(0.42);
     });
   });
 
   describe("Mean Topology Score", () => {
     it("Calculates the mean topology score for all transactions done by a wallet", () => {
       const meanScore: number = privacyMetric.getMeanTopologyScore();
-      expect(meanScore).toBeCloseTo(0.583);
+      expect(meanScore).toBeCloseTo(0.445);
     });
   });
 
   describe("Address Reuse Factor", () => {
-    it.todo(
-      "Make multiple transactions and UTXO objects to test the address reuse factor for half used and half reused addresses.",
-    );
-    it("Calculates the amount being held by reused addresses with respect to the total amount", () => {
-      const addressReuseFactor: number = privacyMetric.addressReuseFactor();
-      expect(addressReuseFactor).toBe(0);
+    // using UTXO's for those addresses which are never used in transactions before
+    it("Returns 0 when no addresses are reused", () => {
+      const uniqueUtxos: AddressUtxos = {
+        "unique_Addr1": [{ txid: "txunique1", vout: 0, value: 0.1, status: { confirmed: true, block_time: 1000 } }],
+        "unique_Addr2": [{ txid: "txunique2", vout: 0, value: 0.2, status: { confirmed: true, block_time: 1000 } }],
+      };
+      const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
+      expect(metricUnique.addressReuseFactor()).toBe(0);
+    });
+
+    // When some UTXO's corresponds to addresses which are used more than once in previous transactions
+    it("Calculates ARF for half used addresses", () => {
+      const arf = privacyMetric.addressReuseFactor();
+      expect(arf).toBeCloseTo(0.833);
+    });
+
+    // When all UTXO's corresponds to addresses which are used more than once in previous transactions
+    it("Returns 1 when all addresses are used more than once", () => {
+      const uniqueUtxos: AddressUtxos = {
+        [ADDR1]: utxos[ADDR1]
+      };
+      const metricUnique = new PrivacyMetrics(transactions, uniqueUtxos);
+      expect(metricUnique.addressReuseFactor()).toBe(1);
     });
   });
 
   describe("Address Type Factor", () => {
     it.todo("Test with different combination of address types and networks");
+
+    // When wallet type not matches with any of used addresses
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
         "P2SH",
@@ -316,6 +372,8 @@ describe("Privacy metric scoring", () => {
       );
       expect(addressTypeFactor).toBe(1);
     });
+
+    // When some used address matches with wallet type (Here it is ADDR1)
     it("Calculates the the address type distribution of the wallet transactions", () => {
       const addressTypeFactor: number = privacyMetric.addressTypeFactor(
         "P2WSH",
@@ -328,7 +386,7 @@ describe("Privacy metric scoring", () => {
   describe("UTXO Spread Factor", () => {
     it("Calculates the standard deviation of UTXO values which helps in assessing the dispersion of UTXO values", () => {
       const utxoSpreadFactor: number = privacyMetric.utxoSpreadFactor();
-      expect(utxoSpreadFactor).toBeCloseTo(0.1);
+      expect(utxoSpreadFactor).toBeCloseTo(0.07);
     });
   });
 
@@ -336,7 +394,7 @@ describe("Privacy metric scoring", () => {
     it("Combines UTXO Spread Factor and UTXO Mass Factor", () => {
       const utxoValueDispersionFactor: number =
         privacyMetric.utxoValueDispersionFactor();
-      expect(utxoValueDispersionFactor).toBeCloseTo(0.015);
+      expect(utxoValueDispersionFactor).toBeCloseTo(-0.03);
     });
   });
 
