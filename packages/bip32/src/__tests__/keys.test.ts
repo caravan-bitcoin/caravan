@@ -1,4 +1,4 @@
-import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
+import { convertExtendedPublicKey, ExtendedPublicKey, Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 import { Mock } from "vitest";
 
@@ -35,6 +35,89 @@ describe("getMaskedKeyOrigin", () => {
       rootFingerprint: "86bd941f",
     });
   });
+
+  it("should handle an xpub with depth 1 on testnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth1Path = "m/45'";
+    const depth1Node = nodes[depth1Path];
+    if (!depth1Node) throw new Error("Depth 1 node not found in fixtures");
+    const parentFingerprint = ExtendedPublicKey.fromBase58(depth1Node.tpub).parentFingerprint?.toString(16);
+    const masked = getMaskedKeyOrigin(depth1Node.tpub);
+    expect(masked).toEqual({
+      xpub: depth1Node.tpub,
+      bip32Path: "m/0", 
+      rootFingerprint: parentFingerprint,
+    });
+  });
+  it("should handle an xpub with depth 1 on mainnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth1Path = "m/45'";
+    const depth1Node = nodes[depth1Path];
+    if (!depth1Node) throw new Error("Depth 1 node not found in fixtures");
+    const parentFingerprint = ExtendedPublicKey.fromBase58(depth1Node.xpub).parentFingerprint?.toString(16);
+    const masked = getMaskedKeyOrigin(depth1Node.xpub);
+    expect(masked).toEqual({
+      xpub: depth1Node.xpub,
+      bip32Path: "m/0", 
+      rootFingerprint: parentFingerprint,
+    });
+  });
+
+  it("should handle an xpub with depth 2 on testnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth2Path = "m/45'/0";
+    const depth2Node = nodes[depth2Path];
+    if(!depth2Node) throw new Error("Depth 2 node not found in fixtures");
+    const masked = getMaskedKeyOrigin(depth2Node.tpub)
+    const parentFingerprint = "8b7af5fd";
+    expect(masked).toEqual({
+      xpub: depth2Node.tpub,
+      bip32Path: "m/0/0",
+      rootFingerprint: parentFingerprint
+    })  
+  })
+  it("should handle an xpub with depth 2 on mainnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth2Path = "m/45'/0";
+    const depth2Node = nodes[depth2Path];
+
+    if(!depth2Node) throw new Error("Depth 2 node not found in fixtures");
+    const xpub = convertExtendedPublicKey(depth2Node.tpub,"xpub");
+    const masked_xpub = getMaskedKeyOrigin(xpub);
+    const parentFingerprint = "8b7af5fd";
+    expect(masked_xpub).toEqual({
+      xpub: xpub,
+      bip32Path: "m/0/0",
+      rootFingerprint: parentFingerprint
+    })  
+  })
+  it("should handle an xpub with depth 3 on testnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth3path = "m/45'/0'/0'";
+    const depth3node = nodes[depth3path];
+    const masked = getMaskedKeyOrigin(depth3node.tpub)
+    expect(masked).toEqual({
+      xpub: depth3node.tpub,
+      bip32Path: "m/0/0/0",
+      rootFingerprint: depth3node.parentFingerprint.toString(16)
+    })
+  })
+  it("should handle an xpub with depth 3 on mainnet", () => {
+    const nodes = TEST_FIXTURES.keys.open_source.nodes;
+    const depth3path = "m/45'/0'/0'";
+    const depth3node = nodes[depth3path];
+    const masked = getMaskedKeyOrigin(depth3node.xpub)
+    expect(masked).toEqual({
+      xpub: depth3node.xpub,
+      bip32Path: "m/0/0/0",
+      rootFingerprint: depth3node.parentFingerprint.toString(16)
+    })
+  })
+
+  it("should throw an error for an invalid xpub", () => {
+    const invalidXpub = "invalid-xpub-str";
+    expect(() => getMaskedKeyOrigin(invalidXpub)).toThrow();
+  })
 });
 
 describe("isValidChildPubKey", () => {
@@ -123,15 +206,29 @@ describe("getRandomChildXpub", () => {
     const keyOrigin = {
       xpub: parent.xpub,
       bip32Path: parentPath,
-      rootFingerprint: parent.fingerprint,
+      rootFingerprint: parent.rootFingerprint,
     };
     const actual = await getRandomChildXpub(keyOrigin, depth);
     expect(actual).toEqual({
       xpub: child.xpub,
       bip32Path: childPath,
-      rootFingerprint: child.fingerprint,
+      rootFingerprint: child.rootFingerprint,
     });
     expect(mockPaths.secureSecretPath).toHaveBeenCalledWith(depth);
+  });
+  it("should handle mixed hardened/non-hardened paths", async () => {
+    const mixedOrigin: KeyOrigin = {
+      xpub: parent.xpub,
+      bip32Path: "m/44'/0/0",
+      rootFingerprint: parent.rootFingerprint,
+    };
+    (mockPaths.secureSecretPath as Mock).mockReturnValue("m/0/0");
+    const result = await getRandomChildXpub(mixedOrigin, 2);
+    expect(result).toEqual({
+      bip32Path: "m/44'/0/0/0/0",
+      xpub: "xpub6FjSpitFpSJB9BpSVwp3eJzhpaQFLbLefD1f3qaGRmok2Z2FDeSNsy5CL9TLwM3HpcV2kAyTNf2W1uUXs1jbeXGWjdWnsaqnUQ9PyWAYVhQ",
+      rootFingerprint: parent.rootFingerprint
+    })
   });
 });
 
