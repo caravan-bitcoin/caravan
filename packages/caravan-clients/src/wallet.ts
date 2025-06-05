@@ -146,11 +146,22 @@ export interface ListUnspentResponse {
 }
 /**
  * Fetch unspent outputs for a single or set of addresses
+ *
+ * This function queries Bitcoin Core's listunspent RPC method to get UTXOs for specified addresses.
+ * By default, Bitcoin Core excludes "unsafe" UTXOs (those already spent in pending transactions),
+ * but for RBF (Replace-By-Fee) transactions, we need access to these UTXOs to create replacement transactions.
+ *
  * @param {Object} options - what is needed to communicate with the RPC
  * @param {string} options.url - where to connect
  * @param {AxiosBasicCredentials} options.auth - username and password
  * @param {string} options.address - The address from which to obtain the information
- * @returns {UTXO} object for signing transaction inputs
+ * @param {string} options.walletName - Name of the wallet to query
+ * @param {string} [options.address] - Single address to get UTXOs for
+ * @param {string[]} [options.addresses] - Array of addresses to get UTXOs for (takes precedence over address)
+ * @param {boolean} [options.includeUnsafe=false] - Whether to include "unsafe" UTXOs that are already spent in pending transactions
+ *
+ * @returns {Promise<UTXO[]>} Array of UTXO objects suitable for signing transaction inputs
+ *
  */
 export async function bitcoindListUnspent({
   url,
@@ -158,9 +169,11 @@ export async function bitcoindListUnspent({
   walletName,
   address,
   addresses,
+  includeUnsafe = false,
 }: BaseBitcoindParams & {
   address?: string;
   addresses?: string[];
+  includeUnsafe?: boolean;
 }): Promise<
   {
     txid: string;
@@ -174,6 +187,23 @@ export async function bitcoindListUnspent({
 > {
   try {
     const addressParam = addresses || [address];
+
+    // include_unsafe parameter is crucial for RBF (Replace-By-Fee) functionality:
+    //
+    // When include_unsafe=false (default):
+    // - Only returns UTXOs that are "safe to spend"
+    // - Excludes UTXOs already spent in pending/unconfirmed transactions
+    // - This is what you want for normal transaction creation
+    //
+    // When include_unsafe=true:
+    // - Returns ALL UTXOs including those marked as "unsafe"
+    // - Includes UTXOs that are already spent in pending transactions
+    // - This is REQUIRED for RBF because we need to reuse the same UTXOs
+    //   from the original transaction to create a replacement transaction
+    //
+    // Without include_unsafe=true, RBF transactions would fail because
+    // the original UTXOs wouldn't be visible via listunspent
+
     //@ts-expect-error Will Fix this
     const resp: {
       result: ListUnspentResponse[];
@@ -182,7 +212,12 @@ export async function bitcoindListUnspent({
       auth,
       walletName,
       method: "listunspent",
-      params: { minconf: 0, maxconf: 9999999, addresses: addressParam },
+      params: {
+        minconf: 0,
+        maxconf: 9999999,
+        addresses: addressParam,
+        include_unsafe: includeUnsafe, // Key parameter for Fee-Bump support
+      },
     });
     const promises: Promise<any>[] = [];
 
