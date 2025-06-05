@@ -1,6 +1,11 @@
 name: Test
 
-on: [push, pull_request]
+on: 
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: 
 
 jobs:
   ci:
@@ -8,7 +13,6 @@ jobs:
     strategy:
       matrix:
         node-version: ["20.x"]
-    # To use Turborepo Remote Caching, set the following environment variables for the job.
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -26,6 +30,16 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Run CI Tasks
         run: |
           npx turbo run ci
+        env:
+          NODE_ENV: test
+
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
