@@ -134,7 +134,9 @@ describe("BlockchainClient", () => {
       type: ClientType.MEMPOOL,
       network: Network.TESTNET,
     });
-    expect(mempool.host).toEqual("https://unchained.mempool.space/testnet/api");
+    expect(mempool.host).toEqual(
+      "https://unchained.mempool.space/testnet4/api",
+    );
   });
 
   it("should set the signet host for a public client", () => {

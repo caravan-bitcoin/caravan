@@ -261,6 +261,9 @@ export class BlockchainClient extends ClientBase {
     if (type !== ClientType.PRIVATE && network !== Network.MAINNET) {
       host += `/${network}`;
     }
+    if (type === ClientType.MEMPOOL && network === Network.TESTNET) {
+      host += "4";
+    }
     if (type !== ClientType.PRIVATE) {
       host += "/api";
     }
