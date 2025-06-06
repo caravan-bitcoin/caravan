@@ -662,6 +662,25 @@ export class BtcTransactionTemplate {
     if (input.sequence !== undefined) {
       inputData.sequence = input.sequence;
     }
+
+    // Add redeem script if available (for P2SH inputs)
+    if (input.redeemScript) {
+      inputData.redeemScript = input.redeemScript;
+    }
+
+    // Add witness script if available (for P2WSH and P2SH-P2WSH inputs)
+    if (input.witnessScript) {
+      inputData.witnessScript = input.witnessScript;
+    }
+
+    // Add BIP32 derivation information if available
+    if (input.bip32Derivations && input.bip32Derivations.length > 0) {
+      inputData.bip32Derivation = input.bip32Derivations.map((derivation) => ({
+        pubkey: Buffer.from(derivation.pubkey),
+        masterFingerprint: Buffer.from(derivation.masterFingerprint),
+        path: derivation.path,
+      }));
+    }
     try {
       psbt.addInput(inputData);
     } catch (error) {
