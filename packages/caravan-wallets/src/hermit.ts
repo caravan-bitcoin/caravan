@@ -91,7 +91,7 @@ export class HermitInteraction extends IndirectKeystoreInteraction {
 
 // FIXME -- move all this descriptor regex and extraction stuff to @caravan/bitcoin
 const DESCRIPTOR_REGEXP = new RegExp(
-  "^\\[([a-fA-F0-9]{8})((?:/[0-9]+'?)+)\\]([a-km-zA-NP-Z1-9]+)$"
+  "^\\[([a-fA-F0-9]{8})((?:/[0-9]+'?)+)\\]([a-km-zA-NP-Z1-9]+)$",
 );
 
 export class HermitExportExtendedPublicKey extends HermitInteraction {
@@ -109,7 +109,7 @@ export class HermitExportExtendedPublicKey extends HermitInteraction {
         instructions:
           "Run the following Hermit command, replacing the BIP32 path if you need to:",
         command: `display-xpub ${this.bip32Path}`,
-      })
+      }),
     );
     return messages;
   }
@@ -181,7 +181,7 @@ export class HermitSignMultisigTransaction extends HermitInteraction {
         instructions:
           "Run the following Hermit command to scan this signature request:",
         command: "sign",
-      })
+      }),
     );
 
     if (!this.psbt) {

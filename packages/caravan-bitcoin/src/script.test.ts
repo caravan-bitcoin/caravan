@@ -8,7 +8,7 @@ describe("scripts", () => {
         if ("multisig" in test) {
           expect(scriptToOps(test.multisig)).toEqual(test.scriptOps);
           expect(scriptToOps(test.multisigScript)).toEqual(
-            test.multisigScriptOps
+            test.multisigScriptOps,
           );
         } else {
           throw Error("does not contain a multisig");
@@ -23,7 +23,7 @@ describe("scripts", () => {
         if ("multisig" in test) {
           expect(scriptToHex(test.multisig)).toEqual(test.scriptHex);
           expect(scriptToHex(test.multisigScript)).toEqual(
-            test.multisigScriptHex
+            test.multisigScriptHex,
           );
         } else {
           throw Error("does not contain a multisig");

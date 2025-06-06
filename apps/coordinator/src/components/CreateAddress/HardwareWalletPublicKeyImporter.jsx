@@ -6,6 +6,7 @@ import {
   ACTIVE,
   ERROR,
   ExportPublicKey,
+	JADE,
   BITBOX,
   TREZOR,
   LEDGER,
@@ -173,7 +174,7 @@ const HardwareWalletPublicKeyImporter = ({
 
 HardwareWalletPublicKeyImporter.propTypes = {
   network: PropTypes.string.isRequired,
-  method: PropTypes.oneOf([BITBOX, LEDGER, TREZOR]).isRequired,
+  method: PropTypes.oneOf([JADE, BITBOX, LEDGER, TREZOR]).isRequired,
   defaultBIP32Path: PropTypes.string.isRequired,
   validatePublicKey: PropTypes.func.isRequired,
   enableChangeMethod: PropTypes.func.isRequired,

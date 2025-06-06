@@ -335,13 +335,11 @@ verify :: Buffer -> Buffer -> Number [-> Bool] -> Maybe Buffer
 
 Returns the ECDSA public key from a signature if it can be recovered, `null` otherwise.
 
-
 ##### Throws:
 
 - `Expected Signature` if `signature` has any (r, s) values not in range `(0...order - 1]`
-- `Bad Recovery Id` if `recid & 2 !== 0`  and `signature` has any r value not in range `(0...P - N - 1]`
+- `Bad Recovery Id` if `recid & 2 !== 0` and `signature` has any r value not in range `(0...P - N - 1]`
 - `Expected Hash` if `h` is not 256-bit
-
 
 ### verifySchnorr (h, Q, signature)
 

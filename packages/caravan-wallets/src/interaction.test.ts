@@ -69,7 +69,7 @@ describe("KeystoreInteraction", () => {
 
     it("matches all messages when passed unknown options", () => {
       expect(
-        interaction.messagesFor((<unknown>{ ding: "dong" }) as any).length
+        interaction.messagesFor((<unknown>{ ding: "dong" }) as any).length,
       ).toEqual(2);
     });
 
@@ -80,7 +80,7 @@ describe("KeystoreInteraction", () => {
 
       it("returns an empty array if there are no matches", () => {
         expect(interaction.messagesFor({ state: UNSUPPORTED }).length).toEqual(
-          0
+          0,
         );
       });
     });
@@ -155,7 +155,7 @@ describe("KeystoreInteraction", () => {
           interaction.messagesFor({
             state: PENDING,
             level: WARNING,
-          }).length
+          }).length,
         ).toEqual(1);
       });
 
@@ -164,7 +164,7 @@ describe("KeystoreInteraction", () => {
           interaction.messagesFor({
             state: PENDING,
             level: INFO,
-          }).length
+          }).length,
         ).toEqual(0);
       });
     });
@@ -187,7 +187,7 @@ describe("KeystoreInteraction", () => {
   describe("messageFor", () => {
     it("returns the first matching message", () => {
       expect(interaction.messageFor({ text: "message" })?.code).toEqual(
-        "alpha"
+        "alpha",
       );
     });
 
@@ -199,7 +199,7 @@ describe("KeystoreInteraction", () => {
   describe("messageTextFor", () => {
     it("returns the text of the first matching message", () => {
       expect(interaction.messageTextFor({ text: "message" })).toEqual(
-        "First message"
+        "First message",
       );
     });
 
@@ -228,7 +228,7 @@ describe("UnsupportedInteraction", () => {
         level: ERROR,
         code,
         text,
-      })
+      }),
     ).toBe(true);
   });
 });

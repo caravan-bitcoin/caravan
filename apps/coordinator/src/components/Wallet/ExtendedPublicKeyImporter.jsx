@@ -92,6 +92,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             onChange={this.handleMethodChange}
           >
             {addressType != P2SH && <MenuItem value={BITBOX}>BitBox</MenuItem>}
+            <MenuItem value={JADE}>Jade</MenuItem>
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={COLDCARD}>Coldcard</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
@@ -116,7 +117,7 @@ class ExtendedPublicKeyImporter extends React.Component {
     } = this.props;
     const { method } = extendedPublicKeyImporter;
 
-    if (method === BITBOX || method === TREZOR || method === LEDGER) {
+    if (method === JADE || method === BITBOX || method === TREZOR || method === LEDGER) {
       return (
         <DirectExtendedPublicKeyImporter
           extendedPublicKeyImporter={extendedPublicKeyImporter}

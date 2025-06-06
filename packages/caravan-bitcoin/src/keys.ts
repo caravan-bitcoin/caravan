@@ -54,7 +54,7 @@ export function validatePrefix(prefix: KeyPrefix): never | null {
 export function validateRootFingerprint(rootFingerprint: string): void {
   assert(
     typeof rootFingerprint === "string",
-    "Root fingerprint must be a string."
+    "Root fingerprint must be a string.",
   );
   assert(rootFingerprint.length === 8, `Expected hex value of length 8`);
   const rootXfpError = validateHex(rootFingerprint);
@@ -108,7 +108,7 @@ export class ExtendedPublicKey extends Struct {
           options.index !== undefined &&
           options.depth >= 0 &&
           options.index >= 0,
-        "Either an absolute bip32 path or index and depth are required to create ExtendedPublicKey"
+        "Either an absolute bip32 path or index and depth are required to create ExtendedPublicKey",
       );
       this.depth = options.depth;
       this.index = options.index;
@@ -121,7 +121,7 @@ export class ExtendedPublicKey extends Struct {
       : compressPublicKey(options.pubkey);
     assert(
       options.chaincode && options.chaincode.length === 64,
-      "xpub derivation requires 32-byte chaincode"
+      "xpub derivation requires 32-byte chaincode",
     );
     const chaincodeError = validateHex(options.chaincode);
     assert(!chaincodeError.length, chaincodeError);
@@ -133,7 +133,7 @@ export class ExtendedPublicKey extends Struct {
     if (options.network) {
       assert(
         [Network.MAINNET, Network.TESTNET].includes(options.network),
-        `Expected network to be one of ${Network.MAINNET} or ${Network.TESTNET}.`
+        `Expected network to be one of ${Network.MAINNET} or ${Network.TESTNET}.`,
       );
       this.network = options.network;
     } else {
@@ -176,7 +176,7 @@ export class ExtendedPublicKey extends Struct {
   setNetwork(network: BitcoinNetwork): void {
     assert(
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].includes(network),
-      `Expected network to be one of ${Network.MAINNET}, ${Network.TESTNET}, or ${Network.REGTEST}.`
+      `Expected network to be one of ${Network.MAINNET}, ${Network.TESTNET}, or ${Network.REGTEST}.`,
     );
     this.network = network;
     this.version =
@@ -276,7 +276,7 @@ export class ExtendedPublicKey extends Struct {
  */
 export function convertExtendedPublicKey(
   extendedPublicKey: string,
-  targetPrefix: KeyPrefix
+  targetPrefix: KeyPrefix,
 ): string | Record<string, unknown> {
   try {
     const sourcePrefix = extendedPublicKey.slice(0, 4);
@@ -308,7 +308,7 @@ export function convertExtendedPublicKey(
  */
 export function validateExtendedPublicKeyForNetwork(
   extendedPublicKey: string,
-  network: string
+  network: string,
 ): string {
   let requiredPrefix = "'xpub'";
   const requiresTpub =
@@ -346,7 +346,7 @@ export function validateExtendedPublicKeyForNetwork(
  */
 export function validateExtendedPublicKey(
   xpubString: string | null | undefined,
-  network: BitcoinNetwork
+  network: BitcoinNetwork,
 ): string {
   if (xpubString === null || xpubString === undefined || xpubString === "") {
     return "Extended public key cannot be blank.";
@@ -393,7 +393,7 @@ export function validateExtendedPublicKey(
  */
 export function validatePublicKey(
   pubkeyHex: string | null | undefined,
-  addressType?: string
+  addressType?: string,
 ): string {
   if (pubkeyHex === null || pubkeyHex === undefined || pubkeyHex === "") {
     return "Public key cannot be blank.";
@@ -440,7 +440,7 @@ export function compressPublicKey(publicKey: string): string {
   const prefixBuffer = Buffer.alloc(1);
   prefixBuffer[0] = prefix;
   return Buffer.concat([prefixBuffer, pubkeyBuffer.slice(1, 1 + 32)]).toString(
-    "hex"
+    "hex",
   );
 }
 
@@ -464,7 +464,7 @@ export function compressPublicKey(publicKey: string): string {
 export function deriveChildPublicKey(
   extendedPublicKey: string,
   bip32Path: string,
-  network: BitcoinNetwork
+  network: BitcoinNetwork,
 ): string {
   if (bip32Path.slice(0, 2) === "m/") {
     return deriveChildPublicKey(extendedPublicKey, bip32Path.slice(2), network);
@@ -494,13 +494,13 @@ export function deriveChildPublicKey(
 export function deriveChildExtendedPublicKey(
   extendedPublicKey: string,
   bip32Path: string,
-  network: BitcoinNetwork
+  network: BitcoinNetwork,
 ): string {
   if (bip32Path.slice(0, 2) === "m/") {
     return deriveChildExtendedPublicKey(
       extendedPublicKey,
       bip32Path.slice(2),
-      network
+      network,
     );
   }
   const node = bip32.fromBase58(extendedPublicKey, networkData(network));
@@ -573,7 +573,7 @@ export function fingerprintToFixedLengthHex(xfp: number): string {
  * Returns the root fingerprint of the extendedPublicKey
  */
 export function extendedPublicKeyRootFingerprint(
-  extendedPublicKey: Struct
+  extendedPublicKey: Struct,
 ): string | null {
   return extendedPublicKey.rootFingerprint
     ? extendedPublicKey.rootFingerprint
@@ -589,7 +589,7 @@ export function deriveExtendedPublicKey(
   pubkey: string,
   chaincode: string,
   parentFingerprint: number,
-  network: BitcoinNetwork = Network.MAINNET
+  network: BitcoinNetwork = Network.MAINNET,
 ): string {
   const xpub = new ExtendedPublicKey({
     path: bip32Path,
@@ -604,7 +604,7 @@ export function deriveExtendedPublicKey(
 
 export function getMaskedDerivation(
   { xpub, bip32Path }: { xpub: string; bip32Path: string },
-  toMask = "unknown"
+  toMask = "unknown",
 ): string {
   const unknownBip32 = bip32Path.toLowerCase().includes(toMask);
   const depth: number = ExtendedPublicKey.fromBase58(xpub).depth || 0;

@@ -14,7 +14,6 @@ import {
 } from "./transactions";
 import { toHexString } from "./utils";
 
-
 // FIXME: transactionbuilder is deprecating, but we know this. remove this after addressing.
 console.warn = vi.fn();
 

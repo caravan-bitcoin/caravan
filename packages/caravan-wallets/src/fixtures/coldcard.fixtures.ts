@@ -2,7 +2,6 @@ import { ROOT_FINGERPRINT } from "@caravan/bitcoin";
 
 import { COLDCARD_WALLET_CONFIG_VERSION } from "../coldcard";
 
-
 export const coldcardFixtures = {
   // These use the Open Source Wallet words from the Caravan Test Suite
   validColdcardXpubJSON: {

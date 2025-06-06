@@ -22,7 +22,7 @@ function itHasStandardMessages(interactionBuilder) {
         level: INFO,
         code: "device.setup",
         text: "plug in and unlock",
-      })
+      }),
     ).toBe(true);
   });
 
@@ -33,7 +33,7 @@ function itHasStandardMessages(interactionBuilder) {
         level: INFO,
         code: "device.active",
         text: "Communicating",
-      })
+      }),
     ).toBe(true);
   });
 }
@@ -48,7 +48,7 @@ function itHasDashboardMessages(interactionBuilder) {
         level: INFO,
         code: "ledger.app.dashboard",
         text: "NOT the Bitcoin app",
-      })
+      }),
     ).toBe(true);
     expect(
       interactionBuilder().hasMessagesFor({
@@ -56,7 +56,7 @@ function itHasDashboardMessages(interactionBuilder) {
         level: INFO,
         code: "ledger.app.dashboard",
         text: "NOT the Bitcoin app",
-      })
+      }),
     ).toBe(true);
   });
 }
@@ -71,7 +71,7 @@ function itHasAppMessages(interactionBuilder) {
         level: INFO,
         code: "ledger.app.bitcoin",
         text: "opened the Bitcoin app",
-      })
+      }),
     ).toBe(true);
     expect(
       interactionBuilder().hasMessagesFor({
@@ -79,7 +79,7 @@ function itHasAppMessages(interactionBuilder) {
         level: INFO,
         code: "ledger.app.bitcoin",
         text: "open the Bitcoin app",
-      })
+      }),
     ).toBe(true);
   });
 }
@@ -140,7 +140,7 @@ describe("ledger", () => {
           state: PENDING,
           level: ERROR,
           code: "ledger.bip32_path.path_error",
-        })
+        }),
       ).toBe(true);
     });
 
@@ -176,10 +176,10 @@ describe("ledger", () => {
       it("extracts and compresses the public key", () => {
         expect(
           interactionBuilder().parsePublicKey(
-            "0429b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898d6881e81d2e0163348ff07b3a9a3968401572aa79c79e7edb522f41addc8e6ce"
-          )
+            "0429b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898d6881e81d2e0163348ff07b3a9a3968401572aa79c79e7edb522f41addc8e6ce",
+          ),
         ).toEqual(
-          "0229b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898"
+          "0229b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898",
         );
       });
     });
@@ -203,10 +203,10 @@ describe("ledger", () => {
           });
           expect(message).not.toBe(null);
           expect(message?.preProcessingTime).toEqual(
-            interaction.preProcessingTime()
+            interaction.preProcessingTime(),
           );
           expect(message?.postProcessingTime).toEqual(
-            interaction.postProcessingTime()
+            interaction.postProcessingTime(),
           );
         });
 
@@ -282,7 +282,7 @@ describe("ledger", () => {
           // signature with sighash already included (foobar is 3 bytes, string length = 8, which is 4 bytes) ...
           // we expect this to chop off the 01 and add it back
           expect(interactionBuilder().parseSignature(["3003foobar01"])).toEqual(
-            ["3003foobar01"]
+            ["3003foobar01"],
           );
         });
       });
@@ -322,7 +322,7 @@ describe("ledger", () => {
   describe("LedgerSignMessage", () => {
     function interactionBuilder(
       bip32Path = "m/48'/1'/0'/2'/0/0",
-      message = "hello world"
+      message = "hello world",
     ) {
       return new LedgerSignMessage({
         bip32Path,
@@ -338,7 +338,7 @@ describe("ledger", () => {
           state: PENDING,
           level: ERROR,
           code: "ledger.bip32_path.path_error",
-        })
+        }),
       ).toBe(true);
     });
   });
@@ -358,13 +358,13 @@ describe("ledger", () => {
   }
 
   function addInteractionMocks(interaction, mockWithApp) {
-    vi
-      .spyOn(interaction, "isAppSupported")
-      .mockReturnValue(Promise.resolve(true));
+    vi.spyOn(interaction, "isAppSupported").mockReturnValue(
+      Promise.resolve(true),
+    );
     vi.spyOn(interaction, "withApp").mockImplementation(mockWithApp);
-    vi
-      .spyOn(interaction, "withTransport")
-      .mockImplementation(() => Promise.resolve(vi.fn));
+    vi.spyOn(interaction, "withTransport").mockImplementation(() =>
+      Promise.resolve(vi.fn),
+    );
   }
 
   describe("LedgerRegisterWalletPolicy", () => {
@@ -384,8 +384,8 @@ describe("ledger", () => {
       policyHmac?: string,
       verify?: boolean,
       walletConfig = braidDetailsToWalletConfig(
-        (<unknown>TEST_FIXTURES.braids[0]) as BraidDetails
-      )
+        (<unknown>TEST_FIXTURES.braids[0]) as BraidDetails,
+      ),
     ) {
       const interaction = new LedgerRegisterWalletPolicy({
         ...walletConfig,
@@ -405,11 +405,11 @@ describe("ledger", () => {
       const interaction = interactionBuilder();
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
-        Promise.resolve([Buffer.from("id"), expectedHmac])
+        Promise.resolve([Buffer.from("id"), expectedHmac]),
       );
       const result = await interaction.run();
       expect(mockApp.registerWallet).toBeCalledWith(
-        interaction.walletPolicy.toLedgerPolicy()
+        interaction.walletPolicy.toLedgerPolicy(),
       );
       expect(result).toEqual(expectedHmac.toString("hex"));
     });
@@ -419,7 +419,7 @@ describe("ledger", () => {
       const interaction = interactionBuilder("beef", true);
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
-        Promise.resolve([Buffer.from("id"), expectedHmac])
+        Promise.resolve([Buffer.from("id"), expectedHmac]),
       );
       const result = await interaction.run();
       // returns the correct registration value but console errors
@@ -439,7 +439,7 @@ describe("ledger", () => {
 
       const expectedHmac = Buffer.from("deadbeef");
       mockApp.registerWallet.mockReturnValue(
-        Promise.resolve([Buffer.from("id"), expectedHmac])
+        Promise.resolve([Buffer.from("id"), expectedHmac]),
       );
     });
 
@@ -451,9 +451,9 @@ describe("ledger", () => {
       policyHmac?: string,
       expected?: string,
       walletConfig = braidDetailsToWalletConfig(
-        (<unknown>TEST_FIXTURES.multisigs[0].braidDetails) as BraidDetails
+        (<unknown>TEST_FIXTURES.multisigs[0].braidDetails) as BraidDetails,
       ),
-      bip32Path = TEST_FIXTURES.multisigs[0].bip32Path
+      bip32Path = TEST_FIXTURES.multisigs[0].bip32Path,
     ) {
       const interaction = new LedgerConfirmMultisigAddress({
         policyHmac,
@@ -469,7 +469,7 @@ describe("ledger", () => {
       const interaction = interactionBuilder();
       const expectedAddress = "payme";
       mockApp.getWalletAddress.mockReturnValue(
-        Promise.resolve(expectedAddress)
+        Promise.resolve(expectedAddress),
       );
       const address = await interaction.run();
       expect(mockApp.registerWallet).toHaveBeenCalled();
@@ -478,7 +478,7 @@ describe("ledger", () => {
         Buffer.from(interaction.POLICY_HMAC, "hex"),
         interaction.braidIndex,
         interaction.addressIndex,
-        interaction.display
+        interaction.display,
       );
       expect(address).toEqual(expectedAddress);
     });
@@ -513,7 +513,7 @@ describe("ledger", () => {
       walletConfig = braidDetailsToWalletConfig(fixture.braidDetails),
       psbt = fixture.psbt,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      progressCallback = () => {}
+      progressCallback = () => {},
     ) {
       let interaction;
       const options = {
@@ -540,7 +540,7 @@ describe("ledger", () => {
         interaction.psbt,
         interaction.walletPolicy.toLedgerPolicy(),
         interaction.policyHmac,
-        interaction.progressCallback
+        interaction.progressCallback,
       );
     });
   });

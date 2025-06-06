@@ -80,7 +80,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
     super();
     if (
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].find(
-        (net) => net === network
+        (net) => net === network,
       )
     ) {
       this.network = network;
@@ -239,7 +239,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
         (!data.p2sh_p2wsh_deriv || !data.p2sh_p2wsh))
     ) {
       throw new Error(
-        "Missing required params. Was this file exported from a Coldcard?  If you are using firmware version 4.1.0 please upgrade to 4.1.1 or later."
+        "Missing required params. Was this file exported from a Coldcard?  If you are using firmware version 4.1.0 please upgrade to 4.1.1 or later.",
       );
     }
 
@@ -263,7 +263,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
       xfpFromWithinXpub !== data.xfp.toLowerCase()
     ) {
       throw new Error(
-        "Computed fingerprint does not match the one in the file."
+        "Computed fingerprint does not match the one in the file.",
       );
     }
 
@@ -441,7 +441,7 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
       } catch (e) {
         console.error("Error building PSBT", e);
         throw new Error(
-          "Unable to build the PSBT from the provided parameters."
+          "Unable to build the PSBT from the provided parameters.",
         );
       }
     }
@@ -519,7 +519,7 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
     const signatures = parseSignaturesFromPSBT(psbtObject);
     if (!signatures || Object.keys(signatures).length === 0) {
       throw new Error(
-        "No signatures found in the PSBT. Did you upload the right one?"
+        "No signatures found in the PSBT. Did you upload the right one?",
       );
     }
     return signatures;
@@ -593,7 +593,7 @@ export class ColdcardMultisigWalletConfig {
       this.totalSigners = this.jsonConfig.quorum.totalSigners;
     } else {
       throw new Error(
-        "Configuration file needs quorum.requiredSigners and quorum.totalSigners."
+        "Configuration file needs quorum.requiredSigners and quorum.totalSigners.",
       );
     }
 

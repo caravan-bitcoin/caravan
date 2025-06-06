@@ -71,7 +71,7 @@ export class CustomExportExtendedPublicKey extends CustomInteraction {
     super();
     if (
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].find(
-        (net) => net === network
+        (net) => net === network,
       )
     ) {
       this.network = network;
@@ -139,7 +139,7 @@ export class CustomExportExtendedPublicKey extends CustomInteraction {
       }
     } catch (e: any) {
       throw new Error(
-        `Root fingerprint validation error: ${e.message.toLowerCase()}.`
+        `Root fingerprint validation error: ${e.message.toLowerCase()}.`,
       );
     }
     const numSlashes = this.bip32Path.split("/").length;
@@ -149,7 +149,7 @@ export class CustomExportExtendedPublicKey extends CustomInteraction {
 
     if (xpubClass.depth !== bipDepth) {
       throw new Error(
-        `Depth of ExtendedPublicKey (${xpubClass.depth}) does not match depth of BIP32 path (${bipDepth}).`
+        `Depth of ExtendedPublicKey (${xpubClass.depth}) does not match depth of BIP32 path (${bipDepth}).`,
       );
     }
 
@@ -205,7 +205,7 @@ export class CustomSignMultisigTransaction extends CustomInteraction {
         });
       } catch (e) {
         throw new Error(
-          "Unable to build the PSBT from the provided parameters."
+          "Unable to build the PSBT from the provided parameters.",
         );
       }
     }
@@ -265,7 +265,7 @@ export class CustomSignMultisigTransaction extends CustomInteraction {
     const signatures = parseSignaturesFromPSBT(psbtObject);
     if (!signatures || Object.keys(signatures).length === 0) {
       throw new Error(
-        "No signatures found in the PSBT. Did you upload the right one?"
+        "No signatures found in the PSBT. Did you upload the right one?",
       );
     }
     return signatures;

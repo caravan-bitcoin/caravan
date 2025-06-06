@@ -38,31 +38,31 @@ describe("keys", () => {
 
     it("returns an error message when the prefix does not match the network", () => {
       expect(
-        validateExtendedPublicKeyForNetwork("foobar", Network.TESTNET)
+        validateExtendedPublicKeyForNetwork("foobar", Network.TESTNET),
       ).toMatch(/must begin with/i);
       expect(
-        validateExtendedPublicKeyForNetwork("tpub", Network.MAINNET)
+        validateExtendedPublicKeyForNetwork("tpub", Network.MAINNET),
       ).toMatch(/must begin with/i);
       expect(
-        validateExtendedPublicKeyForNetwork(validTpub, Network.MAINNET)
+        validateExtendedPublicKeyForNetwork(validTpub, Network.MAINNET),
       ).toMatch(/must begin with/i);
       expect(
-        validateExtendedPublicKeyForNetwork(validXpub, Network.TESTNET)
+        validateExtendedPublicKeyForNetwork(validXpub, Network.TESTNET),
       ).toMatch(/must begin with/i);
       expect(
-        validateExtendedPublicKeyForNetwork(validXpub, Network.REGTEST)
+        validateExtendedPublicKeyForNetwork(validXpub, Network.REGTEST),
       ).toMatch(/must begin with/i);
     });
 
     it("returns an empty string when the value is valid", () => {
       expect(
-        validateExtendedPublicKeyForNetwork(validTpub, Network.TESTNET)
+        validateExtendedPublicKeyForNetwork(validTpub, Network.TESTNET),
       ).toBe("");
       expect(
-        validateExtendedPublicKeyForNetwork(validTpub, Network.REGTEST)
+        validateExtendedPublicKeyForNetwork(validTpub, Network.REGTEST),
       ).toBe("");
       expect(
-        validateExtendedPublicKeyForNetwork(validXpub, Network.MAINNET)
+        validateExtendedPublicKeyForNetwork(validXpub, Network.MAINNET),
       ).toBe("");
     });
   });
@@ -75,56 +75,56 @@ describe("keys", () => {
 
     it("returns an error message on an empty value", () => {
       expect(validateExtendedPublicKey(undefined, Network.TESTNET)).toMatch(
-        /cannot be blank/i
+        /cannot be blank/i,
       );
       expect(validateExtendedPublicKey("", Network.TESTNET)).toMatch(
-        /cannot be blank/i
+        /cannot be blank/i,
       );
       expect(validateExtendedPublicKey(null, Network.TESTNET)).toMatch(
-        /cannot be blank/i
+        /cannot be blank/i,
       );
     });
 
     it("returns an error message when the prefix does not match the network", () => {
       expect(validateExtendedPublicKey("foobar", Network.TESTNET)).toMatch(
-        /must begin with/i
+        /must begin with/i,
       );
       expect(validateExtendedPublicKey("tpub", Network.MAINNET)).toMatch(
-        /must begin with/i
+        /must begin with/i,
       );
       expect(validateExtendedPublicKey(validTpub, Network.MAINNET)).toMatch(
-        /must begin with/i
+        /must begin with/i,
       );
       expect(validateExtendedPublicKey(validXpub, Network.TESTNET)).toMatch(
-        /must begin with/i
+        /must begin with/i,
       );
     });
 
     it("returns an error message when the value is too short", () => {
       expect(validateExtendedPublicKey("tpub123", Network.TESTNET)).toMatch(
-        /is too short/i
+        /is too short/i,
       );
       expect(validateExtendedPublicKey("xpub123", Network.MAINNET)).toMatch(
-        /is too short/i
+        /is too short/i,
       );
     });
 
     it("returns an error message when the value is too short", () => {
       expect(validateExtendedPublicKey("tpub123", Network.TESTNET)).toMatch(
-        /is too short/i
+        /is too short/i,
       );
       expect(validateExtendedPublicKey("xpub123", Network.MAINNET)).toMatch(
-        /is too short/i
+        /is too short/i,
       );
     });
 
     it("returns an error message when the value is not valid", () => {
       // they both have 'n' in them
       expect(
-        validateExtendedPublicKey(validTpub.replace("n", "p"), Network.TESTNET)
+        validateExtendedPublicKey(validTpub.replace("n", "p"), Network.TESTNET),
       ).toMatch(/invalid/i);
       expect(
-        validateExtendedPublicKey(validXpub.replace("n", "p"), Network.MAINNET)
+        validateExtendedPublicKey(validXpub.replace("n", "p"), Network.MAINNET),
       ).toMatch(/invalid/i);
     });
 
@@ -153,7 +153,7 @@ describe("keys", () => {
 
     it("returns an error message on an invalid value", () => {
       expect(validatePublicKey(invalidPublicKey)).toMatch(
-        /invalid public key/i
+        /invalid public key/i,
       );
     });
 
@@ -183,13 +183,13 @@ describe("keys", () => {
 
     it("returns an error message on a valid uncompressed public key used for P2SH-P2WSH", () => {
       expect(validatePublicKey(uncompressedPublicKey, P2SH_P2WSH)).toBe(
-        "P2SH-P2WSH does not support uncompressed public keys."
+        "P2SH-P2WSH does not support uncompressed public keys.",
       );
     });
 
     it("returns an error message on a valid uncompressed public key used for P2WSH", () => {
       expect(validatePublicKey(uncompressedPublicKey, P2WSH)).toBe(
-        "P2WSH does not support uncompressed public keys."
+        "P2WSH does not support uncompressed public keys.",
       );
     });
 
@@ -199,7 +199,7 @@ describe("keys", () => {
 
     it("returns an error message on an invalid value used for P2SH", () => {
       expect(validatePublicKey(invalidPublicKey, P2SH)).toMatch(
-        /invalid public key/i
+        /invalid public key/i,
       );
     });
   });
@@ -208,31 +208,31 @@ describe("keys", () => {
     it("compresses public keys", () => {
       expect(
         compressPublicKey(
-          "04b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee6e43c09d025c2ad322382347ec0f69b4e78d8e23c8ff9aa0dd0cb93665ae83d5"
-        )
+          "04b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee6e43c09d025c2ad322382347ec0f69b4e78d8e23c8ff9aa0dd0cb93665ae83d5",
+        ),
       ).toBe(
-        "03b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee"
+        "03b32dc780fba98db25b4b72cf2b69da228f5e10ca6aa8f46eabe7f9fe22c994ee",
       );
       expect(
         compressPublicKey(
-          "04f7946511e5f5c2697ed1a6c7f1fb7cfa6c03c74ac123b3d2d0c19ad25899baa6bd72af01ea2a58460fe34c2a2d48527f91da977a45a224f50028d937feb68660"
-        )
+          "04f7946511e5f5c2697ed1a6c7f1fb7cfa6c03c74ac123b3d2d0c19ad25899baa6bd72af01ea2a58460fe34c2a2d48527f91da977a45a224f50028d937feb68660",
+        ),
       ).toBe(
-        "02f7946511e5f5c2697ed1a6c7f1fb7cfa6c03c74ac123b3d2d0c19ad25899baa6"
+        "02f7946511e5f5c2697ed1a6c7f1fb7cfa6c03c74ac123b3d2d0c19ad25899baa6",
       );
       expect(
         compressPublicKey(
-          "04d87003b52cc497a6ca9a72fd610bcbfb2fe1430ffc4c9d89c2b25b501e04d677ee43c602a902993757d479d89b004f70a944de6db953594be98f397921b20162"
-        )
+          "04d87003b52cc497a6ca9a72fd610bcbfb2fe1430ffc4c9d89c2b25b501e04d677ee43c602a902993757d479d89b004f70a944de6db953594be98f397921b20162",
+        ),
       ).toBe(
-        "02d87003b52cc497a6ca9a72fd610bcbfb2fe1430ffc4c9d89c2b25b501e04d677"
+        "02d87003b52cc497a6ca9a72fd610bcbfb2fe1430ffc4c9d89c2b25b501e04d677",
       );
       expect(
         compressPublicKey(
-          "040354bd30fed4d431ee2acb51391128c72af8ee2bec8a303d977a40c85ba82e7b0456f8717352c5cb95fef87671109a66243e0b6d4917b3c33eb6aa5f33e5c09d"
-        )
+          "040354bd30fed4d431ee2acb51391128c72af8ee2bec8a303d977a40c85ba82e7b0456f8717352c5cb95fef87671109a66243e0b6d4917b3c33eb6aa5f33e5c09d",
+        ),
       ).toBe(
-        "030354bd30fed4d431ee2acb51391128c72af8ee2bec8a303d977a40c85ba82e7b"
+        "030354bd30fed4d431ee2acb51391128c72af8ee2bec8a303d977a40c85ba82e7b",
       );
     });
   });
@@ -243,11 +243,11 @@ describe("keys", () => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/0/0",
-          Network.MAINNET
-        )
+          Network.MAINNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].pub);
       expect(
-        deriveChildPublicKey(NODES["m/45'/0'/0'"].xpub, "0/0", Network.MAINNET)
+        deriveChildPublicKey(NODES["m/45'/0'/0'"].xpub, "0/0", Network.MAINNET),
       ).toBe(NODES["m/45'/0'/0'/0/0"].pub);
     });
 
@@ -256,11 +256,11 @@ describe("keys", () => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].tpub,
           "m/0/0",
-          Network.TESTNET
-        )
+          Network.TESTNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].pub);
       expect(
-        deriveChildPublicKey(NODES["m/45'/0'/0'"].tpub, "0/0", Network.TESTNET)
+        deriveChildPublicKey(NODES["m/45'/0'/0'"].tpub, "0/0", Network.TESTNET),
       ).toBe(NODES["m/45'/0'/0'/0/0"].pub);
     });
 
@@ -269,14 +269,14 @@ describe("keys", () => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/99'",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/missing private key/i);
       expect(() => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/99'/0/0",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/missing private key/i);
     });
@@ -286,14 +286,14 @@ describe("keys", () => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/0/0",
-          Network.TESTNET
+          Network.TESTNET,
         );
       }).toThrow(/invalid network/i);
       expect(() => {
         deriveChildPublicKey(
           NODES["m/45'/0'/0'"].tpub,
           "m/0/0",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/invalid network/i);
     });
@@ -305,15 +305,15 @@ describe("keys", () => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/0/0",
-          Network.MAINNET
-        )
+          Network.MAINNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].xpub);
       expect(
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "0/0",
-          Network.MAINNET
-        )
+          Network.MAINNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].xpub);
     });
 
@@ -322,15 +322,15 @@ describe("keys", () => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].tpub,
           "m/0/0",
-          Network.TESTNET
-        )
+          Network.TESTNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].tpub);
       expect(
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].tpub,
           "0/0",
-          Network.TESTNET
-        )
+          Network.TESTNET,
+        ),
       ).toBe(NODES["m/45'/0'/0'/0/0"].tpub);
     });
 
@@ -339,14 +339,14 @@ describe("keys", () => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/99'",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/missing private key/i);
       expect(() => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/99'/0/0",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/missing private key/i);
     });
@@ -356,14 +356,14 @@ describe("keys", () => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].xpub,
           "m/0/0",
-          Network.TESTNET
+          Network.TESTNET,
         );
       }).toThrow(/invalid network/i);
       expect(() => {
         deriveChildExtendedPublicKey(
           NODES["m/45'/0'/0'"].tpub,
           "m/0/0",
-          Network.MAINNET
+          Network.MAINNET,
         );
       }).toThrow(/invalid network/i);
     });
@@ -387,7 +387,7 @@ describe("keys", () => {
   describe("convertExtendedPublicKey", () => {
     it(`should fail to convert`, () => {
       expect(() => convertExtendedPublicKey("tpub", "xpub")).toThrow(
-        /Unable to convert extended/
+        /Unable to convert extended/,
       );
     });
 
@@ -405,7 +405,7 @@ describe("keys", () => {
           it(`should properly convert extended public key from ${convertFrom} to ${convertTo}`, () => {
             const converted = convertExtendedPublicKey(
               extendedPubKeyNode[convertFrom],
-              convertTo
+              convertTo,
             );
             expect(converted).toBe(extendedPubKeyNode[convertTo]);
           });
@@ -420,7 +420,7 @@ describe("keys", () => {
         "0487cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03f7c55f784242305cfd8252076d038b0f3c92836754308d06b097d11e37bc0907";
       expect(isKeyCompressed(uncompressedPubkey)).toBeFalsy();
       expect(
-        isKeyCompressed(compressPublicKey(uncompressedPubkey))
+        isKeyCompressed(compressPublicKey(uncompressedPubkey)),
       ).toBeTruthy();
 
       const uncompressedPubkeyBuffer = Buffer.from(uncompressedPubkey, "hex");
@@ -473,7 +473,7 @@ describe("keys", () => {
             "0487cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03f7c55f784242305cfd8252076d038b0f3c92836754308d06b097d11e37bc0907";
         }
         const derivedXpub = ExtendedPublicKey.fromBase58(
-          deriveExtendedPublicKey(path, pubToUse, chaincode, parentFingerprint)
+          deriveExtendedPublicKey(path, pubToUse, chaincode, parentFingerprint),
         );
         derivedXpub.setRootFingerprint(rootFingerprint);
         const derivedTpub = ExtendedPublicKey.fromBase58(
@@ -482,11 +482,11 @@ describe("keys", () => {
             pubToUse,
             chaincode,
             parentFingerprint,
-            Network.TESTNET
-          )
+            Network.TESTNET,
+          ),
         );
         expect(extendedPublicKeyRootFingerprint(derivedXpub)).toEqual(
-          rootFingerprint
+          rootFingerprint,
         );
         expect(extendedPublicKeyRootFingerprint(derivedTpub)).toBe(null);
       }
@@ -525,14 +525,14 @@ describe("keys", () => {
           pub,
           chaincode,
           parentFingerprint,
-          Network.MAINNET
+          Network.MAINNET,
         );
         const derivedTpub = deriveExtendedPublicKey(
           path,
           pub,
           chaincode,
           parentFingerprint,
-          Network.TESTNET
+          Network.TESTNET,
         );
         expect(derivedXpub).toEqual(xpub);
         expect(derivedTpub).toEqual(tpub);
@@ -594,12 +594,12 @@ describe("keys", () => {
         // test decoding (same as fromBase58)
         const decodedXpub = ExtendedPublicKey.decode(bs58check.decode(xpub));
         const decodedTestnetXpub = ExtendedPublicKey.decode(
-          bs58check.decode(tpub)
+          bs58check.decode(tpub),
         );
 
         expect(decodedXpub.version).toEqual(EXTENDED_PUBLIC_KEY_VERSIONS.xpub);
         expect(decodedTestnetXpub.version).toEqual(
-          EXTENDED_PUBLIC_KEY_VERSIONS.tpub
+          EXTENDED_PUBLIC_KEY_VERSIONS.tpub,
         );
         expect(decodedXpub.parentFingerprint).toEqual(parentFingerprint);
         expect(decodedTestnetXpub.parentFingerprint).toEqual(parentFingerprint);
@@ -639,7 +639,7 @@ describe("keys", () => {
           bip32Path: vect.path,
         });
         expect(actual).toEqual(vect.path);
-      }
+      },
     );
   });
 });

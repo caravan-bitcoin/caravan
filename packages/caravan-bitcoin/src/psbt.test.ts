@@ -27,7 +27,7 @@ describe("psbt", () => {
       const input = MULTISIGS[0].utxos[0];
       input.bip32Path = null;
       expect(psbtInputFormatter(input).bip32Derivation).toEqual(
-        MULTISIGS[0].bip32Derivation
+        MULTISIGS[0].bip32Derivation,
       );
     });
   });
@@ -41,11 +41,11 @@ describe("psbt", () => {
         MULTISIGS[0].network,
         MULTISIGS[0].type,
         2,
-        ...changePublicKeys
+        ...changePublicKeys,
       );
       if (changeMultisig) {
         (changeMultisig as any).braidDetails = braidConfig(
-          MULTISIGS[0].changeBraidDetails
+          MULTISIGS[0].changeBraidDetails,
         );
         (changeMultisig as any).bip32Derivation =
           MULTISIGS[0].changeBip32Derivation;
@@ -53,7 +53,7 @@ describe("psbt", () => {
 
       output.multisig = changeMultisig;
       expect(MULTISIGS[0].transaction.outputs[1]).toEqual(
-        expect.objectContaining(psbtOutputFormatter(output))
+        expect.objectContaining(psbtOutputFormatter(output)),
       );
     });
   });
@@ -68,8 +68,8 @@ describe("psbt", () => {
           {
             xfp: ROOT_FINGERPRINT,
             path: "m/45'/1'/100'",
-          }
-        )
+          },
+        ),
       ).toThrow(/Unsupported addressType/i);
     });
 
@@ -95,7 +95,7 @@ describe("psbt", () => {
           multisig: generateMultisigFromHex(
             tx.network,
             tx.format,
-            ms.redeemScriptHex
+            ms.redeemScriptHex,
           ),
         }));
         expect(unchainedInputs).toEqual(expectedInputs);
@@ -111,7 +111,7 @@ describe("psbt", () => {
         expect(unchainedOutputs).toEqual(expectedOutputs);
 
         expect(bip32Derivations.map((b32d) => b32d.path)).toEqual(
-          tx.bip32Paths
+          tx.bip32Paths,
         );
       }
     });
@@ -125,8 +125,8 @@ describe("psbt", () => {
           {
             xfp: ROOT_FINGERPRINT,
             path: "m/45'/1'/100'",
-          }
-        )
+          },
+        ),
       ).toBeNull();
     });
 
@@ -143,7 +143,7 @@ describe("psbt", () => {
   describe("addSignaturesToPSBT", () => {
     // Function expects Buffers but our fixtures are hex strings
     const signaturesAsBuffers = tx.signature.map((sig) =>
-      Buffer.from(sig, "hex")
+      Buffer.from(sig, "hex"),
     );
     const signingPubKeyBuffer = Buffer.from(ms.publicKey, "hex");
     const pubKeys = Array(signaturesAsBuffers.length).fill(signingPubKeyBuffer);
@@ -153,7 +153,7 @@ describe("psbt", () => {
         tx.network,
         tx.psbt,
         pubKeys,
-        signaturesAsBuffers
+        signaturesAsBuffers,
       );
 
       expect(psbtWithSignature).toEqual(ms.psbtOrderedPartiallySigned);
@@ -161,7 +161,7 @@ describe("psbt", () => {
 
     it("throws validation error when trying to add valid signatures to the wrong pubkey", () => {
       const wrongPubKeys = Array(signaturesAsBuffers.length).fill(
-        Buffer.from(ms.publicKeys[1], "hex")
+        Buffer.from(ms.publicKeys[1], "hex"),
       );
 
       expect(() =>
@@ -169,14 +169,14 @@ describe("psbt", () => {
           tx.network,
           tx.psbt,
           wrongPubKeys,
-          signaturesAsBuffers
-        )
+          signaturesAsBuffers,
+        ),
       ).toThrow(/invalid signature/i);
     });
 
     it("should return null with non-string PSBT input", () => {
       expect(
-        addSignaturesToPSBT(tx.network, [], pubKeys, signaturesAsBuffers)
+        addSignaturesToPSBT(tx.network, [], pubKeys, signaturesAsBuffers),
       ).toBeNull();
     });
   });
@@ -216,7 +216,7 @@ describe("psbt", () => {
 
     it("should return null if you send in a blank PSBT", () => {
       expect(
-        parseSignaturesFromPSBT("cHNidP8BAAoCAAAAAAAAAAAAAAAA")
+        parseSignaturesFromPSBT("cHNidP8BAAoCAAAAAAAAAAAAAAAA"),
       ).toBeNull();
     });
 
@@ -232,7 +232,7 @@ describe("psbt", () => {
         ],
       };
       expect(
-        parseSignaturesFromPSBT(singleInputB64PSBT_partiallySigned)
+        parseSignaturesFromPSBT(singleInputB64PSBT_partiallySigned),
       ).toEqual(oneSetOneInput);
     });
 
@@ -244,7 +244,7 @@ describe("psbt", () => {
         ],
       };
       expect(
-        parseSignaturesFromPSBT(multiInputB64PSBT_partiallySigned)
+        parseSignaturesFromPSBT(multiInputB64PSBT_partiallySigned),
       ).toEqual(oneSetTwoInputs);
     });
 
@@ -258,7 +258,7 @@ describe("psbt", () => {
         ],
       };
       expect(parseSignaturesFromPSBT(singleInputB64PSBT_fullySigned)).toEqual(
-        twoSetsOneInput
+        twoSetsOneInput,
       );
     });
 
@@ -274,7 +274,7 @@ describe("psbt", () => {
         ],
       };
       expect(parseSignaturesFromPSBT(multiInputB64PSBT_fullySigned)).toEqual(
-        twoSetsTwoInputs
+        twoSetsTwoInputs,
       );
     });
   });
@@ -286,7 +286,7 @@ describe("psbt", () => {
 
     it("should return null if you send in a blank PSBT", () => {
       expect(
-        parseSignatureArrayFromPSBT("cHNidP8BAAoCAAAAAAAAAAAAAAAA")
+        parseSignatureArrayFromPSBT("cHNidP8BAAoCAAAAAAAAAAAAAAAA"),
       ).toBeNull();
     });
 
@@ -300,7 +300,7 @@ describe("psbt", () => {
         "3045022100fd9862cc751bd99f4b77b7d80f86701ba67e667912b2497f83f0d67d95c976ed02205ae2c4f01a361498709a5605baee70b985a9882c55ad022a8fed71e588f1350601",
       ];
       expect(
-        parseSignatureArrayFromPSBT(singleInputHexPSBT_partiallySigned)
+        parseSignatureArrayFromPSBT(singleInputHexPSBT_partiallySigned),
       ).toEqual(oneSetOneInput);
     });
 
@@ -310,7 +310,7 @@ describe("psbt", () => {
         "3045022100a41cd24ac399c24449334d0a46906626de003e2b88a9c37e46f2cb0cbfbac0f602203c7524ec1c8f12d535a2212632865da1bef43bbe81c1b20ead12b6cbf7f44f9a01",
       ];
       expect(
-        parseSignatureArrayFromPSBT(multiInputHexPSBT_partiallySigned)
+        parseSignatureArrayFromPSBT(multiInputHexPSBT_partiallySigned),
       ).toEqual(oneSetTwoInputs);
     });
 
@@ -324,7 +324,7 @@ describe("psbt", () => {
         ],
       ];
       expect(
-        parseSignatureArrayFromPSBT(singleInputHexPSBT_fullySigned)
+        parseSignatureArrayFromPSBT(singleInputHexPSBT_fullySigned),
       ).toEqual(twoSetsOneInput);
     });
 
@@ -340,7 +340,7 @@ describe("psbt", () => {
         ],
       ];
       expect(
-        parseSignatureArrayFromPSBT(multiInputHexPSBT_fullySigned)
+        parseSignatureArrayFromPSBT(multiInputHexPSBT_fullySigned),
       ).toEqual(twoSetsTwoInputs);
     });
   });

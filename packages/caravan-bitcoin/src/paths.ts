@@ -293,7 +293,7 @@ export function multisigBIP32Root(addressType, network: Network) {
 export function multisigBIP32Path(
   addressType,
   network: Network,
-  relativePath = "0"
+  relativePath = "0",
 ) {
   const root = multisigBIP32Root(addressType, network);
   if (root) {
@@ -336,7 +336,8 @@ export function getRelativeBIP32Path(parentBIP32Path, childBIP32Path) {
   const validatedChild = validateBIP32Path(childBIP32Path);
   if (validatedChild.length) return validatedChild;
   // check that childBIP32Path starts with parentBIP32Path
-  if (!childBIP32Path.startsWith(parentBIP32Path)) return `The provided bip32Path does not start with the chroot.`;
+  if (!childBIP32Path.startsWith(parentBIP32Path))
+    return `The provided bip32Path does not start with the chroot.`;
   // then return the relative path beyond the parentBIP32Path.
 
   return childBIP32Path.slice(parentBIP32Path.length + 1);

@@ -4,7 +4,6 @@ export interface DeviceError extends Error {
   message: string;
 }
 
-
 // really should be interchangeable with KeyDerivations
 // but unfortunately there are inconsistent property names
 // in different contexts

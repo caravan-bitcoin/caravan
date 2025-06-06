@@ -21,6 +21,7 @@ import {
   DownloadColdardConfigButton,
   RegisterBitBoxButton,
   RegisterLedgerButton,
+  RegisterJadeButton,
 } from "../RegisterWallet";
 
 const useStyles = makeStyles({ expanded: { margin: "0 0!important" } });
@@ -90,6 +91,9 @@ const WalletRegistrations = () => {
         <AccordionDetails>
           <Box>
             <Grid container spacing={2}>
+              <Grid item>
+                <RegisterJadeButton/>
+              </Grid>
               <Grid item>
                 <RegisterBitBoxButton />
               </Grid>

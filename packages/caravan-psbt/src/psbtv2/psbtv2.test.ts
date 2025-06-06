@@ -1853,4 +1853,3 @@ describe("PsbtV2 addOutput", () => {
     expect(updateGlobalOutputCountSpy).toHaveBeenCalledTimes(3);
   });
 });
-

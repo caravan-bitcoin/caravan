@@ -13,7 +13,9 @@ if (typeof self === 'undefined') {
 }
 `;
 
-const headerBytes = Uint8Array.from(Array.from(headerText, c => c.charCodeAt(0)));
+const headerBytes = Uint8Array.from(
+  Array.from(headerText, (c) => c.charCodeAt(0)),
+);
 const n_header = headerBytes.length;
 
 /**
@@ -25,7 +27,7 @@ export const provideSelf = (): Plugin => ({
   setup(build: PluginBuild) {
     build.onEnd((result) => {
       for (const file of result.outputFiles ?? []) {
-        if (file.path.endsWith('.js') || file.path.endsWith('.mjs')) {
+        if (file.path.endsWith(".js") || file.path.endsWith(".mjs")) {
           const contentsIn = file.contents;
           const n_in = contentsIn.length;
           const contentsOut = new Uint8Array(n_in + headerBytes.length);
@@ -39,18 +41,21 @@ export const provideSelf = (): Plugin => ({
         }
       }
     });
-  }
+  },
 });
 
 /**
  * A plugin that provides a polyfill for the 'navigator' global object.
  * This is useful for packages that rely on navigator in environments where it's not available (like Node.js).
  */
-export const provideNavigator = (options?: { userAgent?: string, language?: string }): Plugin => ({
+export const provideNavigator = (options?: {
+  userAgent?: string;
+  language?: string;
+}): Plugin => ({
   name: "provide-navigator",
   setup(build: PluginBuild) {
-    const userAgent = options?.userAgent || 'nodejs';
-    const language = options?.language || 'en-US';
+    const userAgent = options?.userAgent || "nodejs";
+    const language = options?.language || "en-US";
 
     const navigatorText = `
 if (typeof navigator === 'undefined') {
@@ -62,12 +67,14 @@ if (typeof navigator === 'undefined') {
 }
 `;
 
-    const navigatorBytes = Uint8Array.from(Array.from(navigatorText, c => c.charCodeAt(0)));
+    const navigatorBytes = Uint8Array.from(
+      Array.from(navigatorText, (c) => c.charCodeAt(0)),
+    );
     const n_navigator = navigatorBytes.length;
 
     build.onEnd((result) => {
       for (const file of result.outputFiles ?? []) {
-        if (file.path.endsWith('.js') || file.path.endsWith('.mjs')) {
+        if (file.path.endsWith(".js") || file.path.endsWith(".mjs")) {
           const contentsIn = file.contents;
           const n_in = contentsIn.length;
           const contentsOut = new Uint8Array(n_in + navigatorBytes.length);
@@ -81,5 +88,5 @@ if (typeof navigator === 'undefined') {
         }
       }
     });
-  }
+  },
 });

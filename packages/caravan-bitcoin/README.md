@@ -113,7 +113,7 @@ const multisig = generateMultisigFromPublicKeys(
   TESTNET,
   P2SH,
   2,
-  ...publicKeys
+  ...publicKeys,
 );
 
 // All 3 UTXOs are at the same address so get decorated with the same multisig object.
@@ -145,7 +145,7 @@ const outputs = [
 const unsignedTransaction = unsignedMultisigTransaction(
   TESTNET,
   inputs,
-  outputs
+  outputs,
 );
 
 // Pass the above unsigned transaction to some keystore device/software to obtain a signature.
@@ -163,7 +163,7 @@ transactionSignature1.forEach((inputSignature, inputIndex) => {
     unsignedTransaction,
     inputIndex,
     inputs[inputIndex],
-    inputSignature
+    inputSignature,
   );
   if (!result) {
     console.error(`Invalid signature for input ${inputIndex + 1}`);
@@ -179,7 +179,7 @@ const signedTransaction = signedMultisigTransaction(
   inputs,
   outputs,
   transactionSignature1,
-  transactionSignature2
+  transactionSignature2,
 );
 
 // Broadcast this transaction somehow...
@@ -221,6 +221,7 @@ and provide a helpful error message otherwise.
 ### Troubleshooting and FAQ
 
 #### `bitcoinjs-lib-v5`
+
 This is to make sure that the legacy caravan/bitcoin functions
 use the legacy bitcoinjs-lib when being built in caravan/coordinator.
 

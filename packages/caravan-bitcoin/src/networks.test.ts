@@ -7,7 +7,6 @@ import {
   getNetworkFromPrefix,
 } from "./networks";
 
-
 describe("networks", () => {
   describe("networkLabel", () => {
     it("returns a human-readable network name", () => {
@@ -28,10 +27,10 @@ describe("networks", () => {
   describe("getNetworkFromPrefix", () => {
     it("throws error on unknown prefix", () => {
       expect(() => getNetworkFromPrefix("foo")).toThrow(
-        /Unrecognized extended public key prefix/i
+        /Unrecognized extended public key prefix/i,
       );
       expect(() => getNetworkFromPrefix("kpub")).toThrow(
-        /Unrecognized extended public key prefix/i
+        /Unrecognized extended public key prefix/i,
       );
     });
     it("returns testnet for testnet prefixes, case insensitive", () => {
