@@ -22,10 +22,10 @@ import { ScriptType, SCRIPT_TYPES } from "./types";
  *
  * This function validates the provided address and creates an appropriate
  * output script based on the address type (P2PKH, P2SH, P2WPKH,P2TR or P2WSH).
- * It supports both mainnet and testnet addresses.
+ * It supports both mainnet, testnet and regtest addresses.
  *
  * @param {string} destinationAddress - The Bitcoin address to create an output script for.
- * @param {Network} network - The Bitcoin network (mainnet or testnet) the address belongs to.
+ * @param {Network} network - The Bitcoin network (mainnet ,testnet or regtest) the address belongs to.
  * @returns {Buffer} The output script as a Buffer.
  * @throws {Error} If the address is invalid or unsupported, or if the output script cannot be created.
  *
@@ -43,8 +43,13 @@ export function createOutputScript(
   }
 
   // Convert Caravan Network to bitcoinjs-lib network
-  const bitcoinJsNetwork =
-    network === Network.TESTNET ? networks.testnet : networks.bitcoin;
+  const networkMap = {
+    [Network.TESTNET]: networks.testnet,
+    [Network.REGTEST]: networks.regtest ?? networks.testnet,
+    [Network.MAINNET]: networks.bitcoin,
+  };
+
+  const bitcoinJsNetwork = networkMap[network];
 
   try {
     // First, try to create an output script using bitcoinjs-lib

@@ -6,6 +6,31 @@ import {
 } from "./btcTransactionComponents";
 
 /**
+ * BIP32 derivation information for a specific public key in a multisig setup.
+ * This provides the wallet with the necessary information to derive the correct
+ * private key for signing and to validate signatures from other cosigners.
+ *
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#input-types
+ */
+export interface Bip32Derivation {
+  /** The public key that corresponds to this derivation path */
+  pubkey: Buffer;
+
+  /**
+   * The master key fingerprint (first 4 bytes of the master public key hash).
+   * Used to identify which master key this derivation belongs to in a multisig setup.
+   */
+  masterFingerprint: Buffer;
+
+  /**
+   * The full BIP32 derivation path from the master key.
+   * Example: "m/84'/1'/0'/0/5" for a specific address in a BIP84 wallet
+   */
+  path: string;
+}
+
+/**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
@@ -21,8 +46,17 @@ export interface UTXO {
   value: Satoshis;
 
   /**
+   * The sequence number of the input.
+   * This is used for relative time locks and signaling RBF.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
+  sequence?: number;
+
+  /**
    * The full previous transaction in hexadecimal format.
-   * Required for non-segwit inputs in PSBTs.
+   * Required for non-segwit inputs in PSBTs to prevent fee attacks.
+   * For P2SH and some hardware wallets, this is mandatory.
    */
   prevTxHex?: string;
 
@@ -34,6 +68,40 @@ export interface UTXO {
     script: Buffer;
     value: number;
   };
+
+  /**
+   * The redeem script for P2SH outputs.
+   * For multisig P2SH addresses, this contains the actual multisig script that
+   * defines the m-of-n signature requirements. Required for spending P2SH outputs.
+   *
+   * Example: For a 2-of-3 P2SH multisig, this would be the script:
+   * OP_2 <pubkey1> <pubkey2> <pubkey3> OP_3 OP_CHECKMULTISIG
+   */
+  redeemScript?: Buffer;
+
+  /**
+   * The witness script for P2WSH and P2SH-P2WSH outputs.
+   * For segwit multisig addresses, this contains the multisig script that
+   * gets committed to in the witness program. Required for spending segwit script outputs.
+   *
+   * Note: For P2SH-P2WSH, both redeemScript and witnessScript are needed:
+   * - redeemScript: Contains the witness program (version + witness script hash)
+   * - witnessScript: Contains the actual multisig script
+   */
+  witnessScript?: Buffer;
+
+  /**
+   * BIP32 derivation information for all public keys involved in this UTXO.
+   * This array contains derivation paths for each cosigner's public key in a multisig setup.
+   *
+   * Critical for:
+   * - Hardware wallets to derive the correct signing key
+   * - Coordinators to validate signatures from other cosigners
+   * - PSBT signers to identify which keys they control
+   *
+   * Each entry maps a public key to its derivation path and master fingerprint.
+   */
+  bip32Derivations?: Bip32Derivation[];
 }
 
 /**

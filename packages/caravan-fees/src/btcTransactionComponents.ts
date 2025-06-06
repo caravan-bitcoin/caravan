@@ -1,7 +1,8 @@
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 
-import { Satoshis, BTC, UTXO } from "./types";
+import { RBF_SEQUENCE } from "./constants";
+import { Satoshis, BTC, UTXO, Bip32Derivation } from "./types";
 import { validateNonWitnessUtxo, validateSequence } from "./utils";
 
 /**
@@ -69,6 +70,9 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     value: number;
   };
   private _sequence?: number;
+  private _redeemScript?: Buffer;
+  private _witnessScript?: Buffer;
+  private _bip32Derivations: Bip32Derivation[] = [];
 
   /**
    * @param {Object} params - The parameters for creating a BtcTxInputTemplate
@@ -98,7 +102,20 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     if (utxo.witnessUtxo) {
       template.setWitnessUtxo(utxo.witnessUtxo);
     }
+    if (utxo.redeemScript) {
+      template.setRedeemScript(utxo.redeemScript);
+    }
 
+    if (utxo.witnessScript) {
+      template.setWitnessScript(utxo.witnessScript);
+    }
+
+    if (utxo.bip32Derivations) {
+      template.setBip32Derivations(utxo.bip32Derivations);
+    }
+    if (utxo.sequence) {
+      template.setSequence(utxo.sequence);
+    }
     return template;
   }
   /**
@@ -196,6 +213,63 @@ export class BtcTxInputTemplate extends BtcTxComponent {
   }
 
   /**
+   * Gets the redeem script for P2SH inputs.
+   * The redeem script contains the actual spending conditions for P2SH outputs.
+   * For multisig P2SH, this is the multisig script with the signature requirements.
+   */
+  get redeemScript(): Buffer | undefined {
+    return this._redeemScript;
+  }
+
+  /**
+   * Sets the redeem script for P2SH inputs.
+   * Required for spending P2SH outputs in PSBTs.
+   *
+   * @param script - The redeem script buffer
+   */
+  setRedeemScript(script: Buffer): void {
+    this._redeemScript = script;
+  }
+
+  /**
+   * Gets the witness script for segwit inputs (P2WSH, P2SH-P2WSH).
+   * The witness script contains the actual spending conditions for segwit script outputs.
+   * For multisig segwit, this is the multisig script with the signature requirements.
+   */
+  get witnessScript(): Buffer | undefined {
+    return this._witnessScript;
+  }
+
+  /**
+   * Sets the witness script for segwit inputs.
+   * Required for spending P2WSH and P2SH-P2WSH outputs in PSBTs.
+   *
+   * @param script - The witness script buffer
+   */
+  setWitnessScript(script: Buffer): void {
+    this._witnessScript = script;
+  }
+
+  /**
+   * Gets the BIP32 derivation information for all public keys in this input.
+   * This information is crucial for hardware wallets and multisig coordinators
+   * to identify which keys they control and how to derive them.
+   */
+  get bip32Derivations(): readonly Bip32Derivation[] {
+    return this._bip32Derivations;
+  }
+
+  /**
+   * Sets the BIP32 derivation information for all public keys in this input.
+   * Each derivation entry maps a public key to its derivation path and master fingerprint.
+   *
+   * @param derivations - Array of BIP32 derivation information
+   */
+  setBip32Derivations(derivations: Bip32Derivation[]): void {
+    this._bip32Derivations = [...derivations];
+  }
+
+  /**
    * Check if the input is valid
    * @returns True if the amount is positive and exists, and txid and vout are valid
    */
@@ -222,8 +296,13 @@ export class BtcTxInputTemplate extends BtcTxComponent {
       txid: this._txid,
       vout: this._vout,
       value: this._amountSats.toString(),
+      sequence: this._sequence || RBF_SEQUENCE, // Default it to signal RBF if not provided
       prevTxHex: this._nonWitnessUtxo?.toString("hex"),
       witnessUtxo: this._witnessUtxo,
+      redeemScript: this._redeemScript,
+      witnessScript: this._witnessScript,
+      bip32Derivations:
+        this._bip32Derivations.length > 0 ? this._bip32Derivations : undefined,
     };
   }
 }
