@@ -10,7 +10,14 @@ import {execSync} from "child_process"
 import { BitcoinCoreService } from "./bitcoinServices";
 import { rpcConfig } from "./bitcoinServices";
 
-export async function globalSetup(_config: FullConfig){
+const clientConfig:rpcConfig = {
+    username: "abhishek",
+    password: "abhishek",
+    host: "http://localhost:18443",
+    port: 18443,
+}
+
+async function globalSetup(_config: FullConfig){
 
    try {
     console.log("Starting docker containers");
@@ -22,8 +29,10 @@ export async function globalSetup(_config: FullConfig){
     console.log("Waiting for continers to be ready...");
     await new Promise(resolve => setTimeout(resolve,10000));
 
-    const client = new BitcoinCoreService();
+    const client = new BitcoinCoreService(clientConfig);
 
+    const blockchainInfo = await client.getBlockchainInfo();
+    console.log("blockchainInfo", blockchainInfo);
 
     
    } catch (error) {
@@ -41,8 +50,6 @@ export async function globalSetup(_config: FullConfig){
         console.log("Error while cleaning up",clearupError)
     }
    }
-
-
-
-
 }
+
+export default globalSetup

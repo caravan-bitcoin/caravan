@@ -13,12 +13,12 @@ export class BitcoinCoreService {
     private client: BitcoinCore
 
 
-    constructor(){
+    constructor(clientConfig: rpcConfig){
         this.clientConfig = {
-            username: "abhishek",
-            password: "abhishek",
-            port: 18443,
-            host: "http://localhost:18443"
+            username: clientConfig.username || "abhishek",
+            password: clientConfig.password || "abhishek",
+            port: clientConfig.port || 18443,
+            host: clientConfig.host || "http://localhost:18443"
         }
 
         this.client = new BitcoinCore(this.clientConfig)
