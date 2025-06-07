@@ -13,5 +13,8 @@
   "description": "",
   "devDependencies": {
     "@types/node": "^22.15.29"
+  },
+  "dependencies": {
+    "bitcoin-core": "^5.0.0"
   }
 }
