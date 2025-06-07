@@ -418,7 +418,6 @@ export function importPSBT(psbtText) {
       // ==== Extract and import signatures ====
       try {
         const signatureSets = extractSignaturesFromPSBT(psbt, inputs);
-
         if (signatureSets.length > 0) {
           // Map signatures to Caravan's signature importers
           const importerData = mapSignaturesToImporters(signatureSets);

@@ -48,7 +48,7 @@ interface Input extends UTXO {
  * Interface for signature information extracted from PSBT
  */
 interface SignatureInfo {
-  signature: Buffer;
+  signature: Buffer | string;
   pubkey: string;
   inputIndex: number;
 }
@@ -57,7 +57,7 @@ interface SignatureInfo {
  * Interface for signature sets grouped by signer
  */
 interface SignatureSet {
-  signatures: Buffer[];
+  signatures: Buffer[] | string[];
   publicKeys: string[];
   signerPubkey: string;
 }
@@ -132,7 +132,7 @@ export function extractSignaturesFromPSBT(psbt: Psbt, inputs: Input[]) {
     if (input.partialSig && input.partialSig.length > 0) {
       for (const partialSig of input.partialSig) {
         inputSigs.push({
-          signature: partialSig.signature,
+          signature: partialSig.signature.toString("hex"),
           pubkey: partialSig.pubkey.toString("hex"),
           inputIndex,
         });
@@ -172,7 +172,7 @@ function groupSignaturesBySigner(
 
   // For each unique pubkey, try to build a complete signature set
   for (const pubkey of allPubkeys) {
-    const signatureSet: Buffer[] = [];
+    const signatureSet: string[] = [];
     const publicKeySet: string[] = [];
     let isCompleteSet = true;
 
@@ -185,14 +185,14 @@ function groupSignaturesBySigner(
         // Validate this signature to make sure it's correct
         try {
           const validatedPubkey = validateSignatureForInput(
-            sigForThisPubkey.signature,
+            sigForThisPubkey.signature as Buffer,
             inputIndex,
             psbt,
             inputs,
           );
 
           if (validatedPubkey) {
-            signatureSet.push(sigForThisPubkey.signature);
+            signatureSet.push(sigForThisPubkey.signature as string);
             publicKeySet.push(validatedPubkey);
           } else {
             console.warn(
