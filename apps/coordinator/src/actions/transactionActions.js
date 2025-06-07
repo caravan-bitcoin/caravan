@@ -3,12 +3,21 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
-  networkData,
-  autoLoadPSBT,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
+import {
+  setSignatureImporterSignature,
+  setSignatureImporterPublicKeys,
+  setSignatureImporterFinalized,
+  setSignatureImporterComplete,
+} from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
+import {
+  loadPsbt,
+  extractSignaturesFromPSBT,
+  mapSignaturesToImporters,
+} from "../utils/psbtUtils";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -300,89 +309,171 @@ export function setMaxSpendOnOutput(outputIndex) {
   };
 }
 
+/**
+ * Processes inputs from PSBT and matches them with wallet UTXOs.
+ */
+function processInputsFromPSBT(psbt, state) {
+  const createInputIdentifier = (txid, index) => `${txid}:${index}`;
+
+  const inputIdentifiers = new Set(
+    psbt.txInputs.map((input) => {
+      const txid = reverseBuffer(input.hash).toString("hex");
+      return createInputIdentifier(txid, input.index);
+    }),
+  );
+
+  const inputs = [];
+  getSpendableSlices(state).forEach((slice) => {
+    Object.entries(slice.utxos).forEach(([, utxo]) => {
+      const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
+      if (inputIdentifiers.has(inputIdentifier)) {
+        const input = {
+          ...utxo,
+          multisig: slice.multisig,
+          bip32Path: slice.bip32Path,
+          change: slice.change,
+        };
+        inputs.push(input);
+      }
+    });
+  });
+
+  return inputs;
+}
+
+/**
+ * Processes outputs from PSBT and adds them to the transaction.
+ */
+function processOutputsFromPSBT(psbt, dispatch) {
+  let outputsTotalSats = new BigNumber(0);
+
+  psbt.txOutputs.forEach((output, outputIndex) => {
+    const number = outputIndex + 1;
+    outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
+
+    if (number > 1) {
+      dispatch(addOutput());
+    }
+
+    // Check if this is a change output (has script/witness script)
+    if (output.script) {
+      dispatch(setChangeOutputIndex(number));
+      dispatch(setChangeAddressAction(output.address));
+    }
+
+    dispatch(setOutputAddress(number, output.address));
+    dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
+  });
+
+  return { outputsTotalSats };
+}
+
 export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
-    if (!psbt) {
-      throw new Error("Could not parse PSBT.");
-    }
+    try {
+      // Handles both PSBTv0 and PSBTv2
+      const psbt = loadPsbt(psbtText, network);
+      if (!psbt) {
+        throw new Error("Could not parse PSBT.");
+      }
 
-    if (psbt.txInputs.length === 0) {
-      throw new Error("PSBT does not contain any inputs.");
-    }
-    if (psbt.txOutputs.length === 0) {
-      throw new Error("PSBT does not contain any outputs.");
-    }
+      if (psbt.txInputs.length === 0) {
+        throw new Error("PSBT does not contain any inputs.");
+      }
+      if (psbt.txOutputs.length === 0) {
+        throw new Error("PSBT does not contain any outputs.");
+      }
 
-    dispatch(resetOutputs());
-    dispatch(setUnsignedPSBT(psbt.toBase64()));
+      dispatch(resetOutputs());
+      dispatch(setUnsignedPSBT(psbt.toBase64()));
 
-    const createInputIdentifier = (txid, index) => `${txid}:${index}`;
+      // ==== PROCESS INPUTS ====
+      const inputs = processInputsFromPSBT(psbt, state);
 
-    const inputIdentifiers = new Set(
-      psbt.txInputs.map((input) => {
-        const txid = reverseBuffer(input.hash).toString("hex");
-        return createInputIdentifier(txid, input.index);
-      }),
-    );
+      if (inputs.length === 0) {
+        throw new Error("PSBT does not contain any UTXOs from this wallet.");
+      }
+      if (inputs.length !== psbt.txInputs.length) {
+        throw new Error(
+          `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
+        );
+      }
 
-    const inputs = [];
-    getSpendableSlices(state).forEach((slice) => {
-      Object.entries(slice.utxos).forEach(([, utxo]) => {
-        const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
-        if (inputIdentifiers.has(inputIdentifier)) {
-          const input = {
-            ...utxo,
-            multisig: slice.multisig,
-            bip32Path: slice.bip32Path,
-            change: slice.change,
-          };
-          inputs.push(input);
-        }
-      });
-    });
+      dispatch(setInputs(inputs));
 
-    if (inputs.length === 0) {
-      throw new Error("PSBT does not contain any UTXOs from this wallet.");
-    }
-    if (inputs.length !== psbt.txInputs.length) {
-      throw new Error(
-        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
+      // ==== PROCESS INPUTS ====
+      const { outputsTotalSats } = processOutputsFromPSBT(psbt, dispatch);
+
+      // Calculate and set fee
+      state = getState(); //Now we get updated state after setting inputs
+      const inputsTotalSats = BigNumber(
+        state.spend.transaction.inputsTotalSats,
       );
+      const feeSats = inputsTotalSats.minus(outputsTotalSats);
+      const fee = satoshisToBitcoins(feeSats);
+      dispatch(setFee(fee));
+
+      // ==== Extract and import signatures ====
+      try {
+        const signatureSets = extractSignaturesFromPSBT(psbt, inputs);
+
+        if (signatureSets.length > 0) {
+          // Map signatures to Caravan's signature importers
+          const importerData = mapSignaturesToImporters(signatureSets);
+
+          // Update signature importers state
+          importerData.forEach((sigData) => {
+            // Set the signature data for this importer
+            dispatch(
+              setSignatureImporterSignature(
+                sigData.importerNumber,
+                sigData.signatures,
+              ),
+            );
+
+            // Set the public keys
+            dispatch(
+              setSignatureImporterPublicKeys(
+                sigData.importerNumber,
+                sigData.publicKeys,
+              ),
+            );
+
+            // Mark as finalized since we have a complete signature set
+            dispatch(
+              setSignatureImporterFinalized(sigData.importerNumber, true),
+            );
+
+            // Use setSignatureImporterComplete for the complete signature
+            dispatch(
+              setSignatureImporterComplete(sigData.importerNumber, {
+                signature: sigData.signatures,
+                publicKeys: sigData.publicKeys,
+                finalized: true,
+              }),
+            );
+          });
+        } else {
+          console.log(
+            "ℹ️ No complete signature sets found in PSBT (this is normal for unsigned PSBTs)",
+          );
+        }
+      } catch (signatureError) {
+        // Don't fail the entire import if signature extraction fails
+        console.warn(
+          "⚠️ Failed to extract signatures, but continuing with PSBT import:",
+          signatureError.message,
+        );
+      }
+
+      // Finalize the transaction
+      dispatch(finalizeOutputs(true));
+    } catch (error) {
+      console.error("❌ PSBT import failed:", error);
+      throw error;
     }
-
-    dispatch(setInputs(inputs));
-
-    let outputsTotalSats = new BigNumber(0);
-    psbt.txOutputs.forEach((output, outputIndex) => {
-      const number = outputIndex + 1;
-      outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
-      if (number > 1) {
-        dispatch(addOutput());
-      }
-
-      if (output.script) {
-        dispatch(setChangeOutputIndex(number));
-        dispatch(setChangeAddressAction(output.address));
-      }
-      dispatch(setOutputAddress(number, output.address));
-      dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
-    });
-
-    state = getState();
-    const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
-    const feeSats = inputsTotalSats - outputsTotalSats;
-    const fee = satoshisToBitcoins(feeSats);
-    dispatch(setFee(fee));
-
-    dispatch(finalizeOutputs(true));
-
-    // In the future, if we want to support loading in signatures
-    // (or sets of signatures) included in a PSBT, we likely need to do
-    // that work here. Initial implementation just ignores any signatures
-    // included with the uploaded PSBT.
   };
 }
 
@@ -390,7 +481,8 @@ export function importHermitPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
@@ -418,7 +510,8 @@ export function importLegacyPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }

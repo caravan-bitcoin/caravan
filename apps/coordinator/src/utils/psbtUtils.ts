@@ -5,7 +5,7 @@ import {
   autoLoadPSBT as psbtPackageAutoLoad,
   validateMultisigPsbtSignature,
 } from "@caravan/psbt";
-import { Psbt } from "bitcoinjs-lib-v6";
+import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt as `autoLoadPSBT` uses this Psbt Object
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
