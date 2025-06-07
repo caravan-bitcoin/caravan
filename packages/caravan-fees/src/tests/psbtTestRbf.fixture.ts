@@ -1,0 +1,79 @@
+import { Network } from "@caravan/bitcoin";
+
+import { SCRIPT_TYPES } from "../types";
+
+// You can check the fixture by putting the given expect below in BIP370.org
+
+export const exactRbfFixtures = {
+  acceleratedRbf: [
+    {
+      case: "Reconstruct exact PSBT #1 - P2WSH 2-of-3 multisig",
+      originalTx:
+        "01000000000101f4558a8b7d843e45337699289f37b82733a046a29c19c3f01099e57b6fc615560100000000fdffffff0200e1f50500000000160014732590c1b3da6d8baab052def750b8e9856629fb80d7f5050000000022002057b52f28cb2374d442785f9042f6efbc5044b8c14e30afaa2d1272d14982da6b0400473044022066286dfbd63c905fa70da4c0235254243b4ed48ed517dc488306c7f8577d624002205ba8382a71c27fc4bd49f94c38f0ecee85cfd7b491f9331d0ca2085bf542a65b01473044022048ddbeede34060a1e382c1eb6c65cfe6fc382837f914733b62de21b9d79c802502206ecd8d9fd4e4aa23b450e2a430690cbf610f9bb2de0d24c4c19ac61e68fa95a801695221022280c09c1775dcc39d93f15e06e5e22b5566952f971f2eb7744f2c12c5494f90210333355fd531bc39e6225d66b9715e064ad949c45e31535631ffcc6ef53a8db91e2103e6485fbfa9b274478ec4c9b101b50fb054ab7409c69ee25e2676389a5b5fc8a453ae00000000",
+      availableUtxos: [
+        {
+          txid: "5615c66f7be59910f0c3199ca246a03327b8379f28997633453e847d8b8a55f4",
+          vout: 1,
+          value: "199999588",
+          sequence: 0xfffffffe,
+          prevTxHex:
+            "010000000001036e4f7ce3ff9606b975309547ac0ea11008591ca0cab5e86ff259c5cba8f4425f0100000000fdffffff0967abd648d9be170ab086204f7aa5367b6545ed996f70a3be0a1312452155cd0100000000fdffffffd3b41cb283cba726fd6460b2b73a8b84cb03177e9cf89bab0507c9dfd0f062f10000000000fdffffff0200c2eb0b000000001600140492f15695d1bdd7150cee2bf78207dd304443c264c0eb0b000000002200202a5072f96089b470a4c22495624aa0b2eb72869ecf0ca85a10f5fdd83f8c85a4040047304402207f432f700c9c75bc92c0bf3bad2941d165094c310afb8cf908b24723b42efc87022063dacbfa1f17f19b147dd16a85a10c7973b50b76dc5b69d6e2aa7dc340301c23014730440220593a54674c321ab16c6666e247494d0c6d1d8d322ffba7d7ed31ac3884731c1702204697443a67d8963b8af178bbe72ba604498f88d04092cfb0b496304aef97345b0169522102c60914cf62df803c41f82761c281c364ee2207f6b90e07691a7681ac675dcde7210315f1ef096cf319ea8f5208b0afd2982602b7d3b3c63200c1461e77e9916f6b0321031c173caf8b44a1ceadbc130316c31d45930fc4c520658a59fd5865deb77b50c253ae040047304402204ca175f47b4f59e6c89a4182f5db32e388d940977e93aaf8f9818627c085377b02202bb0687072a1d5cd88a4c6ffc13e633c51175adb0ec20f8ba7658d8b3c518c68014730440220079d3bc7e95fcde42c213c84f4590d42e90ced8aa7416ac134b1030ac102389202200bdacb7b7de59e286a90e5cb786622c15123ded0e3a19a678eee8e9d800210cc0169522102c60914cf62df803c41f82761c281c364ee2207f6b90e07691a7681ac675dcde7210315f1ef096cf319ea8f5208b0afd2982602b7d3b3c63200c1461e77e9916f6b0321031c173caf8b44a1ceadbc130316c31d45930fc4c520658a59fd5865deb77b50c253ae0400473044022070ff4d70cf9f402911a49c3a7abf7383ea953d8b5ebbee44b82a544ff5ac8df40220779814640ce4f81a8fa4acf388f39ea9f658d1d1d1d28a93c27ee24052b4153001473044022063308beb1bc3c86e84d8c30d56d8ce2a57997b35e0a2c38c4fd208c3d82969a50220498762375ee9a199b062d3e5f87436b7f4402e919aeef22b1840a797562ec1ff0169522102c60914cf62df803c41f82761c281c364ee2207f6b90e07691a7681ac675dcde7210315f1ef096cf319ea8f5208b0afd2982602b7d3b3c63200c1461e77e9916f6b0321031c173caf8b44a1ceadbc130316c31d45930fc4c520658a59fd5865deb77b50c253ae00000000",
+          witnessUtxo: {
+            script: Buffer.from(
+              "64c0eb0b000000002200202a5072f96089b470a4c22495624aa0b2eb72869ecf0ca85a10f5fdd83f8c85a4",
+              "hex",
+            ),
+            value: 199999588,
+          },
+          witnessScript: Buffer.from(
+            "5221022280c09c1775dcc39d93f15e06e5e22b5566952f971f2eb7744f2c12c5494f90210333355fd531bc39e6225d66b9715e064ad949c45e31535631ffcc6ef53a8db91e2103e6485fbfa9b274478ec4c9b101b50fb054ab7409c69ee25e2676389a5b5fc8a453ae",
+            "hex",
+          ),
+          bip32Derivations: [
+            {
+              pubkey: Buffer.from(
+                "022280c09c1775dcc39d93f15e06e5e22b5566952f971f2eb7744f2c12c5494f90",
+                "hex",
+              ),
+              masterFingerprint: Buffer.from("739b19a7", "hex"),
+              path: "m/84'/1'/0'/1/5",
+            },
+            {
+              pubkey: Buffer.from(
+                "0333355fd531bc39e6225d66b9715e064ad949c45e31535631ffcc6ef53a8db91e",
+                "hex",
+              ),
+              masterFingerprint: Buffer.from("c73a4236", "hex"),
+              path: "m/84'/1'/0'/1/5",
+            },
+            {
+              pubkey: Buffer.from(
+                "03e6485fbfa9b274478ec4c9b101b50fb054ab7409c69ee25e2676389a5b5fc8a4",
+                "hex",
+              ),
+              masterFingerprint: Buffer.from("ce216582", "hex"),
+              path: "m/84'/1'/0'/1/5",
+            },
+          ],
+        },
+      ],
+      network: Network.REGTEST,
+      dustThreshold: "546",
+      scriptType: SCRIPT_TYPES.P2WSH,
+      changeAddress:
+        "bcrt1q276j72xtyd6dgsnct7gy9ah0h3gyfwxpfcc2l23dzfedzjvzmf4se4th53",
+      requiredSigners: 2,
+      totalSigners: 3,
+      absoluteFee: "2020",
+      targetFeeRate: 32, // 10.68 sat/vbyte (original fee rate)
+      expected: {
+        inputCount: 1,
+        outputCount: 2,
+        exactPsbt:
+          "cHNidP8B+wQCAAAAAQIEAgAAAAEEAQEBBQECAQMEAAAAAAEGAQMAAQ4gVhXGb3vlmRDwwxmcokagMye4N58omXYzRT6EfYuKVfQBDwQBAAAAARAE/v///wEA/cUDAQAAAAABA25PfOP/lga5dTCVR6wOoRAIWRygyrXob/JZxcuo9EJfAQAAAAD9////CWer1kjZvhcKsIYgT3qlNntlRe2Zb3CjvgoTEkUhVc0BAAAAAP3////TtByyg8unJv1kYLK3OouEywMXfpz4m6sFB8nf0PBi8QAAAAAA/f///wIAwusLAAAAABYAFASS8VaV0b3XFQzuK/eCB90wREPCZMDrCwAAAAAiACAqUHL5YIm0cKTCJJViSqCy63KGns8MqFoQ9f3YP4yFpAQARzBEAiB/Qy9wDJx1vJLAvzutKUHRZQlMMQr7jPkIskcjtC78hwIgY9rL+h8X8ZsUfdFqhaEMeXO1C3bcW2nW4qp9w0AwHCMBRzBEAiBZOlRnTDIasWxmZuJHSU0MbR2NMi/7p9ftMaw4hHMcFwIgRpdEOmfYljuK8Xi75yumBEmPiNBAks+wtJYwSu+XNFsBaVIhAsYJFM9i34A8QfgnYcKBw2TuIgf2uQ4HaRp2gaxnXc3nIQMV8e8JbPMZ6o9SCLCv0pgmArfTs8YyAMFGHnfpkW9rAyEDHBc8r4tEoc6tvBMDFsMdRZMPxMUgZYpZ/Vhl3rd7UMJTrgQARzBEAiBMoXX0e09Z5siaQYL12zLjiNlAl36Tqvj5gYYnwIU3ewIgK7BocHKh1c2IpMb/wT5jPFEXWtsOwg+Lp2WNizxRjGgBRzBEAiAHnTvH6V/N5CwhPIT0WQ1C6QztiqdBasE0sQMKwQI4kgIgC9rLe33lnihqkOXLeGYiwVEj3tDjoZpnju6OnYACEMwBaVIhAsYJFM9i34A8QfgnYcKBw2TuIgf2uQ4HaRp2gaxnXc3nIQMV8e8JbPMZ6o9SCLCv0pgmArfTs8YyAMFGHnfpkW9rAyEDHBc8r4tEoc6tvBMDFsMdRZMPxMUgZYpZ/Vhl3rd7UMJTrgQARzBEAiBw/01wz59AKRGknDp6v3OD6pU9i1677kS4KlRP9ayN9AIgd5gUZAzk+BqPpKzziPOeqfZY0dHR0oqTwn7iQFK0FTABRzBEAiBjMIvrG8PIboTYww1W2M4qV5l7NeCiw4xP0gjD2ClppQIgSYdiN17poZmwYtPl+HQ2t/RALpGa7vIrGECnl1Yuwf8BaVIhAsYJFM9i34A8QfgnYcKBw2TuIgf2uQ4HaRp2gaxnXc3nIQMV8e8JbPMZ6o9SCLCv0pgmArfTs8YyAMFGHnfpkW9rAyEDHBc8r4tEoc6tvBMDFsMdRZMPxMUgZYpZ/Vhl3rd7UMJTrgAAAAABATRkwOsLAAAAACtkwOsLAAAAACIAICpQcvlgibRwpMIklWJKoLLrcoaezwyoWhD1/dg/jIWkAQVpUiECIoDAnBd13MOdk/FeBuXiK1VmlS+XHy63dE8sEsVJT5AhAzM1X9UxvDnmIl1muXFeBkrZScReMVNWMf/MbvU6jbkeIQPmSF+/qbJ0R47EybEBtQ+wVKt0Ccae4l4mdjiaW1/IpFOuIgYCIoDAnBd13MOdk/FeBuXiK1VmlS+XHy63dE8sEsVJT5AYc5sZp1QAAIABAACAAAAAgAEAAAAFAAAAIgYDMzVf1TG8OeYiXWa5cV4GStlJxF4xU1Yx/8xu9TqNuR4YxzpCNlQAAIABAACAAAAAgAEAAAAFAAAAIgYD5khfv6mydEeOxMmxAbUPsFSrdAnGnuJeJnY4mltfyKQYziFlglQAAIABAACAAAAAgAEAAAAFAAAAAAEDCADh9QUAAAAAAQQWABRzJZDBs9pti6qwUt73ULjphWYp+wABAwgkxvUFAAAAAAEEIgAgV7UvKMsjdNRCeF+QQvbvvFBEuMFOMK+qLRJy0UmC2msA",
+        fee: "6464",
+        feeRate: 1.0687830687830688,
+      },
+    },
+  ],
+};
