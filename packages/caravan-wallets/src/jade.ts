@@ -13,6 +13,9 @@ import {
   IJadeInterface,
   JadeTransport,
   base64ToBytes,
+  bytesToBase64,
+  MultisigDescriptor,
+  SignerDescriptor,
 } from "jadets";
 
 import {
@@ -23,7 +26,11 @@ import {
   MultisigAddressType,
 } from "@caravan/bitcoin";
 
+import { v4 as uuidv4 } from 'uuid';
+
 import { MultisigWalletConfig } from "./types";
+
+import { randomBytes } from 'crypto';
 
 export const JADE = "jade";
 
@@ -39,6 +46,27 @@ function convertToMyMultisigVariant(addressType: MultisigAddressType): string {
       throw new Error(`Unsupported multisig address type: ${addressType}`);
   }
 }
+
+function variantFromAddressType(
+  t: MultisigAddressType
+): MultisigDescriptor["variant"] {
+  switch (t) {
+    case "P2SH":
+      return "sh(multi(k))";
+    case "P2WSH":
+      return "wsh(multi(k))";
+    case "P2SH-P2WSH":
+      return "sh(wsh(multi(k)))";
+    default:
+      throw new Error(`Unsupported addressType ${t}`);
+  }
+}
+
+function fingerprintFromHex(xfp: string): Uint8Array {
+	return Buffer.from(xfp, "hex");
+}
+
+
 
 function parseBip32Path(path_i: string): number[] {
   let path = path_i;
@@ -68,6 +96,24 @@ function parseBip32Path(path_i: string): number[] {
     result.push(index + (hardened ? 0x80000000 : 0));
   }
   return result;
+}
+
+export function walletConfigToDescriptor(
+	cfg: MultisigWalletConfig
+): MultisigDescriptor {
+	const signers: SignerDescriptor[] = cfg.extendedPublicKeys.map((ek) => ({
+		fingerprint: fingerprintFromHex(ek.xfp),
+		derivation: parseBip32Path(ek.bip32Path),
+		xpub: ek.xpub,
+		path: [],
+	}));
+
+	return {
+		variant: variantFromAddressType(cfg.addressType),
+		sorted: false,
+		threshold: cfg.quorum.requiredSigners,
+		signers,
+	};
 }
 
 export class JadeInteraction extends DirectKeystoreInteraction {
@@ -261,12 +307,21 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
     return await this.withDevice(
       this.walletConfig.network,
       async (jade: IJade) => {
-        const ping = await jade.ping();
-        return ping;
+		 
+		  const descriptor = walletConfigToDescriptor(this.walletConfig);
+
+//		  console.log("descriptor: ", descriptor)
+
+        await jade.registerMultisig(
+			this.walletConfig.network,
+			undefined,
+			descriptor
+		);
       },
     );
   }
 }
+
 export class JadeConfirmMultisigAddress extends JadeInteraction {
   network: BitcoinNetwork;
 
@@ -289,17 +344,29 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
     this.walletConfig = walletConfig;
   }
 
-  /**
-   * Adds messages about BIP32 path warnings.
-   */
-
   async run() {
-    return await this.withDevice(this.network, async (jade: IJade) => {
-      const ping = await jade.ping();
-      return {
-        ping,
-      };
-    });
+	  return await this.withDevice(this.network, async (jade: IJade) => {
+		  const descriptor = walletConfigToDescriptor(this.walletConfig);
+		  let multisigName = await jade.getMultiSigName(this.network, descriptor);
+		  if (!multisigName) {
+			  multisigName = "jade" + randomBytes(4).toString("hex");
+			  console.log(multisigName);
+			  console.log(descriptor);
+			  await jade.registerMultisig(this.network, multisigName, descriptor);
+		  }
+
+		  const relPath = parseBip32Path(this.bip32Path);
+		  const paths: number[][] = this.walletConfig.extendedPublicKeys.map(
+			  () => relPath
+		  );
+
+		  const addr = await jade.getReceiveAddress(this.network, {
+			  multisigName: multisigName,
+			  paths,
+		  });
+		  return { addr,
+			  relPath }
+	  });
   }
 }
 
@@ -344,14 +411,50 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     return await this.withDevice(
       this.walletConfig.network,
       async (jade: IJade) => {
-		  console.log(this.base64string);
-		  console.log("hi");
         const signedPSBT = await jade.signPSBT(
           this.walletConfig.network,
           this.unsignedPsbt,
         );
+			
+		if (this.returnSignatureArray) {
+			const b64string = bytesToBase64(signedPSBT); 
+			const parsedPsbt = parsePsbt(b64string);
+			const fingerprint =await jade.getMasterFingerPrint(this.walletConfig.network); 
+			console.log("fingerprint: ", fingerprint);
+			let sigArray: string[] = [];
+			for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+				const bip32Derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
+				console.log("bip32d: ", bip32Derivations);
+				if (!Array.isArray(bip32Derivations)) {
+					throw new Error("bip32 derivations expected to be an array");
+				}
+				const bip32Derivation = bip32Derivations.find(
+					(entry) => entry.value!.substr(0, 8) == fingerprint,
+				);
+					if (!bip32Derivation) {
+						throw new Error("could not find our pubkey in the signed PSBT");
+					}
+					// First byte of the key is 0x06, the PSBT key.
+					const pubKey = bip32Derivation.key.substr(2);
+					console.log("pubkey: ",pubKey);
+					// First byte of the key is 0x02, the PSBT key.
+					const partialSig = parsedPsbt.PSBT_IN_PARTIAL_SIG[i].find(
+						(e) => e.key.substr(2) === pubKey,
+					);
+						if (!partialSig) {
+							throw new Error("could not find our signature in the signed PSBT");
+						}
+						sigArray.push(partialSig.value!);
+			}
+			console.log(sigArray);
+
+			return sigArray;
+		}
+
         return signedPSBT;
       },
     );
   }
 }
+
+

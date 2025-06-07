@@ -88,7 +88,7 @@
     "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",
     "core-js": "^2.6.10",
-    "jadets": "^1.0.4",
+    "jadets": "^1.1.10",
     "ledger-bitcoin": "^0.2.0",
     "punycode": "^2.1.1",
     "sha": "^3.0.0"
