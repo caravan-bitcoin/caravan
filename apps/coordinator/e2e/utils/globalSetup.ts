@@ -31,8 +31,8 @@ async function globalSetup(_config: FullConfig){
 
     const client = new BitcoinCoreService(clientConfig);
 
-    const blockchainInfo = await client.getBlockchainInfo();
-    console.log("blockchainInfo", blockchainInfo);
+    const checkConnection = await client.testRpcConnection();
+    console.log("checkConnection",checkConnection)
 
     
    } catch (error) {

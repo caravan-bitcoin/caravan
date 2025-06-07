@@ -5,7 +5,7 @@ async function globalTeardown(_config: FullConfig){
     try {
         console.log("Stopping docker containers...")
         //removing docker containers after use
-        execSync("docker compose down -v", {
+        execSync("docker compose down", {
             cwd: process.cwd() ,
             stdio: "inherit"
         })
