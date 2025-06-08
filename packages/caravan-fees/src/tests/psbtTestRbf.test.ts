@@ -3,7 +3,11 @@
 import { PsbtV2 } from "@caravan/psbt";
 
 import { createAcceleratedRbfTransaction } from "../rbf";
-import { calculateTotalInputValue, calculateTotalOutputValue } from "../utils";
+import {
+  calculateTotalInputValue,
+  calculateTotalOutputValue,
+  reverseHex,
+} from "../utils";
 
 import { exactRbfFixtures } from "./psbtTestRbf.fixture";
 
@@ -38,7 +42,7 @@ describe("Exact RBF Reconstruction Tests", () => {
         );
 
         // Test input details match
-        expect(psbt.PSBT_IN_PREVIOUS_TXID).toEqual(
+        expect(psbt.PSBT_IN_PREVIOUS_TXID.map(reverseHex)).toEqual(
           expectedPsbt.PSBT_IN_PREVIOUS_TXID,
         );
         expect(psbt.PSBT_IN_OUTPUT_INDEX).toEqual(
