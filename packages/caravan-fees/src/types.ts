@@ -36,7 +36,26 @@ export interface Bip32Derivation {
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export interface UTXO {
-  /** The transaction ID of the UTXO in reversed hex format (big-endian). */
+  /** The transaction ID of the UTXO in reversed hex format (big-endian).
+   *
+   * @remarks
+   * This value is typically obtained from user input or block explorers, where
+   * transaction IDs are conventionally displayed in **big-endian** format (i.e.,
+   * the human-readable form).
+   *
+   * Internally, the `@caravan/fees` package will convert this to **little-endian**
+   * format for raw Bitcoin protocol operations, as Bitcoin internally stores and
+   * references TXIDs in little-endian byte order.
+   *
+   * This convention maintains consistency with external expectations while
+   * ensuring compatibility with Bitcoin's internal data structures.
+   *
+   * @example
+   * Big-endian (user-facing): `6fe28c0ab6f1b372...`
+   * Little-endian (internal use): `...72b3f1b60a8ce26f`
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
+   */
   txid: string;
 
   /** The output index of the UTXO in its parent transaction. */
@@ -213,7 +232,7 @@ export enum FeeBumpStrategy {
  */
 export interface TransactionInput {
   /**
-   * The transaction ID of the previous transaction containing the output being spent.
+   * The transaction ID of the previous transaction containing the output being spent in big-endian format.
    */
   txid: string;
 
