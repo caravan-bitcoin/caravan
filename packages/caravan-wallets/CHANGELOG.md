@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2
+
+### Patch Changes
+
+- [#302](https://github.com/caravan-bitcoin/caravan/pull/302) [`69f580a`](https://github.com/caravan-bitcoin/caravan/commit/69f580a8311ef00de521fffa2b40b0d7e2417d76) Thanks [@cc-unchained](https://github.com/cc-unchained)! - bump trezor connect dependency to 9.6.0
+
 ## 0.6.1
 
 ### Patch Changes
