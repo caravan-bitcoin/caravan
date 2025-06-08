@@ -6,7 +6,6 @@ export default defineConfig({
     exclude: ['node_modules/**', 'dist/**'],
     globals: true,
     environment: "node",
-    testTimeout: 10000,
     coverage: {
       provider: "istanbul",
       reporter: "text",
