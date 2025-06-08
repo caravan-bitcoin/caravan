@@ -17,7 +17,7 @@ import {
   MultisigDescriptor,
   SignerDescriptor,
   ReceiveOptions,
-} from "testing-jade-hw";
+} from "jadets";
 
 import {
   BitcoinNetwork,
@@ -26,8 +26,6 @@ import {
   PsbtV2,
   MultisigAddressType,
 } from "@caravan/bitcoin";
-
-import { v4 as uuidv4 } from 'uuid';
 
 import { MultisigWalletConfig } from "./types";
 
@@ -298,7 +296,6 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-	
 
       const path = parseBip32Path(this.bip32Path);
       const xpub = await jade.getXpub(this.network, path);
@@ -331,7 +328,6 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
 			multisigName = "jade" + randomBytes(4).toString("hex");
 			await jade.registerMultisig(this.walletConfig.network, multisigName, descriptor);
 		}
-		return multisigName
       },
     );
   }
