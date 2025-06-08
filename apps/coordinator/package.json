@@ -15,10 +15,6 @@
     "url": "https://github.com/caravan-bitcoin/caravan/issues"
   },
   "homepage": "https://github.com/caravan-bitcoin/caravan",
-  "engineStrict": true,
-  "engines": {
-    "node": ">=20"
-  },
   "overrides": {
     "jspdf": "2.5.1",
     "@ledgerhq/hw-transport-webusb": {
@@ -67,6 +63,7 @@
     "vite-plugin-wasm": "^3.3.0"
   },
   "scripts": {
+    "preinstall": "check-node-version --node=\">=20.18.0 <21.0.0\" --npm=\">=10.5.0 <11.0.0\" || (echo \"\n⚠️  Sorry — you need Node 20.18.x+ and npm 10.5.x+ to work on this project.\n   • Install with nvm:   nvm install 20.18 && nvm use 20.18\n   • Or update npm:      npm install -g npm@10\n\" && exit 1)",
     "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "build:ci": "npm run ci && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
