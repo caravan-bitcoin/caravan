@@ -55,9 +55,6 @@ class ExportExtendedPublicKeyTest extends Test {
   }
 
   expected() {
-	  console.log("-test-fixtures-");
-	  console.log(TEST_FIXTURES.keys.open_source.nodes[this.params.bip32Path]);
-
     const { xpub, tpub, rootFingerprint } =
       TEST_FIXTURES.keys.open_source.nodes[this.params.bip32Path];
 
