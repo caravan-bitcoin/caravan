@@ -466,3 +466,32 @@ export function validateSequence(sequence: number): boolean {
   // Sequence should be a 32-bit unsigned integer
   return Number.isInteger(sequence) && sequence >= 0 && sequence <= 0xffffffff;
 }
+
+/**
+ * Reverses the byte order of a hexadecimal string (i.e., flips endianness).
+ *
+ * @param hex - A hexadecimal string (e.g., a transaction ID or block hash).
+ * @returns The hex string with reversed byte order.
+ *
+ * @remarks
+ * Bitcoin internally stores many values (like transaction IDs, block hashes, etc.)
+ * in little-endian format, even though they are typically represented and
+ * communicated externally in big-endian format.
+ *
+ * This function is particularly important in the `@caravan/fees` because input
+ * UTXOs provided by users often include transaction IDs in **big-endian** form
+ * (as shown in block explorers or PSBT files), but Bitcoin Core and many raw
+ * protocols internally require them in **little-endian**.
+ *
+ * Reversing the byte order ensures correct internal processing for our @caravan/fees-package, matching Bitcoin's
+ * expectations.
+ *
+ * For example:
+ * Big-endian TXID (user-provided): `6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000`
+ * Little-endian (used in raw tx):  `000000000019d6689c0815e165831e934ff763ae46a2a6c172b3f1b60a8ce26f`
+ *
+ * This "quirk" is well-documented and explained in:
+ * @see {@link https://learnmeabitcoin.com/technical/general/byte-order}
+ */
+export const reverseHex = (hex: string): string =>
+  Buffer.from(hex, "hex").reverse().toString("hex");
