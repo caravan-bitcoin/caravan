@@ -9,6 +9,7 @@ import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
 import { BitcoinCoreService } from "./bitcoinServices";
 import { rpcConfig } from "./bitcoinServices";
+import bitcoinClient from "./bitcoinClient";
 
 const clientConfig:rpcConfig = {
     username: "abhishek",
@@ -29,9 +30,9 @@ async function globalSetup(_config: FullConfig){
     console.log("Waiting for continers to be ready...");
     await new Promise(resolve => setTimeout(resolve,10000));
 
-    const client = new BitcoinCoreService(clientConfig);
+    const client = bitcoinClient();
 
-    const checkConnection = await client.testRpcConnection();
+    const checkConnection = await client?.testRpcConnection();
     console.log("checkConnection",checkConnection)
 
     
