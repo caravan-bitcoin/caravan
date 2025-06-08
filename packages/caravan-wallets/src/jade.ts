@@ -16,6 +16,7 @@ import {
   bytesToBase64,
   MultisigDescriptor,
   SignerDescriptor,
+  ReceiveOptions,
 } from "jadets";
 
 import {
@@ -63,10 +64,8 @@ function variantFromAddressType(
 }
 
 function fingerprintFromHex(xfp: string): Uint8Array {
-	return Buffer.from(xfp, "hex");
+  return Uint8Array.from(Buffer.from(xfp, 'hex'));
 }
-
-
 
 function parseBip32Path(path_i: string): number[] {
   let path = path_i;
@@ -98,7 +97,22 @@ function parseBip32Path(path_i: string): number[] {
   return result;
 }
 
-export function walletConfigToDescriptor(
+
+function extractPathSuffix(
+	fullPathStr: string,
+	baseDerivation: number[]
+): number[] {
+	const fullPath = parseBip32Path(fullPathStr);
+	if (fullPath.length < baseDerivation.length ||
+		!baseDerivation.every((v,i) => v === fullPath[i])) {
+		throw new Error(
+			`Path "${fullPathStr}" does not extend base derivation [${baseDerivation.join(",")}]`
+		);
+	}
+	return fullPath.slice(baseDerivation.length);
+}
+
+function walletConfigToDescriptor(
 	cfg: MultisigWalletConfig
 ): MultisigDescriptor {
 	const signers: SignerDescriptor[] = cfg.extendedPublicKeys.map((ek) => ({
@@ -307,10 +321,8 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
     return await this.withDevice(
       this.walletConfig.network,
       async (jade: IJade) => {
-		 
-		  const descriptor = walletConfigToDescriptor(this.walletConfig);
 
-//		  console.log("descriptor: ", descriptor)
+		const descriptor = walletConfigToDescriptor(this.walletConfig);
 
         await jade.registerMultisig(
 			this.walletConfig.network,
@@ -348,24 +360,25 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 	  return await this.withDevice(this.network, async (jade: IJade) => {
 		  const descriptor = walletConfigToDescriptor(this.walletConfig);
 		  let multisigName = await jade.getMultiSigName(this.network, descriptor);
+
 		  if (!multisigName) {
 			  multisigName = "jade" + randomBytes(4).toString("hex");
-			  console.log(multisigName);
-			  console.log(descriptor);
 			  await jade.registerMultisig(this.network, multisigName, descriptor);
 		  }
+		  const relativePath = this.bip32Path;
 
-		  const relPath = parseBip32Path(this.bip32Path);
-		  const paths: number[][] = this.walletConfig.extendedPublicKeys.map(
-			  () => relPath
-		  );
-
-		  const addr = await jade.getReceiveAddress(this.network, {
-			  multisigName: multisigName,
-			  paths,
+		  const paths = descriptor.signers.map((signer) => {
+			  return extractPathSuffix(relativePath, signer.derivation);	
 		  });
-		  return { addr,
-			  relPath }
+
+		  const opts: ReceiveOptions = {
+			  paths: paths,
+			  multisigName: multisigName 
+		  }
+
+		  const multisigAddress = await jade.getReceiveAddress(this.network, opts);
+
+		  return multisigAddress; 
 	  });
   }
 }
