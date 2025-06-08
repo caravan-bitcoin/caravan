@@ -374,11 +374,14 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 		  const descriptor = walletConfigToDescriptor(this.walletConfig);
 		  let multisigName = await jade.getMultiSigName(this.network, descriptor);
 		  console.log("wallet config: ", this.walletConfig);
+		  console.log(multisigName);
 
 		  if (!multisigName) {
 			  multisigName = "jade" + randomBytes(4).toString("hex");
 			  await jade.registerMultisig(this.network, multisigName, descriptor);
 		  }
+		  const walletFromJade = await jade.getRegisteredMultisig(multisigName);
+		  console.log("walletFromJade: ", walletFromJade);
 		  const relativePath = this.bip32Path;
 
 		  const paths = descriptor.signers.map((signer) => {
@@ -469,7 +472,6 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
             }
             
             const pubKey = bip32Derivation.key.substr(2);
-            console.log("pubkey for input", i, ":", pubKey);
             
             const partialSigs = parsedPsbt.PSBT_IN_PARTIAL_SIG[i];
             if (!Array.isArray(partialSigs)) {
@@ -484,11 +486,9 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
               throw new Error(`Could not find our signature for input ${i}`);
             }
             
-            console.log(`Signature for input ${i}:`, partialSig.value);
             sigArray.push(partialSig.value!);
           }
           
-          console.log("Final signature array:", sigArray);
           return sigArray;
         }
         
