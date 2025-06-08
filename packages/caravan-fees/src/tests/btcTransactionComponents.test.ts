@@ -122,7 +122,9 @@ describe("BtcTxInputTemplate", () => {
       expect(reverseHex(input.txid)).toBe(utxoFixture.txid);
 
       // We Create a copy without txid to compare remaining fields
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { txid: _, ...convertedRest } = convertedUTXO;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { txid: __, ...fixtureRest } = utxoFixture;
 
       expect(convertedRest).toEqual(fixtureRest);
@@ -259,8 +261,11 @@ describe("BtcTxInputTemplate", () => {
         expect(reverseHex(input.txid)).toBe(originalUtxo.txid);
 
         // We Create a copy without txid to compare remaining fields
-        const { txid: _, ...convertedRest } = convertedUtxo;
-        const { txid: __, ...fixtureRest } = originalUtxo;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { txid: _unusedConverted, ...convertedRest } = convertedUtxo;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { txid: _unusedOriginal, ...fixtureRest } = originalUtxo;
+
         expect(convertedRest).toEqual(fixtureRest);
       });
 
