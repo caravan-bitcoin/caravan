@@ -17,7 +17,7 @@ import {
   MultisigDescriptor,
   SignerDescriptor,
   ReceiveOptions,
-} from "jadets";
+} from "testing-jade-hw";
 
 import {
   BitcoinNetwork,
@@ -298,10 +298,18 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
+	
+		console.log("bip32Path: ", this.bip32Path);
+		console.log("includeXFP: ", this.includeXFP);
+
       const path = parseBip32Path(this.bip32Path);
+	  console.log("path parsed: ", path);
       const xpub = await jade.getXpub(this.network, path);
+	  console.log("xpub: ", xpub);
       const rootFingerprint = await jade.getMasterFingerPrint(this.network);
+	  console.log("fingerprint: ", rootFingerprint);
       if (this.includeXFP) {
+		  console.log({xpub, rootFingerprint});
         return { xpub, rootFingerprint };
       }
       return xpub;
@@ -322,13 +330,18 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
       this.walletConfig.network,
       async (jade: IJade) => {
 
-		const descriptor = walletConfigToDescriptor(this.walletConfig);
+		  console.log("wallet config: ", this.walletConfig);
 
-        await jade.registerMultisig(
-			this.walletConfig.network,
-			undefined,
-			descriptor
-		);
+		const descriptor = walletConfigToDescriptor(this.walletConfig);
+		//need to check to make sure the wallet doesnt already exist. and if it does, return that wallet
+		let multisigName = await jade.getMultiSigName(this.walletConfig.network, descriptor);
+		console.log("found name: ", multisigName);
+		if (!multisigName) {
+			multisigName = "jade" + randomBytes(4).toString("hex");
+			await jade.registerMultisig(this.walletConfig.network, multisigName, descriptor);
+			console.log("registered new multisig wallet", multisigName);
+		}
+		return multisigName
       },
     );
   }
@@ -360,6 +373,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 	  return await this.withDevice(this.network, async (jade: IJade) => {
 		  const descriptor = walletConfigToDescriptor(this.walletConfig);
 		  let multisigName = await jade.getMultiSigName(this.network, descriptor);
+		  console.log("wallet config: ", this.walletConfig);
 
 		  if (!multisigName) {
 			  multisigName = "jade" + randomBytes(4).toString("hex");
@@ -370,6 +384,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 		  const paths = descriptor.signers.map((signer) => {
 			  return extractPathSuffix(relativePath, signer.derivation);	
 		  });
+		  console.log("extracted path suffix for each signer", paths);
 
 		  const opts: ReceiveOptions = {
 			  paths: paths,
@@ -377,6 +392,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 		  }
 
 		  const multisigAddress = await jade.getReceiveAddress(this.network, opts);
+		  console.log("multisig address: ", multisigAddress);
 
 		  return multisigAddress; 
 	  });
@@ -385,6 +401,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 
 function parsePsbt(psbt: string): PsbtV2 {
   const psbtVersion = getPsbtVersionNumber(psbt);
+  console.log("psbt version output: ", psbtVersion);
   switch (psbtVersion) {
     case 0:
       return PsbtV2.FromV0(psbt, true);
@@ -397,13 +414,10 @@ function parsePsbt(psbt: string): PsbtV2 {
 
 export class JadeSignMultisigTransaction extends JadeInteraction {
   private walletConfig: MultisigWalletConfig;
-
   private returnSignatureArray: boolean;
-
   private unsignedPsbt: Uint8Array;
-
   private base64string: string;
-
+  
   constructor({
     walletConfig,
     psbt,
@@ -417,7 +431,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     this.walletConfig = walletConfig;
     this.returnSignatureArray = returnSignatureArray;
     this.unsignedPsbt = base64ToBytes(psbt);
-	this.base64string = psbt
+    this.base64string = psbt;
   }
 
   async run() {
@@ -428,46 +442,62 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
           this.walletConfig.network,
           this.unsignedPsbt,
         );
-			
-		if (this.returnSignatureArray) {
-			const b64string = bytesToBase64(signedPSBT); 
-			const parsedPsbt = parsePsbt(b64string);
-			const fingerprint =await jade.getMasterFingerPrint(this.walletConfig.network); 
-			console.log("fingerprint: ", fingerprint);
-			let sigArray: string[] = [];
-			for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-				const bip32Derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
-				console.log("bip32d: ", bip32Derivations);
-				if (!Array.isArray(bip32Derivations)) {
-					throw new Error("bip32 derivations expected to be an array");
-				}
-				const bip32Derivation = bip32Derivations.find(
-					(entry) => entry.value!.substr(0, 8) == fingerprint,
-				);
-					if (!bip32Derivation) {
-						throw new Error("could not find our pubkey in the signed PSBT");
-					}
-					// First byte of the key is 0x06, the PSBT key.
-					const pubKey = bip32Derivation.key.substr(2);
-					console.log("pubkey: ",pubKey);
-					// First byte of the key is 0x02, the PSBT key.
-					const partialSig = parsedPsbt.PSBT_IN_PARTIAL_SIG[i].find(
-						(e) => e.key.substr(2) === pubKey,
-					);
-						if (!partialSig) {
-							throw new Error("could not find our signature in the signed PSBT");
-						}
-						sigArray.push(partialSig.value!);
-			}
-			console.log(sigArray);
+        
+        if (this.returnSignatureArray) {
+          const b64string = bytesToBase64(signedPSBT);
+          const parsedPsbt = parsePsbt(b64string);
+          const fingerprint = await jade.getMasterFingerPrint(this.walletConfig.network);
 
-			return sigArray;
-		}
-
+          let sigArray: string[] = [];
+          
+          const originalPsbt = parsePsbt(this.base64string);
+          
+          for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+            const bip32Derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
+            
+            if (!Array.isArray(bip32Derivations)) {
+              throw new Error(`bip32 derivations expected to be an array for input ${i}`);
+            }
+            
+            const bip32Derivation = bip32Derivations.find(
+              (entry) => entry.value!.substr(0, 8) === fingerprint,
+            );
+            
+            if (!bip32Derivation) {
+              console.warn(`Could not find our pubkey in input ${i}, skipping`);
+              continue;
+            }
+            
+            const pubKey = bip32Derivation.key.substr(2);
+            console.log("pubkey for input", i, ":", pubKey);
+            
+            const partialSigs = parsedPsbt.PSBT_IN_PARTIAL_SIG[i];
+            if (!Array.isArray(partialSigs)) {
+              throw new Error(`Partial signatures expected to be an array for input ${i}`);
+            }
+            
+            const partialSig = partialSigs.find(
+              (e) => e.key.substr(2) === pubKey,
+            );
+            
+            if (!partialSig) {
+              throw new Error(`Could not find our signature for input ${i}`);
+            }
+            
+            console.log(`Signature for input ${i}:`, partialSig.value);
+            sigArray.push(partialSig.value!);
+          }
+          
+          console.log("Final signature array:", sigArray);
+          return sigArray;
+        }
+        
         return signedPSBT;
       },
     );
   }
+
+
 }
 
 

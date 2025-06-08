@@ -235,7 +235,7 @@ class SignMultisigTransactionTest extends Test {
   }
 
   expected() {
-    if (this.params.keystore === COLDCARD) {
+    if (this.params.keystore === COLDCARD || this.params.keystore === JADE) {
       return this.params.byteCeilingSignature;
     }
     return this.params.signature;
