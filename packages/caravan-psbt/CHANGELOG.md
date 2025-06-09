@@ -1,5 +1,12 @@
 # @caravan/psbt
 
+## 1.9.6
+
+### Patch Changes
+
+- Updated dependencies [[`73754e4`](https://github.com/caravan-bitcoin/caravan/commit/73754e431ca7286de7d1c78305b5ebd9070a15d9)]:
+  - @caravan/bitcoin@0.3.4
+
 ## 1.9.5
 
 ### Patch Changes
