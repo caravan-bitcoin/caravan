@@ -480,6 +480,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
   }
 
 
+  //TODO - add adaptor
 }
 
 
