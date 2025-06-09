@@ -151,7 +151,7 @@ class CreateWallet extends React.Component {
       method: (method, index) => {
         if (
           [
-			"jade",
+            "jade",
             "bitbox",
             "trezor",
             "coldcard",

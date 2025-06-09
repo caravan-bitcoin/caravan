@@ -92,7 +92,7 @@ const WalletRegistrations = () => {
           <Box>
             <Grid container spacing={2}>
               <Grid item>
-                <RegisterJadeButton/>
+                <RegisterJadeButton />
               </Grid>
               <Grid item>
                 <RegisterBitBoxButton />

@@ -5,7 +5,7 @@ import { JADE, RegisterWalletPolicy } from "@caravan/wallets";
 import { getWalletConfig } from "../../selectors/wallet";
 import { setErrorNotification } from "../../actions/errorNotificationActions";
 
-const RegisterJadeButton= ({ ...otherProps }) => {
+const RegisterJadeButton = ({ ...otherProps }) => {
   const [isActive, setIsActive] = useState(false);
   const walletConfig = useSelector(getWalletConfig);
   const dispatch = useDispatch();
@@ -31,7 +31,7 @@ const RegisterJadeButton= ({ ...otherProps }) => {
       disabled={isActive}
       {...otherProps}
     >
-      Register w/ Jade 
+      Register w/ Jade
     </Button>
   );
 };

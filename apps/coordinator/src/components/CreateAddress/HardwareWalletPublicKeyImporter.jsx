@@ -6,7 +6,7 @@ import {
   ACTIVE,
   ERROR,
   ExportPublicKey,
-	JADE,
+  JADE,
   BITBOX,
   TREZOR,
   LEDGER,

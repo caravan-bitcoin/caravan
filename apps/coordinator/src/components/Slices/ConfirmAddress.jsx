@@ -141,7 +141,7 @@ const ConfirmAddress = ({ slice, network }) => {
       }
       // FIXME - hardcoded to just show up for trezor
       if (
-		extendedPublicKeyImporter.method === JADE   ||
+        extendedPublicKeyImporter.method === JADE ||
         extendedPublicKeyImporter.method === BITBOX ||
         extendedPublicKeyImporter.method === TREZOR ||
         extendedPublicKeyImporter.method === LEDGER
