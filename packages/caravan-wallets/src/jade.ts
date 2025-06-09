@@ -479,7 +479,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     );
   }
 
-
+  //TODO - add sign message
   //TODO - add adaptor
 }
 
