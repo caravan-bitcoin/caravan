@@ -122,7 +122,7 @@ function walletConfigToDescriptor(
 
 	return {
 		variant: variantFromAddressType(cfg.addressType),
-		sorted: false,
+		sorted: true,
 		threshold: cfg.quorum.requiredSigners,
 		signers,
 	};
@@ -328,6 +328,8 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
 			multisigName = "jade" + randomBytes(4).toString("hex");
 			await jade.registerMultisig(this.walletConfig.network, multisigName, descriptor);
 		}
+		const wallet = await jade.getRegisteredMultisig(multisigName);
+		console.log("wallet", wallet);
       },
     );
   }
@@ -364,11 +366,14 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 			  multisigName = "jade" + randomBytes(4).toString("hex");
 			  await jade.registerMultisig(this.network, multisigName, descriptor);
 		  }
+		  const wallet = await jade.getRegisteredMultisig(multisigName);
+		  console.log("registered wallet", wallet);
 		  const relativePath = this.bip32Path;
 
 		  const paths = descriptor.signers.map((signer) => {
 			  return extractPathSuffix(relativePath, signer.derivation);	
 		  });
+
 		  const opts: ReceiveOptions = {
 			  paths: paths,
 			  multisigName: multisigName 
