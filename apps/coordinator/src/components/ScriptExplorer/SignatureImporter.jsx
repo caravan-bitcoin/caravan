@@ -121,9 +121,9 @@ class SignatureImporter extends React.Component {
             <MenuItem value={TREZOR}>Trezor</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={COLDCARD} disabled={!isWallet}>
-            <MenuItem value={JADE}>Ledger</MenuItem>
-              Coldcard
-            </MenuItem>
+				Coldcard
+			</MenuItem>
+            <MenuItem value={JADE}>Jade</MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
             <MenuItem value={BCUR2}>BCUR2</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
