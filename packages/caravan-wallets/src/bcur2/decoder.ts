@@ -88,11 +88,14 @@ export class BCURDecoder2 {
     const lastComponent = components[components.length - 1];
 
     // Handle hardened vs non-hardened indices correctly
-    const index = lastComponent
-      ? lastComponent.isHardened()
-        ? lastComponent.getIndex() + 0x80000000
-        : lastComponent.getIndex()
-      : 0;
+    let index = 0;
+    if (lastComponent) {
+      if (lastComponent.isHardened()) {
+        index = lastComponent.getIndex() + 0x80000000;
+      } else {
+        index = lastComponent.getIndex();
+      }
+    }
     // Construct ExtendedPublicKey
     const xpubObj = new ExtendedPublicKey({
       depth,
@@ -134,11 +137,16 @@ export class BCURDecoder2 {
     const components = origin?.getComponents() || [];
     const depth = components.length;
     const lastComponent = components[components.length - 1];
-    const index = lastComponent
-      ? lastComponent.isHardened()
-        ? lastComponent.getIndex() + 0x80000000
-        : lastComponent.getIndex()
-      : 0;
+
+    // Handle hardened vs non-hardened indices
+    let index = 0;
+    if (lastComponent) {
+      if (lastComponent.isHardened()) {
+        index = lastComponent.getIndex() + 0x80000000;
+      } else {
+        index = lastComponent.getIndex();
+      }
+    }
 
     // Create xpub with proper network version
     const xpubObj = new ExtendedPublicKey({
