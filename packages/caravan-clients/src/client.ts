@@ -41,8 +41,14 @@ export class BlockchainClientError extends Error {
 
 export enum ClientType {
   PRIVATE = "private",
-  BLOCKSTREAM = "blockstream",
+  PUBLIC = "public",
   MEMPOOL = "mempool",
+  BLOCKSTREAM = "blockstream"
+}
+
+export enum PublicBitcoinProvider {
+  BLOCKSTREAM = "blockstream",
+  MEMPOOL = "mempool"
 }
 
 const delay = () => {
@@ -217,6 +223,7 @@ export interface BitcoindParams {
 
 export interface BlockchainClientParams {
   type: ClientType;
+  provider?: PublicBitcoinProvider;
   network?: Network;
   throttled?: boolean;
   client?: BitcoindClientConfig;
@@ -224,11 +231,13 @@ export interface BlockchainClientParams {
 
 export class BlockchainClient extends ClientBase {
   public readonly type: ClientType;
+  public readonly provider?: PublicBitcoinProvider;
   public readonly network?: Network;
   public readonly bitcoindParams: BitcoindParams;
 
   constructor({
     type,
+    provider,
     network,
     throttled = false,
     client = {
@@ -240,33 +249,54 @@ export class BlockchainClient extends ClientBase {
   }: BlockchainClientParams) {
     // regtest not supported by public explorers
     if (
-      type !== ClientType.PRIVATE &&
+      type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
       network !== Network.SIGNET
     ) {
       throw new Error("Invalid network");
     }
-    if (type !== ClientType.MEMPOOL && network === Network.SIGNET) {
-      throw new Error("Invalid network");
+
+    // Blockstream does not support Signet
+    if (type === ClientType.PUBLIC && provider === PublicBitcoinProvider.BLOCKSTREAM && network === Network.SIGNET) {
+      throw new Error("Invalid network: Blockstream does not support Signet");
     }
 
-    let host = "";
+    if (type === ClientType.PRIVATE && provider) {
+      throw new Error("Provider cannot be set for private client type");
+    }
 
-    if (type === ClientType.BLOCKSTREAM) {
-      host = "https://blockstream.info";
-    } else if (type === ClientType.MEMPOOL) {
-      host = "https://unchained.mempool.space";
+    // Backwards compatibility for older configs where client.type = 'mempool' or 'blockstream'
+    if (type === ClientType.MEMPOOL || type === ClientType.BLOCKSTREAM) {
+      // eslint-disable-next-line no-param-reassign
+      provider = type as any;
+      // eslint-disable-next-line no-param-reassign
+      type = ClientType.PUBLIC;
     }
-    if (type !== ClientType.PRIVATE && network !== Network.MAINNET) {
-      host += `/${network}`;
+
+    if (type === ClientType.PUBLIC && !provider) {
+        // Default to mempool if no provider is specified for a public client
+        // eslint-disable-next-line no-param-reassign
+        provider = PublicBitcoinProvider.MEMPOOL;
     }
-    if (type !== ClientType.PRIVATE) {
-      host += "/api";
+
+    let hostURL = "";
+    if (type === ClientType.PUBLIC) {
+      if (provider === PublicBitcoinProvider.BLOCKSTREAM) {
+        hostURL = "https://blockstream.info";
+      } else if (provider === PublicBitcoinProvider.MEMPOOL) {
+        hostURL = "https://unchained.mempool.space";
+      }
+      if (network !== Network.MAINNET) {
+        hostURL += `/${network}`;
+      }
+      hostURL += "/api";
     }
-    super(throttled, host);
+
+    super(throttled, hostURL);
     this.network = network;
     this.type = type;
+    this.provider = provider;
     this.bitcoindParams = bitcoindParams(client);
   }
 
@@ -433,7 +463,7 @@ export class BlockchainClient extends ClientBase {
         );
       }
     } catch (error: Error | any) {
-      if (this.type === "private" && isWalletAddressNotFoundError(error)) {
+      if (this.type === ClientType.PRIVATE && isWalletAddressNotFoundError(error)) {
         updates = {
           utxos: [],
           balanceSats: BigNumber(0),
@@ -503,22 +533,29 @@ export class BlockchainClient extends ClientBase {
             numBlocks: +blocks,
             ...this.bitcoindParams,
           });
-        case ClientType.BLOCKSTREAM:
-          fees = await this.Get(`/fee-estimates`);
-          return fees[blocks];
-        case ClientType.MEMPOOL:
-          fees = await this.Get("/v1/fees/recommended");
-          if (blocks === 1) {
-            return fees.fastestFee;
-          } else if (blocks <= 3) {
-            return fees.halfHourFee;
-          } else if (blocks <= 6) {
-            return fees.hourFee;
+        case ClientType.PUBLIC:
+          if (!this.provider) {
+            throw new Error("Provider is required for public client type");
+          }
+          if (this.provider === PublicBitcoinProvider.BLOCKSTREAM) {
+            fees = await this.Get(`/fee-estimates`);
+            return fees[blocks];
+          } else if (this.provider === PublicBitcoinProvider.MEMPOOL) {
+            fees = await this.Get("/v1/fees/recommended");
+            if (blocks === 1) {
+              return fees.fastestFee;
+            } else if (blocks <= 3) {
+              return fees.halfHourFee;
+            } else if (blocks <= 6) {
+              return fees.hourFee;
+            } else {
+              return fees.economyFee;
+            }
           } else {
-            return fees.economyFee;
+            throw new Error("Invalid provider type for public client");
           }
         default:
-          throw new Error("Invalid client type");
+          throw new Error(`Invalid client type: ${this.type}`);
       }
     } catch (error: any) {
       throw new Error(`Failed to get fee estimate: ${error.message}`);
@@ -531,7 +568,7 @@ export class BlockchainClient extends ClientBase {
     try {
       if (
         this.type === ClientType.PRIVATE ||
-        this.type === ClientType.BLOCKSTREAM
+        this.provider === PublicBitcoinProvider.BLOCKSTREAM
       ) {
         throw new Error(
           "Not supported for private clients and blockstream. Currently only supported for mempool",
@@ -629,35 +666,38 @@ export class BlockchainClient extends ClientBase {
     try {
       let txData: RawTransactionData;
 
-      if (this.type === ClientType.PRIVATE) {
-        // For private nodes, try wallet transaction first (which includes fee data)
-
-        // unless forceRawTx is true
-        if (!forceRawTx && this.bitcoindParams.walletName) {
-          try {
-            return await this.getWalletTransaction(txid);
-          } catch (walletError: any) {
-            // If wallet transaction lookup fails (e.g., tx not in wallet),
-            // fall back to raw transaction lookup
-            console.warn(
-              `Wallet transaction lookup failed, falling back to raw transaction: ${walletError.message}`,
-            );
+      switch (this.type) {
+        case ClientType.PRIVATE:
+          if (!forceRawTx && this.bitcoindParams.walletName) {
+            try {
+              return await this.getWalletTransaction(txid);
+            } catch (walletError: any) {
+              console.warn(
+                `Wallet transaction lookup failed, falling back to raw transaction: ${walletError.message}`,
+              );
+            }
           }
-        }
-        // Use raw transaction lookup as fallback
-        const response = await bitcoindRawTxData({
-          url: this.bitcoindParams.url,
-          auth: this.bitcoindParams.auth,
-          txid,
-        });
-        txData = response;
-      } else if (
-        this.type === ClientType.BLOCKSTREAM ||
-        this.type === ClientType.MEMPOOL
-      ) {
-        txData = await this.Get(`/tx/${txid}`);
-      } else {
-        throw new Error("Invalid client type");
+          txData = await bitcoindRawTxData({
+            url: this.bitcoindParams.url,
+            auth: this.bitcoindParams.auth,
+            txid,
+          });
+          break;
+        case ClientType.PUBLIC:
+          if (this.provider === PublicBitcoinProvider.BLOCKSTREAM || this.provider === PublicBitcoinProvider.MEMPOOL) {
+            txData = await this.Get(`/tx/${txid}`);
+          } else {
+            throw new Error("Invalid provider for public client."); // Should not happen with constructor guards
+          }
+          break;
+        // Cases for deprecated direct mempool/blockstream types if they existed in ClientType before
+        // and if the current enum still has them for some reason (e.g. backward compatibility layer)
+        // However, the goal of the PR was to consolidate these under ClientType.PUBLIC and a provider.
+        // So, ideally, direct cases for MEMPOOL/BLOCKSTREAM in ClientType shouldn't be needed here
+        // if the constructor correctly maps them to ClientType.PUBLIC and sets the provider.
+        default:
+          // This will catch if type is 'mempool' or 'blockstream' string literals if not handled by constructor
+          throw new Error(`Invalid client type: ${this.type}`);
       }
       return normalizeTransactionData(txData, this.type);
     } catch (error: any) {
