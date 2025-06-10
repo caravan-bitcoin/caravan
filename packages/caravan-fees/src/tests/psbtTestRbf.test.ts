@@ -139,8 +139,6 @@ describe("Exact RBF Reconstruction Tests", () => {
         const psbt = new PsbtV2(cancelPsbt);
         const expectedPsbt = new PsbtV2(fixture.expected.exactPsbt, true);
 
-        console.log("cancel", psbt.serialize("base64"));
-
         // Cancel RBF creates a completely new transaction structure
         // Unlike accelerated RBF, it only has ONE output (the cancel address)
         // and uses the minimum number of inputs needed to cover fees
