@@ -10,6 +10,7 @@ const clientConfig:rpcConfig = {
 function bitcoinClient(){
     try {
         const client = new BitcoinCoreService(clientConfig)
+
         return client;
         
     } catch (error) {

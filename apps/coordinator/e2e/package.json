@@ -4,15 +4,18 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:ui": "playwright test --ui", 
+    "test:headed": "playwright test --headed",
+    "test-scripts": "tsx test-scripts.ts",
+    "test-globalsetup": "tsx utils/globalSetup.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@types/node": "^22.15.29"
+    "@types/node": "^22.15.29",
+    "tsx": "^4.19.4"
   },
   "dependencies": {
     "bitcoin-core": "^5.0.0"

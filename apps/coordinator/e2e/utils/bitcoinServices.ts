@@ -19,6 +19,15 @@ export interface walletConfig {
   external_signer?: boolean;
 }
 
+export type AddressType = "p2sh" | "p2sh-p2wsh" | "p2wsh";
+
+export interface descStructure {
+  checksum: string;
+  fingerPrint: string;
+  path: string;
+  xpub: string;
+}
+
 export class BitcoinCoreService {
   private clientConfig: rpcConfig;
   private client: BitcoinCore;
@@ -95,9 +104,116 @@ export class BitcoinCoreService {
         walletConfig.load_on_startup,
         walletConfig.external_signer,
       );
-      return wallet
+      return wallet;
     } catch (error) {
-        console.log("Error while create wallet: ",error)
+      console.log("Error while create wallet: ", error);
+    }
+  }
+
+  async loadWallets(walletName: string) {
+    try {
+      const loadWallet = this.client.command("loadwallet", walletName);
+      return loadWallet;
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  async walletexists(walletName: string): Promise<boolean> {
+    try {
+      const wallets = await this.listWallets();
+
+      if (wallets.includes(walletName)) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.log("error", error);
+      return false;
+    }
+  }
+
+  async listWallets() {
+    try {
+      const allWallets = await this.client.command("listwallets");
+      return allWallets;
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  async listDescriptors(walletName: string) {
+    try {
+      const walletClient = this.getWalletClient(walletName);
+
+      const descriptors = await walletClient?.command("listdescriptors");
+      return descriptors;
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  async extractAddressDescriptors(
+    walletName: string,
+  ): Promise<Record<AddressType, descStructure>> {
+    const walletClient = this.getWalletClient(walletName);
+    const allDesc = await walletClient?.command("listdescriptors");
+
+    const standardDescRegex = /^\w+\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\#(.+)$/;
+    const shWpkhDescRegex =
+      /^sh\(wpkh\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\)\#(.+)$/;
+
+    const parsedAddressDescriptors: Record<AddressType, descStructure> = {
+      p2sh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      "p2sh-p2wsh": { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      p2wsh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+    };
+
+    for (let desc of allDesc.descriptors) {
+      const descriptor = desc.desc;
+
+      if (descriptor.startsWith("sh(wpkh(")) {
+        const match = descriptor.match(shWpkhDescRegex);
+        if (match) {
+          parsedAddressDescriptors["p2sh-p2wsh"] = {
+            fingerPrint: match[1],
+            path: match[2],
+            xpub: match[3],
+            checksum: match[5],
+          };
+        }
+      } else {
+        const match = descriptor.match(standardDescRegex);
+        if (match) {
+          if (descriptor.startsWith("pkh")) {
+            parsedAddressDescriptors.p2sh = {
+              fingerPrint: match[1],
+              path: match[2],
+              xpub: match[3],
+              checksum: match[5],
+            };
+          } else if (descriptor.startsWith("wpkh")) {
+            parsedAddressDescriptors.p2wsh = {
+              fingerPrint: match[1],
+              path: match[2],
+              xpub: match[3],
+              checksum: match[5],
+            };
+          }
+        }
+      }
+    }
+    return parsedAddressDescriptors;
+  }
+
+  async checkBalance(walletName: string) {
+    try {
+      const walletClient = this.getWalletClient(walletName);
+
+      const balance = await walletClient?.command("getbalance");
+      return balance;
+    } catch (error) {
+      console.log("error", error);
     }
   }
 }
