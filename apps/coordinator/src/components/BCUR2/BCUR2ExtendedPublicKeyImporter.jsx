@@ -16,7 +16,7 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
     const { network, extendedPublicKeyImporter } = this.props;
     return new BCUR2ExportExtendedPublicKey({
       network,
-      bip32Path: extendedPublicKeyImporter.bip32Path
+      bip32Path: extendedPublicKeyImporter.bip32Path,
     });
   };
 
@@ -29,24 +29,24 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
       validateAndSetBIP32Path,
       validateAndSetExtendedPublicKey,
       validateAndSetRootFingerprint,
-      enableChangeMethod
+      enableChangeMethod,
     } = this.props;
 
     enableChangeMethod();
     try {
       // The data is already parsed as an object with the correct structure
       const { xpub, xfp: fingerprint, path } = data;
-      
+
       validateAndSetRootFingerprint(fingerprint, (error) => {
         this.setError(error);
       });
-      
+
       validateAndSetBIP32Path(
         path,
         () => {
           validateAndSetExtendedPublicKey(xpub, this.setError);
         },
-        this.setError
+        this.setError,
       );
     } catch (e) {
       this.setError(e.message);
@@ -71,9 +71,7 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
           onClear={this.onClear}
           width="400px"
         />
-        <FormHelperText error>
-          {extendedPublicKeyError}
-        </FormHelperText>
+        <FormHelperText error>{extendedPublicKeyError}</FormHelperText>
       </FormGroup>
     );
   };
@@ -87,7 +85,7 @@ BCUR2ExtendedPublicKeyImporter.propTypes = {
   network: PropTypes.string.isRequired,
   validateAndSetBIP32Path: PropTypes.func.isRequired,
   validateAndSetExtendedPublicKey: PropTypes.func.isRequired,
-  validateAndSetRootFingerprint: PropTypes.func.isRequired
+  validateAndSetRootFingerprint: PropTypes.func.isRequired,
 };
 
 export default BCUR2ExtendedPublicKeyImporter;

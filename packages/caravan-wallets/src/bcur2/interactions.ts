@@ -7,7 +7,12 @@
 
 import { BitcoinNetwork, Network } from "@caravan/bitcoin";
 
-import { IndirectKeystoreInteraction, PENDING, ACTIVE, INFO } from "../interaction";
+import {
+  IndirectKeystoreInteraction,
+  PENDING,
+  ACTIVE,
+  INFO,
+} from "../interaction";
 
 import { BCURDecoder2 } from "./decoder";
 
@@ -18,7 +23,7 @@ export const BCUR2 = "bcur2";
  * Base class for interactions with BCUR2-based wallets.
  * Provides common functionality for handling QR code scanning and decoding
  * using the BCUR2 format.
- * 
+ *
  * @extends IndirectKeystoreInteraction
  */
 export class BCUR2Interaction extends IndirectKeystoreInteraction {
@@ -87,24 +92,24 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
  * Class for importing extended public keys from BCUR2 wallet QR codes.
  * Handles the scanning and decoding of multi-part QR codes containing
  * extended public key (xpub) data in the BCUR2 format.
- * 
+ *
  * This interaction class works with the BCURDecoder2 class to process
  * multi-part QR codes. It expects QR codes to contain:
  * - Extended public key (xpub)
  * - Root fingerprint (xfp)
  * - BIP32 derivation path
- * 
+ *
  * @extends BCUR2Interaction
- * 
+ *
  * @example
- * const interaction = new BCUR2ExportExtendedPublicKey({ 
+ * const interaction = new BCUR2ExportExtendedPublicKey({
  *   network: Network.TESTNET,
- *   bip32Path: "m/48'/1'/0'/2'" 
+ *   bip32Path: "m/48'/1'/0'/2'"
  * });
- * 
+ *
  * // When QR code part is scanned:
  * interaction.parse("UR:CRYPTO-ACCOUNT/...");
- * 
+ *
  * if (interaction.isComplete()) {
  *   const result = interaction.getDecodedData();
  *   console.log(result.xpub);  // The extended public key
@@ -123,7 +128,13 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
    * @param {BitcoinNetwork} [params.network=Network.MAINNET] - The Bitcoin network to use
    * @param {string} params.bip32Path - The BIP32 derivation path to request
    */
-  constructor({ network = Network.MAINNET, bip32Path }: { network?: BitcoinNetwork, bip32Path: string }) {
+  constructor({
+    network = Network.MAINNET,
+    bip32Path,
+  }: {
+    network?: BitcoinNetwork;
+    bip32Path: string;
+  }) {
     super(network);
     this.bip32Path = bip32Path;
     this.workflow = ["request", "parse"];

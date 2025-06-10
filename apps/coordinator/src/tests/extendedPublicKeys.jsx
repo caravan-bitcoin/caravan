@@ -14,12 +14,20 @@ class ExportExtendedPublicKeyTest extends Test {
   // eslint-disable-next-line class-methods-use-this
   postprocess(result) {
     let tempResult = result;
-    console.log("ExportExtendedPublicKeyTest postprocess", result);
     if (this.params.keystore === HERMIT) {
       tempResult = this.interaction().parse(result);
     }
-    if(tempResult.xpub){
-      return tempResult.xpub;
+
+    // BCUR2 returns a different structure
+    if (
+      tempResult.type === "crypto-account" ||
+      tempResult.type === "crypto-hdkey"
+    ) {
+      return {
+        bip32Path: tempResult.bip32Path,
+        rootFingerprint: tempResult.rootFingerprint?.toLowerCase(),
+        xpub: tempResult.xpub,
+      };
     }
     return tempResult.pubkey ? tempResult.pubkey : tempResult;
   }
@@ -51,7 +59,11 @@ class ExportExtendedPublicKeyTest extends Test {
       TEST_FIXTURES.keys.open_source.nodes[this.params.bip32Path];
 
     if (this.params.keystore === HERMIT || this.params.keystore === BCUR2) {
-      return { xpub: tpub || xpub, rootFingerprint, bip32Path: this.params.bip32Path };
+      return {
+        xpub: tpub || xpub,
+        rootFingerprint,
+        bip32Path: this.params.bip32Path,
+      };
     }
     if (
       this.params.network === Network.MAINNET ||

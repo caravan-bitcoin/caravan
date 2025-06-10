@@ -5,21 +5,25 @@
  */
 
 import { ExtendedPublicKey, Network, BitcoinNetwork } from "@caravan/bitcoin";
-import { CryptoHDKey, CryptoAccount, URRegistryDecoder } from "@keystonehq/bc-ur-registry";
+import {
+  CryptoHDKey,
+  CryptoAccount,
+  URRegistryDecoder,
+} from "@keystonehq/bc-ur-registry";
 
 /**
- * Interface representing the decoded data from a BCUR2 QR code
- * @interface DecodedData
+ * Interface representing decoded extended public key data from a BCUR2 QR code
+ * @interface ExtendedPublicKeyData
  */
-export interface DecodedData {
+export interface ExtendedPublicKeyData {
   /** The type of UR data (e.g., "crypto-account" or "crypto-hdkey") */
   type: string;
   /** The extended public key in base58 format */
   xpub: string;
   /** The root fingerprint of the master key (optional) */
-  xfp?: string;
+  rootFingerprint?: string;
   /** The BIP32 derivation path (optional) */
-  path?: string;
+  bip32Path?: string;
 }
 
 /**
@@ -30,11 +34,8 @@ export interface DecodedData {
  */
 export class BCURDecoder2 {
   private decoder: URRegistryDecoder;
-
   private error: string | null = null;
-
   private progress: string = "Idle";
-
   private network: BitcoinNetwork = Network.TESTNET;
 
   /**
@@ -56,67 +57,126 @@ export class BCURDecoder2 {
   }
 
   /**
+   * Handles decoding of crypto-account type BCUR2 data
+   * @private
+   */
+  private handleCryptoAccount(cbor: Buffer): ExtendedPublicKeyData {
+    const account = CryptoAccount.fromCBOR(cbor);
+    const descriptors = account.getOutputDescriptors();
+    if (!descriptors.length) throw new Error("No output descriptors found");
+
+    // Ensured we have  only 1 descriptor here
+    const hdKey = descriptors[0].getCryptoKey();
+    if (!hdKey || !(hdKey instanceof CryptoHDKey)) {
+      throw new Error("Invalid HDKey in crypto-account");
+    }
+
+    // Extract components from CryptoHDKey
+    const chainCode = hdKey.getChainCode();
+    const key = hdKey.getKey();
+    const parentFp = hdKey.getParentFingerprint() || Buffer.alloc(4);
+    const origin = hdKey.getOrigin();
+    const rootFingerprint = origin
+      ?.getSourceFingerprint()
+      ?.toString("hex")
+      ?.toUpperCase();
+    const bip32Path = origin?.getPath();
+
+    // Get the correct depth and index from the path components
+    const components = origin?.getComponents() || [];
+    const depth = components.length;
+    const lastComponent = components[components.length - 1];
+
+    // Handle hardened vs non-hardened indices correctly
+    const index = lastComponent
+      ? lastComponent.isHardened()
+        ? lastComponent.getIndex() + 0x80000000
+        : lastComponent.getIndex()
+      : 0;
+    // Construct ExtendedPublicKey
+    const xpubObj = new ExtendedPublicKey({
+      depth,
+      index,
+      chaincode: chainCode.toString("hex"),
+      pubkey: key.toString("hex"),
+      parentFingerprint: parentFp.readUInt32BE(0),
+      network: this.network,
+    });
+
+    const xpub = xpubObj.toBase58();
+    if (!xpub) throw new Error("Failed to construct xpub from HDKey");
+
+    return { type: "crypto-account", xpub, rootFingerprint, bip32Path };
+  }
+
+  /**
+   * Handles decoding of crypto-hdkey type BCUR2 data
+   * @private
+   */
+  private handleCryptoHDKey(cbor: Buffer): ExtendedPublicKeyData {
+    const hdkey = CryptoHDKey.fromCBOR(cbor);
+    if (!hdkey) {
+      throw new Error("Invalid crypto-hdkey data");
+    }
+
+    // Extract key details
+    const chainCode = hdkey.getChainCode();
+    const key = hdkey.getKey();
+    const parentFp = hdkey.getParentFingerprint() || Buffer.alloc(4);
+    const origin = hdkey.getOrigin();
+    const rootFingerprint = origin
+      ?.getSourceFingerprint()
+      ?.toString("hex")
+      ?.toUpperCase();
+    const bip32Path = origin?.getPath();
+
+    // Get depth and index from path
+    const components = origin?.getComponents() || [];
+    const depth = components.length;
+    const lastComponent = components[components.length - 1];
+    const index = lastComponent
+      ? lastComponent.isHardened()
+        ? lastComponent.getIndex() + 0x80000000
+        : lastComponent.getIndex()
+      : 0;
+
+    // Create xpub with proper network version
+    const xpubObj = new ExtendedPublicKey({
+      depth,
+      index,
+      chaincode: chainCode.toString("hex"),
+      pubkey: key.toString("hex"),
+      parentFingerprint: parentFp.readUInt32BE(0),
+      rootFingerprint,
+      network: this.network,
+      path: bip32Path,
+    });
+
+    const xpub = xpubObj.toBase58();
+    if (!xpub) throw new Error("Failed to construct xpub from HDKey");
+    return { type: "crypto-hdkey", xpub, rootFingerprint, bip32Path };
+  }
+
+  /**
    * Processes decoded CBOR data based on the UR type
    * @private
    * @param {string} type - The UR type (crypto-account or crypto-hdkey)
    * @param {Buffer} cbor - The decoded CBOR data
-   * @returns {DecodedData|null} The decoded wallet data or null if error
+   * @returns {ExtendedPublicKeyData|null} The decoded wallet data or null if error
    */
-  private handleDecodedResult(type: string, cbor: Buffer): DecodedData | null {
+  private handleDecodedResult(
+    type: string,
+    cbor: Buffer
+  ): ExtendedPublicKeyData | null {
     try {
-      if (type === "crypto-account") {
-        const account = CryptoAccount.fromCBOR(cbor);
-        const descriptors = account.getOutputDescriptors();
-        if (!descriptors.length) throw new Error("No output descriptors found");
-        
-        const hdKey = descriptors[0].getCryptoKey();
-        if (!hdKey || !(hdKey instanceof CryptoHDKey)) {
-          throw new Error("Invalid HDKey in crypto-account");
-        }
-
-        // Extract components from CryptoHDKey
-        const chainCode = hdKey.getChainCode();
-        const key = hdKey.getKey();
-        const origin = hdKey.getOrigin();
-        const xfp = origin?.getSourceFingerprint()?.toString("hex")?.toUpperCase();
-        const path = origin?.getPath();
-        const depth = origin?.getDepth() || 0;
-        const components = origin?.getComponents() || [];
-        const index = components.length > 0 ? components[components.length - 1]?.getIndex() || 0 : 0;
-        const parentFp = origin?.getSourceFingerprint() || Buffer.alloc(4);
-
-        // Construct ExtendedPublicKey
-        const xpubObj = new ExtendedPublicKey({
-          depth,
-          index,
-          chaincode: chainCode.toString('hex'),
-          pubkey: key.toString('hex'), 
-          parentFingerprint: parentFp.readUInt32BE(0),
-          network: this.network
-        });
-
-        const xpub = xpubObj.toBase58();
-        console.log("Constructed xpub:", xpub);
-        if (!xpub) throw new Error("Failed to construct xpub from HDKey");
-        return { type, xpub, xfp, path };
+      switch (type) {
+        case "crypto-account":
+          return this.handleCryptoAccount(cbor);
+        case "crypto-hdkey":
+          return this.handleCryptoHDKey(cbor);
+        default:
+          throw new Error(`Unsupported UR type: ${type}`);
       }
-
-      if (type === "crypto-hdkey") {
-        const hdkey = CryptoHDKey.fromCBOR(cbor);
-        if (!hdkey) {
-          throw new Error("Invalid crypto-hdkey data");
-        }
-
-        const xpub = hdkey.toString();
-        const origin = hdkey.getOrigin();
-        const xfp = origin?.getSourceFingerprint()?.toString("hex")?.toUpperCase();
-        const path = origin?.getPath();
-
-        if (!xpub) throw new Error("xpub missing in crypto-hdkey");
-        return { type, xpub, xfp, path };
-      }
-
-      throw new Error(`Unsupported UR type: ${type}`);
     } catch (err: any) {
       console.error("Error decoding UR:", err);
       this.error = err.message || String(err);
@@ -125,15 +185,14 @@ export class BCURDecoder2 {
   }
 
   /**
-   * Processes a single QR code part
-   * @param {string} text - The scanned QR code text (must start with "UR:")
-   * @throws {Error} If the QR code format is invalid or there's a decoding error
+   * Receives a part of the QR code data and processes it
+   * @param {string} text - The text data from the QR code
    */
   receivePart(text: string): void {
     try {
       if (text.toUpperCase().startsWith("UR:")) {
         this.decoder.receivePart(text);
-      
+
         if (this.decoder.isComplete()) {
           this.progress = "Complete";
         } else {
@@ -149,39 +208,42 @@ export class BCURDecoder2 {
   }
 
   /**
-   * Checks if all required QR code parts have been received
-   * @returns {boolean} True if decoding is complete or error occurred
+   * Checks if the decoding process is complete
+   * @returns {boolean} True if complete, false otherwise
    */
   isComplete(): boolean {
     return this.decoder.isComplete() || Boolean(this.error);
   }
 
   /**
-   * Gets the current decoding progress
-   * @returns {string} A string describing the current progress
+   * Gets the current progress of the decoding process
+   * @returns {string} The progress message
    */
   getProgress(): string {
     return this.progress;
   }
 
   /**
-   * Gets any error that occurred during decoding
-   * @returns {string|null} Error message or null if no error
+   * Gets the last error message, if any
+   * @returns {string|null} The error message or null
    */
   getError(): string | null {
     return this.error;
   }
 
   /**
-   * Gets the fully decoded data if all parts are received
-   * @returns {DecodedData|null} The decoded wallet data or null if incomplete/error
+   * Gets the decoded wallet data, if available
+   * @returns {ExtendedPublicKeyData|null} The decoded data or null
    */
-  getDecodedData(): DecodedData | null {
+  getDecodedData(): ExtendedPublicKeyData | null {
     if (!this.decoder.isComplete()) return null;
 
     try {
       const result = this.decoder.resultUR();
-      return this.handleDecodedResult(result.type, Buffer.from(result.cbor.buffer));
+      return this.handleDecodedResult(
+        result.type,
+        Buffer.from(result.cbor.buffer)
+      );
     } catch (err: any) {
       this.error = err.message || String(err);
       return null;

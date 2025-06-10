@@ -1,24 +1,13 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { BCURDecoder2 } from "@caravan/wallets";
 import { QrReader } from "react-qr-reader";
-import {
-  Box,
-  Button,
-  FormHelperText,
-  Paper,
-  Typography,
-} from "@mui/material";
+import { Box, Button, FormHelperText, Paper, Typography } from "@mui/material";
 
-interface DecodedData {
-  type: string;
-  xpub: string;
-  xfp: string;
-  path: string;
-}
+import { ExtendedPublicKeyData } from "@caravan/wallets";
 
 interface BCUR2ReaderProps {
   onStart?: () => void;
-  onSuccess: (data: DecodedData) => void;
+  onSuccess: (data: ExtendedPublicKeyData) => void;
   onClear: () => void;
   startText?: string;
   width?: string | number;
@@ -61,27 +50,33 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
     if (!text || !text.toLowerCase().startsWith("ur:")) return;
 
     try {
-      console.log("Received QR part:", text);     
+      console.log("Received QR part:", text);
       decoder.receivePart(text);
 
       if (decoder.isComplete()) {
-        console.log("QR decoding complete."); 
-        const decodedData = decoder.getDecodedData();
-        if (!decodedData) throw new Error("Failed to decode data.");
-        if (!decodedData.path) throw new Error("BIP32 path is missing in the decoded data");
-        
+        console.log("QR decoding complete.");
+        const extendedPublicKeyData = decoder.getDecodedData();
+        if (!extendedPublicKeyData)
+          throw new Error("Failed to decode extended public key data.");
+        if (!extendedPublicKeyData.bip32Path)
+          throw new Error(
+            "BIP32 path is missing in the extended public key data",
+          );
+
         statusRef.current = "complete";
         setIsScanning(false);
-        
-        // Ensure the path starts with "m/"
+
+        // Ensure the bip32Path starts with "m/"
         const data = {
-          ...decodedData,
-          path: decodedData.path.startsWith('m/') ? decodedData.path : `m/${decodedData.path}`
+          ...extendedPublicKeyData,
+          bip32Path: extendedPublicKeyData.bip32Path.startsWith("m/")
+            ? extendedPublicKeyData.bip32Path
+            : `m/${extendedPublicKeyData.bip32Path}`,
         };
-        
-        console.log("Decoded data:", data);
-        onSuccess(data as DecodedData);
-        
+
+        console.log("Extended public key data:", data);
+        onSuccess(data);
+
         decoder.reset();
       }
     } catch (e) {
