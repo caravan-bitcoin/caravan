@@ -1,4 +1,11 @@
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD, BCUR2 } from "@caravan/wallets";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCUR2,
+} from "@caravan/wallets";
 import { TEST_FIXTURES } from "@caravan/bitcoin";
 
 import bitboxTests from "./bitbox";

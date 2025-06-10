@@ -61,7 +61,6 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
 
   render = () => {
     const { extendedPublicKeyError } = this.state;
-    const interaction = this.interaction();
 
     return (
       <FormGroup>

@@ -1,4 +1,11 @@
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD, BCUR2 } from "@caravan/wallets";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCUR2,
+} from "@caravan/wallets";
 
 export const SET_KEYSTORE = "SET_KEYSTORE";
 export const SET_KEYSTORE_NOTE = "SET_KEYSTORE_NOTE";

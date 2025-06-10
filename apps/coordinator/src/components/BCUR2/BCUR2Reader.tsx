@@ -1,9 +1,7 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
-import { BCURDecoder2 } from "@caravan/wallets";
+import React, { useState, useRef, useMemo } from "react";
+import { BCURDecoder2, ExtendedPublicKeyData } from "@caravan/wallets";
 import { QrReader } from "react-qr-reader";
 import { Box, Button, FormHelperText, Paper, Typography } from "@mui/material";
-
-import { ExtendedPublicKeyData } from "@caravan/wallets";
 
 interface BCUR2ReaderProps {
   onStart?: () => void;
