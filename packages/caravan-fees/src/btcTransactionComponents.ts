@@ -2,7 +2,7 @@ import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 
 import { RBF_SEQUENCE } from "./constants";
-import { Satoshis, BTC, UTXO, Bip32Derivation } from "./types";
+import { Satoshis, BTC, UTXO, InputDerivation } from "./types";
 import { validateNonWitnessUtxo, validateSequence, reverseHex } from "./utils";
 
 /**
@@ -72,7 +72,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
   private _sequence?: number;
   private _redeemScript?: Buffer;
   private _witnessScript?: Buffer;
-  private _bip32Derivations: Bip32Derivation[] = [];
+  private _bip32Derivations: InputDerivation[] = [];
 
   /**
    * @param {Object} params - The parameters for creating a BtcTxInputTemplate
@@ -273,7 +273,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * This information is crucial for hardware wallets and multisig coordinators
    * to identify which keys they control and how to derive them.
    */
-  get bip32Derivations(): readonly Bip32Derivation[] {
+  get bip32Derivations(): readonly InputDerivation[] {
     return this._bip32Derivations;
   }
 
@@ -283,7 +283,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    *
    * @param derivations - Array of BIP32 derivation information
    */
-  setBip32Derivations(derivations: Bip32Derivation[]): void {
+  setBip32Derivations(derivations: InputDerivation[]): void {
     this._bip32Derivations = [...derivations];
   }
 

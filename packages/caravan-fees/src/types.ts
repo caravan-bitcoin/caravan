@@ -13,7 +13,7 @@ import {
  * @see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#input-types
  */
-export interface Bip32Derivation {
+export interface InputDerivation {
   /** The public key that corresponds to this derivation path */
   pubkey: Buffer;
 
@@ -33,22 +33,40 @@ export interface Bip32Derivation {
 /**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
  *
+ * @remarks
+ * **TXID Format Convention for @caravan/fees Package:**
+ *
+ * Throughout this entire package, all input TXIDs are expected to be in **big-endian**
+ * format (human-readable format). This includes:
+ * - UTXO.txid fields
+ * - originalTx parameters in RBF/CPFP functions
+ * - Any transaction references in analysis
+ *
+ * This maintains consistency with external expectations (block explorers, wallets, APIs)
+ * while the package internally handles the conversion to Bitcoin's native little-endian
+ * format when constructing raw transactions and PSBTs.
+ *
+ * **Output Format:**
+ * When this package returns fee-bumped PSBTs, the internal TXID references within
+ * those PSBTs will be in little-endian format to ensure compatibility with Bitcoin's
+ * internal data structures and protocol requirements.
+ *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export interface UTXO {
   /** The transaction ID of the UTXO in reversed hex format (big-endian).
    *
    * @remarks
-   * This value is typically obtained from user input or block explorers, where
-   * transaction IDs are conventionally displayed in **big-endian** format (i.e.,
-   * the human-readable form).
+   * **Package-wide TXID Convention:**
+   * All TXIDs provided to this package should be in big-endian format (human-readable format), which is the
+   * standard format used by:
+   * - Block explorers (e.g., blockstream.info, blockchain.info)
+   * - Wallet APIs and RPC interfaces
+   * - Bitcoin Core's getrawmempool, getrawtransaction outputs
+   * - User-facing interfaces
    *
-   * Internally, the `@caravan/fees` package will convert this to **little-endian**
-   * format for raw Bitcoin protocol operations, as Bitcoin internally stores and
-   * references TXIDs in little-endian byte order.
-   *
-   * This convention maintains consistency with external expectations while
-   * ensuring compatibility with Bitcoin's internal data structures.
+   * The package will internally convert these to little-endian format when needed
+   * for Bitcoin protocol operations and PSBT construction.
    *
    * @example
    * Big-endian (user-facing): `6fe28c0ab6f1b372...`
@@ -120,11 +138,16 @@ export interface UTXO {
    *
    * Each entry maps a public key to its derivation path and master fingerprint.
    */
-  bip32Derivations?: Bip32Derivation[];
+  bip32Derivations?: InputDerivation[];
 }
 
 /**
  * Configuration options for the TransactionAnalyzer.
+ *
+ * @remarks
+ * **TXID Format Convention:**
+ * All transaction hex data and TXID references provided to this analyzer
+ * should use big-endian format (human-readable format).
  */
 export interface AnalyzerOptions {
   /**
