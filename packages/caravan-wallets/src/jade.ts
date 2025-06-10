@@ -32,6 +32,8 @@ import { MultisigWalletConfig } from "./types";
 
 export const JADE = "jade";
 
+const DEFAULT_NETWORK = "mainnet";
+
 function variantFromAddressType(
   t: MultisigAddressType,
 ): MultisigDescriptor["variant"] {
@@ -64,7 +66,6 @@ function parseBip32Path(path_i: string): number[] {
   const segments = path.split("/");
   const result: number[] = [];
   for (const segment of segments) {
-    // Check if the segment is hardened (ends with "'" or "h")
     let hardened = false;
     let numStr = segment;
     if (segment.endsWith("'") || segment.endsWith("h")) {
@@ -75,7 +76,6 @@ function parseBip32Path(path_i: string): number[] {
     if (isNaN(index)) {
       throw new Error(`Invalid path segment: ${segment}`);
     }
-    // Hardened index = index + 0x80000000 (2^31)
     result.push(index + (hardened ? 0x80000000 : 0));
   }
   return result;
@@ -154,7 +154,6 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     f: (jade: IJade) => Promise<T>,
   ): Promise<T> {
     try {
-      // Connect to the device.
       await this.jade.connect();
 
       const httpRequestFn = async (params: any): Promise<{ body: any }> => {
@@ -236,7 +235,6 @@ export class JadeExportPublicKey extends JadeInteraction {
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
-  //make sure network comes out right
 
   messages() {
     return super.messages();
@@ -277,7 +275,6 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
-  //make sure network comes out right
 
   messages() {
     return super.messages();
@@ -323,7 +320,6 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
           );
         }
         const wallet = await jade.getRegisteredMultisig(multisigName);
-        console.log("wallet", wallet);
       },
     );
   }
@@ -479,7 +475,30 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
       },
     );
   }
-
-  //TODO - add sign message
-  //TODO - add adaptor
 }
+
+
+export class JadeSignMessage extends JadeInteraction{
+  bip32Path: string;
+
+  message: string;
+
+  network: string;
+
+  constructor({ bip32Path, message }: { bip32Path: string; message: string }) {
+    super();
+    this.bip32Path = bip32Path;
+    this.message = message;
+	this.network = DEFAULT_NETWORK
+
+  }
+
+  async run() {
+    return await this.withDevice(this.network, async (jade: IJade) => {
+	  const path = parseBip32Path(this.bip32Path) 
+      return await jade.signMessage(path, this.message);
+    });
+  }
+
+}
+
