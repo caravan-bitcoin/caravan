@@ -34,8 +34,11 @@ export interface ExtendedPublicKeyData {
  */
 export class BCURDecoder2 {
   private decoder: URRegistryDecoder;
+
   private error: string | null = null;
+
   private progress: string = "Idle";
+
   private network: BitcoinNetwork = Network.TESTNET;
 
   /**
