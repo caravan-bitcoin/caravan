@@ -129,11 +129,57 @@ if [ -n "$UNSTAGED_LOCKFILES" ]; then
     echo "   ⚠️  Found unstaged package-lock.json changes:"
     echo "$UNSTAGED_LOCKFILES" | sed 's/^/     /'
     echo ""
+
+    # Check if corresponding package.json files are staged
+    CONFLICTING_PAIRS=""
+    for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
+        LOCKFILE_DIR=$(dirname "$UNSTAGED_LOCKFILE")
+        PACKAGE_JSON="$LOCKFILE_DIR/package.json"
+
+        # Check if corresponding package.json is staged
+        if echo "$STAGED_FILES" | grep -q "^$PACKAGE_JSON$"; then
+            CONFLICTING_PAIRS="$CONFLICTING_PAIRS\n   - $PACKAGE_JSON (staged) ↔ $UNSTAGED_LOCKFILE (unstaged)"
+        fi
+    done
+
+    if [ -n "$CONFLICTING_PAIRS" ]; then
+        echo "   ❌ CRITICAL: Staged package.json with unstaged package-lock.json detected:"
+        echo "$CONFLICTING_PAIRS"
+        echo ""
+        echo "   This creates an inconsistent dependency state!"
+        echo "   package.json and package-lock.json must be committed together."
+        echo ""
+        echo "   To fix this, choose one option:"
+        echo ""
+        echo "   Option 1 - Stage the lockfiles (recommended):"
+        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
+            echo "   git add $UNSTAGED_LOCKFILE"
+        done
+        echo ""
+        echo "   Option 2 - Unstage the package.json files:"
+        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
+            LOCKFILE_DIR=$(dirname "$UNSTAGED_LOCKFILE")
+            PACKAGE_JSON="$LOCKFILE_DIR/package.json"
+            if echo "$STAGED_FILES" | grep -q "^$PACKAGE_JSON$"; then
+                echo "   git reset $PACKAGE_JSON"
+            fi
+        done
+        echo ""
+        echo "   Option 3 - Discard lockfile changes (if they're accidental):"
+        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
+            echo "   git checkout $UNSTAGED_LOCKFILE"
+        done
+        echo ""
+        echo "❌ Commit cancelled - fix package.json/package-lock.json mismatch"
+        exit 1
+    fi
+
+    # If no conflicting pairs, these might just be development artifacts
     echo "   These files have been modified but are not staged for commit."
     echo "   This might indicate:"
-    echo "   - You forgot to stage them: git add <file>"
     echo "   - Accidental changes from Node.js version mismatch"
     echo "   - Local development artifacts"
+    echo "   - Forgotten to stage legitimate changes"
     echo ""
 
     # Count lines in unstaged changes
@@ -145,7 +191,11 @@ if [ -n "$UNSTAGED_LOCKFILES" ]; then
     done
 
     echo ""
-    printf "   Continue without staging these lockfiles? (y/N): "
+    echo "   Since no package.json files are staged with these lockfiles,"
+    echo "   you can safely proceed or clean them up."
+    echo ""
+    printf "   Continue with current staged files? (y/N): "
+
 
 
     if [ -t 0 ]; then
@@ -176,7 +226,6 @@ if [ -z "$STAGED_LOCKFILES" ] && [ -z "$UNSTAGED_LOCKFILES" ]; then
     echo "   No package-lock.json changes detected"
 fi
 
-echo "   ✅ Package lockfile changes look good"
 
 # 3. Run linting (only if we're in a directory with lint script)
 echo "3️⃣ Checking for lint script..."
