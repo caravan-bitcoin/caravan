@@ -10,5 +10,5 @@
   "plugin": ["typedoc-theme-hierarchy"],
   "theme": "hierarchy",
   "favicon": "./assets/images/caravan-logo-transparent.png",
-  "readme": "README.md",
+  "readme": "README.md"
 }

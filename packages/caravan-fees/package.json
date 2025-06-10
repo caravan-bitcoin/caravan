@@ -1,6 +1,6 @@
 {
   "name": "@caravan/fees",
-  "version": "1.0.0-beta",
+  "version": "1.0.1-beta",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
