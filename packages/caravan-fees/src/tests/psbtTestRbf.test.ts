@@ -116,6 +116,9 @@ describe("Exact RBF Reconstruction Tests", () => {
 
           expect(hasAnyMatchingOutput).toBe(true);
         }
+
+        // Finally we check the PSBT's
+        expect(psbt.serialize("base64")).toBe(expectedPsbt.serialize("base64"));
       });
     });
   });
@@ -141,7 +144,6 @@ describe("Exact RBF Reconstruction Tests", () => {
 
         // Cancel RBF creates a completely new transaction structure
         // Unlike accelerated RBF, it only has ONE output (the cancel address)
-        // and uses the minimum number of inputs needed to cover fees
 
         // Test basic structure
         expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(
@@ -153,7 +155,7 @@ describe("Exact RBF Reconstruction Tests", () => {
         expect(expectedPsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
 
         // Test input details - Cancel RBF must conflict with original tx
-        // So we need at least one matching TXID from the original transaction ( to also consider case where extra additional UTXO are used)
+        // So we need at least one matching TXID from the original transaction ( to also consider case where extra additional UTXO are used , for fee-bump though rare in cancel RBF)
         const hasConflictingInput = expectedPsbt.PSBT_IN_PREVIOUS_TXID.some(
           (expectedTxid) => psbt.PSBT_IN_PREVIOUS_TXID.includes(expectedTxid),
         );
@@ -174,6 +176,9 @@ describe("Exact RBF Reconstruction Tests", () => {
         // Test output script - Cancel RBF has only one output to cancel address
         expect(psbt.PSBT_OUT_SCRIPT).toHaveLength(1);
         expect(psbt.PSBT_OUT_SCRIPT).toEqual(expectedPsbt.PSBT_OUT_SCRIPT);
+
+        // Finally we check the PSBT's
+        expect(psbt.serialize("base64")).toBe(expectedPsbt.serialize("base64"));
       });
     });
   });
