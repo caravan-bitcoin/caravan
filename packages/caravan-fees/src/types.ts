@@ -305,6 +305,18 @@ export type Satoshis = string;
 export type BTC = string;
 
 /**
+ * Interface for global xpub information
+ */
+export interface GlobalXpub {
+  /** The extended public key */
+  xpub: string;
+  /** The master fingerprint (4 bytes) */
+  masterFingerprint: string;
+  /** The BIP32 derivation path */
+  path: string;
+}
+
+/**
  * Configuration options for creating a transaction template.
  * This is used to set up the initial state and parameters for a new transaction.
  */
@@ -354,6 +366,9 @@ export interface TransactionTemplateOptions {
    * This is used along with requiredSigners for multisig transactions.
    */
   totalSigners: number;
+
+  /** Optional array of global xpubs to include in the PSBT */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**

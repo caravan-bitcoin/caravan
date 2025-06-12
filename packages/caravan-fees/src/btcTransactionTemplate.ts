@@ -11,7 +11,12 @@ import {
   ABSURDLY_HIGH_ABS_FEE,
   ABSURDLY_HIGH_FEE_RATE,
 } from "./constants";
-import { Satoshis, TransactionTemplateOptions, ScriptType } from "./types";
+import {
+  Satoshis,
+  TransactionTemplateOptions,
+  ScriptType,
+  GlobalXpub,
+} from "./types";
 import {
   createOutputScript,
   estimateTransactionVsize,
@@ -19,6 +24,7 @@ import {
   getOutputAddress,
   parseWitnessUtxoValue,
   parseNonWitnessUtxoValue,
+  reverseHex,
 } from "./utils";
 
 /**
@@ -34,6 +40,7 @@ export class BtcTransactionTemplate {
   private readonly _scriptType: ScriptType;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
+  private readonly _globalXpubs: GlobalXpub[];
 
   /**
    * Creates a new BtcTransactionTemplate instance.
@@ -50,6 +57,7 @@ export class BtcTransactionTemplate {
     this._scriptType = options.scriptType;
     this._requiredSigners = options.requiredSigners;
     this._totalSigners = options.totalSigners;
+    this._globalXpubs = options.globalXpubs || [];
   }
 
   /**
@@ -215,6 +223,53 @@ export class BtcTransactionTemplate {
     return this.calculateCurrentFee()
       .dividedBy(this.calculateEstimatedVsize())
       .toString();
+  }
+
+  /**
+   * Gets the global xpubs of the transaction.
+   * @returns A read-only array of global xpubs
+   */
+  get globalXpubs(): readonly GlobalXpub[] {
+    return this._globalXpubs;
+  }
+
+  /**
+   * Adds a global xpub to the transaction.
+   * @param globalXpub - The global xpub to add
+   * @throws Error if the xpub already exists
+   */
+  addGlobalXpub(globalXpub: GlobalXpub): void {
+    // Check if xpub already exists
+    const exists = this._globalXpubs.some(
+      (existing) =>
+        existing.xpub === globalXpub.xpub && existing.path === globalXpub.path,
+    );
+
+    if (exists) {
+      throw new Error(
+        `Global xpub already exists: ${globalXpub.xpub} with path ${globalXpub.path}`,
+      );
+    }
+
+    // Validate the xpub format (basic validation)
+    if (!globalXpub.xpub || !globalXpub.path || !globalXpub.masterFingerprint) {
+      throw new Error(
+        "Global xpub must have xpub, path, and masterFingerprint",
+      );
+    }
+    this._globalXpubs.push(globalXpub);
+  }
+
+  /**
+   * Sets global xpubs for the transaction, replacing any existing ones.
+   * @param globalXpubs - Array of global xpubs to set
+   */
+  setGlobalXpubs(globalXpubs: GlobalXpub[]): void {
+    // Clear existing xpubs
+    this._globalXpubs.length = 0;
+
+    // Add each new xpub
+    globalXpubs.forEach((xpub) => this.addGlobalXpub(xpub));
   }
 
   /**
@@ -386,6 +441,9 @@ export class BtcTransactionTemplate {
    *    the transaction is valid.
    * 2. Creates a new PsbtV2 instance.
    * 3. Adds all inputs from the template to the PSBT, including UTXO information.
+   *    - During this step, each input's `txid`, which is internally stored in **big-endian**
+   *      (human-readable) format, is **converted to little-endian** format as required by
+   *      Bitcoin’s serialization rules.
    * 4. Adds all outputs from the template to the PSBT.
    * 5. Serializes the PSBT to a base64-encoded string.
    *
@@ -404,6 +462,8 @@ export class BtcTransactionTemplate {
    * - Input amounts are not included in the PSBT. If needed, they should be added separately.
    * - Output amounts are converted from string to integer (satoshis) when added to the PSBT.
    * - The resulting PSBT is not signed and may require further processing (e.g., signing) before it can be broadcast.
+   * - Input `txid`s are stored in **big-endian** format internally for readability and compatibility with common UTXO sources,
+   *   but are **converted to little-endian** here, during PSBT serialization as per Bitcoin protocol requirements.
    */
   toPsbt(validated: boolean = true): string {
     if (validated && !this.validate()) {
@@ -411,6 +471,26 @@ export class BtcTransactionTemplate {
     }
 
     const psbt = new PsbtV2();
+
+    if (this.globalXpubs) {
+      // Add Global Xpubs to PSBT
+      this.globalXpubs.forEach((globalXpub) => {
+        try {
+          // Convert xpub string to Buffer ( base58 encoding)
+          const xpubBuffer = Buffer.from(globalXpub.xpub, "base64");
+          const fingerprintBuffer = Buffer.from(
+            globalXpub.masterFingerprint,
+            "hex",
+          );
+
+          psbt.addGlobalXpub(xpubBuffer, fingerprintBuffer, globalXpub.path);
+        } catch (error) {
+          throw new Error(
+            `Failed to add global xpub to PSBT: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      });
+    }
 
     // Add Inputs to PSBT
     this._inputs.forEach((input) => this.addInputToPsbt(psbt, input)); // already checks for validity
@@ -630,9 +710,21 @@ export class BtcTransactionTemplate {
 
   /**
    * Adds a single input to the provided PSBT based on the given input template (used in BtcTransactionTemplate)
+   *
+   * This method performs the following:
+   * - Validates that the input has the required fields.
+   * - Converts the input `txid` from big-endian (human-readable) to little-endian, as required by Bitcoin's protocol.
+   * - Constructs the PSBT input object including optional fields like witness/non-witness UTXO, scripts, and derivation paths.
+   * - Adds the input to the PSBT using `psbt.addInput()`.
+   *
    * @param {PsbtV2} psbt - The PsbtV2 object.
    * @param input - The input template to be processed and added.
    * @throws {Error} - Throws an error if script extraction or PSBT input addition fails.
+   *
+   * @remarks
+   * The `txid` in the `input` is expected to be in big-endian (UI-friendly) format.
+   * Bitcoin’s serialization format, however, uses little-endian for transaction IDs.
+   * Therefore, `txid` is reversed using `reverseHex()` before being added to the PSBT input.
    */
   private addInputToPsbt(psbt: PsbtV2, input: BtcTxInputTemplate): void {
     if (!input.hasRequiredFieldsforPSBT()) {
@@ -642,7 +734,8 @@ export class BtcTransactionTemplate {
     }
 
     const inputData: any = {
-      previousTxId: input.txid,
+      // Convert txid from big-endian (UI format) to little-endian (Bitcoin protocol format)
+      previousTxId: reverseHex(input.txid),
       outputIndex: input.vout,
     };
     // Add non-witness UTXO if available
