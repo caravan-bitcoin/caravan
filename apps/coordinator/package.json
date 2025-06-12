@@ -15,6 +15,10 @@
     "url": "https://github.com/caravan-bitcoin/caravan/issues"
   },
   "homepage": "https://github.com/caravan-bitcoin/caravan",
+  "engines": {
+    "node": ">=20.18.0 <21.0.0",
+    "npm": ">=10.5.0 <11.0.0"
+  },
   "overrides": {
     "jspdf": "2.5.1",
     "@ledgerhq/hw-transport-webusb": {
