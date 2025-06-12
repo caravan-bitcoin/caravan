@@ -99,7 +99,7 @@ if [ -n "$STAGED_LOCKFILES" ]; then
             echo "   - Node.js version mismatch (current: $CURRENT_NODE)"
             echo "   - Lockfile corruption"
             echo "   - Missing package.json changes"
-            echo "   - Forgotten to stage package.json"
+            echo "   - Forgot to stage package.json"
             echo ""
             echo "   If you added/removed packages:"
             echo "   git add $PACKAGE_JSON"
