@@ -264,7 +264,7 @@ export class BtcTransactionTemplate {
    * Sets global xpubs for the transaction, replacing any existing ones.
    * @param globalXpubs - Array of global xpubs to set
    */
-  setGlobalXpubs(globalXpubs: GlobalXpub[]): void {
+  set GlobalXpubs(globalXpubs: GlobalXpub[]) {
     // Clear existing xpubs
     this._globalXpubs.length = 0;
 
