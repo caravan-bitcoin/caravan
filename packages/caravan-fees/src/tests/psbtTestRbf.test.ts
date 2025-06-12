@@ -35,10 +35,10 @@ describe("Exact RBF Reconstruction Tests", () => {
           absoluteFee: fixture.absoluteFee,
           ...changeConfig,
           reuseAllInputs: true,
+          ...(fixture.globalXpubs && { globalXpubs: fixture.globalXpubs }), // Only add if fixture provides us globalXpubs
         });
 
         const psbt = new PsbtV2(acceleratedPsbt);
-
         const expectedPsbt = new PsbtV2(fixture.expected.exactPsbt, true);
 
         // Test basic structure matches
@@ -84,6 +84,43 @@ describe("Exact RBF Reconstruction Tests", () => {
           expectedPsbt.PSBT_IN_OUTPUT_INDEX,
         );
         expect(psbt.PSBT_IN_SEQUENCE).toEqual(expectedPsbt.PSBT_IN_SEQUENCE);
+
+        // Test Global Xpubs if present in fixture
+        if (fixture.globalXpubs && fixture.globalXpubs.length > 0) {
+          expect(psbt.PSBT_GLOBAL_XPUB).toBeDefined();
+          expect(psbt.PSBT_GLOBAL_XPUB.length).toBe(fixture.globalXpubs.length);
+
+          // Validate each global xpub
+          fixture.globalXpubs.forEach((expectedXpub, index) => {
+            const psbtXpub = psbt.PSBT_GLOBAL_XPUB[index];
+            expect(psbtXpub).toBeDefined();
+            expect(psbtXpub.key).toBeDefined();
+            expect(psbtXpub.value).toBeDefined();
+
+            // Extract and validate the fingerprint and path from the PSBT
+            if (psbtXpub.value) {
+              const valueBuffer = Buffer.from(psbtXpub.value, "hex");
+              const fingerprint = valueBuffer.slice(0, 4).toString("hex");
+
+              expect(fingerprint).toBe(expectedXpub.masterFingerprint);
+
+              // Parse BIP32 path from bytes
+              const pathBytes = valueBuffer.slice(4);
+              const pathNodes = [];
+              for (let i = 0; i < pathBytes.length; i += 4) {
+                const nodeValue = pathBytes.readUInt32LE(i);
+                const isHardened = nodeValue >= 0x80000000;
+                const nodeIndex = isHardened
+                  ? nodeValue - 0x80000000
+                  : nodeValue;
+                //@ts-expect-error some type error here
+                pathNodes.push(`/${nodeIndex}${isHardened ? "'" : ""}`);
+              }
+              const parsedPath = `m${pathNodes.join("")}`;
+              expect(parsedPath).toBe(expectedXpub.path);
+            }
+          });
+        }
 
         // Test witness UTXO data is present
         expect(psbt.PSBT_IN_WITNESS_UTXO[0]).toBeDefined();

@@ -37,14 +37,15 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
     "@caravan/typescript-config": "*",
+    "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "@caravan/bitcoin": "*",
     "@caravan/psbt": "*",
     "bignumber.js": "^9.1.2",
-    "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5"
+    "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",
+    "bs58check": "^4.0.0"
   }
 }

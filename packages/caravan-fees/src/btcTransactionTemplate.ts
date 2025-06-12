@@ -1,6 +1,7 @@
 import { Network } from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
 import { BigNumber } from "bignumber.js";
+import bs58check from "bs58check";
 
 import {
   BtcTxInputTemplate,
@@ -476,8 +477,8 @@ export class BtcTransactionTemplate {
       // Add Global Xpubs to PSBT
       this.globalXpubs.forEach((globalXpub) => {
         try {
-          // Convert xpub string to Buffer ( base58 encoding)
-          const xpubBuffer = Buffer.from(globalXpub.xpub, "base64");
+          // So we need to first decode the base58check-encoded xpub to get the raw 78-byte extended public key and then add that to PSBT
+          const xpubBuffer = Buffer.from(bs58check.decode(globalXpub.xpub));
           const fingerprintBuffer = Buffer.from(
             globalXpub.masterFingerprint,
             "hex",
