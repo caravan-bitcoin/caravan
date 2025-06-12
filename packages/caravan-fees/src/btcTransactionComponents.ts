@@ -3,7 +3,7 @@ import { BigNumber } from "bignumber.js";
 
 import { RBF_SEQUENCE } from "./constants";
 import { Satoshis, BTC, UTXO, InputDerivation } from "./types";
-import { validateNonWitnessUtxo, validateSequence, reverseHex } from "./utils";
+import { validateNonWitnessUtxo, validateSequence } from "./utils";
 
 /**
  * Abstract base class for Bitcoin transaction components (inputs and outputs).
@@ -62,7 +62,7 @@ export abstract class BtcTxComponent {
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export class BtcTxInputTemplate extends BtcTxComponent {
-  private readonly _txid: string;
+  private readonly _txid: string; // Note internally in this class we retain the `txid` in **big-endian** form throughout our internal structures.
   private readonly _vout: number;
   private _nonWitnessUtxo?: Buffer;
   private _witnessUtxo?: {
@@ -90,8 +90,9 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Creates a `BtcTxInputTemplate` from a user-provided `UTXO` object.
    *
    * This function prepares the UTXO for internal PSBT construction by:
-   * - Reversing the `txid` from big-endian to little-endian, as required by Bitcoin's internal protocol format.
    * - Mapping UTXO metadata such as amount, witness/non-witness data, scripts, derivation paths, and sequence number into the PSBT-compatible format.
+   * - Keeping the `txid` stored in its original **big-endian** (human-readable) form internally.
+   * - Only converting the `txid` to **little-endian** at the time of serialization during PSBT construction (inside `toPSBT()` method of `BtcTransactionTemplate`), as required by Bitcoin’s internal protocol format.
    *
    * @param utxo - The UTXO provided by the user, where `txid` is expected to be in **big-endian** format
    *               (as commonly seen in block explorers and UIs).
@@ -99,16 +100,17 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * @returns A `BtcTxInputTemplate` instance representing the PSBT input.
    *
    * @remarks
-   * Bitcoin internally uses **little-endian** format for transaction IDs. Hence, we reverse the `txid`
-   * to little-endian here using `reverseHex()` for correct transaction serialization and signing.
-   * This is a common quirk of Bitcoin, where display and internal formats differ.
+   * Bitcoin internally uses **little-endian** format for transaction IDs during transaction serialization and signing.
+   * However, for clarity and consistency with human-readable sources (like block explorers),
+   * we retain the `txid` in **big-endian** form throughout our internal structures.
+   * The conversion to little-endian is deferred until the final serialization step (`toPSBT()`).
    *
    * For more information on byte order in Bitcoin, see:
    * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   static fromUTXO(utxo: UTXO): BtcTxInputTemplate {
     const template = new BtcTxInputTemplate({
-      txid: reverseHex(utxo.txid),
+      txid: utxo.txid,
       vout: utxo.vout,
       amountSats: utxo.value,
     });
