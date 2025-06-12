@@ -1,7 +1,6 @@
 import { Network, ExtendedPublicKey } from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
 import { BigNumber } from "bignumber.js";
-import bs58check from "bs58check";
 
 import {
   BtcTxInputTemplate,
