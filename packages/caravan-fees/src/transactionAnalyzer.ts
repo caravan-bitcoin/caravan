@@ -549,7 +549,7 @@ export class TransactionAnalyzer {
       });
 
       // Set sequence
-      template.setSequence(input.sequence);
+      template.Sequence = input.sequence;
       return template;
     });
   }

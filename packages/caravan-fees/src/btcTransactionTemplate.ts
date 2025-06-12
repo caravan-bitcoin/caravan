@@ -654,17 +654,17 @@ export class BtcTransactionTemplate {
       const value = witnessUtxoBuffer.readUInt32LE(0);
       const script = witnessUtxoBuffer.slice(4);
 
-      input.setWitnessUtxo({ script, value });
+      input.WitnessUtxo = { script, value };
       input.amountSats = amountSats;
     } else if (nonWitnessUtxo) {
       const amountSats = parseNonWitnessUtxoValue(
         nonWitnessUtxo,
         index,
       ).toString();
-      input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
+      input.NonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
       input.amountSats = amountSats;
 
-      input.setNonWitnessUtxo(Buffer.from(nonWitnessUtxo, "hex"));
+      input.NonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
       input.amountSats = amountSats;
     } else {
       throw new Error(`Missing UTXO information for input ${index}`);

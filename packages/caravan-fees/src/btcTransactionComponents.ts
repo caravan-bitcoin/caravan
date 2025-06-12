@@ -116,25 +116,25 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     });
 
     if (utxo.prevTxHex) {
-      template.setNonWitnessUtxo(Buffer.from(utxo.prevTxHex, "hex"));
+      template.NonWitnessUtxo = Buffer.from(utxo.prevTxHex, "hex");
     }
 
     if (utxo.witnessUtxo) {
-      template.setWitnessUtxo(utxo.witnessUtxo);
+      template.WitnessUtxo = utxo.witnessUtxo;
     }
     if (utxo.redeemScript) {
-      template.setRedeemScript(utxo.redeemScript);
+      template.RedeemScript = utxo.redeemScript;
     }
 
     if (utxo.witnessScript) {
-      template.setWitnessScript(utxo.witnessScript);
+      template.WitnessScript = utxo.witnessScript;
     }
 
     if (utxo.bip32Derivations) {
-      template.setBip32Derivations(utxo.bip32Derivations);
+      template.Bip32Derivations = utxo.bip32Derivations;
     }
     if (utxo.sequence) {
-      template.setSequence(utxo.sequence);
+      template.Sequence = utxo.sequence;
     }
     return template;
   }
@@ -164,7 +164,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Optional, but useful for RBF signaling.
    * @param {number} sequence - The sequence number
    */
-  setSequence(sequence: number): void {
+  set Sequence(sequence: number) {
     if (!validateSequence(sequence)) {
       throw new Error("Invalid sequence number");
     }
@@ -176,7 +176,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Sets the sequence number to 0xfffffffd .
    */
   enableRBF(): void {
-    this.setSequence(0xfffffffd);
+    this.Sequence = 0xfffffffd;
   }
 
   /**
@@ -184,7 +184,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Sets the sequence number to 0xffffffff.
    */
   disableRBF(): void {
-    this.setSequence(0xffffffff);
+    this.Sequence = 0xffffffff;
   }
 
   /**
@@ -207,7 +207,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Required for non-segwit inputs in PSBTs.
    * @param {Buffer} value - The full transaction containing the UTXO being spent
    */
-  setNonWitnessUtxo(value: Buffer): void {
+  set NonWitnessUtxo(value: Buffer) {
     if (!validateNonWitnessUtxo(value, this._txid, this._vout)) {
       throw new Error("Invalid non-witness UTXO");
     }
@@ -228,7 +228,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * @param {Buffer} value.script - The scriptPubKey of the output
    * @param {number} value.value - The value of the output in satoshis
    */
-  setWitnessUtxo(value: { script: Buffer; value: number }): void {
+  set WitnessUtxo(value: { script: Buffer; value: number }) {
     this._witnessUtxo = value;
   }
 
@@ -247,7 +247,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    *
    * @param script - The redeem script buffer
    */
-  setRedeemScript(script: Buffer): void {
+  set RedeemScript(script: Buffer) {
     this._redeemScript = script;
   }
 
@@ -266,7 +266,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    *
    * @param script - The witness script buffer
    */
-  setWitnessScript(script: Buffer): void {
+  set WitnessScript(script: Buffer) {
     this._witnessScript = script;
   }
 
@@ -285,7 +285,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    *
    * @param derivations - Array of BIP32 derivation information
    */
-  setBip32Derivations(derivations: InputDerivation[]): void {
+  set Bip32Derivations(derivations: InputDerivation[]) {
     this._bip32Derivations = [...derivations];
   }
 
