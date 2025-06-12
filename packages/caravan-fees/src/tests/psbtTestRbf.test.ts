@@ -13,13 +13,9 @@ describe("Exact RBF Reconstruction Tests", () => {
   describe("createAcceleratedRbfTransaction - PSBT Recreation", () => {
     exactRbfFixtures.acceleratedRbf.forEach((fixture) => {
       it(fixture.case, () => {
-        const isAdditionalUtxoCase = fixture.case.includes(
-          "Using additional UTXO",
-        );
-
         // For normal exact reconstruction: use changeIndex (internal change derivation)
         // For additional UTXO fee-bumping: use changeAddress (external address provided)
-        const changeConfig = isAdditionalUtxoCase
+        const changeConfig = fixture.isAdditionalUtxoCase
           ? { changeAddress: fixture.changeAddress }
           : { changeIndex: fixture.changeIndex ?? 0 };
 
@@ -44,7 +40,7 @@ describe("Exact RBF Reconstruction Tests", () => {
         // Test basic structure matches
         // Note: For additional UTXO cases, we expect MORE inputs than the original
         // since we're adding extra UTXOs to cover the higher fees
-        if (!isAdditionalUtxoCase) {
+        if (!fixture.isAdditionalUtxoCase) {
           expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(
             expectedPsbt.PSBT_GLOBAL_INPUT_COUNT,
           );
@@ -66,7 +62,7 @@ describe("Exact RBF Reconstruction Tests", () => {
         // For additional UTXO cases: Since we're adding extra inputs to cover fees,
         // the TXID arrays will differ. We just need to verify that all original
         // TXIDs are still present in the fee-bumped transaction
-        if (!isAdditionalUtxoCase) {
+        if (!fixture.isAdditionalUtxoCase) {
           expect(psbt.PSBT_IN_PREVIOUS_TXID).toEqual(
             expectedPsbt.PSBT_IN_PREVIOUS_TXID,
           );
@@ -142,7 +138,7 @@ describe("Exact RBF Reconstruction Tests", () => {
         // For additional UTXO cases: Since we're adding extra inputs to cover fees to changeAddress,
         // So we'll have an extra output. We just need to verify that all original
         // outputs are still present in the fee-bumped transaction
-        if (!isAdditionalUtxoCase) {
+        if (!fixture.isAdditionalUtxoCase) {
           expect(psbt.PSBT_OUT_SCRIPT).toEqual(expectedPsbt.PSBT_OUT_SCRIPT);
         } else {
           // For fee-bumping with additional UTXOs, verify original TXIDs are preserved
