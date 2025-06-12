@@ -2,7 +2,6 @@ import {
   BtcTxInputTemplate,
   BtcTxOutputTemplate,
 } from "../btcTransactionComponents";
-import { reverseHex } from "../utils";
 
 import {
   validInputTemplateFixtures,
@@ -46,7 +45,7 @@ describe("BtcTxInputTemplate", () => {
   describe("fromUTXO", () => {
     it("should create an input template from a UTXO", () => {
       const input = BtcTxInputTemplate.fromUTXO(utxoFixture);
-      expect(reverseHex(input.txid)).toBe(utxoFixture.txid); // as utxo's have txid in little endian
+      expect(input.txid).toBe(utxoFixture.txid);
       expect(input.vout).toBe(utxoFixture.vout);
       expect(input.amountSats).toBe(utxoFixture.value);
       expect(input.nonWitnessUtxo).toEqual(
@@ -118,8 +117,8 @@ describe("BtcTxInputTemplate", () => {
       const input = BtcTxInputTemplate.fromUTXO(utxoFixture);
       const convertedUTXO = input.toUTXO();
 
-      // Assert that txid reversed matches original fixture (since internal uses little-endian)
-      expect(reverseHex(input.txid)).toBe(utxoFixture.txid);
+      // Assert that txid reversed matches original fixture
+      expect(input.txid).toBe(utxoFixture.txid);
 
       // We Create a copy without txid to compare remaining fields
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -217,7 +216,7 @@ describe("BtcTxInputTemplate", () => {
         const utxo = multisigUtxoFixtures[0];
         const input = BtcTxInputTemplate.fromUTXO(utxo);
 
-        expect(reverseHex(input.txid)).toBe(utxo.txid);
+        expect(input.txid).toBe(utxo.txid);
         expect(input.vout).toBe(utxo.vout);
         expect(input.amountSats).toBe(utxo.value);
         expect(input.redeemScript).toEqual(utxo.redeemScript);
@@ -229,7 +228,7 @@ describe("BtcTxInputTemplate", () => {
         const utxo = multisigUtxoFixtures[1];
         const input = BtcTxInputTemplate.fromUTXO(utxo);
 
-        expect(reverseHex(input.txid)).toBe(utxo.txid);
+        expect(input.txid).toBe(utxo.txid);
         expect(input.vout).toBe(utxo.vout);
         expect(input.amountSats).toBe(utxo.value);
         expect(input.redeemScript).toBeUndefined();
@@ -242,7 +241,7 @@ describe("BtcTxInputTemplate", () => {
         const utxo = multisigUtxoFixtures[2];
         const input = BtcTxInputTemplate.fromUTXO(utxo);
 
-        expect(reverseHex(input.txid)).toBe(utxo.txid);
+        expect(input.txid).toBe(utxo.txid);
         expect(input.vout).toBe(utxo.vout);
         expect(input.amountSats).toBe(utxo.value);
         expect(input.redeemScript).toEqual(utxo.redeemScript);
@@ -258,7 +257,7 @@ describe("BtcTxInputTemplate", () => {
         const input = BtcTxInputTemplate.fromUTXO(originalUtxo);
         const convertedUtxo = input.toUTXO();
         // Assert that txid reversed matches original fixture (since internal uses little-endian)
-        expect(reverseHex(input.txid)).toBe(originalUtxo.txid);
+        expect(input.txid).toBe(originalUtxo.txid);
 
         // We Create a copy without txid to compare remaining fields
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
