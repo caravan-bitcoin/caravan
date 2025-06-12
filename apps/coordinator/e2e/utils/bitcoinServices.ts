@@ -100,8 +100,8 @@ export class BitcoinCoreService {
         walletConfig.blank,
         walletConfig.passphrase,
         walletConfig.avoid_reuse,
-        walletConfig.descriptors,
-        walletConfig.load_on_startup,
+        walletConfig.descriptors || true,
+        walletConfig.load_on_startup || true,
         walletConfig.external_signer,
       );
       return wallet;
@@ -116,6 +116,16 @@ export class BitcoinCoreService {
       return loadWallet;
     } catch (error) {
       console.log("error", error);
+    }
+  }
+
+  async unloadWallet(walletName: string) {
+    try {
+      const unloadWallet = await this.client.command("unloadwallet", walletName);
+      return unloadWallet;
+    } catch (error) {
+      console.log("Error unloading wallet:", error);
+      throw error;
     }
   }
 

@@ -1,6 +1,6 @@
 import { BitcoinCoreService, rpcConfig } from "./bitcoinServices";
 
-const clientConfig:rpcConfig = {
+export const clientConfig:rpcConfig = {
     username: "abhishek",
     password: "abhishek",
     port: 18443,

@@ -7,13 +7,6 @@ services:
     volumes:
       - ./bitcoin-data:/data/.bitcoin
       - ./bitcoin.conf:/data/.bitcoin/bitcoin.conf:ro
-    # command: [
-    #   "-regtest",
-    #   "-server",
-    #   "-rpcallowip=0.0.0.0/0",
-    #   "-rpcbind=0.0.0.0:18443",
-    #   "-fallbackfee=0.0002"
-    # ]
     healthcheck:
       test: ["CMD", "bitcoin-cli", "-regtest", "getblockchaininfo"]
       interval: 10s
