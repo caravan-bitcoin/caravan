@@ -296,17 +296,17 @@ module.exports = {
 - Run the development server with turbo: `turbo run dev`
 - Add to `ClientPicker/index.tsx` (as an example):
 ```typescript
-import { BlockchainClient, ClientType } from "@caravan/clients";
+import { BlockchainClient, ClientType, PublicBitcoinProvider, Network } from "@caravan/clients";
 
 ...
   // add this function to the component and put it to use!
   const getFees = async () => {
-    const blockchainClient = new BlockchainClient({
-      type: ClientType.MEMPOOL,
-      client,
-      network,
+    const client = new BlockchainClient({
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
+      network: Network.MAINNET,
     });
-    return await blockchainClient.getFeeEstimate(3);
+    return await client.getFeeEstimate(3);
   };
 ...
 ```
