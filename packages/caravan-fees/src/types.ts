@@ -455,6 +455,11 @@ export interface CancelRbfOptions {
    * @default false
    */
   reuseAllInputs?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**
@@ -569,6 +574,11 @@ export interface CPFPOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**

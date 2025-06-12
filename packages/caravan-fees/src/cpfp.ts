@@ -115,6 +115,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     scriptType,
     requiredSigners,
     totalSigners,
+    ...(options.globalXpubs && { globalXpubs: options.globalXpubs }), // Only add if user-code provides us globalXpubs
   });
 
   // Step 4: Add the spendable output from the parent transaction as an input
