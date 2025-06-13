@@ -38,7 +38,7 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
   constructor(network: BitcoinNetwork = Network.MAINNET) {
     super();
     this.network = network;
-    this.decoder = new BCURDecoder2(network);
+    this.decoder = new BCURDecoder2();
   }
 
   /**
@@ -189,7 +189,7 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
 
       // If we have all parts, get the decoded data
       if (this.decoder.isComplete()) {
-        const data = this.decoder.getDecodedData();
+        const data = this.decoder.getDecodedData(this.network);
         if (!data) {
           throw new Error("Failed to decode QR code data");
         }
@@ -210,6 +210,9 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
    * @returns {Object|null} The decoded data containing xpub, path and fingerprint
    */
   getDecodedData() {
+    if (!this.decodedData && this.decoder.isComplete()) {
+      this.decodedData = this.decoder.getDecodedData(this.network);
+    }
     return this.decodedData;
   }
 }

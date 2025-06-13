@@ -4,12 +4,9 @@
  * specifically focused on crypto-account and crypto-hdkey formats used by hardware wallets.
  */
 
-import { ExtendedPublicKey, Network, BitcoinNetwork } from "@caravan/bitcoin";
-import {
-  CryptoHDKey,
-  CryptoAccount,
-  URRegistryDecoder,
-} from "@keystonehq/bc-ur-registry";
+import { Network, BitcoinNetwork } from "@caravan/bitcoin";
+import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
+import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
 
 /**
  * Interface representing decoded extended public key data from a BCUR2 QR code
@@ -34,20 +31,14 @@ export interface ExtendedPublicKeyData {
  */
 export class BCURDecoder2 {
   private decoder: URRegistryDecoder;
-
   private error: string | null = null;
-
   private progress: string = "Idle";
-
-  private network: BitcoinNetwork = Network.TESTNET;
 
   /**
    * Creates a new BCUR2 decoder instance
-   * @param {BitcoinNetwork} network - The Bitcoin network to use (mainnet or testnet)
    */
-  constructor(network: BitcoinNetwork = Network.TESTNET) {
+  constructor() {
     this.decoder = new URRegistryDecoder();
-    this.network = network;
   }
 
   /**
@@ -63,109 +54,22 @@ export class BCURDecoder2 {
    * Handles decoding of crypto-account type BCUR2 data
    * @private
    */
-  private handleCryptoAccount(cbor: Buffer): ExtendedPublicKeyData {
-    const account = CryptoAccount.fromCBOR(cbor);
-    const descriptors = account.getOutputDescriptors();
-    if (!descriptors.length) throw new Error("No output descriptors found");
-
-    // Ensured we have  only 1 descriptor here
-    const hdKey = descriptors[0].getCryptoKey();
-    if (!hdKey || !(hdKey instanceof CryptoHDKey)) {
-      throw new Error("Invalid HDKey in crypto-account");
-    }
-
-    // Extract components from CryptoHDKey
-    const chainCode = hdKey.getChainCode();
-    const key = hdKey.getKey();
-    const parentFp = hdKey.getParentFingerprint() || Buffer.alloc(4);
-    const origin = hdKey.getOrigin();
-    const rootFingerprint = origin
-      ?.getSourceFingerprint()
-      ?.toString("hex")
-      ?.toUpperCase();
-    const bip32Path = origin?.getPath();
-
-    // Get the correct depth and index from the path components
-    const components = origin?.getComponents() || [];
-    const depth = components.length;
-    const lastComponent = components[components.length - 1];
-
-    // Handle hardened vs non-hardened indices correctly
-    let index = 0;
-    if (lastComponent) {
-      if (lastComponent.isHardened()) {
-        index = lastComponent.getIndex() + 0x80000000;
-      } else {
-        index = lastComponent.getIndex();
-      }
-    }
-    // Construct ExtendedPublicKey
-    const xpubObj = new ExtendedPublicKey({
-      depth,
-      index,
-      chaincode: chainCode.toString("hex"),
-      pubkey: key.toString("hex"),
-      parentFingerprint: parentFp.readUInt32BE(0),
-      network: this.network,
-    });
-
-    const xpub = xpubObj.toBase58();
-    if (!xpub) throw new Error("Failed to construct xpub from HDKey");
-
-    return { type: "crypto-account", xpub, rootFingerprint, bip32Path };
+  private handleCryptoAccount(
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData {
+    return processCryptoAccountCBOR(cbor, network);
   }
 
   /**
    * Handles decoding of crypto-hdkey type BCUR2 data
    * @private
    */
-  private handleCryptoHDKey(cbor: Buffer): ExtendedPublicKeyData {
-    const hdkey = CryptoHDKey.fromCBOR(cbor);
-    if (!hdkey) {
-      throw new Error("Invalid crypto-hdkey data");
-    }
-
-    // Extract key details
-    const chainCode = hdkey.getChainCode();
-    const key = hdkey.getKey();
-    const parentFp = hdkey.getParentFingerprint() || Buffer.alloc(4);
-    const origin = hdkey.getOrigin();
-    const rootFingerprint = origin
-      ?.getSourceFingerprint()
-      ?.toString("hex")
-      ?.toUpperCase();
-    const bip32Path = origin?.getPath();
-
-    // Get depth and index from path
-    const components = origin?.getComponents() || [];
-    const depth = components.length;
-    const lastComponent = components[components.length - 1];
-
-    // Handle hardened vs non-hardened indices
-    let index = 0;
-    if (lastComponent) {
-      if (lastComponent.isHardened()) {
-        index = lastComponent.getIndex() + 0x80000000;
-      } else {
-        index = lastComponent.getIndex();
-      }
-    }
-
-    // Create xpub with proper network version
-    const xpubObj = new ExtendedPublicKey({
-      depth,
-      index,
-      chaincode: chainCode.toString("hex"),
-      pubkey: key.toString("hex"),
-      parentFingerprint: parentFp.readUInt32BE(0),
-      rootFingerprint,
-      network: this.network,
-      path: bip32Path,
-    });
-
-    const xpub = xpubObj.toBase58();
-    if (!xpub) throw new Error("Failed to construct xpub from HDKey");
-    return { type: "crypto-hdkey", xpub, rootFingerprint, bip32Path };
+  private handleCryptoHDKey(
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData {
+    return processCryptoHDKeyCBOR(cbor, network);
   }
 
   /**
@@ -173,18 +77,20 @@ export class BCURDecoder2 {
    * @private
    * @param {string} type - The UR type (crypto-account or crypto-hdkey)
    * @param {Buffer} cbor - The decoded CBOR data
+   * @param {BitcoinNetwork} network - The Bitcoin network to use
    * @returns {ExtendedPublicKeyData|null} The decoded wallet data or null if error
    */
   private handleDecodedResult(
     type: string,
-    cbor: Buffer
+    cbor: Buffer,
+    network: BitcoinNetwork
   ): ExtendedPublicKeyData | null {
     try {
       switch (type) {
         case "crypto-account":
-          return this.handleCryptoAccount(cbor);
+          return this.handleCryptoAccount(cbor, network);
         case "crypto-hdkey":
-          return this.handleCryptoHDKey(cbor);
+          return this.handleCryptoHDKey(cbor, network);
         default:
           throw new Error(`Unsupported UR type: ${type}`);
       }
@@ -244,16 +150,18 @@ export class BCURDecoder2 {
 
   /**
    * Gets the decoded wallet data, if available
+   * @param {BitcoinNetwork} network - The Bitcoin network to use for decoding
    * @returns {ExtendedPublicKeyData|null} The decoded data or null
    */
-  getDecodedData(): ExtendedPublicKeyData | null {
+  getDecodedData(network: BitcoinNetwork): ExtendedPublicKeyData | null {
     if (!this.decoder.isComplete()) return null;
 
     try {
       const result = this.decoder.resultUR();
       return this.handleDecodedResult(
         result.type,
-        Buffer.from(result.cbor.buffer)
+        Buffer.from(result.cbor.buffer),
+        network
       );
     } catch (err: any) {
       this.error = err.message || String(err);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from "react";
 import { BCURDecoder2, ExtendedPublicKeyData } from "@caravan/wallets";
 import { QrReader } from "react-qr-reader";
 import { Box, Button, FormHelperText, Paper, Typography } from "@mui/material";
+import { BitcoinNetwork, Network } from "@caravan/bitcoin";
 
 interface BCUR2ReaderProps {
   onStart?: () => void;
@@ -9,6 +10,7 @@ interface BCUR2ReaderProps {
   onClear: () => void;
   startText?: string;
   width?: string | number;
+  network?: BitcoinNetwork;
 }
 
 const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
@@ -17,6 +19,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
   onClear,
   startText = "Start QR Scan",
   width = 300,
+  network = Network.MAINNET,
 }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState("");
@@ -53,7 +56,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
 
       if (decoder.isComplete()) {
         console.log("QR decoding complete.");
-        const extendedPublicKeyData = decoder.getDecodedData();
+        const extendedPublicKeyData = decoder.getDecodedData(network);
         if (!extendedPublicKeyData)
           throw new Error("Failed to decode extended public key data.");
         if (!extendedPublicKeyData.bip32Path)

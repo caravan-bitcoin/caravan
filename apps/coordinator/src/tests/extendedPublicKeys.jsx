@@ -18,7 +18,7 @@ class ExportExtendedPublicKeyTest extends Test {
       tempResult = this.interaction().parse(result);
     }
 
-    // BCUR2 returns a different structure
+    // The "tempResult" from BCUR2 contains an extra field "type" that we don't want to return.
     if (
       tempResult.type === "crypto-account" ||
       tempResult.type === "crypto-hdkey"
@@ -84,6 +84,41 @@ const extendedPublicKeyTests = (keystore) => {
           keystore,
           network: Network.TESTNET,
           bip32Path: "m/45'/1'/0'",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.TESTNET,
+          bip32Path: "m/45'/1/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.TESTNET,
+          bip32Path: "m/45'/1'/0'/0/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.TESTNET,
+          bip32Path: "m/48'/1'/0'/2'/0/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.MAINNET,
+          bip32Path: "m/45'/0/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.MAINNET,
+          bip32Path: "m/45'/0'/0'/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.MAINNET,
+          bip32Path: "m/45'/0'/0'/0/0",
+        }),
+        new ExportExtendedPublicKeyTest({
+          keystore,
+          network: Network.MAINNET,
+          bip32Path: "m/45'/0'/4'/99'/2147483647/3/1",
         }),
       ];
     case COLDCARD:

@@ -201,7 +201,7 @@ Derivation: ${test.params.derivation}
                   onSuccess={this.resolve}
                   onClear={this.reset}
                   startText="Scan the BCUR2 QR Code Sequence"
-                  interaction={test.interaction()}
+                  network={test.interaction().network}
                 />
               </Box>
             )}
