@@ -6,6 +6,7 @@
 
 import { Network, BitcoinNetwork } from "@caravan/bitcoin";
 import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
+
 import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
 
 /**
@@ -31,7 +32,9 @@ export interface ExtendedPublicKeyData {
  */
 export class BCURDecoder2 {
   private decoder: URRegistryDecoder;
+
   private error: string | null = null;
+
   private progress: string = "Idle";
 
   /**
