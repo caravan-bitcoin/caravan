@@ -67,7 +67,6 @@
     "vite-plugin-wasm": "^3.3.0"
   },
   "scripts": {
-    "preinstall": "node -e \"const {engines} = require('./package.json'); const nodeRange = engines.node; const npmRange = engines.npm; const nodeVer = nodeRange.split(' ')[0].replace(/[^\\d.]/g, ''); const npmVer = npmRange.split(' ')[0].replace(/[^\\d.]/g, ''); try { require('child_process').execSync('check-node-version --node=\\\"' + nodeRange + '\\\" --npm=\\\"' + npmRange + '\\\"', {stdio: 'pipe'}); } catch(e) { console.error('\\\\n⚠️  Node/npm version mismatch. Required: Node ' + nodeRange + ', npm ' + npmRange + '\\\\n   • Install with nvm: nvm install ' + nodeVer + ' && nvm use ' + nodeVer + '\\\\n   • Update npm: npm install -g npm@' + npmVer + '\\\\n'); process.exit(1); }\"",
     "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "build:ci": "npm run ci && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
