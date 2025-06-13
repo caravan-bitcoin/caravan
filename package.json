@@ -6,7 +6,7 @@
     "npm": ">=10.5.0 <11.0.0"
   },
   "scripts": {
-    "preinstall": "node -e \"const {engines} = require('./package.json'); const nodeRange = engines.node; const npmRange = engines.npm; const nodeVer = nodeRange.match(/>=([\\d.]+)/)?.[1] ; const npmVer = npmRange.match(/>=([\\d.]+)/)?.[1] ; require('child_process').execSync(\\`check-node-version --node=\\\"${nodeRange}\\\" --npm=\\\"${npmRange}\\\" || (echo \\\"\\\\n⚠️  Node/npm version mismatch. Required: Node ${nodeRange}, npm ${npmRange}\\\\n   • Install with nvm: nvm install ${nodeVer} && nvm use ${nodeVer}\\\\n   • Update npm: npm install -g npm@${npmVer.split('.').slice(0,2).join('.')}\\\\n\\\" && exit 1)\\`, {stdio: 'inherit'})\"",
+    "preinstall": "node -e \"const {engines} = require('./package.json'); const nodeRange = engines.node; const npmRange = engines.npm; const nodeVer = nodeRange.match(/>=([\\d.]+)/)?.[1]; const npmVer = npmRange.match(/>=([\\d.]+)/)?.[1]; const npmMajorMinor = npmVer.split('.').slice(0,2).join('.'); require('child_process').execSync('check-node-version --node=\\\"' + nodeRange + '\\\" --npm=\\\"' + npmRange + '\\\" || (echo \\\"\\\\n⚠️  Node/npm version mismatch. Required: Node ' + nodeRange + ', npm ' + npmRange + '\\\\n   • Install with nvm: nvm install ' + nodeVer + ' && nvm use ' + nodeVer + '\\\\n   • Update npm: npm install -g npm@' + npmMajorMinor + '\\\\n\\\" && exit 1)', {stdio: 'inherit'})\"",
     "build": "turbo build",
     "build:coordinator": "turbo build --filter=caravan-coordinator",
     "changeset": "changeset",
