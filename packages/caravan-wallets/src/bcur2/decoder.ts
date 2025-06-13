@@ -4,7 +4,7 @@
  * specifically focused on crypto-account and crypto-hdkey formats used by hardware wallets.
  */
 
-import { Network, BitcoinNetwork } from "@caravan/bitcoin";
+import { BitcoinNetwork } from "@caravan/bitcoin";
 import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
 
 import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
