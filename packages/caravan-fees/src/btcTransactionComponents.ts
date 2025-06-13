@@ -321,8 +321,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
       witnessUtxo: this._witnessUtxo,
       redeemScript: this._redeemScript,
       witnessScript: this._witnessScript,
-      bip32Derivations:
-        this._bip32Derivations.length > 0 ? this._bip32Derivations : undefined,
+      bip32Derivations: this._bip32Derivations || undefined,
     };
   }
 }

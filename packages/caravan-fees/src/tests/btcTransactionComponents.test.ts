@@ -259,23 +259,7 @@ describe("BtcTxInputTemplate", () => {
 
         expect(convertedUtxo.redeemScript).toBeUndefined();
         expect(convertedUtxo.witnessScript).toBeUndefined();
-        expect(convertedUtxo.bip32Derivations).toBeUndefined();
-      });
-
-      it("should include bip32Derivations only when not empty", () => {
-        const input = new BtcTxInputTemplate(
-          validInputTemplateFixtures[0].data,
-        );
-        input.Bip32Derivations = [];
-        const convertedUtxo = input.toUTXO();
-
-        expect(convertedUtxo.bip32Derivations).toBeUndefined();
-
-        input.Bip32Derivations = bip32DerivationFixtures;
-        const convertedUtxoWithDerivations = input.toUTXO();
-        expect(convertedUtxoWithDerivations.bip32Derivations).toEqual(
-          bip32DerivationFixtures,
-        );
+        expect(convertedUtxo.bip32Derivations).toEqual([]);
       });
     });
 
