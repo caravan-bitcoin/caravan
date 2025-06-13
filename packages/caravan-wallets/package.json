@@ -1,6 +1,6 @@
 {
   "name": "@caravan/wallets",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Unchained Capital's HWI Library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -77,6 +77,7 @@
     "@babel/runtime": "^7.23.9",
     "@caravan/bitcoin": "*",
     "@caravan/psbt": "*",
+    "@keystonehq/bc-ur-registry": "^0.7.0",
     "@ledgerhq/hw-app-btc": "^5.34.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.27.12",
