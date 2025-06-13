@@ -7,31 +7,82 @@ echo "🚀 Pre-commit checks (from $(pwd))..."
 GIT_ROOT=$(git rev-parse --show-toplevel)
 echo "📁 Git root: $GIT_ROOT"
 
-# 1. Check Node.js version
+# 1. Check Node.js version (get it from package.json engines)
 echo "1️⃣ Checking Node.js version..."
 CURRENT_NODE=$(node --version)
-EXPECTED_MAJOR="20"
 
-# Extract major version (e.g., "v20.18.0" -> "20")
-CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
+# Find package.json with engines field
+ENGINES_FILE="$GIT_ROOT/package.json"
 
-echo "   Current Node.js: $CURRENT_NODE"
+if [ -n "$ENGINES_FILE" ]; then
+    echo "   📋 Using engines from: $ENGINES_FILE"
 
-if [ "$CURRENT_MAJOR" != "$EXPECTED_MAJOR" ]; then
-    echo ""
-    echo "❌ Wrong Node.js version!"
-    echo "   Expected: v${EXPECTED_MAJOR}.x.x (any Node.js 20)"
-    echo "   Current:  $CURRENT_NODE"
-    echo ""
-    echo "   To fix this:"
-    echo "   1. Run: nvm use 20"
-    echo "   2. Or run: nvm use (uses .nvmrc)"
-    echo "   3. Then try your commit again"
-    echo ""
+    # Extract Node version requirement from engines field
+    NODE_REQUIREMENT=$(node -e "
+        try {
+            const pkg = require('$ENGINES_FILE');
+            if (pkg.engines && pkg.engines.node) {
+                console.log(pkg.engines.node);
+            }
+        } catch(e) {
+            console.log('⚠️  package.json with no engines field found')
+            process.exit(1);
+        }
+    ")
+
+    if [ $? -eq 0 ] && [ -n "$NODE_REQUIREMENT" ]; then
+        echo "   📝 Required Node.js: $NODE_REQUIREMENT"
+        echo "   💻 Current Node.js: $CURRENT_NODE"
+
+        # Use check-node-version to validate (same as preinstall script)
+        # First check if check-node-version is available
+        if ! command -v check-node-version >/dev/null 2>&1; then
+            echo "   ⚠️  check-node-version not found, using basic version check"
+            # Extract major version for basic check
+            CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
+            REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+
+            if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
+                echo ""
+                echo "❌ Node.js major version mismatch!"
+                echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
+                echo "   Current:  $CURRENT_NODE"
+                echo ""
+                echo "   To fix this:"
+                echo "   1. Run: nvm use $REQUIRED_MAJOR"
+                echo "   2. Or run: nvm install $REQUIRED_MAJOR"
+                echo "   3. Then try your commit again"
+                echo ""
+                exit 1
+            fi
+        else
+            # Use check-node-version for precise validation
+            if ! check-node-version --node="$NODE_REQUIREMENT" >/dev/null 2>&1; then
+                echo ""
+                echo "❌ Node.js version mismatch!"
+                echo "   Required: $NODE_REQUIREMENT"
+                echo "   Current:  $CURRENT_NODE"
+                echo ""
+                # Extract a reasonable version to suggest
+                SUGGESTED_VERSION=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9.]//g' | cut -d' ' -f1)
+                echo "   To fix this:"
+                echo "   1. Run: nvm use \$(cat .nvmrc 2>/dev/null || echo \"$SUGGESTED_VERSION\")"
+                echo "   2. Or run: nvm install $SUGGESTED_VERSION"
+                echo "   3. Then try your commit again"
+                echo ""
+                exit 1
+            fi
+        fi
+
+        echo "   ✅ Node.js version OK"
+    else
+        echo "   ⚠️  Could not read engines.node field"
+        exit 1
+    fi
+else
+    echo "   ⚠️  package.json with no engines field found"
     exit 1
 fi
-
-echo "   ✅ Node.js version OK"
 
 # 2. package-lock.json sanity checks:
 #    a) Ensure package-lock.json doesn’t have massive diffs — usually a sign of incorrect Node.js/npm versions.
