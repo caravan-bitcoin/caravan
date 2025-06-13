@@ -33,7 +33,7 @@ describe("BtcTxInputTemplate", () => {
       if (expected.error) {
         const temp = new BtcTxInputTemplate(data);
         expect(() => {
-          temp.Sequence = data.sequence!;
+          temp.sequence = data.sequence!;
         }).toThrow(expected.error);
       } else {
         const input = new BtcTxInputTemplate(data);
@@ -58,7 +58,7 @@ describe("BtcTxInputTemplate", () => {
   describe("setSequence", () => {
     it("should set sequence number", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
-      input.Sequence = 0xfffffffd;
+      input.sequence = 0xfffffffd;
       expect(input.sequence).toBe(0xfffffffd);
       expect(input.isRBFEnabled()).toBe(true);
     });
@@ -66,7 +66,7 @@ describe("BtcTxInputTemplate", () => {
     it("should throw error when setting invalid sequence number", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       expect(() => {
-        input.Sequence = 0x100000000; // Greater than 32-bit unsigned integer
+        input.sequence = 0x100000000; // Greater than 32-bit unsigned integer
       }).toThrow("Invalid sequence number");
     });
   });
@@ -78,7 +78,7 @@ describe("BtcTxInputTemplate", () => {
         script: Buffer.from("dummy_script"),
         value: 123456,
       };
-      input.WitnessUtxo = witnessUtxo;
+      input.witnessUtxo = witnessUtxo;
       expect(input.witnessUtxo).toEqual(witnessUtxo);
     });
   });
@@ -87,7 +87,7 @@ describe("BtcTxInputTemplate", () => {
     it("should set non-witness UTXO", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       const nonWitnessUtxo = Buffer.from(utxoFixture.prevTxHex!, "hex");
-      input.NonWitnessUtxo = nonWitnessUtxo;
+      input.nonWitnessUtxo = nonWitnessUtxo;
       expect(input.nonWitnessUtxo).toEqual(nonWitnessUtxo);
     });
 
@@ -95,7 +95,7 @@ describe("BtcTxInputTemplate", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       const invalidNonWitnessUtxo = Buffer.from("invalid_utxo");
       expect(() => {
-        input.NonWitnessUtxo = invalidNonWitnessUtxo;
+        input.nonWitnessUtxo = invalidNonWitnessUtxo;
       }).toThrow("Invalid non-witness UTXO");
     });
   });
@@ -132,7 +132,7 @@ describe("BtcTxInputTemplate", () => {
           "hex",
         );
 
-        input.RedeemScript = redeemScript;
+        input.redeemScript = redeemScript;
         expect(input.redeemScript).toEqual(redeemScript);
       });
 
@@ -154,7 +154,7 @@ describe("BtcTxInputTemplate", () => {
           "hex",
         );
 
-        input.WitnessScript = witnessScript;
+        input.witnessScript = witnessScript;
         expect(input.witnessScript).toEqual(witnessScript);
       });
 
@@ -172,7 +172,7 @@ describe("BtcTxInputTemplate", () => {
           validInputTemplateFixtures[0].data,
         );
 
-        input.Bip32Derivations = bip32DerivationFixtures;
+        input.bip32Derivations = bip32DerivationFixtures;
         expect(input.bip32Derivations).toEqual(bip32DerivationFixtures);
       });
 
@@ -181,7 +181,7 @@ describe("BtcTxInputTemplate", () => {
           validInputTemplateFixtures[0].data,
         );
 
-        input.Bip32Derivations = [];
+        input.bip32Derivations = [];
         expect(input.bip32Derivations).toEqual([]);
       });
 
@@ -191,7 +191,7 @@ describe("BtcTxInputTemplate", () => {
         );
         const originalDerivations = [...bip32DerivationFixtures];
 
-        input.Bip32Derivations = originalDerivations;
+        input.bip32Derivations = originalDerivations;
         originalDerivations.push({
           pubkey: Buffer.from("newkey", "hex"),
           masterFingerprint: Buffer.from("newfingerprint", "hex"),
@@ -278,8 +278,8 @@ describe("BtcTxInputTemplate", () => {
           script: Buffer.from("dummy_script"),
           value: 123456,
         };
-        input.WitnessUtxo = witnessUtxo;
-        input.RedeemScript = Buffer.from("redeem_script", "hex");
+        input.witnessUtxo = witnessUtxo;
+        input.redeemScript = Buffer.from("redeem_script", "hex");
 
         expect(input.isValid()).toBe(true);
         expect(input.hasRequiredFieldsforPSBT()).toBe(true);
@@ -291,7 +291,7 @@ describe("BtcTxInputTemplate", () => {
         const input = new BtcTxInputTemplate(
           validInputTemplateFixtures[0].data,
         );
-        input.Bip32Derivations = bip32DerivationFixtures;
+        input.bip32Derivations = bip32DerivationFixtures;
 
         expect(input.bip32Derivations).toEqual(bip32DerivationFixtures);
         expect(input.redeemScript).toBeUndefined();
@@ -305,8 +305,8 @@ describe("BtcTxInputTemplate", () => {
         const redeemScript = Buffer.from("redeem_script", "hex");
         const witnessScript = Buffer.from("witness_script", "hex");
 
-        input.RedeemScript = redeemScript;
-        input.WitnessScript = witnessScript;
+        input.redeemScript = redeemScript;
+        input.witnessScript = witnessScript;
 
         expect(input.redeemScript).toEqual(redeemScript);
         expect(input.witnessScript).toEqual(witnessScript);

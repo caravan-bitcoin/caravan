@@ -263,7 +263,7 @@ export class BtcTransactionTemplate {
    * Sets global xpubs for the transaction, replacing any existing ones.
    * @param globalXpubs - Array of global xpubs to set
    */
-  set GlobalXpubs(globalXpubs: GlobalXpub[]) {
+  set globalXpubs(globalXpubs: GlobalXpub[]) {
     // Clear existing xpubs
     this._globalXpubs.length = 0;
 
@@ -653,17 +653,17 @@ export class BtcTransactionTemplate {
       const value = witnessUtxoBuffer.readUInt32LE(0);
       const script = witnessUtxoBuffer.slice(4);
 
-      input.WitnessUtxo = { script, value };
+      input.witnessUtxo = { script, value };
       input.amountSats = amountSats;
     } else if (nonWitnessUtxo) {
       const amountSats = parseNonWitnessUtxoValue(
         nonWitnessUtxo,
         index,
       ).toString();
-      input.NonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
+      input.nonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
       input.amountSats = amountSats;
 
-      input.NonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
+      input.nonWitnessUtxo = Buffer.from(nonWitnessUtxo, "hex");
       input.amountSats = amountSats;
     } else {
       throw new Error(`Missing UTXO information for input ${index}`);
