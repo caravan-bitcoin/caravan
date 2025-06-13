@@ -241,8 +241,7 @@ export class BtcTransactionTemplate {
   addGlobalXpub(globalXpub: GlobalXpub): void {
     // Check if xpub already exists
     const exists = this._globalXpubs.some(
-      (existing) =>
-        existing.xpub === globalXpub.xpub && existing.path === globalXpub.path,
+      (existing) => existing.xpub === globalXpub.xpub,
     );
 
     if (exists) {
