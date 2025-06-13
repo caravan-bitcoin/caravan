@@ -51,11 +51,9 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
     if (!text || !text.toLowerCase().startsWith("ur:")) return;
 
     try {
-      console.log("Received QR part:", text);
       decoder.receivePart(text);
 
       if (decoder.isComplete()) {
-        console.log("QR decoding complete.");
         const extendedPublicKeyData = decoder.getDecodedData(network);
         if (!extendedPublicKeyData)
           throw new Error("Failed to decode extended public key data.");
@@ -75,7 +73,6 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
             : `m/${extendedPublicKeyData.bip32Path}`,
         };
 
-        console.log("Extended public key data:", data);
         onSuccess(data);
 
         decoder.reset();
