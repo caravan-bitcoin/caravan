@@ -21,6 +21,11 @@
         "build"
       ]
     },
+    "test:coverage": {
+      "dependsOn": ["^build", "build"],
+      "outputs": ["coverage/**"],
+      "cache": false
+    },
     "test:debug": {
       "cache": false
     },
@@ -52,8 +57,9 @@
     },
     "ci": {
       "dependsOn": [
-        "^build"
-      ]
+        "^build", "build","test","lint"
+      ],
+      "outputs": []
     }
   }
 }
