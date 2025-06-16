@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.5.0
+
+### Minor Changes
+
+- [#244](https://github.com/caravan-bitcoin/caravan/pull/244) [`2fdced3`](https://github.com/caravan-bitcoin/caravan/commit/2fdced3ec1c51ed8df5b5d91f88386cb2302bb94) Thanks [@waldenraines](https://github.com/waldenraines)! - separate public/private and blockchain explorer concerns
+
 ## 0.4.1
 
 ### Patch Changes

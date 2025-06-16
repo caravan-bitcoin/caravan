@@ -7,6 +7,7 @@ import * as bitcoind from "./bitcoind";
 import {
   BlockchainClient,
   ClientType,
+  PublicBitcoinProvider,
   ClientBase,
   BlockchainClientError,
   transformWalletTransactionToRawTransactionData,
@@ -93,19 +94,22 @@ describe("BlockchainClient", () => {
   it("should throw an error if the network is invalid", () => {
     expect(() => {
       new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.REGTEST,
       });
     }).toThrow("Invalid network");
     expect(() => {
       new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.REGTEST,
       });
     }).toThrow("Invalid network");
     expect(() => {
       new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.SIGNET,
       });
     }).toThrow("Invalid network");
@@ -113,12 +117,14 @@ describe("BlockchainClient", () => {
 
   it("should set the mainnet host for a public client", () => {
     const blockstream = new BlockchainClient({
-      type: ClientType.BLOCKSTREAM,
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.BLOCKSTREAM,
       network: Network.MAINNET,
     });
     expect(blockstream.host).toEqual("https://blockstream.info/api");
     const mempool = new BlockchainClient({
-      type: ClientType.MEMPOOL,
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
       network: Network.MAINNET,
     });
     expect(mempool.host).toEqual("https://unchained.mempool.space/api");
@@ -126,12 +132,14 @@ describe("BlockchainClient", () => {
 
   it("should set the testnet host for a public client", () => {
     const blockstream = new BlockchainClient({
-      type: ClientType.BLOCKSTREAM,
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.BLOCKSTREAM,
       network: Network.TESTNET,
     });
     expect(blockstream.host).toEqual("https://blockstream.info/testnet/api");
     const mempool = new BlockchainClient({
-      type: ClientType.MEMPOOL,
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
       network: Network.TESTNET,
     });
     expect(mempool.host).toEqual("https://unchained.mempool.space/testnet/api");
@@ -139,16 +147,57 @@ describe("BlockchainClient", () => {
 
   it("should set the signet host for a public client", () => {
     const mempool = new BlockchainClient({
-      type: ClientType.MEMPOOL,
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
       network: Network.SIGNET,
     });
     expect(mempool.host).toEqual("https://unchained.mempool.space/signet/api");
     expect(() => {
       new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.SIGNET,
       });
     }).toThrow("Invalid network");
+  });
+
+  it("should default to mempool for public client if no provider is specified", () => {
+    const client = new BlockchainClient({
+      type: ClientType.PUBLIC,
+      network: Network.MAINNET,
+    });
+    expect(client.provider).toEqual(PublicBitcoinProvider.MEMPOOL);
+    expect(client.host).toEqual("https://unchained.mempool.space/api");
+  });
+
+  it("should handle backwards compatibility for mempool type", () => {
+    const client = new BlockchainClient({
+      type: ClientType.MEMPOOL as any, // Cast to any to simulate old config
+      network: Network.MAINNET,
+    });
+    expect(client.type).toEqual(ClientType.PUBLIC);
+    expect(client.provider).toEqual(PublicBitcoinProvider.MEMPOOL);
+    expect(client.host).toEqual("https://unchained.mempool.space/api");
+  });
+
+  it("should handle backwards compatibility for blockstream type", () => {
+    const client = new BlockchainClient({
+      type: ClientType.BLOCKSTREAM as any, // Cast to any to simulate old config
+      network: Network.MAINNET,
+    });
+    expect(client.type).toEqual(ClientType.PUBLIC);
+    expect(client.provider).toEqual(PublicBitcoinProvider.BLOCKSTREAM);
+    expect(client.host).toEqual("https://blockstream.info/api");
+  });
+
+  it("should throw an error if provider is set for private client", () => {
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PRIVATE,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+    }).toThrow("Provider cannot be set for private client type");
   });
 
   describe("broadcastTransaction", () => {
@@ -187,7 +236,8 @@ describe("BlockchainClient", () => {
       const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Post = mockPost;
@@ -202,13 +252,15 @@ describe("BlockchainClient", () => {
       // Verify the returned result
       expect(result).toEqual(mockResponse);
     });
+
     it("should broadcast a transaction (BLOCKSTREAM client)", async () => {
       // Mock the response from the API
       const mockResponse = "txid";
       const mockPost = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.MAINNET,
       });
       blockchainClient.Post = mockPost;
@@ -296,7 +348,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -318,7 +371,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -352,7 +406,8 @@ describe("BlockchainClient", () => {
 
       // Create a new instance of BlockchainClient with mock methods
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.getTransactionHex = mockGetTransactionHex;
@@ -529,9 +584,10 @@ describe("BlockchainClient", () => {
       ];
       const mockGet = vi.fn().mockResolvedValue(mockUtxos);
 
-      // Create a new instance of BlockchainClient with ClientType.MEMPOOL
+      // Create a new instance of BlockchainClient with PublicBitcoinProvider.MEMPOOL
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -560,9 +616,10 @@ describe("BlockchainClient", () => {
       const mockError = new Error("Failed to fetch UTXOs");
       const mockGet = vi.fn().mockRejectedValue(mockError);
 
-      // Create a new instance of BlockchainClient with ClientType.MEMPOOL
+      // Create a new instance of BlockchainClient with PublicBitcoinProvider.MEMPOOL
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -672,7 +729,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -703,7 +761,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -766,7 +825,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -793,7 +853,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -822,7 +883,8 @@ describe("BlockchainClient", () => {
   describe("importDescriptors", () => {
     it("should throw BlockchainClientError if not a private client", () => {
       const blockchainClient = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.MAINNET,
       });
 
@@ -890,7 +952,8 @@ describe("BlockchainClient", () => {
   describe("getWalletInfo", () => {
     it("should throw BlockchainClientError if not a private client", () => {
       const blockchainClient = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.MAINNET,
       });
 
@@ -1096,7 +1159,8 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
       blockchainClient.Get = mockGet;
@@ -1279,7 +1343,8 @@ describe("BlockchainClient", () => {
       describe("BLOCKSTREAM client", () => {
         beforeEach(() => {
           client = new BlockchainClient({
-            type: ClientType.BLOCKSTREAM,
+            type: ClientType.PUBLIC,
+            provider: PublicBitcoinProvider.BLOCKSTREAM,
             network: Network.MAINNET,
           });
         });
@@ -1306,7 +1371,8 @@ describe("BlockchainClient", () => {
       describe("MEMPOOL client", () => {
         beforeEach(() => {
           client = new BlockchainClient({
-            type: ClientType.MEMPOOL,
+            type: ClientType.PUBLIC,
+            provider: PublicBitcoinProvider.MEMPOOL,
             network: Network.MAINNET,
           });
         });
@@ -1348,7 +1414,8 @@ describe("BlockchainClient", () => {
         const mockGet = vi.fn().mockRejectedValue(mockError);
 
         const client = new BlockchainClient({
-          type: ClientType.BLOCKSTREAM,
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
           network: Network.MAINNET,
         });
         client.Get = mockGet;
@@ -1544,7 +1611,8 @@ describe("BlockchainClient", () => {
 
     it("should throw error for non-private clients", async () => {
       const blockstreamClient = new BlockchainClient({
-        type: ClientType.BLOCKSTREAM,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.MAINNET,
       });
 
@@ -1555,7 +1623,8 @@ describe("BlockchainClient", () => {
       );
 
       const mempoolClient = new BlockchainClient({
-        type: ClientType.MEMPOOL,
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
 

@@ -37,8 +37,8 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
     "@caravan/typescript-config": "*",
+    "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   },
   "dependencies": {

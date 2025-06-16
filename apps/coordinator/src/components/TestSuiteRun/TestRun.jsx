@@ -6,6 +6,7 @@ import {
   ACTIVE,
   HERMIT,
   COLDCARD,
+  BCUR2, // Add BCUR2 import
   INDIRECT_KEYSTORES,
 } from "@caravan/wallets";
 import {
@@ -30,6 +31,7 @@ import * as errorNotificationActions from "../../actions/errorNotificationAction
 import InteractionMessages from "../InteractionMessages";
 import { TestRunNote } from "./Note";
 import { HermitReader, HermitDisplayer } from "../Hermit";
+import BCUR2Reader from "../BCUR2/BCUR2Reader"; // Import as default export
 import {
   ColdcardJSONReader,
   ColdcardPSBTReader,
@@ -172,6 +174,15 @@ Derivation: ${test.params.derivation}
                   />
                 </Box>
               )}
+            {keystore.type === BCUR2 &&
+              test.interaction().workflow[0] === "request" &&
+              status === PENDING && (
+                <Box align="center">
+                  <Typography variant="body1" gutterBottom>
+                    {test.interaction().request().instruction}
+                  </Typography>
+                </Box>
+              )}
             {keystore.type === HERMIT && !this.testComplete() && (
               <Box>
                 <HermitReader
@@ -180,6 +191,17 @@ Derivation: ${test.params.derivation}
                   onClear={this.reset}
                   startText="Scan QR Codes From Hermit"
                   interaction={test.interaction()}
+                />
+              </Box>
+            )}
+            {keystore.type === BCUR2 && !this.testComplete() && (
+              <Box>
+                <BCUR2Reader
+                  onStart={this.start}
+                  onSuccess={this.resolve}
+                  onClear={this.reset}
+                  startText="Scan the BCUR2 QR Code Sequence"
+                  network={test.interaction().network}
                 />
               </Box>
             )}
@@ -271,7 +293,7 @@ Derivation: ${test.params.derivation}
   start = async () => {
     const { test, keystore, testRunIndex, startTestRun } = this.props;
     startTestRun(testRunIndex);
-    if (keystore.type === HERMIT) {
+    if (keystore.type === HERMIT || keystore.type === BCUR2) {
       return;
     }
     const result = await test.run();
