@@ -5,7 +5,6 @@ services:
     ports:
       - "18443:18443"
     volumes:
-      - ./bitcoin-data:/data/.bitcoin
       - ./bitcoin.conf:/data/.bitcoin/bitcoin.conf:ro
     healthcheck:
       test: ["CMD", "bitcoin-cli", "-regtest", "getblockchaininfo"]
