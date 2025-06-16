@@ -5,13 +5,15 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui", 
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "test:install": "npx playwright install"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.29",
     "tsx": "^4.19.4"
   },
