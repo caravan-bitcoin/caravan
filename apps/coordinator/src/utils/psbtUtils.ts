@@ -11,7 +11,7 @@ import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt 
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
  *  TO-DO: Make all the various UTXO types we have in @caravan/client and @caravan/fees in sync
  */
-interface UTXO {
+export interface UTXO {
   confirmed: boolean;
   txid: string;
   index: number;
@@ -30,7 +30,7 @@ interface UTXO {
 /**
  * Interface for slice data structure
  */
-interface Slice {
+export interface Slice {
   multisig: any; // Type this more specifically based on our multisig structure
   bip32Path: string;
   change: boolean;
@@ -39,7 +39,7 @@ interface Slice {
 /**
  * Interface for input objects with multisig information
  */
-interface Input extends UTXO {
+export interface Input extends UTXO {
   multisig: Slice["multisig"]; // From slice.multisig
   bip32Path: Slice["bip32Path"]; // From slice.bip32Path
 }

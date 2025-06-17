@@ -1,5 +1,4 @@
 import BigNumber from "bignumber.js";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
@@ -311,42 +310,20 @@ export function setMaxSpendOnOutput(outputIndex) {
 }
 
 /**
- * Processes inputs from PSBT and matches them with wallet UTXOs.
- */
-function processInputsFromPSBT(psbt, state) {
-  const createInputIdentifier = (txid, index) => `${txid}:${index}`;
-
-  const inputIdentifiers = new Set(
-    psbt.txInputs.map((input) => {
-      const txid = reverseBuffer(input.hash).toString("hex");
-      return createInputIdentifier(txid, input.index);
-    }),
-  );
-
-  const inputs = [];
-  getSpendableSlices(state).forEach((slice) => {
-    Object.entries(slice.utxos).forEach(([, utxo]) => {
-      const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
-      if (inputIdentifiers.has(inputIdentifier)) {
-        const input = {
-          ...utxo,
-          multisig: slice.multisig,
-          bip32Path: slice.bip32Path,
-          change: slice.change,
-        };
-        inputs.push(input);
-      }
-    });
-  });
-
-  return inputs;
-}
-
-/**
- * Processes outputs from PSBT and adds them to the transaction.
+ * Sets outputs from a PSBT into Redux state.
+ * This thunk:
+ *  - Iterates over each PSBT output
+ *  - Dispatches actions to reflect each output in the UI state
+ *  - Identifies and sets the change output if applicable
+ *
+ * @param psbt - The partially signed Bitcoin transaction
+ * @returns A thunk function for Redux
  */
 function setOutputsFromPSBT(psbt) {
-  return (dispatch, getState) => {
+  return (
+    dispatch,
+    _getState, // eslint-disable-line @typescript-eslint/no-unused-vars
+  ) => {
     let outputsTotalSats = new BigNumber(0);
 
     psbt.txOutputs.forEach((output, outputIndex) => {

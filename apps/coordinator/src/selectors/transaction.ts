@@ -7,8 +7,9 @@ import { UTXO, Input, Slice } from "utils/psbtUtils";
 /**
  * Processes inputs from PSBT and matches them with wallet UTXOs.
  */
-export const selectInputsFromPSBT = (psbt: Psbt) =>
-  createSelector([getSpendableSlices], (slices: any) => {
+export const selectInputsFromPSBT = createSelector(
+  [getSpendableSlices, (state: any, psbt: Psbt) => psbt],
+  (slices: any, psbt: Psbt) => {
     const createInputIdentifier = (txid: string, index: number) =>
       `${txid}:${index}`;
 
@@ -36,4 +37,5 @@ export const selectInputsFromPSBT = (psbt: Psbt) =>
     });
 
     return inputs;
-  });
+  },
+);
