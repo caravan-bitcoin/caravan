@@ -4,7 +4,11 @@ import {
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
-import { selectInputsFromPSBT } from "../selectors/transaction";
+import {
+  selectInputsFromPSBT,
+  mapSignaturesToImporters,
+  extractSignaturesFromPSBT,
+} from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -13,11 +17,7 @@ import {
 } from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
-import {
-  loadPsbt,
-  extractSignaturesFromPSBT,
-  mapSignaturesToImporters,
-} from "../utils/psbtUtils";
+import { loadPsbt } from "../utils/psbtUtils";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -348,6 +348,104 @@ function setOutputsFromPSBT(psbt) {
   };
 }
 
+/**
+ * Extracts and imports partial signatures from a PSBT into Caravan's signature importers.
+ *
+ * This is the main entry point for processing signatures when importing a PSBT that
+ * has already been partially signed by other wallets/tools. It handles the entire
+ * workflow from signature extraction to updating the Redux state.
+ *
+ * @description The function performs these key steps:
+ *   1. Extracts signature data from the PSBT using our composed selectors
+ *   2. Transforms the signatures into Caravan's internal format
+ *   3. Updates the signature importers state via multiple Redux actions
+ *   4. Handles errors gracefully without breaking the PSBT import flow
+ *
+ * @param {Psbt} psbt - The PSBT object containing partial signatures to extract
+ *
+ * @returns {Function} Redux thunk function that takes (dispatch, getState)
+ *
+ * @example
+ * // In your PSBT import flow:
+ * dispatch(setSignaturesFromPsbt(psbt));
+ *
+ * @see extractSignaturesFromPSBT - For the core signature extraction logic
+ * @see mapSignaturesToImporters - For signature format transformation
+ *
+ * @throws {Error} Logs warnings for signature extraction failures but doesn't throw
+ *                 to avoid breaking the overall PSBT import process
+ */
+export function setSignaturesFromPsbt(psbt) {
+  return (dispatch, getState) => {
+    try {
+      // === STEP 1: Extract signature sets from the PSBT ===
+      // This uses our composed selectors to:
+      // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
+      // - Parse partial signatures from PSBT data
+      // - Group signatures by signer (one signer signs ALL inputs)
+      const signatureSets = extractSignaturesFromPSBT(getState(), psbt);
+
+      // === STEP 2: Process signatures if any were found ===
+      if (signatureSets.length > 0) {
+        // Transform raw signature data into Caravan's signature importer format
+        // This maps each signature set to an "importer" (numbered 1, 2, 3...)
+        // that corresponds to Caravan's UI signature input slots
+        const importerData = mapSignaturesToImporters(
+          getState(),
+          signatureSets,
+        );
+
+        // === STEP 3: Update Redux state for each signature set ===
+        // For each complete signature set, we need to update multiple parts
+        // of the signature importer state. This is Caravan's pattern for
+        // managing signature data across the signing workflow.
+        importerData.forEach((sigData) => {
+          // Set the raw signature data (hex-encoded signatures)
+          dispatch(
+            setSignatureImporterSignature(
+              sigData.importerNumber,
+              sigData.signatures,
+            ),
+          );
+
+          // Set the public keys that correspond to these signatures
+          // These are used for signature verification
+          dispatch(
+            setSignatureImporterPublicKeys(
+              sigData.importerNumber,
+              sigData.publicKeys,
+            ),
+          );
+
+          // Mark this importer as "finalized" - meaning we have a complete
+          // signature set and it's ready for use in transaction construction
+          dispatch(setSignatureImporterFinalized(sigData.importerNumber, true));
+
+          // Set the complete signature data object
+          // This is Caravan's "master" action that bundles everything together
+          // and is used by the signing components to display signature status
+          dispatch(
+            setSignatureImporterComplete(sigData.importerNumber, {
+              signature: sigData.signatures,
+              publicKeys: sigData.publicKeys,
+              finalized: true,
+            }),
+          );
+        });
+      }
+    } catch (signatureError) {
+      // === ERROR HANDLING ===
+      // We intentionally don't re-throw here because signature extraction
+      // failing shouldn't break the entire PSBT import process. The user
+      // can still import the PSBT structure and sign it manually.
+      console.warn(
+        "⚠️ Failed to extract signatures, but continuing with PSBT import:",
+        signatureError.message,
+      );
+    }
+  };
+}
+
 export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
@@ -396,56 +494,7 @@ export function importPSBT(psbtText) {
       dispatch(setFee(fee));
 
       // ==== Extract and import signatures ====
-      try {
-        const signatureSets = extractSignaturesFromPSBT(psbt, inputs);
-        if (signatureSets.length > 0) {
-          // Map signatures to Caravan's signature importers
-          const importerData = mapSignaturesToImporters(signatureSets);
-
-          // Update signature importers state
-          importerData.forEach((sigData) => {
-            // Set the signature data for this importer
-            dispatch(
-              setSignatureImporterSignature(
-                sigData.importerNumber,
-                sigData.signatures,
-              ),
-            );
-
-            // Set the public keys
-            dispatch(
-              setSignatureImporterPublicKeys(
-                sigData.importerNumber,
-                sigData.publicKeys,
-              ),
-            );
-
-            // Mark as finalized since we have a complete signature set
-            dispatch(
-              setSignatureImporterFinalized(sigData.importerNumber, true),
-            );
-
-            // Use setSignatureImporterComplete for the complete signature
-            dispatch(
-              setSignatureImporterComplete(sigData.importerNumber, {
-                signature: sigData.signatures,
-                publicKeys: sigData.publicKeys,
-                finalized: true,
-              }),
-            );
-          });
-        } else {
-          console.log(
-            "ℹ️ No complete signature sets found in PSBT (this is normal for unsigned PSBTs)",
-          );
-        }
-      } catch (signatureError) {
-        // Don't fail the entire import if signature extraction fails
-        console.warn(
-          "⚠️ Failed to extract signatures, but continuing with PSBT import:",
-          signatureError.message,
-        );
-      }
+      dispatch(setSignaturesFromPsbt(psbt));
 
       // Finalize the transaction
       dispatch(finalizeOutputs(true));
