@@ -5,6 +5,7 @@ import {
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
+import { selectInputsFromPSBT } from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -344,28 +345,30 @@ function processInputsFromPSBT(psbt, state) {
 /**
  * Processes outputs from PSBT and adds them to the transaction.
  */
-function processOutputsFromPSBT(psbt, dispatch) {
-  let outputsTotalSats = new BigNumber(0);
+function setOutputsFromPSBT(psbt) {
+  return (dispatch, getState) => {
+    let outputsTotalSats = new BigNumber(0);
 
-  psbt.txOutputs.forEach((output, outputIndex) => {
-    const number = outputIndex + 1;
-    outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
+    psbt.txOutputs.forEach((output, outputIndex) => {
+      const number = outputIndex + 1;
+      outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
 
-    if (number > 1) {
-      dispatch(addOutput());
-    }
+      if (number > 1) {
+        dispatch(addOutput());
+      }
 
-    // Check if this is a change output (has script/witness script)
-    if (output.script) {
-      dispatch(setChangeOutputIndex(number));
-      dispatch(setChangeAddressAction(output.address));
-    }
+      // Check if this is a change output (has script/witness script)
+      if (output.script) {
+        dispatch(setChangeOutputIndex(number));
+        dispatch(setChangeAddressAction(output.address));
+      }
 
-    dispatch(setOutputAddress(number, output.address));
-    dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
-  });
+      dispatch(setOutputAddress(number, output.address));
+      dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
+    });
 
-  return { outputsTotalSats };
+    return { outputsTotalSats };
+  };
 }
 
 export function importPSBT(psbtText) {
@@ -390,7 +393,7 @@ export function importPSBT(psbtText) {
       dispatch(setUnsignedPSBT(psbt.toBase64()));
 
       // ==== PROCESS INPUTS ====
-      const inputs = processInputsFromPSBT(psbt, state);
+      const inputs = selectInputsFromPSBT(getState(), psbt);
 
       if (inputs.length === 0) {
         throw new Error("PSBT does not contain any UTXOs from this wallet.");
@@ -404,7 +407,7 @@ export function importPSBT(psbtText) {
       dispatch(setInputs(inputs));
 
       // ==== PROCESS INPUTS ====
-      const { outputsTotalSats } = processOutputsFromPSBT(psbt, dispatch);
+      const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
       // Calculate and set fee
       state = getState(); //Now we get updated state after setting inputs
