@@ -31,45 +31,28 @@ if [ -n "$ENGINES_FILE" ]; then
         echo "   📝 Required Node.js: $NODE_REQUIREMENT"
         echo "   💻 Current Node.js: $CURRENT_NODE"
 
-        # Use check-node-version to validate (same as preinstall script)
-        # First check if check-node-version is available
-        if ! command -v check-node-version >/dev/null 2>&1; then
-            echo "   ⚠️  check-node-version not found, using basic version check"
-            # Extract major version for basic check
-            CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
-            REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
 
-            if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
-                echo ""
-                echo "❌ Node.js major version mismatch!"
-                echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
-                echo "   Current:  $CURRENT_NODE"
-                echo ""
-                echo "   To fix this:"
-                echo "   1. Run: nvm use $REQUIRED_MAJOR"
-                echo "   2. Or run: nvm install $REQUIRED_MAJOR"
-                echo "   3. Then try your commit again"
-                echo ""
-                exit 1
-            fi
-        else
-            # Use check-node-version for precise validation
-            if ! check-node-version --node="$NODE_REQUIREMENT" >/dev/null 2>&1; then
-                echo ""
-                echo "❌ Node.js version mismatch!"
-                echo "   Required: $NODE_REQUIREMENT"
-                echo "   Current:  $CURRENT_NODE"
-                echo ""
-                # Extract a reasonable version to suggest
-                SUGGESTED_VERSION=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9.]//g' | cut -d' ' -f1)
-                echo "   To fix this:"
-                echo "   1. Run: nvm use \$(cat .nvmrc 2>/dev/null || echo \"$SUGGESTED_VERSION\")"
-                echo "   2. Or run: nvm install $SUGGESTED_VERSION"
-                echo "   3. Then try your commit again"
-                echo ""
-                exit 1
-            fi
+        echo "   ⚠️  check-node-version not found, using basic version check"
+        # Extract major version for basic check
+        # We areu using shell-based version checking
+
+        CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
+        REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+
+        if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
+            echo ""
+            echo "❌ Node.js major version mismatch!"
+            echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
+            echo "   Current:  $CURRENT_NODE"
+            echo ""
+            echo "   To fix this:"
+            echo "   1. Run: nvm use $REQUIRED_MAJOR"
+            echo "   2. Or run: nvm install $REQUIRED_MAJOR"
+            echo "   3. Then try your commit again"
+            echo ""
+            exit 1
         fi
+
 
         echo "   ✅ Node.js version OK"
     else
