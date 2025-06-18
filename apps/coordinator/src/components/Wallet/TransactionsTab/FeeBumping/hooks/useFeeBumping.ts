@@ -121,7 +121,7 @@ export const useFeeBumping = () => {
           walletConfig,
           priority,
         );
-
+        console.log("analyze", analysis);
         // We add some additional UI-friendly details which we'll use to show the user
         const feeBumpRecommendation: FeeBumpRecommendation = {
           ...analysis,

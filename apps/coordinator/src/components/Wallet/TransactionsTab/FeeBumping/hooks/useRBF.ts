@@ -202,7 +202,7 @@ export const useRBF = () => {
 
         // Create the accelerated RBF transaction
         const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
-
+        console.log("PSBT", psbtBase64);
         // Calculate estimated new fee
         const txVsize = transaction.vsize || transaction.size;
         const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
@@ -347,7 +347,7 @@ export const useRBF = () => {
           priority: selectedPriority,
           createdAt: new Date().toISOString(),
         };
-
+        console.log("cancel", psbtBase64);
         dispatch(setFeeBumpResult(result));
 
         return psbtBase64;

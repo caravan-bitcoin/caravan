@@ -6,12 +6,74 @@ import {
 } from "./btcTransactionComponents";
 
 /**
+ * BIP32 derivation information for a specific public key in a multisig setup.
+ * This provides the wallet with the necessary information to derive the correct
+ * private key for signing and to validate signatures from other cosigners.
+ *
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#input-types
+ */
+export interface InputDerivation {
+  /** The public key that corresponds to this derivation path */
+  pubkey: Buffer;
+
+  /**
+   * The master key fingerprint (first 4 bytes of the master public key hash).
+   * Used to identify which master key this derivation belongs to in a multisig setup.
+   */
+  masterFingerprint: Buffer;
+
+  /**
+   * The full BIP32 derivation path from the master key.
+   * Example: "m/84'/1'/0'/0/5" for a specific address in a BIP84 wallet
+   */
+  path: string;
+}
+
+/**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
+ *
+ * @remarks
+ * **TXID Format Convention for @caravan/fees Package:**
+ *
+ * Throughout this entire package, all input TXIDs are expected to be in **big-endian**
+ * format (human-readable format). This includes:
+ * - UTXO.txid fields
+ * - originalTx parameters in RBF/CPFP functions
+ * - Any transaction references in analysis
+ *
+ * This maintains consistency with external expectations (block explorers, wallets, APIs)
+ * while the package internally handles the conversion to Bitcoin's native little-endian
+ * format when constructing raw transactions and PSBTs.
+ *
+ * **Output Format:**
+ * When this package returns fee-bumped PSBTs, the internal TXID references within
+ * those PSBTs will be in little-endian format to ensure compatibility with Bitcoin's
+ * internal data structures and protocol requirements.
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export interface UTXO {
-  /** The transaction ID of the UTXO in reversed hex format (big-endian). */
+  /** The transaction ID of the UTXO in reversed hex format (big-endian).
+   *
+   * @remarks
+   * **Package-wide TXID Convention:**
+   * All TXIDs provided to this package should be in big-endian format (human-readable format), which is the
+   * standard format used by:
+   * - Block explorers (e.g., blockstream.info, blockchain.info)
+   * - Wallet APIs and RPC interfaces
+   * - Bitcoin Core's getrawmempool, getrawtransaction outputs
+   * - User-facing interfaces
+   *
+   * The package will internally convert these to little-endian format when needed
+   * for Bitcoin protocol operations and PSBT construction.
+   *
+   * @example
+   * Big-endian (user-facing): `6fe28c0ab6f1b372...`
+   * Little-endian (internal use): `...72b3f1b60a8ce26f`
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
+   */
   txid: string;
 
   /** The output index of the UTXO in its parent transaction. */
@@ -21,8 +83,17 @@ export interface UTXO {
   value: Satoshis;
 
   /**
+   * The sequence number of the input.
+   * This is used for relative time locks and signaling RBF.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
+  sequence?: number;
+
+  /**
    * The full previous transaction in hexadecimal format.
-   * Required for non-segwit inputs in PSBTs.
+   * Required for non-segwit inputs in PSBTs to prevent fee attacks.
+   * For P2SH and some hardware wallets, this is mandatory.
    */
   prevTxHex?: string;
 
@@ -34,10 +105,49 @@ export interface UTXO {
     script: Buffer;
     value: number;
   };
+
+  /**
+   * The redeem script for P2SH outputs.
+   * For multisig P2SH addresses, this contains the actual multisig script that
+   * defines the m-of-n signature requirements. Required for spending P2SH outputs.
+   *
+   * Example: For a 2-of-3 P2SH multisig, this would be the script:
+   * OP_2 <pubkey1> <pubkey2> <pubkey3> OP_3 OP_CHECKMULTISIG
+   */
+  redeemScript?: Buffer;
+
+  /**
+   * The witness script for P2WSH and P2SH-P2WSH outputs.
+   * For segwit multisig addresses, this contains the multisig script that
+   * gets committed to in the witness program. Required for spending segwit script outputs.
+   *
+   * Note: For P2SH-P2WSH, both redeemScript and witnessScript are needed:
+   * - redeemScript: Contains the witness program (version + witness script hash)
+   * - witnessScript: Contains the actual multisig script
+   */
+  witnessScript?: Buffer;
+
+  /**
+   * BIP32 derivation information for all public keys involved in this UTXO.
+   * This array contains derivation paths for each cosigner's public key in a multisig setup.
+   *
+   * Critical for:
+   * - Hardware wallets to derive the correct signing key
+   * - Coordinators to validate signatures from other cosigners
+   * - PSBT signers to identify which keys they control
+   *
+   * Each entry maps a public key to its derivation path and master fingerprint.
+   */
+  bip32Derivations?: InputDerivation[];
 }
 
 /**
  * Configuration options for the TransactionAnalyzer.
+ *
+ * @remarks
+ * **TXID Format Convention:**
+ * All transaction hex data and TXID references provided to this analyzer
+ * should use big-endian format (human-readable format).
  */
 export interface AnalyzerOptions {
   /**
@@ -145,7 +255,7 @@ export enum FeeBumpStrategy {
  */
 export interface TransactionInput {
   /**
-   * The transaction ID of the previous transaction containing the output being spent.
+   * The transaction ID of the previous transaction containing the output being spent in big-endian format.
    */
   txid: string;
 
@@ -193,6 +303,18 @@ export type Satoshis = string;
  * Represents an amount in bitcoin.
  */
 export type BTC = string;
+
+/**
+ * Interface for global xpub information
+ */
+export interface GlobalXpub {
+  /** The extended public key */
+  xpub: string;
+  /** The master fingerprint (4 bytes) */
+  masterFingerprint: string;
+  /** The BIP32 derivation path */
+  path: string;
+}
 
 /**
  * Configuration options for creating a transaction template.
@@ -244,6 +366,9 @@ export interface TransactionTemplateOptions {
    * This is used along with requiredSigners for multisig transactions.
    */
   totalSigners: number;
+
+  /** Optional array of global xpubs to include in the PSBT */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**
@@ -330,6 +455,11 @@ export interface CancelRbfOptions {
    * @default false
    */
   reuseAllInputs?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**
@@ -444,6 +574,11 @@ export interface CPFPOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**

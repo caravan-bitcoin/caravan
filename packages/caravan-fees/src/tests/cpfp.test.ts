@@ -7,6 +7,7 @@ import {
   calculateTotalInputValue,
   calculateTotalOutputValue,
   estimateTransactionVsize,
+  reverseHex,
 } from "../utils";
 
 import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
@@ -40,7 +41,9 @@ describe("CPFP Transaction Creation", () => {
         expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
 
         // Step 4: Verify spendable output is used as input
-        expect(psbt.PSBT_IN_PREVIOUS_TXID[0]).toBe(fixture.expected.parentTxid);
+        expect(reverseHex(psbt.PSBT_IN_PREVIOUS_TXID[0])).toBe(
+          fixture.expected.parentTxid,
+        );
         expect(psbt.PSBT_IN_OUTPUT_INDEX[0]).toBe(
           fixture.options.spendableOutputIndex,
         );

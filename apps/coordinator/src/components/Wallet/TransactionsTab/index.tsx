@@ -83,7 +83,7 @@ const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
     try {
       // Fetch the raw transaction he
       const TxHex = await blockchainClient.getTransactionHex(tx.txid);
-
+      console.log("clickedTx", tx);
       if (!TxHex || typeof txHex !== "string") {
         throw new Error("Invalid transaction hex received");
       }

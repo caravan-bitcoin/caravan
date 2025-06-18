@@ -178,12 +178,136 @@ export const analyzeTransaction = async (
   };
 };
 
+// UTILITY FUNCTIONS FOR extractUtxosForFeeBumping`
+
+/**
+ * Extracts the output address from a transaction at the specified output index
+ */
+const extractOutputAddressFromTransaction = (
+  fullTx: any,
+  vout: number,
+): string | null => {
+  try {
+    // Handle different transaction formats from various blockchain clients
+    if (typeof fullTx === "object" && fullTx && fullTx.vout) {
+      // Private client response format
+      const voutData = fullTx.vout[vout];
+      if (voutData) {
+        // Try multiple address field variations
+        return (
+          voutData.scriptPubkeyAddress ||
+          voutData.scriptPubKey?.address ||
+          voutData.scriptpubkey_address ||
+          null
+        );
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error extracting output address from transaction:`, error);
+    return null;
+  }
+};
+
+/**
+ * Finds the wallet slice that matches the given output address
+ */
+const findMatchingWalletSlice = (
+  allSlices: any[],
+  outputAddress: string | null,
+): any | null => {
+  if (!outputAddress) return null;
+
+  // Find the corresponding wallet slice for this address
+  // This gives us the multisig details, BIP32 path, etc.
+  const matchingSlice = allSlices.find(
+    (slice) => slice.multisig?.address === outputAddress,
+  );
+
+  return matchingSlice || null;
+};
+
+/**
+ * Extracts BIP32 derivation paths and multisig scripts from a wallet slice
+ */
+const extractBip32MetadataFromSlice = (slice: any): object => {
+  const metadata: any = {};
+
+  try {
+    // Extract BIP32 derivation path
+    if (slice.bip32Path) {
+      metadata.bip32Path = slice.bip32Path;
+    }
+
+    // Extract BIP32 derivation information for each pubkey
+    if (slice.multisig?.bip32Derivation) {
+      metadata.bip32Derivations = slice.multisig.bip32Derivation.map(
+        (derivation: any) => ({
+          masterFingerprint: derivation.masterFingerprint,
+          path: derivation.path,
+          pubkey: derivation.pubkey,
+        }),
+      );
+    }
+
+    // Extract witness script (for P2WSH)
+    if (slice.multisig?.output) {
+      metadata.witnessScript = slice.multisig.output;
+    }
+
+    // Extract redeem script (for P2SH-wrapped)
+    if (slice.multisig?.redeem?.output) {
+      metadata.redeemScript = slice.multisig.redeem.output;
+    }
+
+    // Extract script hash
+    if (slice.multisig?.hash) {
+      metadata.scriptHash = slice.multisig.hash;
+    }
+
+    // Extract script type information
+    if (slice.multisig?.name) {
+      metadata.scriptType = slice.multisig.name;
+    }
+
+    // Extract address type and change flag
+    metadata.isChange = slice.change || false;
+
+    // Include address for reference
+    if (slice.multisig?.address) {
+      metadata.address = slice.multisig.address;
+    }
+
+    // Extract network information
+    if (slice.multisig?.network) {
+      metadata.network = slice.multisig.network;
+    }
+
+    console.log(`Extracted BIP32 metadata:`, {
+      address: metadata.address,
+      scriptType: metadata.scriptType,
+      bip32Path: metadata.bip32Path,
+      derivationCount: metadata.bip32Derivations?.length || 0,
+      hasWitnessScript: !!metadata.witnessScript,
+      hasRedeemScript: !!metadata.redeemScript,
+    });
+  } catch (error) {
+    console.error("Error extracting BIP32 metadata from slice:", error);
+  }
+
+  return metadata;
+};
+
 /**
  * Extracts UTXOs from a transaction and wallet state for fee bumping
  *
  * This function collects two types of UTXOs needed for fee bumping operations:
- * 1. Original transaction inputs (required for RBF)
+ * 1. Original transaction inputs (required for RBF) - with recovered BIP32 paths and scripts
  * 2. Available wallet UTXOs (for adding inputs to new transactions)
+ *
+ * For spent UTXOs, this function implements a recovery mechanism to restore
+ * BIP32 derivation paths and multisig scripts by matching output addresses
+ * to known wallet slices.
  *
  * @param transaction - The transaction object to analyze
  * @param walletState - Current wallet state containing UTXOs
@@ -198,8 +322,20 @@ export const extractUtxosForFeeBumping = async (
 ): Promise<FeeUTXO[]> => {
   // Array to store
   const utxos: FeeUTXO[] = [];
-
+  console.log("fullTX", transaction);
   try {
+    // STEP 0: PREPARE WALLET SLICES FOR BIP32 RECOVERY
+    // ------------------------------------------------
+    // Combine all wallet slices for efficient lookup during BIP32 recovery
+    const allSlices = [
+      ...Object.values(depositNodes),
+      ...Object.values(changeNodes),
+    ].filter((slice: any) => slice?.multisig?.address); // Only include slices with valid addresses
+
+    console.log(
+      `Prepared ${allSlices.length} wallet slices for BIP32 recovery`,
+    );
+
     // STEP 1: COLLECT WALLET UTXOS
     // ---------------------------
 
@@ -224,7 +360,7 @@ export const extractUtxosForFeeBumping = async (
       //   https://github.com/blockstream/esplora/blob/master/API.md#transaction-format
       const txid = input.txid;
       const vout = input.vout;
-
+      console.log("inpt", input);
       // Skip if we don't have valid identifiers
       if (!txid || vout === undefined) continue;
 
@@ -244,7 +380,38 @@ export const extractUtxosForFeeBumping = async (
         // This is REQUIRED for the TransactionAnalyzer to properly analyze inputs
         const fullTx = await blockchainClient.getTransaction(txid);
         const prevTxHex = await blockchainClient.getTransactionHex(txid);
-        // If we don't have the value yet, try to get it from the wallet state
+
+        // STEP 2A: RECOVER BIP32 PATHS AND MULTISIG SCRIPTS
+        // ------------------------------------------------
+        /*
+         * BIP32 Recovery Mechanism:
+         * When a UTXO is spent, our wallet's UTXO set no longer retains the metadata
+         * (BIP32 paths, multisig scripts). To recover this information:
+         * 1. Extract the output address from the spending transaction
+         * 2. Match this address against our known wallet slices
+         * 3. Retrieve BIP32 derivation paths and multisig scripts from the matching slice
+         */
+
+        // Extract the output address that was spent by this input
+        const outputAddress = extractOutputAddressFromTransaction(fullTx, vout);
+        console.log(
+          `Extracted output address for ${txid}:${vout} -> ${outputAddress}`,
+        );
+
+        // Find the corresponding wallet slice for this address
+        const matchingSlice = findMatchingWalletSlice(allSlices, outputAddress);
+
+        let recoveredMetadata = {};
+        if (matchingSlice) {
+          console.log(`Found matching slice for address ${outputAddress}`);
+          recoveredMetadata = extractBip32MetadataFromSlice(matchingSlice);
+        } else {
+          console.warn(
+            `No matching wallet slice found for address ${outputAddress}`,
+          );
+        }
+
+        // If we don't have the value yet, try to get it from the wallet state (for only change outputs we see as rest used utxos are gone ...)
         if (!value) {
           // Look through all nodes for matching UTXOs
           for (const nodes of [depositNodes, changeNodes]) {
@@ -282,12 +449,28 @@ export const extractUtxosForFeeBumping = async (
           continue;
         }
 
+        console.log("Successfully processed input:", {
+          txid,
+          vout,
+          value,
+          recoveredMetadata,
+        });
+        console.log("pushed", {
+          txid,
+          vout,
+          value,
+          prevTxHex,
+        });
         // Add to UTXOs list with full transaction data
         utxos.push({
           txid,
           vout,
           value,
           prevTxHex,
+          redeemScript: recoveredMetadata.redeemScript,
+          witnessScript: recoveredMetadata.witnessScript,
+          bip32Derivations: recoveredMetadata.bip32Derivations,
+          sequence: input.sequence,
         });
       } catch (error) {
         console.warn(`Error processing input ${txid}:${vout}:`, error);
