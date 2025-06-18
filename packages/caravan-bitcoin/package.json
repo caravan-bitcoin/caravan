@@ -1,6 +1,6 @@
 {
   "name": "@caravan/bitcoin",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "Unchained Capital's bitcoin utilities library.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -70,7 +70,7 @@
   "dependencies": {
     "@babel/polyfill": "^7.7.0",
     "@babel/runtime": "^7.23.9",
-    "bignumber.js": "^8.1.1",
+    "bignumber.js": "^9.3.0",
     "bip32": "^2.0.5",
     "bip66": "^1.1.5",
     "bitcoin-address-validation": "^2.2.3",

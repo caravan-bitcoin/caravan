@@ -1,6 +1,7 @@
 import updateState from "./utils";
 import {
   SET_CLIENT_TYPE,
+  SET_CLIENT_PROVIDER,
   SET_CLIENT_URL,
   SET_CLIENT_USERNAME,
   SET_CLIENT_PASSWORD,
@@ -13,6 +14,7 @@ import {
 
 const initialState = {
   type: "public",
+  provider: "mempool",
   url: "",
   username: "",
   password: "",
@@ -28,6 +30,8 @@ export default (state = initialState, action) => {
   switch (action.type) {
     case SET_CLIENT_TYPE:
       return updateState(state, { type: action.value });
+    case SET_CLIENT_PROVIDER:
+      return updateState(state, { provider: action.value });
     case SET_CLIENT_URL:
       return updateState(state, { url: action.value });
     case SET_CLIENT_USERNAME:

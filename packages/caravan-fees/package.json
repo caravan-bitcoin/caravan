@@ -1,6 +1,6 @@
 {
   "name": "@caravan/fees",
-  "version": "1.0.0-beta",
+  "version": "1.0.1-beta",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -37,8 +37,8 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
     "@caravan/typescript-config": "*",
+    "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   },
   "dependencies": {

@@ -8,6 +8,10 @@ import {
 } from "../paths";
 import { KeyOrigin } from "../types";
 
+vi.mock("../utils", () => ({
+  secureRandomInt: vi.fn(() => 42)
+}));
+
 const globalOrigin: KeyOrigin = {
   xpub: "tpubDEtyXJKvCT2V3ccXBBrNPEGb8RNZjNMcGbx68CzE74zq7aKWwRz8up95PYCm7HrYRT7Sz42uFVpW1MgRzqRU7KTHsY6LgPcYMc53pqHC7uc",
   bip32Path: "m/45'/0'/0'/42",
@@ -65,11 +69,18 @@ describe("combineBip32Paths", () => {
     const secondPath = "invalid/path";
     expect(() => combineBip32Paths(firstPath, secondPath)).toThrow();
   });
-});
+  it("should throw for paths with negative indices", () => {
+    expect(() => combineBip32Paths("m/0/-5", "m/0/0")).toThrow();
+    expect(() => combineBip32Paths("m/0", "m/-1")).toThrow();
+    expect(() => combineBip32Paths("m/-1","/m/-1")).toThrow();
+  });
 
-vi.mock("../utils", () => ({
-  secureRandomInt: () => 42,
-}));
+  it("should throw for non-numeric path components", () => {
+    expect(() => combineBip32Paths("m/abc","m/0")).toThrow();
+    expect(() => combineBip32Paths("m/0", "m/abc")).toThrow();
+    expect(() => combineBip32Paths("m/abc", "m/abc")).toThrow();
+  });
+});
 
 describe("secureSecretPath", () => {
   it("should return a path of the desired depth", async () => {
@@ -98,6 +109,15 @@ describe("secureSecretPath", () => {
     }
     expect(failures).toBe(2);
   });
+
+  it("should handle maximum allowed depth", () => {
+    // secureSecretPath function itself throws an error if depth is 32 or greater.
+    // Therefore, 31 is the maximum depth it will accept.
+    const maxDepth = 31;
+    const path = secureSecretPath(maxDepth);
+    expect(path.split("/").length).toBe(maxDepth + 1);
+  });
+  
 });
 
 describe("getRelativeBip32Sequence", () => {

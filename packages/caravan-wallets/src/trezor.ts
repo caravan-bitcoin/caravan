@@ -132,14 +132,17 @@ const TREZOR_DEV =
   env_variables.REACT_APP_TREZOR_DEV ||
   env_variables.VITE_TREZOR_DEV;
 
+const TREZOR_APP_NAME = env_variables.TREZOR_APP_NAME || "Caravan";
+
 try {
   TrezorConnect.init({
     connectSrc: TREZOR_DEV
       ? TREZOR_CONNECT_URL
-      : "https://connect.trezor.io/9.5.0/", // pinning to this connect version to avoid backwards incompatible changes
+      : "https://connect.trezor.io/9.6.0/", // pinning to this connect version to avoid backwards incompatible changes
     coreMode: "auto", // default value still required to enable WebUSB support
     lazyLoad: true, // this param prevents iframe injection until a TrezorConnect.method is called
     manifest: {
+      appName: TREZOR_APP_NAME,
       email: "help@unchained.com",
       appUrl: "https://github.com/caravan-bitcoin/caravan",
     },

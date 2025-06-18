@@ -174,6 +174,7 @@ const NODES = {
   "m/45'/0": {
     pub: "02b04ac39b566b7353b5bf8e164be83bf90b090e7516170e88a8cb6c88a860f0a3",
     tpub: "tpubDBAj15fFkLimiBmDqapikSS4qkmvAS8LijMey9S9fAyjq65ERgjuzaa6GonVQXugcrBzfpEoH6SPBzevfowZgYJ3apWcHbMPaNJnBRkbsRY",
+    xpub: "xpub6Ao6Uqqa34mKSPaNPPqdYX6hWdgGB3dHB6mMcbP1KGDr5oQXMTtpr8uG2mhht2xSpwf64EivjzcLVpAKGx6Ko6qkXDmJc4h9zQiNRS5g9Cu",
     rootFingerprint: ROOT_FINGERPRINT,
   },
   "m/45'/0/0": {
