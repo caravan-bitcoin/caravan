@@ -7,7 +7,11 @@ import {
   AcceleratedRbfOptions,
   SCRIPT_TYPES,
 } from "@caravan/fees";
-import { getChangeOutputIndex, extractUtxosForFeeBumping } from "../utils";
+import {
+  getChangeOutputIndex,
+  extractUtxosForFeeBumping,
+  extractGlobalXpubsFromWallet,
+} from "../utils";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 import { FeeBumpResult, FeeBumpStatus } from "../types";
 import {
@@ -70,6 +74,12 @@ export const useRBF = () => {
   const depositNodes = useSelector((state: any) => state.wallet.deposits.nodes);
   const changeNodes = useSelector((state: any) => state.wallet.change.nodes);
 
+  /**
+   * Gets global extended public keys for PSBT inclusion
+   */
+  const getGlobalXpubs = useCallback(() => {
+    return extractGlobalXpubsFromWallet(depositNodes, changeNodes);
+  }, [depositNodes, changeNodes]);
   /**
    * Gets the appropriate script type based on wallet address type
    * Maps Caravan address types to the fee package's script types
@@ -177,7 +187,8 @@ export const useRBF = () => {
             "Could not determine change output. Please provide a change address.",
           );
         }
-
+        // **Get global xpubs for PSBT**
+        const globalXpubs = getGlobalXpubs();
         // Create RBF options
         const rbfOptions: AcceleratedRbfOptions = {
           originalTx: txHex,
@@ -193,6 +204,7 @@ export const useRBF = () => {
           strict: false, // Less strict validation for better user experience
           fullRBF: false, // Only use signals RBF by default
           reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
+          globalXpubs, // **ADD GLOBAL XPUBS**
         };
 
         console.log(
@@ -309,7 +321,8 @@ export const useRBF = () => {
 
         // Create cancel RBF transaction options
         const scriptType = getScriptType();
-
+        // **Get global xpubs for PSBT**
+        const globalXpubs = getGlobalXpubs();
         const options = {
           originalTx: txHex,
           network,
@@ -321,9 +334,10 @@ export const useRBF = () => {
           scriptType,
           dustThreshold: "546", // Default dust threshold
           cancelAddress: addressToUse,
-          strict: false, // Less strict validation for better user experience
-          fullRBF: false, // Only use signals RBF by default
-          reuseAllInputs: false, // For cancel transactions, we don't need to reuse all inputs
+          strict: false,
+          fullRBF: false,
+          reuseAllInputs: true,
+          globalXpubs, // **ADD GLOBAL XPUBS**
         };
         console.log(
           "UTXOs used for fee bumping: createCancelRbfTransaction",

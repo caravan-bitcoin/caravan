@@ -1,5 +1,11 @@
-import { Network, bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { TransactionAnalyzer, UTXO as FeeUTXO } from "@caravan/fees";
+import { Transaction } from "bitcoinjs-lib-v6";
+
+import { Network, bitcoinsToSatoshis, P2SH } from "@caravan/bitcoin";
+import {
+  TransactionAnalyzer,
+  UTXO as FeeUTXO,
+  GlobalXpub,
+} from "@caravan/fees";
 import { FeePriority, FeeBumpRecommendation } from "./types";
 import { TransactionT } from "../types";
 import { BlockchainClient } from "@caravan/clients";
@@ -230,10 +236,15 @@ const findMatchingWalletSlice = (
 /**
  * Extracts BIP32 derivation paths and multisig scripts from a wallet slice
  */
-const extractBip32MetadataFromSlice = (slice: any): object => {
+const extractBip32MetadataFromSlice = (
+  slice: any,
+  txHex: any,
+  vout: number,
+): object => {
   const metadata: any = {};
-
   try {
+    console.log("extraction", slice);
+
     // Extract BIP32 derivation path
     if (slice.bip32Path) {
       metadata.bip32Path = slice.bip32Path;
@@ -250,15 +261,65 @@ const extractBip32MetadataFromSlice = (slice: any): object => {
       );
     }
 
-    // Extract witness script (for P2WSH)
-    if (slice.multisig?.output) {
-      metadata.witnessScript = slice.multisig.output;
+    // **NEW: Determine address type and add appropriate fields**
+    // ========================================================
+    let addressType = "P2SH"; // default fallback
+
+    // Get address type from braidDetails if available
+    if (slice.multisig?.braidDetails) {
+      try {
+        const braidDetails = JSON.parse(slice.multisig.braidDetails);
+        addressType = braidDetails.addressType;
+      } catch (e) {
+        console.warn(
+          "Could not parse braidDetails, using fallback address type detection",
+        );
+      }
     }
 
-    // Extract redeem script (for P2SH-wrapped)
-    if (slice.multisig?.redeem?.output) {
-      metadata.redeemScript = slice.multisig.redeem.output;
+    // Fallback: determine from multisig structure (same logic as caravan/bitcoin)
+    if (addressType === "P2SH") {
+      // if not found in braidDetails
+      if (slice.multisig?.redeem?.redeem) {
+        addressType = "P2SH_P2WSH";
+      } else if (slice.multisig?.address?.match(/^(tb|bc|bcrt)/)) {
+        addressType = "P2WSH";
+      }
     }
+
+    // **Add fields based on address type (same logic as psbtInputFormatter)**
+    // =====================================================================
+    switch (addressType) {
+      case "P2SH":
+        // For P2SH: only redeemScript needed
+        if (slice.multisig?.redeem?.output) {
+          metadata.redeemScript = slice.multisig.redeem.output;
+        }
+        break;
+
+      case "P2WSH":
+        // For P2WSH: witnessScript needed
+        if (slice.multisig?.redeem?.output) {
+          metadata.witnessScript = slice.multisig.redeem.output;
+        }
+        break;
+
+      case "P2SH_P2WSH":
+        // For P2SH_P2WSH: both redeemScript and witnessScript needed
+        if (slice.multisig?.output) {
+          metadata.redeemScript = slice.multisig.output; // outer P2SH script
+        }
+        if (slice.multisig?.redeem?.redeem?.output) {
+          metadata.witnessScript = slice.multisig.redeem.redeem.output; // inner witness script
+        }
+        break;
+    }
+
+    // **Add nonWitnessUtxo and witnessUtxo handling info**
+    // ==================================================
+    metadata.addressType = addressType;
+    metadata.needsWitnessUtxo =
+      addressType === "P2WSH" || addressType === "P2SH_P2WSH";
 
     // Extract script hash
     if (slice.multisig?.hash) {
@@ -283,18 +344,28 @@ const extractBip32MetadataFromSlice = (slice: any): object => {
       metadata.network = slice.multisig.network;
     }
 
+    const tx = Transaction.fromHex(txHex);
+    const nonWitnessUtxo = tx.toBuffer();
+    if (addressType === P2SH) {
+      metadata.nonWitnessUtxo = nonWitnessUtxo;
+    } else {
+      metadata.nonWitnessUtxo = nonWitnessUtxo;
+      metadata.witnessUtxo = tx.outs[vout];
+    }
     console.log(`Extracted BIP32 metadata:`, {
       address: metadata.address,
+      addressType: metadata.addressType,
       scriptType: metadata.scriptType,
       bip32Path: metadata.bip32Path,
       derivationCount: metadata.bip32Derivations?.length || 0,
       hasWitnessScript: !!metadata.witnessScript,
       hasRedeemScript: !!metadata.redeemScript,
+      needsWitnessUtxo: metadata.needsWitnessUtxo,
     });
   } catch (error) {
     console.error("Error extracting BIP32 metadata from slice:", error);
   }
-
+  console.log("metta", metadata);
   return metadata;
 };
 
@@ -401,10 +472,14 @@ export const extractUtxosForFeeBumping = async (
         // Find the corresponding wallet slice for this address
         const matchingSlice = findMatchingWalletSlice(allSlices, outputAddress);
 
-        let recoveredMetadata = {};
+        let recoveredMetadata: any = {};
         if (matchingSlice) {
           console.log(`Found matching slice for address ${outputAddress}`);
-          recoveredMetadata = extractBip32MetadataFromSlice(matchingSlice);
+          recoveredMetadata = extractBip32MetadataFromSlice(
+            matchingSlice,
+            prevTxHex,
+            vout,
+          );
         } else {
           console.warn(
             `No matching wallet slice found for address ${outputAddress}`,
@@ -455,22 +530,63 @@ export const extractUtxosForFeeBumping = async (
           value,
           recoveredMetadata,
         });
-        console.log("pushed", {
+
+        // **Create transaction object for PSBT fields**
+        // ============================================
+        const tx = Transaction.fromHex(prevTxHex);
+        const baseUtxo: any = {
           txid,
           vout,
           value,
           prevTxHex,
-        });
-        // Add to UTXOs list with full transaction data
-        utxos.push({
-          txid,
-          vout,
-          value,
-          prevTxHex,
-          redeemScript: recoveredMetadata.redeemScript,
-          witnessScript: recoveredMetadata.witnessScript,
-          bip32Derivations: recoveredMetadata.bip32Derivations,
-          sequence: input.sequence,
+        };
+
+        // **Add PSBT fields based on address type (same pattern as psbtInputFormatter)**
+        // =============================================================================
+        const addressType = recoveredMetadata.addressType;
+
+        if (addressType === "P2SH") {
+          // **P2SH: Only nonWitnessUtxo + redeemScript**
+          baseUtxo.nonWitnessUtxo = tx.toBuffer();
+          if (recoveredMetadata.redeemScript) {
+            baseUtxo.redeemScript = recoveredMetadata.redeemScript;
+          }
+        } else {
+          // **P2WSH & P2SH_P2WSH: nonWitnessUtxo + witnessUtxo + witnessScript**
+          baseUtxo.nonWitnessUtxo = tx.toBuffer();
+          baseUtxo.witnessUtxo = {
+            script: tx.outs[vout].script,
+            value: parseInt(value),
+          };
+          if (recoveredMetadata.witnessScript) {
+            baseUtxo.witnessScript = recoveredMetadata.witnessScript;
+          }
+          // **P2SH_P2WSH also needs redeemScript (outer P2SH script)**
+          if (addressType === "P2SH_P2WSH" && recoveredMetadata.redeemScript) {
+            baseUtxo.redeemScript = recoveredMetadata.redeemScript;
+          }
+        }
+
+        // **Add BIP32 derivations and sequence (for all types)**
+        // =====================================================
+        if (recoveredMetadata.bip32Derivations) {
+          baseUtxo.bip32Derivations = recoveredMetadata.bip32Derivations;
+        }
+
+        if (input.sequence !== undefined) {
+          baseUtxo.sequence = input.sequence;
+        }
+
+        utxos.push(baseUtxo);
+        console.log("Pushed formatted UTXO:", {
+          txid: baseUtxo.txid,
+          vout: baseUtxo.vout,
+          addressType: recoveredMetadata.addressType,
+          hasNonWitnessUtxo: !!baseUtxo.nonWitnessUtxo,
+          hasWitnessUtxo: !!baseUtxo.witnessUtxo,
+          hasRedeemScript: !!baseUtxo.redeemScript,
+          hasWitnessScript: !!baseUtxo.witnessScript,
+          hasBip32Derivations: !!baseUtxo.bip32Derivations,
         });
       } catch (error) {
         console.warn(`Error processing input ${txid}:${vout}:`, error);
@@ -622,4 +738,64 @@ export const formatFee = (
   const formattedFee = fee.toLocaleString();
 
   return formattedFee + (includeSuffix ? " sats" : "");
+};
+
+/**
+ * Extracts global extended public keys from wallet nodes for PSBT inclusion
+ * @param depositNodes - Wallet deposit nodes
+ * @param changeNodes - Wallet change nodes
+ * @returns Array of GlobalXpub objects
+ */
+export const extractGlobalXpubsFromWallet = (
+  depositNodes: any,
+  changeNodes: any,
+): GlobalXpub[] => {
+  const globalXpubs: GlobalXpub[] = [];
+  const seenXpubs = new Set<string>(); // Prevent duplicates
+
+  // Helper to process a single node
+  const processNode = (node: any) => {
+    if (!node?.multisig?.braidDetails) return;
+
+    try {
+      const braidDetails = JSON.parse(node.multisig.braidDetails);
+      const extendedPublicKeys = braidDetails.extendedPublicKeys || [];
+
+      extendedPublicKeys.forEach((epk: any) => {
+        // Use base58String as the unique identifier
+        const xpubString = epk.base58String || epk.xpub;
+        if (!xpubString || seenXpubs.has(xpubString)) return;
+
+        seenXpubs.add(xpubString);
+
+        const globalXpub: GlobalXpub = {
+          xpub: xpubString,
+          masterFingerprint:
+            epk.rootFingerprint || epk.masterFingerprint || "00000000",
+          path: epk.path || "m",
+        };
+
+        globalXpubs.push(globalXpub);
+      });
+    } catch (error) {
+      console.warn("Error parsing braidDetails for globalXpubs:", error);
+    }
+  };
+
+  // Process all deposit nodes
+  if (depositNodes) {
+    Object.values(depositNodes).forEach(processNode);
+  }
+
+  // Process all change nodes
+  if (changeNodes) {
+    Object.values(changeNodes).forEach(processNode);
+  }
+
+  console.log(
+    `Extracted ${globalXpubs.length} global xpubs for PSBT:`,
+    globalXpubs.map((x) => `${x.masterFingerprint}:${x.path}`),
+  );
+
+  return globalXpubs;
 };
