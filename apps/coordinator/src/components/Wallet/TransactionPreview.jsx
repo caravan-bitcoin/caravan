@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { connect, useSelector } from "react-redux";
 import BigNumber from "bignumber.js";
@@ -28,8 +28,12 @@ import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
 
-const SignatureStatus = () => {
-  // Get signature data
+/**
+ * Custom hook to get current signing state
+ * @returns {Object} { signedCount, requiredSigners, isFullySigned, hasPartialSignatures, needsSignatures }
+ */
+export const useSigningState = () => {
+  // Get signature data from Redux store
   const signatureImporters = useSelector(
     (state) => state.spend.signatureImporters,
   );
@@ -39,15 +43,16 @@ const SignatureStatus = () => {
 
   /**
    * Calculate current signature status
-   * @returns {Object} { signedCount, requiredSigners, isFullySigned, hasPartialSignatures }
+   * Only recalculates when signatureImporters or requiredSigners change
    */
-  const getSignatureStatus = () => {
+  const signingState = useMemo(() => {
     if (!signatureImporters) {
       return {
         signedCount: 0,
         requiredSigners: requiredSigners || 0,
         isFullySigned: false,
         hasPartialSignatures: false,
+        needsSignatures: requiredSigners || 0,
       };
     }
 
@@ -59,26 +64,34 @@ const SignatureStatus = () => {
         importer.signature.length > 0,
     ).length;
 
-    const isFullySigned = signedCount >= requiredSigners;
+    const effectiveRequiredSigners = requiredSigners || 0;
+    const isFullySigned = signedCount >= effectiveRequiredSigners;
     const hasPartialSignatures =
-      signedCount > 0 && signedCount < requiredSigners;
+      signedCount > 0 && signedCount < effectiveRequiredSigners;
+    const needsSignatures = Math.max(0, effectiveRequiredSigners - signedCount);
 
     return {
       signedCount,
-      requiredSigners: requiredSigners || 0,
+      requiredSigners: effectiveRequiredSigners,
       isFullySigned,
       hasPartialSignatures,
+      needsSignatures,
     };
-  };
+  }, [signatureImporters, requiredSigners]);
 
+  return signingState;
+};
+
+const SignatureStatus = () => {
   const {
     signedCount,
-    requiredSigners: reqSigners,
+    requiredSigners,
     isFullySigned,
     hasPartialSignatures,
-  } = getSignatureStatus();
+    needsSignatures,
+  } = useSigningState();
 
-  // Don't render anything if no signatures are present
+  // We Don't render anything if no signatures are present
   if (signedCount === 0) {
     return null;
   }
@@ -99,7 +112,7 @@ const SignatureStatus = () => {
       {/* Status chips */}
       <Box display="flex" alignItems="center" gap={1} mb={2}>
         <Chip
-          label={`${signedCount} of ${reqSigners} signatures`}
+          label={`${signedCount} of ${requiredSigners} signatures`}
           color={
             isFullySigned
               ? "success"
@@ -121,17 +134,17 @@ const SignatureStatus = () => {
       {hasPartialSignatures && (
         <Alert severity="info" sx={{ mb: 1 }}>
           <AlertTitle>Partial Signatures Detected</AlertTitle>
-          This transaction has {signedCount} out of {reqSigners} required
-          signatures. You need {reqSigners - signedCount} more signature
-          {reqSigners - signedCount > 1 ? "s" : ""} to broadcast.
+          This transaction has {signedCount} out of {requiredSigners} required
+          signatures. You need {needsSignatures} more signature
+          {needsSignatures > 1 ? "s" : ""} to broadcast.
         </Alert>
       )}
 
       {isFullySigned && (
         <Alert severity="success" sx={{ mb: 1 }}>
           <AlertTitle>Transaction Ready</AlertTitle>
-          This transaction has all {reqSigners} required signatures and is ready
-          to broadcast.
+          This transaction has all {requiredSigners} required signatures and is
+          ready to broadcast.
         </Alert>
       )}
 
