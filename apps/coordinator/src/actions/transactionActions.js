@@ -320,10 +320,7 @@ export function setMaxSpendOnOutput(outputIndex) {
  * @returns A thunk function for Redux
  */
 function setOutputsFromPSBT(psbt) {
-  return (
-    dispatch,
-    _getState, // eslint-disable-line @typescript-eslint/no-unused-vars
-  ) => {
+  return (dispatch) => {
     let outputsTotalSats = new BigNumber(0);
 
     psbt.txOutputs.forEach((output, outputIndex) => {
@@ -383,17 +380,16 @@ export function setSignaturesFromPsbt(psbt) {
       // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
       // - Parse partial signatures from PSBT data
       // - Group signatures by signer (one signer signs ALL inputs)
-      const signatureSets = extractSignaturesFromPSBT(getState(), psbt);
+      const state = getState();
+      const signatureSets = extractSignaturesFromPSBT(state, psbt);
 
       // === STEP 2: Process signatures if any were found ===
       if (signatureSets.length > 0) {
         // Transform raw signature data into Caravan's signature importer format
         // This maps each signature set to an "importer" (numbered 1, 2, 3...)
         // that corresponds to Caravan's UI signature input slots
-        const importerData = mapSignaturesToImporters(
-          getState(),
-          signatureSets,
-        );
+        const state = getState();
+        const importerData = mapSignaturesToImporters(state, signatureSets);
 
         // === STEP 3: Update Redux state for each signature set ===
         // For each complete signature set, we need to update multiple parts
@@ -446,6 +442,28 @@ export function setSignaturesFromPsbt(psbt) {
   };
 }
 
+/**
+ * Calculates and sets the transaction fee based on current state.
+ *
+ * This action creator encapsulates the fee calculation logic by:
+ * 1. Getting the current inputsTotalSats from state
+ * 2. Calculating fee as the difference between inputs and outputs
+ * 3. Converting from satoshis to bitcoins
+ * 4. Dispatching the setFee action
+ *
+ * @param {BigNumber} outputsTotalSats - Total satoshis in all outputs
+ * @returns {Function} Redux thunk function
+ */
+export function setFeeFromState(outputsTotalSats) {
+  return (dispatch, getState) => {
+    const state = getState();
+    const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
+    const feeSats = inputsTotalSats.minus(outputsTotalSats);
+    const fee = satoshisToBitcoins(feeSats);
+    dispatch(setFee(fee));
+  };
+}
+
 export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
@@ -485,15 +503,9 @@ export function importPSBT(psbtText) {
       const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
       // Calculate and set fee
-      state = getState(); //Now we get updated state after setting inputs
-      const inputsTotalSats = BigNumber(
-        state.spend.transaction.inputsTotalSats,
-      );
-      const feeSats = inputsTotalSats.minus(outputsTotalSats);
-      const fee = satoshisToBitcoins(feeSats);
-      dispatch(setFee(fee));
+      dispatch(setFeeFromState(outputsTotalSats));
 
-      // ==== Extract and import signatures ====
+      // ==== Extract and import signatures (If they are present)====
       dispatch(setSignaturesFromPsbt(psbt));
 
       // Finalize the transaction
