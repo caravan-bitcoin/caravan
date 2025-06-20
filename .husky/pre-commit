@@ -31,10 +31,8 @@ if [ -n "$ENGINES_FILE" ]; then
         echo "   📝 Required Node.js: $NODE_REQUIREMENT"
         echo "   💻 Current Node.js: $CURRENT_NODE"
 
-
-        echo "   ⚠️  check-node-version not found, using basic version check"
         # Extract major version for basic check
-        # We areu using shell-based version checking
+        # We are using shell-based version checking
 
         CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
         REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
