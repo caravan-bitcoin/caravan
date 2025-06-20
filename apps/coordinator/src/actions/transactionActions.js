@@ -388,8 +388,7 @@ export function setSignaturesFromPsbt(psbt) {
         // Transform raw signature data into Caravan's signature importer format
         // This maps each signature set to an "importer" (numbered 1, 2, 3...)
         // that corresponds to Caravan's UI signature input slots
-        const state = getState();
-        const importerData = mapSignaturesToImporters(state, signatureSets);
+        const importerData = mapSignaturesToImporters(signatureSets);
 
         // === STEP 3: Update Redux state for each signature set ===
         // For each complete signature set, we need to update multiple parts

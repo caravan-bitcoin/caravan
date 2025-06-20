@@ -15,6 +15,7 @@ import {
  * Processes inputs from PSBT and matches them with wallet UTXOs.
  */
 export const selectInputsFromPSBT = createSelector(
+  // Need the state param as createSelector expects two args
   [getSpendableSlices, (state: any, psbt: Psbt) => psbt],
   (slices: any, psbt: Psbt) => {
     const createInputIdentifier = (txid: string, index: number) =>
@@ -53,10 +54,7 @@ export const selectInputsFromPSBT = createSelector(
  * @param signatureSets - Signature sets from extractSignaturesFromPSBT
  * @returns Array formatted for Caravan's signature importers
  */
-export const mapSignaturesToImporters = (
-  state: any, // eslint-disable-line @typescript-eslint/no-unused-vars
-  signatureSets: SignatureSet[],
-) => {
+export const mapSignaturesToImporters = (signatureSets: SignatureSet[]) => {
   return signatureSets.map((sigSet, index) => ({
     importerNumber: index + 1, // As in Caravan we use 1-based indexing
     signatures: sigSet.signatures,
@@ -75,10 +73,7 @@ export const mapSignaturesToImporters = (
  * @param  network - Network (mainnet, testnet, etc.)
  * @returns  Array of signature sets, each containing signatures for all inputs
  */
-export const extractSignaturesFromPSBT = (
-  state: any, // eslint-disable-line @typescript-eslint/no-unused-vars
-  psbt: Psbt,
-) => {
+export const extractSignaturesFromPSBT = (state: any, psbt: Psbt) => {
   // Get Inputs to extract Signature from
   const inputs = selectInputsFromPSBT(state, psbt);
 
@@ -211,34 +206,18 @@ function validateSignatureForInput(
   originalPsbt: Psbt,
   inputs: Input[],
 ): string | false {
-  try {
-    //  Handle empty signatures
-    if (!signature || signature.length === 0) {
-      return false;
-    }
-
-    const validatedPubkey = validateMultisigPsbtSignature(
-      originalPsbt.toBase64(),
-      inputIndex,
-      signature,
-      inputs[inputIndex].amountSats,
-    );
-
-    // Handle the case where validateMultisigPsbtSignature returns boolean true
-    // Convert true to false since we only want string (pubkey) or false
-    if (validatedPubkey === true) {
-      console.warn(
-        `Signature validation returned true but expected pubkey string for input ${inputIndex}`,
-      );
-      return false;
-    }
-    // Return the pubkey string or false
-    return validatedPubkey;
-  } catch (error) {
-    console.error(
-      `❌ Signature validation failed for input ${inputIndex + 1}:`,
-      error.message,
-    );
+  //  Handle empty signatures
+  if (!signature || signature.length === 0) {
     return false;
   }
+
+  const validatedPubkey = validateMultisigPsbtSignature(
+    originalPsbt.toBase64(),
+    inputIndex,
+    signature,
+    inputs[inputIndex].amountSats,
+  ) as string | false;
+
+  // Return the pubkey string or false
+  return validatedPubkey;
 }
