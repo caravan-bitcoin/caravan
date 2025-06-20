@@ -64,7 +64,7 @@ fi
 
 # 2. package-lock.json sanity checks:
 #    a) Ensure package-lock.json doesn’t have massive diffs — usually a sign of incorrect Node.js/npm versions.
-#    b) Make sure any package-lock.json change is paired with a meaningful change in its corresponding package.json.
+#    b) Make sure any package-lock.json change is paired with a meaningful change in any workspaces package.json.
 echo "2️⃣ Checking package-lock.json changes..."
 
 # Check if there are ANY staged files at all
@@ -95,166 +95,201 @@ else
     echo "$STAGED_FILES" | sed 's/^/     /'
 fi
 
-# Get all staged package-lock.json files
-STAGED_LOCKFILES=$(echo "$STAGED_FILES" | grep "package-lock\.json$" || true)
+# Get package-lock.json
+ROOT_LOCKFILE="package-lock.json"
+STAGED_ROOT_LOCKFILE=$(echo "$STAGED_FILES" | grep "^$ROOT_LOCKFILE$" || true)
 
-# Get all unstaged package-lock.json files (might indicate forgotten staging)
-UNSTAGED_LOCKFILES=$(git diff --name-only | grep "package-lock\.json$" || true)
+# Get all staged package.json files (any workspace)
+STAGED_PACKAGE_JSONS=$(echo "$STAGED_FILES" | grep "package\.json$" || true)
+
+# Get unstaged package-lock.json file (might indicate forgotten staging)
+UNSTAGED_ROOT_LOCKFILE=$(git diff --name-only | grep "^$ROOT_LOCKFILE$" || true)
 
 # Check staged lockfiles
-if [ -n "$STAGED_LOCKFILES" ]; then
-    echo "   📝 Analyzing staged lockfiles:"
-    echo "$STAGED_LOCKFILES" | sed 's/^/     /'
+if [ -n "$STAGED_ROOT_LOCKFILE" ]; then
+    echo "   📝Root package-lock.json is staged"
 
-    # Check each staged lockfile
-    for LOCKFILE in $STAGED_LOCKFILES; do
-        # Count lines changed in this lockfile
-        LOCK_CHANGES=$(git diff --cached --numstat "$LOCKFILE" | cut -f1)
+   # Count lines changed in lockfile
+    LOCK_CHANGES=$(git diff --cached --numstat "$ROOT_LOCKFILE" \
+    | awk '{ added += $1; removed += $2 } END { print added + removed }')
 
-        # Find corresponding package.json
-        LOCKFILE_DIR=$(dirname "$LOCKFILE")
-        PACKAGE_JSON="$LOCKFILE_DIR/package.json"
-
-        # Check if corresponding package.json is also staged
-        PKG_STAGED=$(echo "$STAGED_FILES" | grep "^$PACKAGE_JSON$" | wc -l)
-
-        if [ -n "$LOCK_CHANGES" ] && [ "$LOCK_CHANGES" -gt 500 ] && [ "$PKG_STAGED" -eq 0 ]; then
-            echo ""
-            echo "⚠️  WARNING: Large changes detected in $LOCKFILE"
-            echo "   Lines changed: $LOCK_CHANGES"
-            echo "   But corresponding $PACKAGE_JSON is not staged"
-            echo ""
-            echo "   This might indicate:"
-            echo "   - Node.js version mismatch (current: $CURRENT_NODE)"
-            echo "   - Lockfile corruption"
-            echo "   - Missing package.json changes"
-            echo "   - Forgot to stage package.json"
-            echo ""
-            echo "   If you added/removed packages:"
-            echo "   git add $PACKAGE_JSON"
-            echo ""
-            echo "   If you didn't change dependencies, this might be a Node.js version issue."
-            echo ""
-            printf "   Continue anyway? (y/N): "
-
-            # Read from /dev/tty to work properly in Git hooks
-            if [ -t 0 ]; then
-                read -r response
-            else
-                read -r response < /dev/tty
-            fi
-
-            if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
-                echo "❌ Commit cancelled"
-                exit 1
-            fi
+    if [ -n "$LOCK_CHANGES" ] && [ "$LOCK_CHANGES" -gt 500 ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+        echo ""
+        echo "   ⚠️  WARNING: Large changes in package-lock.json ($LOCK_CHANGES lines)"
+        echo "   But no package.json files are staged"
+        echo ""
+        echo "   This might indicate:"
+        echo "   - Node.js version mismatch (current: $CURRENT_NODE)"
+        echo "   - Lockfile corruption"
+        echo "   - Missing package.json changes"
+        echo "   - Forgot to stage package.json files"
+        echo ""
+        echo "   If you added/removed packages, make sure to stage the relevant package.json:"
+        if [ -n "$STAGED_PACKAGE_JSONS" ]; then
+            echo "$STAGED_PACKAGE_JSONS" | sed 's/^/   git add /'
+        else
+            echo "   git add package.json  # (or the specific workspace package.json)"
         fi
-    done
+        echo ""
+        printf "   Continue anyway? (y/N): "
+
+        if [ -t 0 ]; then
+            read -r response
+        else
+            read -r response < /dev/tty
+        fi
+
+        if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+            echo "❌ Commit cancelled"
+            exit 1
+        fi
+    elif [ -n "$STAGED_PACKAGE_JSONS" ]; then
+        echo "   ✅ Package.json files are also staged:"
+        echo "$STAGED_PACKAGE_JSONS" | sed 's/^/     /'
+    fi
 fi
 
-# Check for unstaged lockfiles (might indicate forgotten staging)
-if [ -n "$UNSTAGED_LOCKFILES" ]; then
+
+# Check for staged root lockfile without staged package.json files
+if [ -n "$STAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+    LOCK_CHANGES=$(git diff --cached --numstat "$ROOT_LOCKFILE" | cut -f1)
     echo ""
-    echo "   ⚠️  Found unstaged package-lock.json changes:"
-    echo "$UNSTAGED_LOCKFILES" | sed 's/^/     /'
+    echo "   ⚠️  WARNING: package-lock.json staged without any package.json files"
+    echo "   Lockfile changes: $LOCK_CHANGES lines"
+    echo ""
+    echo "   This might indicate:"
+    echo "   - Security updates or npm audit fixes"
+    echo "   - Node.js version mismatch causing spurious changes"
+    echo "   - Manual lockfile modification (not recommended)"
+    echo "   - Forgotten to stage package.json changes"
     echo ""
 
-    # Check if corresponding package.json files are staged
-    CONFLICTING_PAIRS=""
-    for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-        LOCKFILE_DIR=$(dirname "$UNSTAGED_LOCKFILE")
-        PACKAGE_JSON="$LOCKFILE_DIR/package.json"
+    if [ -n "$LOCK_CHANGES" ] && [ "$LOCK_CHANGES" -gt 500 ]; then
+        echo "   ⚠️  LARGE changes detected ($LOCK_CHANGES lines) - this is suspicious!"
+        echo "   Large lockfile changes usually indicate:"
+        echo "   - Wrong Node.js version (current: $CURRENT_NODE)"
+        echo "   - Corrupted lockfile"
+        echo "   - Missing package.json changes"
+        echo ""
+        printf "   Continue with lockfile-only commit? (y/N): "
 
-        # Check if corresponding package.json is staged
-        if echo "$STAGED_FILES" | grep -q "^$PACKAGE_JSON$"; then
-            CONFLICTING_PAIRS="$CONFLICTING_PAIRS\n   - $PACKAGE_JSON (staged) ↔ $UNSTAGED_LOCKFILE (unstaged)"
+        if [ -t 0 ]; then
+            read -r response
+        else
+            read -r response < /dev/tty
         fi
-    done
 
-    if [ -n "$CONFLICTING_PAIRS" ]; then
-        echo "   ❌ CRITICAL: Staged package.json with unstaged package-lock.json detected:"
-        echo "$CONFLICTING_PAIRS"
-        echo ""
-        echo "   This creates an inconsistent dependency state!"
-        echo "   package.json and package-lock.json must be committed together."
-        echo ""
-        echo "   To fix this, choose one option:"
-        echo ""
-        echo "   Option 1 - Stage the lockfiles (recommended):"
-        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-            echo "   git add $UNSTAGED_LOCKFILE"
-        done
-        echo ""
-        echo "   Option 2 - Unstage the package.json files:"
-        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-            LOCKFILE_DIR=$(dirname "$UNSTAGED_LOCKFILE")
-            PACKAGE_JSON="$LOCKFILE_DIR/package.json"
-            if echo "$STAGED_FILES" | grep -q "^$PACKAGE_JSON$"; then
-                echo "   git reset $PACKAGE_JSON"
-            fi
-        done
-        echo ""
-        echo "   Option 3 - Discard lockfile changes (if they're accidental):"
-        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-            echo "   git checkout $UNSTAGED_LOCKFILE"
-        done
-        echo ""
-        echo "❌ Commit cancelled - fix package.json/package-lock.json mismatch"
-        exit 1
+        if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+            echo ""
+            echo "   To check what changed:"
+            echo "   git diff --cached $ROOT_LOCKFILE"
+            echo ""
+            echo "   If this was accidental:"
+            echo "   git reset $ROOT_LOCKFILE"
+            echo ""
+            echo "❌ Commit cancelled"
+            exit 1
+        fi
+    else
+        echo "   Small changes detected - likely legitimate (security updates, etc.)"
+        printf "   Continue? (Y/n): "
+
+        if [ -t 0 ]; then
+            read -r response
+        else
+            read -r response < /dev/tty
+        fi
+
+        if [ "$response" = "n" ] || [ "$response" = "N" ]; then
+            echo "❌ Commit cancelled"
+            exit 1
+        fi
     fi
+fi
 
-    # If no conflicting pairs, these might just be development artifacts
-    echo "   These files have been modified but are not staged for commit."
+
+# Check for staged package.json files without staged root lockfile
+if [ -n "$STAGED_PACKAGE_JSONS" ] && [ -z "$STAGED_ROOT_LOCKFILE" ]; then
+    echo ""
+    echo "   ❌ CRITICAL: package.json files staged without package-lock.json!"
+    echo "   Staged package.json files:"
+    echo "$STAGED_PACKAGE_JSONS" | sed 's/^/     /'
+    echo ""
+    echo "   In a monorepo, changing dependencies in any package.json should"
+    echo "   update the root package-lock.json file."
+    echo ""
+    echo "   This indicates you might need to:"
+    echo "   1. Run 'npm install' to update the lockfile"
+    echo "   2. Stage the updated package-lock.json:"
+    echo "      git add package-lock.json"
+    echo ""
+    echo "❌ Commit cancelled - package.json/package-lock.json mismatch"
+    exit 1
+fi
+
+# Check for unstaged root lockfile when package.json files are staged
+if [ -n "$UNSTAGED_ROOT_LOCKFILE" ] && [ -n "$STAGED_PACKAGE_JSONS" ]; then
+    echo ""
+    echo "   ❌ CRITICAL: package.json files staged but package-lock.json is unstaged!"
+    echo "   Staged package.json files:"
+    echo "$STAGED_PACKAGE_JSONS" | sed 's/^/     /'
+    echo "   Unstaged: $ROOT_LOCKFILE"
+    echo ""
+    echo "   Dependencies must be committed together. To fix:"
+    echo "   git add $ROOT_LOCKFILE"
+    echo ""
+    echo "❌ Commit cancelled - missing package-lock.json staging"
+    exit 1
+fi
+
+# Check for unstaged root lockfile without staged package.json files
+if [ -n "$UNSTAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+    UNSTAGED_CHANGES=$(git diff --numstat "$ROOT_LOCKFILE" | cut -f1)
+    echo ""
+    echo "   ⚠️  Found unstaged package-lock.json changes ($UNSTAGED_CHANGES lines)"
+    echo "   But no package.json files are staged"
+    echo ""
     echo "   This might indicate:"
     echo "   - Accidental changes from Node.js version mismatch"
     echo "   - Local development artifacts"
-    echo "   - Forgotten to stage legitimate changes"
+    echo "   - Forgotten to stage package.json changes"
     echo ""
 
-    # Count lines in unstaged changes
-    for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-        UNSTAGED_CHANGES=$(git diff --numstat "$UNSTAGED_LOCKFILE" | cut -f1)
-        if [ -n "$UNSTAGED_CHANGES" ] && [ "$UNSTAGED_CHANGES" -gt 50 ]; then
-            echo "   📊 Large unstaged changes in $UNSTAGED_LOCKFILE: $UNSTAGED_CHANGES lines"
+    if [ -n "$UNSTAGED_CHANGES" ] && [ "$UNSTAGED_CHANGES" -gt 50 ]; then
+        echo "   📊 Large unstaged changes detected"
+        echo ""
+        printf "   Continue without staging package-lock.json? (y/N): "
+
+        if [ -t 0 ]; then
+            read -r response
+        else
+            read -r response < /dev/tty
         fi
-    done
 
-    echo ""
-    echo "   Since no package.json files are staged with these lockfiles,"
-    echo "   you can safely proceed or clean them up."
-    echo ""
-    printf "   Continue with current staged files? (y/N): "
-
-
-
-    if [ -t 0 ]; then
-        read -r response
-    else
-        read -r response < /dev/tty
-    fi
-
-    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
-        echo ""
-        echo "   To stage the lockfiles:"
-        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-            echo "   git add $UNSTAGED_LOCKFILE"
-        done
-        echo ""
-        echo "   Or to discard the changes:"
-        for UNSTAGED_LOCKFILE in $UNSTAGED_LOCKFILES; do
-            echo "   git checkout $UNSTAGED_LOCKFILE"
-        done
-        echo ""
-        echo "❌ Commit cancelled"
-        exit 1
+        if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+            echo ""
+            echo "   To stage the lockfile:"
+            echo "   git add $ROOT_LOCKFILE"
+            echo ""
+            echo "   Or to discard the changes:"
+            echo "   git checkout $ROOT_LOCKFILE"
+            echo ""
+            echo "❌ Commit cancelled"
+            exit 1
+        fi
     fi
 fi
 
 # Summary for lockfiles
-if [ -z "$STAGED_LOCKFILES" ] && [ -z "$UNSTAGED_LOCKFILES" ]; then
-    echo "   No package-lock.json changes detected"
+if [ -z "$STAGED_ROOT_LOCKFILE" ] && [ -z "$UNSTAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+    echo "   No dependency-related changes detected"
+elif [ -n "$STAGED_ROOT_LOCKFILE" ] && [ -n "$STAGED_PACKAGE_JSONS" ]; then
+    echo "   ✅ Dependencies and lockfile properly staged together"
+elif [ -n "$STAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+    echo "   ℹ️  Lockfile-only changes staged (security updates, etc.)"
+elif [ -z "$STAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
+    echo "   No dependency changes in this commit"
 fi
-
 
 # 3. Run linting (only if we're in a directory with lint script)
 echo "3️⃣ Checking for lint script..."
