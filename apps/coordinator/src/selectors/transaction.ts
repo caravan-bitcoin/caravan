@@ -23,6 +23,12 @@ export const selectInputsFromPSBT = createSelector(
 
     const inputIdentifiers = new Set(
       psbt.txInputs.map((input) => {
+        /*
+         * All input TXIDs are expected to be in **big-endian**
+         * format (human-readable format). Which we get from block explorers, wallets, APIs
+         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
+         * internal data structures and processing so here we convert the txid to little-endian format
+         */
         const txid = reverseBuffer(input.hash).toString("hex");
         return createInputIdentifier(txid, input.index);
       }),
