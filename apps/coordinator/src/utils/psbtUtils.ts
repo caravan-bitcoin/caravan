@@ -80,28 +80,18 @@ export function loadPsbt(
     // Try to determine the PSBT version
     const version = getPsbtVersionNumber(psbtText);
 
-    if (version >= 2) {
-      // It's a PSBTv2, convert it to PSBTv0 format for compatibility
-      console.log(
-        `Detected PSBTv2 (version ${version}), converting to PSBTv0 format`,
-      );
-      try {
-        const psbtv2 = new PsbtV2(psbtText, true); // Allow version 1 transactions if needed
-        const psbtv0Base64 = psbtv2.toV0("base64");
-        // Use the autoLoadPSBT from @caravan/psbt
-        return psbtPackageAutoLoad(psbtv0Base64, options);
-      } catch (e) {
-        console.error("Failed to parse PSBTv2:", e);
-        throw new Error(`Failed to parse PSBTv2: ${e.message}`);
-      }
-    } else {
-      // It's a PSBTv0, use the autoLoadPSBT from @caravan/psbt
-      const psbt = psbtPackageAutoLoad(psbtText, options);
-      if (!psbt) {
-        throw new Error("Could not parse PSBT. Invalid format.");
-      }
-      return psbt;
+    if (version === 2) {
+      const psbtv2 = new PsbtV2(psbtText, true); // Allow version 1 transactions if needed
+      const psbtv0Base64 = psbtv2.toV0("base64");
+      // Use the autoLoadPSBT from @caravan/psbt
+      return psbtPackageAutoLoad(psbtv0Base64, options);
     }
+    // It's a PSBTv0, use the autoLoadPSBT from @caravan/psbt
+    const psbt = psbtPackageAutoLoad(psbtText, options);
+    if (!psbt) {
+      throw new Error("Could not parse PSBT. Invalid format.");
+    }
+    return psbt;
   } catch (e) {
     console.error("Error loading PSBT:", e);
     throw new Error(`Error loading PSBT: ${e.message}`);
@@ -118,7 +108,7 @@ export function loadPsbt(
 export function isPsbtV2(psbtText: string | Buffer): boolean {
   try {
     const version = getPsbtVersionNumber(psbtText);
-    return version >= 2;
+    return version === 2;
   } catch {
     return false;
   }
