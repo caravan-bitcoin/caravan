@@ -14,6 +14,7 @@ import {
   InputAdornment,
   Typography,
   FormHelperText,
+  Slider,
 } from "@mui/material";
 import { Speed } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
@@ -29,6 +30,9 @@ import { updateBlockchainClient } from "../../actions/clientActions";
 import { MIN_SATS_PER_BYTE_FEE } from "../Wallet/constants";
 import OutputEntry from "./OutputEntry";
 import styles from "./styles.module.scss";
+import InfoIcon from "@mui/icons-material/Info";
+import { WasteMetrics } from "@caravan/health";
+import { getWalletConfig } from "../../selectors/wallet";
 
 class OutputsForm extends React.Component {
   static unitLabel(label, options) {
@@ -56,12 +60,15 @@ class OutputsForm extends React.Component {
     super(props);
     this.state = {
       feeRateFetchError: "",
+      longTermFeeEstimate: 101,
+      wasteAmount: 0,
     };
   }
 
   componentDidMount = () => {
     this.initialOutputState();
     this.scrollToTitle();
+    this.calculateWaste();
   };
 
   scrollToTitle = () => {
@@ -149,11 +156,13 @@ class OutputsForm extends React.Component {
   handleAddOutput = () => {
     const { addOutput } = this.props;
     addOutput();
+    this.calculateWaste();
   };
 
   handleFeeRateChange = (event) => {
     const { setFeeRate } = this.props;
     let rate = event.target.value;
+    this.calculateWaste();
 
     if (
       rate === "" ||
@@ -167,6 +176,7 @@ class OutputsForm extends React.Component {
   handleFeeChange = (event) => {
     const { setFee } = this.props;
     setFee(event.target.value);
+    this.calculateWaste();
   };
 
   handleFinalize = () => {
@@ -181,7 +191,7 @@ class OutputsForm extends React.Component {
   };
 
   getFeeEstimate = async () => {
-    const { getBlockchainClient, setFeeRate } = this.props;
+    const { getBlockchainClient, setFeeRate, onFeeEstimate } = this.props;
     const client = await getBlockchainClient();
     let feeEstimate;
     let feeRateFetchError = "";
@@ -196,6 +206,14 @@ class OutputsForm extends React.Component {
           ? feeEstimate.toString()
           : MIN_SATS_PER_BYTE_FEE.toString(),
       );
+      if (onFeeEstimate) {
+        try {
+          onFeeEstimate(feeEstimate?.toString());
+        } catch (err) {
+          console.error("onFeeEstimate error:", err);
+          feeRateFetchError = "There was an error handling the fee estimate.";
+        }
+      }
       this.setState({ feeRateFetchError });
     }
   };
@@ -231,6 +249,55 @@ class OutputsForm extends React.Component {
       setOutputAmount(1, outputAmount);
   }
 
+  handleLongTermFeeEstimateChange = (event, newValue) => {
+    this.setState({ longTermFeeEstimate: newValue });
+    this.calculateWaste();
+  };
+
+  calculateWaste = () => {
+    console.log("🧮 [calculateWaste] Called");
+
+    const { feeRate, fee } = this.props;
+    const { longTermFeeEstimate } = this.state;
+
+    console.log("📊 Inputs:");
+    console.log("  • feeRate:", feeRate);
+    console.log("  • fee:", fee);
+    console.log("  • longTermFeeEstimate:", longTermFeeEstimate);
+
+    if (!fee || !feeRate || parseFloat(feeRate) === 0) {
+      console.warn(
+        "⚠️ Skipping waste calculation: missing or zero fee/feeRate",
+      );
+      return;
+    }
+
+    const weight = fee / satoshisToBitcoins(feeRate);
+    console.log("📏 Calculated weight:", weight);
+
+    const wasteMetrics = new WasteMetrics();
+    const walletConfig = this.props.walletConfig;
+    const scriptType = walletConfig.addressType;
+
+    const config = {
+      requiredSignerCount: walletConfig.quorum.requiredSigners,
+      totalSignerCount: walletConfig.quorum.totalSigners,
+    };
+
+    const rawWasteAmount = wasteMetrics.spendWasteAmount(
+      weight,
+      feeRate,
+      scriptType,
+      config,
+      longTermFeeEstimate,
+    );
+
+    const wasteAmountInSats = 1000000 * rawWasteAmount;
+    console.log("✅ Waste amount (sats):", wasteAmountInSats);
+
+    this.setState({ wasteAmount: wasteAmountInSats });
+  };
+
   render() {
     const {
       feeRate,
@@ -249,6 +316,7 @@ class OutputsForm extends React.Component {
     const totalMt = 7;
     const actionMt = 7;
     const gridSpacing = isWallet ? 10 : 1;
+    const { longTermFeeEstimate, wasteAmount } = this.state;
     return (
       <>
         <Box ref={this.titleRef}>
@@ -414,6 +482,42 @@ class OutputsForm extends React.Component {
             </Grid>
             <Grid item xs={2} />
           </Grid>
+          {wasteAmount ? (
+            <Grid item xs={12}>
+              <h3>
+                Waste Analysis
+                <Tooltip title="Waste analysis helps calculate inefficiencies in the transaction due to fees, UTXO consolidation, etc.">
+                  <IconButton size="small" sx={{ marginLeft: 1 }}>
+                    <InfoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </h3>
+              <Typography gutterBottom>
+                Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} Sats
+                <Tooltip title="SWA represents the amount of waste in Satoshis spent during the transaction due to inefficiencies. Postive SWA means that it would be efficient to spend this transaction later when the feerate decreases. For Negative SWA, spending now could be the best decision.">
+                  <IconButton size="small" sx={{ marginLeft: 1 }}>
+                    <InfoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Typography>
+              <Slider
+                value={longTermFeeEstimate}
+                min={1}
+                max={500}
+                step={1}
+                onChange={this.handleLongTermFeeEstimateChange}
+                aria-labelledby="long-term-fee-estimate-slider"
+              />
+              <Typography id="long-term-fee-estimate-slider" gutterBottom>
+                Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
+                <Tooltip title="L refers to the long-term estimated fee rate in Satoshis per vByte for future transactions.">
+                  <IconButton size="small" sx={{ marginLeft: 1 }}>
+                    <InfoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Typography>
+            </Grid>
+          ) : null}
         </Box>
 
         {!isWallet && (
@@ -488,6 +592,8 @@ OutputsForm.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updatesComplete: PropTypes.bool,
   getBlockchainClient: PropTypes.func.isRequired,
+  onFeeEstimate: PropTypes.func,
+  walletConfig: PropTypes.object,
 };
 
 OutputsForm.defaultProps = {
@@ -504,6 +610,7 @@ function mapStateToProps(state) {
     ...state.client,
     signatureImporters: state.spend.signatureImporters,
     change: state.wallet.change,
+    walletConfig: getWalletConfig(state),
   };
 }
 
