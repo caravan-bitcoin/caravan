@@ -21,7 +21,6 @@ import {
   TransactionDetails,
   RawTransactionData,
   ListTransactionsItem,
-  TransactionResponse,
   WalletTransactionResponse,
 } from "./types";
 import {
@@ -30,6 +29,7 @@ import {
   bitcoindListUnspent,
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
+  callBitcoindWallet,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -300,14 +300,25 @@ export class BlockchainClient extends ClientBase {
     this.bitcoindParams = bitcoindParams(client);
   }
 
-  public async getAddressUtxos(address: string): Promise<any> {
+  public async getAddressUtxos(
+    address: string,
+    includeUnsafe: boolean = false,
+  ): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
+        // For private Bitcoin Core nodes, we can control whether to include
+        // "unsafe" UTXOs (those already spent in pending transactions).
+        // This is essential for RBF functionality.
         return bitcoindListUnspent({
           address,
+          includeUnsafe,
           ...this.bitcoindParams,
         });
       }
+
+      // Public block explorers (like Blockstream, Mempool.space) don't support
+      // the includeUnsafe parameter and typically only return spendable UTXOs.
+      // RBF with public clients may be limited or require different approaches ... will need to see how to test it
       return await this.Get(`/address/${address}/utxo`);
     } catch (error: any) {
       throw new Error(
@@ -603,12 +614,26 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind<TransactionResponse>(
-          this.bitcoindParams.url,
-          this.bitcoindParams.auth,
-          "gettransaction",
-          [txid],
-        );
+        // Check if wallet name is provided for private clients
+        if (!this.bitcoindParams.walletName) {
+          throw new Error(
+            "Wallet name is required for private client transaction lookups",
+          );
+        }
+
+        const response = (await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "gettransaction",
+          params: [txid, true, true], // [txid, include_watchonly, verbose]
+        })) as any;
+
+        if (response?.result?.hex) {
+          return response.result.hex;
+        }
+
+        throw new Error("Transaction not found in wallet or missing hex data");
       }
       return await this.Get(`/tx/${txid}/hex`);
     } catch (error: any) {

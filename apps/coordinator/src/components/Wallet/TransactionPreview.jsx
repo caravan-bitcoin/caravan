@@ -13,7 +13,17 @@ import {
   TableRow,
   TableCell,
   Grid,
+  Alert,
+  AlertTitle,
+  Chip,
+  Typography,
+  Paper,
 } from "@mui/material";
+import {
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  Edit as EditIcon,
+} from "@mui/icons-material";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
@@ -155,6 +165,95 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtBase64, "transaction.psbt");
   };
 
+  getSignatureStatus = () => {
+    const { signatureImporters, requiredSigners } = this.props;
+
+    if (!signatureImporters) {
+      return { signedCount: 0, requiredSigners: requiredSigners || 0 };
+    }
+
+    const signedCount = Object.values(signatureImporters).filter(
+      (importer) =>
+        importer.finalized &&
+        importer.signature &&
+        importer.signature.length > 0,
+    ).length;
+
+    return { signedCount, requiredSigners: requiredSigners || 0 };
+  };
+
+  renderSignatureStatus = () => {
+    const { signedCount, requiredSigners } = this.getSignatureStatus();
+    const isFullySigned = signedCount >= requiredSigners;
+    const hasPartialSignatures =
+      signedCount > 0 && signedCount < requiredSigners;
+
+    if (signedCount === 0) {
+      return null; // Don't show anything if no signatures
+    }
+
+    return (
+      <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <Box display="flex" alignItems="center" mb={1}>
+          {isFullySigned ? (
+            <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+          ) : (
+            <WarningIcon color="warning" sx={{ mr: 1 }} />
+          )}
+          <Typography variant="h6" component="div">
+            Signature Status
+          </Typography>
+        </Box>
+
+        <Box display="flex" alignItems="center" gap={1} mb={2}>
+          <Chip
+            label={`${signedCount} of ${requiredSigners} signatures`}
+            color={
+              isFullySigned
+                ? "success"
+                : hasPartialSignatures
+                  ? "warning"
+                  : "default"
+            }
+            variant={isFullySigned ? "filled" : "outlined"}
+          />
+          {isFullySigned && (
+            <Chip label="Fully Signed" color="success" size="small" />
+          )}
+          {hasPartialSignatures && (
+            <Chip label="Partially Signed" color="warning" size="small" />
+          )}
+        </Box>
+
+        {hasPartialSignatures && (
+          <Alert severity="info" sx={{ mb: 1 }}>
+            <AlertTitle>Partial Signatures Detected</AlertTitle>
+            This transaction has {signedCount} out of {requiredSigners} required
+            signatures. You need {requiredSigners - signedCount} more signature
+            {requiredSigners - signedCount > 1 ? "s" : ""} to broadcast.
+          </Alert>
+        )}
+
+        {isFullySigned && (
+          <Alert severity="success" sx={{ mb: 1 }}>
+            <AlertTitle>Transaction Ready</AlertTitle>
+            This transaction has all {requiredSigners} required signatures and
+            is ready to broadcast.
+          </Alert>
+        )}
+
+        {signedCount > 0 && (
+          <Alert severity="warning" icon={<EditIcon />}>
+            <AlertTitle>Important: Editing Will Clear Signatures</AlertTitle>
+            If you edit this transaction (inputs, outputs, or fee), all existing
+            signatures will be cleared and you&aposll need to collect signatures
+            again from all signers.
+          </Alert>
+        )}
+      </Paper>
+    );
+  };
+
   render = () => {
     const {
       feeRate,
@@ -168,6 +267,9 @@ class TransactionPreview extends React.Component {
     return (
       <Box>
         <h2>Transaction Preview</h2>
+
+        {/* Signature Status Section */}
+        {this.renderSignatureStatus()}
         <UnsignedTransaction />
         <h3>Inputs</h3>
         {this.renderInputs()}
@@ -242,6 +344,8 @@ TransactionPreview.propTypes = {
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
+  signatureImporters: PropTypes.shape({}),
+  requiredSigners: PropTypes.number,
 };
 
 function mapStateToProps(state) {
@@ -251,6 +355,8 @@ function mapStateToProps(state) {
     inputs: state.spend.transaction.inputs,
     outputs: state.spend.transaction.outputs,
     unsignedPSBT: state.spend.transaction.unsignedPSBT,
+    signatureImporters: state.spend.signatureImporters,
+    requiredSigners: state.settings.requiredSigners,
   };
 }
 
