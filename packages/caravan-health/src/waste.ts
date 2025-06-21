@@ -1,5 +1,4 @@
-import { getWitnessSize } from "@caravan/bitcoin";
-
+import { getInputWeight } from "./spendType";
 import { FeeRatePercentile, Transaction, MultisigAddressType } from "./types";
 import { WalletMetrics } from "./wallet";
 
@@ -103,10 +102,10 @@ export class WasteMetrics extends WalletMetrics {
           The amount by which we exceed our selection target when creating a changeless transaction, 
           mutually exclusive with cost of change. It is extra fees paid if we don't make a change output 
           and instead add the difference to the fees.
-      - Input Amount :
-          Sum of amount for each coin in input of the transaction
-      - Spend Amount :
-          Exact amount wanted to be spent in the transaction.
+      - Script Type :
+          This is for calculating size of change output which will always be the same script type as the wallet
+      - Config :
+          The configuration of the wallet. It includes the requiredSignerCount and totalSignerCount
 
     Calculation :
       spend waste amount = consolidation factor + cost of transaction
@@ -121,11 +120,14 @@ export class WasteMetrics extends WalletMetrics {
   spendWasteAmount(
     weight: number, // Estimated weight of the transaction
     feeRate: number, // Current fee rate for the transaction
-    inputAmountSum: number, // Sum of amount for each coin in input of the transaction
-    spendAmount: number, // Exact amount wanted to be spent in the transaction
+    scriptType: MultisigAddressType,
+    config: {
+      requiredSignerCount: number;
+      totalSignerCount: number;
+    },
     estimatedLongTermFeeRate: number, // Long term estimated fee-rate
   ): number {
-    const costOfTx: number = Math.abs(spendAmount - inputAmountSum);
+    const costOfTx: number = getInputWeight(scriptType, config) * feeRate;
     return weight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
   }
 
@@ -169,39 +171,7 @@ export class WasteMetrics extends WalletMetrics {
       throw new Error("Risk Multiplier should be greater than 1");
     }
 
-    let vsize: number;
-    if (scriptType === "P2SH") {
-      const signatureLength = 72 + 1; // approx including push byte
-      const keylength = 33 + 1; // push byte
-      vsize =
-        signatureLength * config.requiredSignerCount +
-        keylength * config.totalSignerCount;
-    } else if (scriptType === "P2WSH") {
-      let total = 0;
-      total += 1; // segwit marker
-      total += 1; // segwit flag
-      total += getWitnessSize(
-        config.requiredSignerCount,
-        config.totalSignerCount,
-      );
-      vsize = total;
-    } else if (scriptType === "P2SH-P2WSH") {
-      const signatureLength = 72;
-      const keylength = 33;
-      const witnessSize =
-        signatureLength * config.requiredSignerCount +
-        keylength * config.totalSignerCount;
-      vsize = Math.ceil(0.25 * witnessSize);
-    } else if (scriptType === "P2TR") {
-      // Reference : https://bitcoin.stackexchange.com/questions/111395/what-is-the-weight-of-a-p2tr-input
-      // Optimistic key-path-spend input size
-      vsize = 57.5;
-    } else if (scriptType === "P2PKH") {
-      // Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
-      vsize = 131.5;
-    } else {
-      vsize = 546; // Worst Case
-    }
+    const vsize = getInputWeight(scriptType, config);
     const lowerLimit: number = vsize * feeRate;
     const upperLimit: number = lowerLimit * riskMultiplier;
     return { lowerLimit, upperLimit };

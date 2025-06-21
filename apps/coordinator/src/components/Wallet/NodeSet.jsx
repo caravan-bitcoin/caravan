@@ -153,7 +153,7 @@ class NodeSet extends React.Component {
 
   renderNodes = () => {
     const { page, nodesPerPage, select } = this.state;
-    const { addNode, updateNode } = this.props;
+    const { addNode, updateNode, feeRate } = this.props;
     const startingIndex = page * nodesPerPage;
     const nodesRows = [];
     const nodeSet = this.getNodeSet();
@@ -168,6 +168,7 @@ class NodeSet extends React.Component {
           bip32Path={bip32Path}
           addNode={addNode}
           updateNode={updateNode}
+          feeRate={feeRate}
           change={change}
           select={select}
         />
@@ -277,6 +278,7 @@ NodeSet.propTypes = {
   addNode: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   walletMode: PropTypes.number.isRequired,
+  feeRate: PropTypes.string,
 };
 
 function mapStateToProps(state) {

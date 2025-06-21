@@ -1,4 +1,7 @@
-import { SpendType } from "./types";
+
+import { getWitnessSize } from "@caravan/bitcoin";
+
+import { MultisigAddressType, SpendType } from "./types";
 
 /*
     Name : Spend Type Determination
@@ -74,4 +77,44 @@ export function getSpendTypeScore(
     default:
       throw new Error("Invalid spend type");
   }
+}
+
+export function getInputWeight(
+      scriptType: MultisigAddressType,
+  config: { requiredSignerCount: number; totalSignerCount: number },
+):number {
+    let vsize: number;
+  if (scriptType === "P2SH") {
+    const signatureLength = 72 + 1; // approx including push byte
+    const keylength = 33 + 1; // push byte
+    vsize =
+      signatureLength * config.requiredSignerCount +
+      keylength * config.totalSignerCount;
+  } else if (scriptType === "P2WSH") {
+    let total = 0;
+    total += 1; // segwit marker
+    total += 1; // segwit flag
+    total += getWitnessSize(
+      config.requiredSignerCount,
+      config.totalSignerCount,
+    );
+    vsize = total;
+  } else if (scriptType === "P2SH-P2WSH") {
+    const signatureLength = 72;
+    const keylength = 33;
+    const witnessSize =
+      signatureLength * config.requiredSignerCount +
+      keylength * config.totalSignerCount;
+    vsize = Math.ceil(0.25 * witnessSize);
+  } else if (scriptType === "P2TR") {
+    // Reference : https://bitcoin.stackexchange.com/questions/111395/what-is-the-weight-of-a-p2tr-input
+    // Optimistic key-path-spend input size
+    vsize = 57.5;
+  } else if (scriptType === "P2PKH") {
+    // Reference : https://medium.com/coinmonks/on-bitcoin-transaction-sizes-97e31bc9d816
+    vsize = 131.5;
+  } else {
+    vsize = 546; // Worst Case
+  }
+  return vsize;
 }
