@@ -6,6 +6,16 @@ import { analyzeTransaction, extractUtxosForFeeBumping } from "../utils";
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 import { BlockchainClient } from "@caravan/clients";
 import {
+  useFeeBumpTransaction,
+  useFeeBumpTxHex,
+  useFeeBumpRecommendation,
+  useSelectedFeeBumpStrategy,
+  useSelectedFeeRate,
+  useSelectedFeePriority,
+  useFeeBumpResult,
+  useFeeBumpStatus,
+  useFeeBumpError,
+  useFeeBumpDispatch,
   setFeeBumpTransaction,
   setFeeBumpStatus,
   setFeeBumpError,
@@ -14,18 +24,7 @@ import {
   setFeeBumpRate,
   setFeeBumpPriority,
   resetFeeBumpState,
-} from "../../../../../actions/feeBumpingActions";
-import {
-  getFeeBumpTransaction,
-  getFeeBumpTxHex,
-  getFeeBumpRecommendation,
-  getSelectedFeeBumpStrategy,
-  getSelectedFeeRate,
-  getSelectedFeePriority,
-  getFeeBumpResult,
-  getFeeBumpStatus,
-  getFeeBumpError,
-} from "../../../../../selectors/feeBumping";
+} from "../context";
 
 /**
  * Hook for handling transaction fee bumping with FeeBumping Redux State...
@@ -39,17 +38,18 @@ import {
  */
 export const useFeeBumping = () => {
   const dispatch = useDispatch();
+  const feeBumpDispatch = useFeeBumpDispatch(); // dispatch for fee bump actions
 
-  // Get all state from Redux selectors
-  const transaction = useSelector(getFeeBumpTransaction);
-  const txHex = useSelector(getFeeBumpTxHex);
-  const status = useSelector(getFeeBumpStatus);
-  const error = useSelector(getFeeBumpError);
-  const recommendation = useSelector(getFeeBumpRecommendation);
-  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
-  const selectedFeeRate = useSelector(getSelectedFeeRate);
-  const selectedPriority = useSelector(getSelectedFeePriority);
-  const result = useSelector(getFeeBumpResult);
+  // Get all state from Context
+  const transaction = useFeeBumpTransaction();
+  const txHex = useFeeBumpTxHex();
+  const status = useFeeBumpStatus();
+  const error = useFeeBumpError();
+  const recommendation = useFeeBumpRecommendation();
+  const selectedStrategy = useSelectedFeeBumpStrategy();
+  const selectedFeeRate = useSelectedFeeRate();
+  const selectedPriority = useSelectedFeePriority();
+  const result = useFeeBumpResult();
 
   // Get wallet configuration from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -83,8 +83,8 @@ export const useFeeBumping = () => {
     ) => {
       if (!tx) return;
       try {
-        dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
-        dispatch(setFeeBumpError(null));
+        feeBumpDispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
+        feeBumpDispatch(setFeeBumpError(null));
 
         // Get blockchain client
         const blockchainClient = dispatch(
@@ -140,11 +140,11 @@ export const useFeeBumping = () => {
           ),
         };
 
-        dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
-        dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
+        feeBumpDispatch(setFeeBumpRecommendation(feeBumpRecommendation));
+        feeBumpDispatch(setFeeBumpStatus(FeeBumpStatus.READY));
       } catch (error) {
         console.error("Error analyzing transaction:", error);
-        dispatch(
+        feeBumpDispatch(
           setFeeBumpError(
             error instanceof Error
               ? error.message
@@ -155,6 +155,7 @@ export const useFeeBumping = () => {
     },
     [
       dispatch,
+      feeBumpDispatch,
       network,
       requiredSigners,
       totalSigners,
@@ -181,11 +182,11 @@ export const useFeeBumping = () => {
       priority: FeePriority = FeePriority.MEDIUM,
       initialTxHex: string = "",
     ) => {
-      dispatch(setFeeBumpTransaction(tx, initialTxHex));
-      dispatch(setFeeBumpPriority(priority));
+      feeBumpDispatch(setFeeBumpTransaction(tx, initialTxHex));
+      feeBumpDispatch(setFeeBumpPriority(priority));
       await analyzeTx(tx, initialTxHex, priority);
     },
-    [analyzeTx, dispatch],
+    [analyzeTx, feeBumpDispatch],
   );
 
   /**
@@ -197,7 +198,7 @@ export const useFeeBumping = () => {
     (feeRate: number) => {
       dispatch(setFeeBumpRate(feeRate));
     },
-    [dispatch],
+    [feeBumpDispatch],
   );
 
   /**
@@ -211,9 +212,9 @@ export const useFeeBumping = () => {
         console.warn("Cannot update fee priority: No transaction selected");
         return;
       }
-      dispatch(setFeeBumpPriority(priority));
+      feeBumpDispatch(setFeeBumpPriority(priority));
     },
-    [transaction, analyzeTx, txHex, dispatch],
+    [transaction, analyzeTx, txHex, feeBumpDispatch],
   );
 
   /**
@@ -227,9 +228,9 @@ export const useFeeBumping = () => {
         console.warn("Cannot select NONE as a strategy");
         return;
       }
-      dispatch(setFeeBumpStrategy(strategy));
+      feeBumpDispatch(setFeeBumpStrategy(strategy));
     },
-    [dispatch],
+    [feeBumpDispatch],
   );
 
   /**

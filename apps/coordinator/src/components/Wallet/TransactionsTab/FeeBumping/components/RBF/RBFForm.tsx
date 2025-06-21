@@ -1,5 +1,4 @@
 import React, { useCallback, useMemo, useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   Button,
@@ -22,24 +21,23 @@ import { InfoOutlined } from "@mui/icons-material";
 import { FeePriority } from "../../types";
 import { formatFee } from "../../utils";
 import {
+  useFeeBumpRecommendation,
+  useSelectedFeeRate,
+  useSelectedFeePriority,
+  useRbfType,
+  useCancelAddress,
+  useChangeAddress,
+  useMinimumFeeRate,
+  useEstimatedNewFee,
+  useFeeDifference,
+  useIsRbfFormValid,
+  useFeeBumpDispatch,
   setRbfType,
   setCancelAddress,
   setChangeAddress,
   setFeeBumpRate,
   setFeeBumpPriority,
-} from "../../../../../../actions/feeBumpingActions";
-import {
-  getFeeBumpRecommendation,
-  getSelectedFeeRate,
-  getSelectedFeePriority,
-  getRbfType,
-  getCancelAddress,
-  getChangeAddress,
-  getMinimumFeeRate,
-  getEstimatedNewFee,
-  getFeeDifference,
-  getIsRbfFormValid,
-} from "../../../../../../selectors/feeBumping";
+} from "../../context";
 
 export type RbfType = "accelerate" | "cancel";
 
@@ -95,19 +93,19 @@ export const RBFForm: React.FC<RBFFormProps> = ({
   onSubmit,
   isCreating = false,
 }) => {
-  const dispatch = useDispatch();
+  const dispatch = useFeeBumpDispatch();
 
-  // Get all state from Redux - no more props!
-  const recommendation = useSelector(getFeeBumpRecommendation);
-  const selectedFeeRate = useSelector(getSelectedFeeRate);
-  const selectedPriority = useSelector(getSelectedFeePriority);
-  const rbfType = useSelector(getRbfType);
-  const cancelAddress = useSelector(getCancelAddress);
-  const changeAddress = useSelector(getChangeAddress);
-  const minimumFeeRate = useSelector(getMinimumFeeRate);
-  const estimatedNewFee = useSelector(getEstimatedNewFee);
-  const feeDifference = useSelector(getFeeDifference);
-  const isFormValid = useSelector(getIsRbfFormValid);
+  // Get all state from Context - no more props!
+  const recommendation = useFeeBumpRecommendation();
+  const selectedFeeRate = useSelectedFeeRate();
+  const selectedPriority = useSelectedFeePriority();
+  const rbfType = useRbfType();
+  const cancelAddress = useCancelAddress();
+  const changeAddress = useChangeAddress();
+  const minimumFeeRate = useMinimumFeeRate();
+  const estimatedNewFee = useEstimatedNewFee();
+  const feeDifference = useFeeDifference();
+  const isFormValid = useIsRbfFormValid();
 
   // Local state for fee level selection (UI state only)
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(

@@ -1,5 +1,4 @@
 import React from "react";
-import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   FormControl,
@@ -19,11 +18,12 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { formatFee } from "../utils";
-import { setFeeBumpStrategy } from "../../../../../actions/feeBumpingActions";
 import {
-  getFeeBumpRecommendation,
-  getSelectedFeeBumpStrategy,
-} from "../../../../../selectors/feeBumping";
+  useFeeBumpRecommendation,
+  useSelectedFeeBumpStrategy,
+  useFeeBumpDispatch,
+  setFeeBumpStrategy,
+} from "../context";
 
 /**
  * Component for selecting a fee bumping strategy (RBF or CPFP)
@@ -33,12 +33,9 @@ import {
  * and recommendations based on transaction analysis.
  */
 export const FeeStrategySelector: React.FC = () => {
-  const dispatch = useDispatch();
-
-  // Get state from Redux
-  const recommendation = useSelector(getFeeBumpRecommendation);
-  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
-
+  const dispatch = useFeeBumpDispatch();
+  const recommendation = useFeeBumpRecommendation();
+  const selectedStrategy = useSelectedFeeBumpStrategy();
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setFeeBumpStrategy(event.target.value as FeeBumpStrategy));
   };

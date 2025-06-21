@@ -15,20 +15,19 @@ import {
 import { updateBlockchainClient } from "../../../../../actions/clientActions";
 import { FeeBumpResult, FeeBumpStatus } from "../types";
 import {
+  useFeeBumpDispatch,
+  useFeeBumpTransaction,
+  useFeeBumpTxHex,
+  useSelectedFeeRate,
+  useSelectedFeePriority,
+  useCancelAddress,
+  useChangeAddress,
+  useRbfType,
+  useSelectedFeeBumpStrategy,
   setFeeBumpStatus,
   setFeeBumpError,
   setFeeBumpResult,
-} from "../../../../../actions/feeBumpingActions";
-import {
-  getFeeBumpTransaction,
-  getFeeBumpTxHex,
-  getSelectedFeeRate,
-  getSelectedFeePriority,
-  getCancelAddress,
-  getChangeAddress,
-  getRbfType,
-  getSelectedFeeBumpStrategy,
-} from "../../../../../selectors/feeBumping";
+} from "../context";
 
 /**
  * Hook for RBF (Replace-By-Fee) operations with comprehensive wallet integration
@@ -43,19 +42,20 @@ import {
  */
 export const useRBF = () => {
   const dispatch = useDispatch();
+  const feeBumpDispatch = useFeeBumpDispatch(); // dispatch for fee bump actions
 
   // We now only manage loading locally since it's operation-specific rest is redux managed
   const [isCreating, setIsCreating] = useState(false);
 
-  // Get all state from Redux
-  const transaction = useSelector(getFeeBumpTransaction);
-  const txHex = useSelector(getFeeBumpTxHex);
-  const selectedFeeRate = useSelector(getSelectedFeeRate);
-  const selectedPriority = useSelector(getSelectedFeePriority);
-  const cancelAddress = useSelector(getCancelAddress);
-  const changeAddress = useSelector(getChangeAddress);
-  const rbfType = useSelector(getRbfType);
-  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
+  // Get all state from Context
+  const transaction = useFeeBumpTransaction();
+  const txHex = useFeeBumpTxHex();
+  const selectedFeeRate = useSelectedFeeRate();
+  const selectedPriority = useSelectedFeePriority();
+  const cancelAddress = useCancelAddress();
+  const changeAddress = useChangeAddress();
+  const rbfType = useRbfType();
+  const selectedStrategy = useSelectedFeeBumpStrategy();
 
   // Get wallet settings from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -114,8 +114,8 @@ export const useRBF = () => {
       }
 
       setIsCreating(true);
-      dispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
-      dispatch(setFeeBumpError(null));
+      feeBumpDispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
+      feeBumpDispatch(setFeeBumpError(null));
 
       try {
         // Get blockchain client
@@ -230,7 +230,7 @@ export const useRBF = () => {
           createdAt: new Date().toISOString(),
         };
 
-        dispatch(setFeeBumpResult(result));
+        feeBumpDispatch(setFeeBumpResult(result));
 
         return psbtBase64;
       } catch (error) {
@@ -239,7 +239,7 @@ export const useRBF = () => {
           error instanceof Error
             ? error.message
             : "Unknown error creating RBF transaction";
-        dispatch(setFeeBumpError(errorMessage));
+        feeBumpDispatch(setFeeBumpError(errorMessage));
         throw error;
       } finally {
         setIsCreating(false);
@@ -254,6 +254,7 @@ export const useRBF = () => {
       changeAddress,
       defaultChangeAddress,
       dispatch,
+      feeBumpDispatch,
       network,
       addressType,
       requiredSigners,
@@ -293,8 +294,8 @@ export const useRBF = () => {
       }
 
       setIsCreating(true);
-      dispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
-      dispatch(setFeeBumpError(null));
+      feeBumpDispatch(setFeeBumpStatus(FeeBumpStatus.CREATING));
+      feeBumpDispatch(setFeeBumpError(null));
 
       try {
         // Get blockchain client
@@ -362,7 +363,7 @@ export const useRBF = () => {
           createdAt: new Date().toISOString(),
         };
         console.log("cancel", psbtBase64);
-        dispatch(setFeeBumpResult(result));
+        feeBumpDispatch(setFeeBumpResult(result));
 
         return psbtBase64;
       } catch (error) {
@@ -371,7 +372,7 @@ export const useRBF = () => {
           error instanceof Error
             ? error.message
             : "Unknown error creating cancel RBF transaction";
-        dispatch(setFeeBumpError(errorMessage));
+        feeBumpDispatch(setFeeBumpError(errorMessage));
         throw error;
       } finally {
         setIsCreating(false);
@@ -385,6 +386,7 @@ export const useRBF = () => {
       selectedStrategy,
       cancelAddress,
       dispatch,
+      feeBumpDispatch,
       network,
       requiredSigners,
       depositNodes,

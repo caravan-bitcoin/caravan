@@ -1,5 +1,4 @@
 import React from "react";
-import { useSelector } from "react-redux";
 import {
   Box,
   LinearProgress,
@@ -10,10 +9,10 @@ import {
 import { FeeStrategySelector } from "../FeeStrategySelector";
 import { FeeBumpStatus } from "../../types";
 import {
-  getFeeBumpRecommendation,
-  getFeeBumpStatus,
-  getFeeBumpError,
-} from "../../../../../../selectors/feeBumping";
+  useFeeBumpStatus,
+  useFeeBumpRecommendation,
+  useFeeBumpError,
+} from "../../context";
 
 /**
  * Step 1: Strategy Selection
@@ -23,10 +22,9 @@ import {
  * FeeStrategySelector once analysis is complete.
  */
 export const StrategySelectionStep: React.FC = () => {
-  const recommendation = useSelector(getFeeBumpRecommendation);
-  const status = useSelector(getFeeBumpStatus);
-  const error = useSelector(getFeeBumpError);
-
+  const recommendation = useFeeBumpRecommendation();
+  const status = useFeeBumpStatus();
+  const error = useFeeBumpError();
   // If we have a recommendation, show the strategy selector
   if (recommendation) {
     return <FeeStrategySelector />;

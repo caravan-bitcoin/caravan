@@ -1,9 +1,8 @@
 import React from "react";
-import { useSelector } from "react-redux";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "../RBF/RBFForm";
-import { getSelectedFeeBumpStrategy } from "../../../../../../selectors/feeBumping";
+import { useSelectedFeeBumpStrategy } from "../../context";
 import { Transaction } from "../../../types";
 
 interface ConfigurationStepProps {
@@ -28,7 +27,7 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onSubmit,
   isCreating,
 }) => {
-  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
+  const selectedStrategy = useSelectedFeeBumpStrategy();
 
   // Calculate original fee rate helper function
   const calculateOriginalFeeRate = (): number => {

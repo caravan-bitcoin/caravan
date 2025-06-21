@@ -1,5 +1,4 @@
 import React from "react";
-import { useSelector } from "react-redux";
 import {
   Box,
   LinearProgress,
@@ -10,12 +9,12 @@ import {
 } from "@mui/material";
 import { TransactionComparison } from "../TransactionComparison";
 import { FeeBumpStatus } from "../../types";
-import {
-  getFeeBumpStatus,
-  getFeeBumpError,
-  getFeeBumpResult,
-} from "../../../../../../selectors/feeBumping";
 import { Transaction } from "../../../types";
+import {
+  useFeeBumpStatus,
+  useFeeBumpError,
+  useFeeBumpResult,
+} from "../../context";
 
 interface ReviewStepProps {
   transaction: Transaction;
@@ -35,9 +34,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   onDownloadPSBT,
   downloadClicked,
 }) => {
-  const status = useSelector(getFeeBumpStatus);
-  const error = useSelector(getFeeBumpError);
-  const result = useSelector(getFeeBumpResult);
+  const status = useFeeBumpStatus();
+  const error = useFeeBumpError();
+  const result = useFeeBumpResult();
 
   return (
     <Box>

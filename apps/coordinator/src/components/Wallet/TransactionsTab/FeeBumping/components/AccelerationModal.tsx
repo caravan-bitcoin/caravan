@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useSelector } from "react-redux";
 import {
   Box,
   Button,
@@ -21,11 +20,11 @@ import { useRBF } from "../hooks/useRBF";
 import { FeeBumpStatus, FeePriority } from "../types";
 import { downloadFile } from "../../../../../utils";
 import {
-  getFeeBumpStatus,
-  getFeeBumpRecommendation,
-  getSelectedFeeBumpStrategy,
-  getFeeBumpResult,
-} from "../../../../../selectors/feeBumping";
+  useFeeBumpStatus,
+  useFeeBumpRecommendation,
+  useSelectedFeeBumpStrategy,
+  useFeeBumpResult,
+} from "../context";
 import { Transaction } from "../../types";
 import {
   StrategySelectionStep,
@@ -70,10 +69,10 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   const [downloadClicked, setDownloadClicked] = useState(false);
 
   // Get state from Redux instead of props
-  const status = useSelector(getFeeBumpStatus);
-  const recommendation = useSelector(getFeeBumpRecommendation);
-  const selectedStrategy = useSelector(getSelectedFeeBumpStrategy);
-  const result = useSelector(getFeeBumpResult);
+  const status = useFeeBumpStatus();
+  const recommendation = useFeeBumpRecommendation();
+  const selectedStrategy = useSelectedFeeBumpStrategy();
+  const result = useFeeBumpResult();
 
   // Get hooks - no state management in hooks now ...
   const { setTransactionForBumping, reset } = useFeeBumping();
