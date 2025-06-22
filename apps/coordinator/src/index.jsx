@@ -6,12 +6,12 @@ import ReduxPromise from "redux-promise";
 import thunk from "redux-thunk";
 import App from "./components/AppContainer";
 import reducers from "./reducers";
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: "light",
   },
 });
 

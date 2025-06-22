@@ -25,4 +25,4 @@ export interface Transaction {
   feeRate: number;
   totalFee: number;
   size: number;
-} 
+}

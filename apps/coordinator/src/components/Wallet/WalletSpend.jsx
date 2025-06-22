@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import BigNumber from "bignumber.js";
 import {
   Box,
   Card,
@@ -35,18 +34,16 @@ import {
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
 } from "../../actions/transactionActions";
-import { naiveCoinSelection } from "../../utils";
 import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import { useTransactionAnalysis } from '../../hooks/useTransactionAnalysis';
+import { useTransactionAnalysis } from "../../hooks/useTransactionAnalysis";
 
 function WalletSpend(props) {
   const [importPSBTDisabled, setImportPSBTDisabled] = useState(false);
   const [importPSBTError, setImportPSBTError] = useState("");
-  const [feeEstimate, setFeeEstimate] = useState("");
 
   const {
     autoSpend,
@@ -101,7 +98,15 @@ function WalletSpend(props) {
       }
     }
     return false;
-  }, [inputs, outputs, autoSpend, props.finalizedOutputs, props.feeRateError, props.feeError, props.balanceError]);
+  }, [
+    inputs,
+    outputs,
+    autoSpend,
+    props.finalizedOutputs,
+    props.feeRateError,
+    props.feeError,
+    props.balanceError,
+  ]);
 
   const showSignTransaction = useCallback(() => {
     setSpendStep(SPEND_STEP_SIGN);
@@ -119,11 +124,14 @@ function WalletSpend(props) {
     deleteChangeOutput();
   }, [setSpendStep, finalizeOutputs, resetNodesSpend, deleteChangeOutput]);
 
-  const handleSpendMode = useCallback((event) => {
-    updateAutoSpend(!event.target.checked);
-    resetNodesSpend();
-    deleteChangeOutput();
-  }, [updateAutoSpend, resetNodesSpend, deleteChangeOutput]);
+  const handleSpendMode = useCallback(
+    (event) => {
+      updateAutoSpend(!event.target.checked);
+      resetNodesSpend();
+      deleteChangeOutput();
+    },
+    [updateAutoSpend, resetNodesSpend, deleteChangeOutput],
+  );
 
   const setPSBTToggleAndError = (disabled, errorMessage) => {
     setImportPSBTDisabled(disabled);
@@ -160,7 +168,7 @@ function WalletSpend(props) {
   const transactionAnalysis = useTransactionAnalysis({
     inputs: selectedUTXOs || [],
     outputs: transactionOutputs || [],
-    feeRate: feeRate || 1
+    feeRate: feeRate || 1,
   });
 
   return (
@@ -170,15 +178,17 @@ function WalletSpend(props) {
         {transactionAnalysis.dust.hasDustInputs && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             <AlertTitle>Dust Inputs Detected</AlertTitle>
-            {transactionAnalysis.dust.inputCount} of your selected inputs may be considered dust at {feeRate} sat/vB. 
-            This could result in higher fees or uneconomical spending.
+            {transactionAnalysis.dust.inputCount} of your selected inputs may be
+            considered dust at {feeRate} sat/vB. This could result in higher
+            fees or uneconomical spending.
           </Alert>
         )}
         {transactionAnalysis.fingerprinting.hasFingerprinting && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             <AlertTitle>Output Fingerprinting Detected</AlertTitle>
-            Your transaction outputs use mixed script types ({transactionAnalysis.fingerprinting.scriptTypes.join(', ')}), 
-            which may compromise privacy.
+            Your transaction outputs use mixed script types (
+            {transactionAnalysis.fingerprinting.scriptTypes.join(", ")}), which
+            may compromise privacy.
           </Alert>
         )}
         <Grid container>

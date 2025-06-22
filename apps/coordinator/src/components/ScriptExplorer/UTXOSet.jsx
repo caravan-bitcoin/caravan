@@ -20,10 +20,9 @@ import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
-import DustChip from '../DustChip';
-import ScriptTypeChip from '../ScriptTypeChip';
-import { useSelector } from 'react-redux';
-import { getFeeRate } from '../../selectors/transactionSelectors';
+import DustChip from "../DustChip";
+import ScriptTypeChip from "../ScriptTypeChip";
+import { getFeeRate } from "../../selectors/transactionSelectors";
 
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
 import styles from "./styles.module.scss";
@@ -57,13 +56,13 @@ class UTXOSet extends React.Component {
     if (multisig && !autoSpend) {
       const { node, existingTransactionInputs } = this.props;
       const { currentInputs } = this.state;
-      
+
       const prevSpentInputs = this.getFilteredInputs(
         currentInputs,
         prevProps.existingTransactionInputs,
         true,
       ).length;
-      
+
       const currentSpentInputs = this.getFilteredInputs(
         currentInputs,
         existingTransactionInputs,
@@ -122,12 +121,12 @@ class UTXOSet extends React.Component {
     } = this.props;
 
     let selectedInputs = inputs.filter((input) => input.checked);
-    
+
     if (multisig) {
       selectedInputs = selectedInputs.map((utxo) => ({
-        ...utxo, 
-        multisig, 
-        bip32Path
+        ...utxo,
+        multisig,
+        bip32Path,
       }));
     }
 
@@ -135,7 +134,7 @@ class UTXOSet extends React.Component {
       (sum, input) => sum.plus(input.amountSats),
       new BigNumber(0),
     );
-    
+
     this.setState({
       selectedInputsSats: totalSats,
     });
@@ -175,18 +174,19 @@ class UTXOSet extends React.Component {
   renderTableRows = () => {
     const { network, showSelection, finalizedOutputs } = this.props;
     const { currentInputs } = this.state;
-    
+
     // Get fee rate - fallback to 1 if not available
-    const feeRate = (typeof window !== 'undefined' && window.__REDUX_STORE__)
-      ? getFeeRate(window.__REDUX_STORE__.getState())
-      : 1;
+    const feeRate =
+      typeof window !== "undefined" && window.__REDUX_STORE__
+        ? getFeeRate(window.__REDUX_STORE__.getState())
+        : 1;
 
     return currentInputs.map((input, idx) => {
       const txidClass = `${styles.utxoTxid}${
         input.confirmed ? "" : ` ${styles.unconfirmed}`
       }`;
       const statusText = input.confirmed ? "confirmed" : "unconfirmed";
-      
+
       return (
         <TableRow hover key={input.txid}>
           {showSelection && (
@@ -225,7 +225,7 @@ class UTXOSet extends React.Component {
             <DustChip
               amountSats={input.amountSats}
               feeRate={feeRate || 1}
-              scriptType={input.scriptType || 'P2WPKH'}
+              scriptType={input.scriptType || "P2WPKH"}
             />
           </TableCell>
         </TableRow>
@@ -241,7 +241,7 @@ class UTXOSet extends React.Component {
       finalizedOutputs,
     } = this.props;
     const { selectedInputsSats, currentInputs } = this.state;
-    
+
     return (
       <>
         <Typography variant="h5">

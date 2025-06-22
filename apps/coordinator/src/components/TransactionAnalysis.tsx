@@ -1,10 +1,10 @@
-import React from 'react';
-import { Box, Typography, Grid, Tooltip } from '@mui/material';
-import { Shield, CleaningServices } from '@mui/icons-material';
-import { useTransactionAnalysis } from '../hooks/useTransactionAnalysis';
-import DustChip from './DustChip';
-import OutputFingerprintChip from './OutputFingerprintChip';
-import ScriptTypeChip from './ScriptTypeChip';
+import React from "react";
+import { Box, Typography, Grid, Tooltip } from "@mui/material";
+import { Shield, CleaningServices } from "@mui/icons-material";
+import { useTransactionAnalysis } from "../hooks/useTransactionAnalysis";
+import DustChip from "./DustChip";
+import OutputFingerprintChip from "./OutputFingerprintChip";
+import ScriptTypeChip from "./ScriptTypeChip";
 
 interface UTXO {
   txid: string;
@@ -30,13 +30,21 @@ interface TransactionAnalysisProps {
  * Shows script type fingerprinting for transaction outputs.
  */
 const ScriptTypeAnalysis: React.FC<{ outputs: Output[] }> = ({ outputs }) => {
-  const { fingerprinting, summary } = useTransactionAnalysis({ outputs, inputs: [], feeRate: 0 });
+  const { fingerprinting, summary } = useTransactionAnalysis({
+    outputs,
+    inputs: [],
+    feeRate: 0,
+  });
 
   if (fingerprinting.hasFingerprinting) {
     return (
-      <Tooltip title={`This transaction uses mixed script types: ${fingerprinting.scriptTypes.join(', ')}`}>
+      <Tooltip
+        title={`This transaction uses mixed script types: ${fingerprinting.scriptTypes.join(", ")}`}
+      >
         <span>
-          <OutputFingerprintChip outputs={outputs.map(o => ({ ...o, amount: o.amountSats }))} />
+          <OutputFingerprintChip
+            outputs={outputs.map((o) => ({ ...o, amount: o.amountSats }))}
+          />
         </span>
       </Tooltip>
     );
@@ -46,17 +54,28 @@ const ScriptTypeAnalysis: React.FC<{ outputs: Output[] }> = ({ outputs }) => {
     return <ScriptTypeChip scriptType={fingerprinting.primaryScriptType} />;
   }
 
-  return <Typography variant="body2" color="textSecondary">N/A</Typography>;
+  return (
+    <Typography variant="body2" color="textSecondary">
+      N/A
+    </Typography>
+  );
 };
 
 /**
  * Shows dust analysis for transaction inputs.
  */
-const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({ inputs, feeRate }) => {
+const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({
+  inputs,
+  feeRate,
+}) => {
   const { dust } = useTransactionAnalysis({ inputs, outputs: [], feeRate });
 
   if (!dust.hasDustInputs) {
-    return <Typography variant="body2" color="textSecondary">No dust inputs detected.</Typography>;
+    return (
+      <Typography variant="body2" color="textSecondary">
+        No dust inputs detected.
+      </Typography>
+    );
   }
 
   return (
@@ -65,9 +84,9 @@ const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({ inputs, f
         <DustChip
           key={`${input.txid}-${input.index}`}
           amountSats={input.amountSats}
-          feeRate={feeRate}
-          scriptType={input.scriptType}
-          isDust={dust.inputs.some(d => d.txid === input.txid && d.index === input.index)}
+          isDust={dust.inputs.some(
+            (d) => d.txid === input.txid && d.index === input.index,
+          )}
         />
       ))}
     </Box>
@@ -78,10 +97,16 @@ const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({ inputs, f
  * Main component: TransactionAnalysis
  * Shows script type fingerprinting and dust analysis for the current transaction.
  */
-const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({ inputs, outputs, feeRate }) => {
+const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
+  inputs,
+  outputs,
+  feeRate,
+}) => {
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>Transaction Analysis</Typography>
+      <Typography variant="h6" gutterBottom>
+        Transaction Analysis
+      </Typography>
 
       {/* Output script type fingerprinting */}
       <Grid container spacing={2} alignItems="center">
@@ -97,7 +122,7 @@ const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({ inputs, outpu
           <ScriptTypeAnalysis outputs={outputs} />
         </Grid>
       </Grid>
-      
+
       {/* Input dust analysis */}
       <Grid container spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
         <Grid item>

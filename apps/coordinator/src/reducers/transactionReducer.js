@@ -432,10 +432,10 @@ export default (state = initialState(), action) => {
       return validateTransaction(deleteOutput(state, action));
     case SET_FEE_RATE:
       return validateTransaction(updateFeeRate(state, action));
-    case 'ANALYZE_TRANSACTION':
+    case "ANALYZE_TRANSACTION":
       return {
         ...state,
-        transactionAnalysis: action.analysis
+        transactionAnalysis: action.analysis,
       };
     case SET_FEE:
       return validateTransaction(updateFee(state, action));

@@ -30,7 +30,7 @@ class TransactionPreview extends React.Component {
       changeNode,
       setChangeOutputMultisig,
     } = this.props;
-    
+
     outputs.forEach((output) => {
       if (output.address === changeAddress) {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
@@ -44,9 +44,7 @@ class TransactionPreview extends React.Component {
       <TableRow key={output.address}>
         <TableCell>
           <code>{output.address}</code>
-          {output.address === changeAddress && (
-            <small>&nbsp;(change)</small>
-          )}
+          {output.address === changeAddress && <small>&nbsp;(change)</small>}
         </TableCell>
         <TableCell>
           <code>{BigNumber(output.amount).toFixed(8)}</code>
@@ -101,15 +99,15 @@ class TransactionPreview extends React.Component {
 
     return (
       <Box>
-        <TransactionAnalysis 
+        <TransactionAnalysis
           inputs={inputs || []}
           outputs={outputs || []}
           feeRate={feeRate || 1}
         />
-        
+
         <h2>Transaction Preview</h2>
         <UnsignedTransaction />
-        
+
         <h3>Inputs</h3>
         <UTXOSet
           inputs={inputs || []}
@@ -117,10 +115,10 @@ class TransactionPreview extends React.Component {
           showSelection={false}
           finalizedOutputs
         />
-        
+
         <h3>Outputs</h3>
         {this.buildOutputsTable()}
-        
+
         <Grid container>
           <Grid item xs={4}>
             <h3>Fee</h3>
@@ -135,7 +133,7 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
         </Grid>
-        
+
         <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>

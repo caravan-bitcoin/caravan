@@ -123,8 +123,22 @@ export function naiveCoinSelection(options) {
     numInputs,
   });
 
-  if (spendAll) changeRequired = false;
-  else {
+  if (spendAll) {
+    // Add all UTXOs from all slices
+    slices.forEach(slice => {
+      slice.utxos.forEach(utxo => {
+        selectedUtxos.push({
+          ...utxo,
+          scriptType: addressType,
+          multisig: slice.multisig,
+          bip32Path: slice.bip32Path,
+          change: slice.change,
+        });
+      });
+    });
+    changeRequired = false;
+    return [selectedUtxos, changeRequired];
+  } else {
     // go through slices and add utxos until we've met the required output total
     for (let i = 0; i < slices.length; i += 1) {
       const slice = slices[i];
@@ -140,18 +154,39 @@ export function naiveCoinSelection(options) {
         };
         selectedUtxos.push(utxoWithScriptType);
         inputTotal = inputTotal.plus(utxo.amountSats);
-        const estimatedFee = new BigNumber(
+        // First, estimate fee assuming NO change output
+        const estimatedFeeNoChange = new BigNumber(
           estimateMultisigTransactionFee({
             numInputs: selectedUtxos.length,
-            numOutputs: outputs.length + 1, // assume change
+            numOutputs: outputs.length,
             m,
             n,
             addressType,
             feesPerByteInSatoshis,
           }),
         );
-        if (inputTotal.isGreaterThan(outputTotal.plus(estimatedFee))) {
-          const changeAmount = inputTotal.minus(outputTotal).minus(estimatedFee);
+        const requiredTotalNoChange = outputTotal.plus(estimatedFeeNoChange);
+
+        if (inputTotal.isEqualTo(requiredTotalNoChange)) {
+          changeRequired = false;
+          return [selectedUtxos, changeRequired];
+        }
+
+        // Otherwise, estimate fee assuming a change output
+        const estimatedFeeWithChange = new BigNumber(
+          estimateMultisigTransactionFee({
+            numInputs: selectedUtxos.length,
+            numOutputs: outputs.length + 1,
+            m,
+            n,
+            addressType,
+            feesPerByteInSatoshis,
+          }),
+        );
+        const requiredTotalWithChange = outputTotal.plus(estimatedFeeWithChange);
+
+        if (inputTotal.isGreaterThan(requiredTotalWithChange)) {
+          const changeAmount = inputTotal.minus(outputTotal).minus(estimatedFeeWithChange);
           changeRequired = changeAmount.isGreaterThan(DUST_IN_SATOSHIS);
           return [selectedUtxos, changeRequired];
         }
