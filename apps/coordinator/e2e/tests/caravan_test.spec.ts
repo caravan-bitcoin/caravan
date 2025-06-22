@@ -1,14 +1,29 @@
 import { test, expect } from "@playwright/test";
 import bitcoinClient from "../utils/bitcoinClient";
 import { clientConfig } from "../utils/bitcoinClient";
+import path from "path"
+import fs from "fs"
+import { doesNotMatch } from "assert";
 
 test.describe("Caravan Wallet Creation", () => {
   let testWallets: any[] = [];
   let walletNames: string[] = []
   let client = bitcoinClient();
+  
+  
+  const downloadDir = path.join(__dirname,'../downloads');
+  let downloadedWalletFile: string;
+
 
   test.beforeAll(async () => {
     console.log("Setting up test wallets...");
+
+    //create download dir if not exists
+    if(!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir,{recursive: true})
+    }
+
+
 
     if(process.env.TEST_WALLET_NAMES && process.env.TEST_WALLETS){
       walletNames= JSON.parse(process.env.TEST_WALLET_NAMES);
@@ -198,11 +213,41 @@ test.describe("Caravan Wallet Creation", () => {
 
     await page.click("button[type=button]:has-text('Enter')");
 
-    await page.waitForTimeout(1000)
+    // await page.waitForTimeout(1000)
 
-    await page.locator("button#confirm-wallet[type='button']").click()
-    await page.waitForTimeout(1000)
+    // await page.locator("button#confirm-wallet[type='button']").click()
+    await page.waitForTimeout(5000)
 
-    console.log("Wallet creation test completed");
+    //wait for the file to start on curr page and then will return a download obj
+    const downloadPromise = page.waitForEvent('download');
+
+    await page.click('button[type=button]:has-text("Download Wallet Details")');
+
+    //wait for download to complete
+    const download = await downloadPromise;
+
+    const suggestedFilename = download.suggestedFilename();
+    console.log("downloaded File: ",suggestedFilename)
+    console.log("downloaded File Url: ",download.url)
+    console.log("downloaded File Path: ",download.path)
+
+    //save the file to our created download dir
+
+    downloadedWalletFile = path.join(downloadDir,suggestedFilename);
+    await download.saveAs(downloadedWalletFile);
+
+    expect(fs.existsSync(downloadedWalletFile)).toBe(true);
+
+    const walletData = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
+    console.log("wallet-data:",walletData);
+
+    expect(walletData).toHaveProperty('name');
+    expect(walletData).toHaveProperty('network');
+    expect(walletData).toHaveProperty('addressType');
+    expect(walletData).toHaveProperty('extendedPublicKeys');
+
+    process.env.DOWNLOADED_WALLET_FILE = downloadedWalletFile
+
+     console.log("Wallet creation and download test completed");
   });
 });

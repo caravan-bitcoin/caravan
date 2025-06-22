@@ -12,11 +12,11 @@ const globalWalletData ={
 async function globalSetup(_config: FullConfig){
 
    try {
-    console.log("Starting docker containers");
-    execSync("docker compose up -d", {
-        stdio: "inherit",
-        cwd: process.cwd()
-    })
+    // console.log("Starting docker containers");
+    // execSync("docker compose up -d", {
+    //     stdio: "inherit",
+    //     cwd: process.cwd()
+    // })
 
     console.log("Waiting for continers to be ready...");
     await new Promise(resolve => setTimeout(resolve,2000));
@@ -28,13 +28,13 @@ async function globalSetup(_config: FullConfig){
 
     console.log("Creating test wallets in globally...")
 
-    const timestamp = Date.now();
+    // const timestamp = Date.now();
     
     const walletNames = [
-        `test_wallet_${timestamp}_1`,
-        `test_wallet_${timestamp}_2`,
-        `test_wallet_${timestamp}_3`,
-        `watcher_wallet_${timestamp}`
+        `test_wallet_1`,
+        `test_wallet_2`,
+        `test_wallet_3`,
+        `watcher_wallet}`
     ]
 
     for (const walletName in walletNames){
@@ -72,10 +72,10 @@ async function globalSetup(_config: FullConfig){
     try {
         //cleaning up on failures
 
-        execSync("docker compose down",{
-            stdio: "inherit",
-            cwd: process.cwd()
-        })
+        // execSync("docker compose down",{
+        //     stdio: "inherit",
+        //     cwd: process.cwd()
+        // })
         console.log("")
         
     } catch (clearupError) {

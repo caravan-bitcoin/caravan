@@ -24,10 +24,10 @@ async function globalTeardown(_config: FullConfig) {
 
     console.log("Stopping docker containers...");
     //removing docker containers after use
-    execSync("docker compose down", {
-      cwd: process.cwd(),
-      stdio: "inherit",
-    });
+    // execSync("docker compose down", {
+    //   cwd: process.cwd(),
+    //   stdio: "inherit",
+    // });
 
     console.log("Global Teardown completes");
   } catch (error) {
