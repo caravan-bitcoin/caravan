@@ -103,11 +103,9 @@
     "@caravan/psbt": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
-    "@emotion/react": "^11.10.6",
-    "@emotion/styled": "^11.10.6",
-    "@mui/icons-material": "^5.11.11",
+    "@mui/icons-material": "^5.14.19",
     "@mui/lab": "^5.0.0-alpha.72",
-    "@mui/material": "^5.5.0",
+    "@mui/material": "^5.14.19",
     "@mui/styles": "^5.5.0",
     "@trezor/transport": "^1.1.15",
     "@vitejs/plugin-react": "^3.1.0",
@@ -148,6 +146,8 @@
     "redux-promise": "^0.6.0",
     "redux-thunk": "^2.3.0",
     "reselect": "^4.0.0",
-    "sass": "^1.56.2"
+    "sass": "^1.56.2",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0"
   }
 }

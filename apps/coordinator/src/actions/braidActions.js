@@ -15,7 +15,8 @@ export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
  * @param {array<object>} slices - array of slices from one or more braids
  */
 export const fetchSliceData = async (slices) => {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
+    const { addressType } = getState().settings;
     const blockchainClient = dispatch(updateBlockchainClient());
     if (!blockchainClient) return;
 
@@ -42,7 +43,14 @@ export const fetchSliceData = async (slices) => {
 
         // for each queried slice, we need to check if there are utxos
         // skip if no updates
-        if (!addressData || !addressData.utxos.length) return;
+        if (!addressData || !addressData.utxos || !addressData.utxos.length) return;
+        
+        const { utxos, ...restOfAddressData } = addressData;
+
+        const utxosWithScriptType = utxos.map((utxo) => ({
+          ...utxo,
+          scriptType: addressType,
+        }));
 
         const updater = slice.change
           ? updateChangeSliceAction
@@ -50,7 +58,8 @@ export const fetchSliceData = async (slices) => {
         const updatedSlice = {
           bip32Path: slice.bip32Path,
           addressKnown: true,
-          ...addressData,
+          ...restOfAddressData,
+          utxos: utxosWithScriptType,
           addressStatus,
         };
         dispatch(updater(updatedSlice));

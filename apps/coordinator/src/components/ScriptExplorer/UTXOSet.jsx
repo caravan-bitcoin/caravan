@@ -14,102 +14,105 @@ import {
   TableCell,
   Typography,
   Checkbox,
+  Tooltip,
 } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
+import DustChip from '../DustChip';
+import ScriptTypeChip from '../ScriptTypeChip';
+import { useSelector } from 'react-redux';
+import { getFeeRate } from '../../selectors/transactionSelectors';
 
-// Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
-
-// Assets
 import styles from "./styles.module.scss";
 
 class UTXOSet extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      inputsSatsSelected: props.inputsTotalSats,
-      localInputs: props.inputs.map((input) => {
-        return {
-          ...input,
-          checked: props.selectAll,
-        };
-      }),
-      toggleAll: true,
+      selectedInputsSats: props.inputsTotalSats,
+      currentInputs: props.inputs.map((input) => ({
+        ...input,
+        checked: props.selectAll,
+      })),
+      selectAllToggle: true,
     };
   }
 
   componentDidUpdate(prevProps) {
-    // This function exists because we need to respond to the parent node having
-    // its select/spend checkbox clicked (toggling select-all or select-none).
-    // None of this needs to happen on the redeem script interface.
+    // Update local inputs when props change
+    if (prevProps.inputs !== this.props.inputs) {
+      this.setState({
+        currentInputs: this.props.inputs.map((input) => ({
+          ...input,
+          checked: this.props.selectAll,
+        })),
+      });
+    }
+
+    // Handle multisig scenarios - need to sync with parent checkbox state
     const { multisig, autoSpend } = this.props;
     if (multisig && !autoSpend) {
       const { node, existingTransactionInputs } = this.props;
-      const { localInputs } = this.state;
-      const prevMyInputsBeingSpent = this.filterInputs(
-        localInputs,
+      const { currentInputs } = this.state;
+      
+      const prevSpentInputs = this.getFilteredInputs(
+        currentInputs,
         prevProps.existingTransactionInputs,
         true,
       ).length;
-      const myInputsBeingSpent = this.filterInputs(
-        localInputs,
+      
+      const currentSpentInputs = this.getFilteredInputs(
+        currentInputs,
         existingTransactionInputs,
         true,
       ).length;
 
-      const isFullSpend = myInputsBeingSpent === localInputs.length;
+      const allSelected = currentSpentInputs === currentInputs.length;
 
-      // If the spend bool on the node changes, toggleAll the checks.
-      // but that's not quite enough because if a single UTXO is selected
-      // then it is also marked from not spend -> spend ... so don't want
-      // to toggleAll in that case. Furthermore, if you have 5 UTXOs and
-      // 2 selected and *then* click select all ... we also need to toggelAll.
+      // Sync with parent spend checkbox when needed
       if (
         (prevProps.node.spend !== node.spend ||
-          myInputsBeingSpent !== prevMyInputsBeingSpent) &&
-        isFullSpend
+          currentSpentInputs !== prevSpentInputs) &&
+        allSelected
       ) {
-        this.toggleAll(node.spend);
+        this.handleSelectAll(node.spend);
       }
     }
   }
 
-  filterInputs = (localInputs, transactionStoreInputs, filterToMyInputs) => {
+  getFilteredInputs = (localInputs, storeInputs, includeMatches) => {
     return localInputs.filter((input) => {
-      const included = transactionStoreInputs.filter((utxo) => {
+      const matches = storeInputs.filter((utxo) => {
         return utxo.txid === input.txid && utxo.index === input.index;
       });
-      return filterToMyInputs ? included.length > 0 : included.length === 0;
+      return includeMatches ? matches.length > 0 : matches.length === 0;
     });
   };
 
-  toggleInput = (inputIndex) => {
-    const { localInputs } = this.state;
-    this.setState({ toggleAll: false });
+  handleInputToggle = (idx) => {
+    const { currentInputs } = this.state;
+    this.setState({ selectAllToggle: false });
 
-    localInputs[inputIndex].checked = !localInputs[inputIndex].checked;
-
-    this.setInputsAndUpdateDisplay(localInputs);
+    currentInputs[idx].checked = !currentInputs[idx].checked;
+    this.updateInputSelection(currentInputs);
   };
 
-  toggleAll = (setTo = null) => {
-    const { localInputs, toggleAll } = this.state;
-    const toggled = !toggleAll;
+  handleSelectAll = (forceState = null) => {
+    const { currentInputs, selectAllToggle } = this.state;
+    const newState = !selectAllToggle;
 
-    localInputs.forEach((input) => {
-      const i = input;
-      i.checked = setTo === null ? toggled : setTo;
-      return i;
+    currentInputs.forEach((input) => {
+      input.checked = forceState !== null ? forceState : newState;
     });
 
-    this.setInputsAndUpdateDisplay(localInputs);
-    this.setState({ toggleAll: toggled });
+    this.updateInputSelection(currentInputs);
+    this.setState({ selectAllToggle: newState });
   };
 
-  setInputsAndUpdateDisplay = (incomingInputs) => {
+  updateInputSelection = (inputs) => {
     const {
       setInputs,
       multisig,
@@ -117,84 +120,90 @@ class UTXOSet extends React.Component {
       existingTransactionInputs,
       setSpendCheckbox,
     } = this.props;
-    const { localInputs } = this.state;
-    let inputsToSpend = incomingInputs.filter((input) => input.checked);
+
+    let selectedInputs = inputs.filter((input) => input.checked);
+    
     if (multisig) {
-      inputsToSpend = inputsToSpend.map((utxo) => {
-        return { ...utxo, multisig, bip32Path };
-      });
+      selectedInputs = selectedInputs.map((utxo) => ({
+        ...utxo, 
+        multisig, 
+        bip32Path
+      }));
     }
-    const satsSelected = inputsToSpend.reduce(
-      (accumulator, input) => accumulator.plus(input.amountSats),
+
+    const totalSats = selectedInputs.reduce(
+      (sum, input) => sum.plus(input.amountSats),
       new BigNumber(0),
     );
+    
     this.setState({
-      inputsSatsSelected: satsSelected,
+      selectedInputsSats: totalSats,
     });
-    let totalInputsToSpend = inputsToSpend;
 
-    // The following is only relevant on the wallet interface
+    let finalInputs = selectedInputs;
+
+    // For multisig wallets, combine with inputs from other nodes
     if (multisig) {
-      // There are 3 total sets of inputs to care about:
-      // 1. localInputs - all inputs from this node/address
-      // 2. inputsToSpend - equal to or subset of those from #1 (inputs marked checked==true)
-      // 3. existingTransactionInputs - all inputs from all nodes/addresses
-
-      // Check if #3 contains any inputs not associated with this component
-      const notMyInputs = this.filterInputs(
+      const otherInputs = this.getFilteredInputs(
         existingTransactionInputs,
-        localInputs,
+        inputs,
         false,
       );
 
-      if (notMyInputs.length > 0) {
-        totalInputsToSpend = inputsToSpend.concat(notMyInputs);
+      if (otherInputs.length > 0) {
+        finalInputs = selectedInputs.concat(otherInputs);
       }
 
-      // Now we push a change up to the top level node so it can update its checkbox
-      const numLocalInputsToSpend = inputsToSpend.length;
-      if (numLocalInputsToSpend === 0) {
+      // Update parent checkbox state
+      const numSelected = selectedInputs.length;
+      if (numSelected === 0) {
         setSpendCheckbox(false);
-      } else if (numLocalInputsToSpend < localInputs.length) {
+      } else if (numSelected < inputs.length) {
         setSpendCheckbox("indeterminate");
       } else {
         setSpendCheckbox(true);
       }
     }
 
-    if (totalInputsToSpend.length > 0) {
-      setInputs(totalInputsToSpend);
+    if (finalInputs.length > 0) {
+      setInputs(finalInputs);
     } else if (multisig) {
-      // If we do this on redeem script interface, the panel will disappear
       setInputs([]);
     }
   };
 
-  renderInputs = () => {
+  renderTableRows = () => {
     const { network, showSelection, finalizedOutputs } = this.props;
-    const { localInputs } = this.state;
-    return localInputs.map((input, inputIndex) => {
-      const confirmedStyle = `${styles.utxoTxid}${
+    const { currentInputs } = this.state;
+    
+    // Get fee rate - fallback to 1 if not available
+    const feeRate = (typeof window !== 'undefined' && window.__REDUX_STORE__)
+      ? getFeeRate(window.__REDUX_STORE__.getState())
+      : 1;
+
+    return currentInputs.map((input, idx) => {
+      const txidClass = `${styles.utxoTxid}${
         input.confirmed ? "" : ` ${styles.unconfirmed}`
       }`;
-      const confirmedTitle = input.confirmed ? "confirmed" : "unconfirmed";
+      const statusText = input.confirmed ? "confirmed" : "unconfirmed";
+      
       return (
         <TableRow hover key={input.txid}>
           {showSelection && (
             <TableCell>
               <Checkbox
-                data-testid={`utxo-checkbox-${inputIndex}`}
+                data-testid={`utxo-checkbox-${idx}`}
                 checked={input.checked}
-                onClick={() => this.toggleInput(inputIndex)}
+                onClick={() => this.handleInputToggle(idx)}
                 color="primary"
                 disabled={finalizedOutputs}
               />
             </TableCell>
           )}
-          <TableCell>{inputIndex + 1}</TableCell>
-          <TableCell className={confirmedStyle}>
+          <TableCell>{idx + 1}</TableCell>
+          <TableCell className={txidClass}>
             <Copyable text={input.txid} showIcon showText={false}>
-              <code title={confirmedTitle}>{input.txid}</code>
+              <code title={statusText}>{input.txid}</code>
             </Copyable>
           </TableCell>
           <TableCell>
@@ -204,10 +213,20 @@ class UTXOSet extends React.Component {
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
           </TableCell>
           <TableCell>
+            <ScriptTypeChip scriptType={input.scriptType} />
+          </TableCell>
+          <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
               <OpenInNew />,
             )}
+          </TableCell>
+          <TableCell align="right">
+            <DustChip
+              amountSats={input.amountSats}
+              feeRate={feeRate || 1}
+              scriptType={input.scriptType || 'P2WPKH'}
+            />
           </TableCell>
         </TableRow>
       );
@@ -221,42 +240,48 @@ class UTXOSet extends React.Component {
       hideSelectAllInHeader,
       finalizedOutputs,
     } = this.props;
-    const { inputsSatsSelected, toggleAll, localInputs } = this.state;
+    const { selectedInputsSats, currentInputs } = this.state;
+    
     return (
       <>
         <Typography variant="h5">
-          {`Available Inputs (${localInputs.length})`}{" "}
+          Available Inputs ({currentInputs.length})
         </Typography>
-        <p>The following UTXOs will be spent as inputs in a new transaction.</p>
+        <p>These UTXOs will be used as inputs for the new transaction.</p>
         <Table>
           <TableHead>
-            <TableRow hover>
+            <TableRow>
               {showSelection && !hideSelectAllInHeader && (
                 <TableCell>
                   <Checkbox
-                    data-testid="utxo-check-all"
-                    checked={toggleAll}
-                    onClick={() => this.toggleAll()}
-                    color="primary"
+                    data-testid="utxo-select-all-checkbox"
+                    checked={this.state.selectAllToggle}
+                    onChange={() => this.handleSelectAll()}
                     disabled={finalizedOutputs}
                   />
                 </TableCell>
               )}
-              {hideSelectAllInHeader && <TableCell />}
+              {showSelection && hideSelectAllInHeader && <TableCell />}
               <TableCell>Number</TableCell>
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
+              <TableCell>Script Type</TableCell>
               <TableCell>View</TableCell>
+              <TableCell align="right">
+                <Tooltip title="Shows if UTXO is dust at current fee rate">
+                  <span>Dust Status</span>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>{this.renderInputs()}</TableBody>
+          <TableBody>{this.renderTableRows()}</TableBody>
           <TableFooter>
             <TableRow hover>
               <TableCell colSpan={3}>TOTAL:</TableCell>
               <TableCell colSpan={2}>
-                {inputsSatsSelected
-                  ? satoshisToBitcoins(inputsSatsSelected)
+                {selectedInputsSats
+                  ? satoshisToBitcoins(selectedInputsSats)
                   : satoshisToBitcoins(inputsTotalSats)}
               </TableCell>
             </TableRow>
