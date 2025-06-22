@@ -1,4 +1,3 @@
-
 # Playwright
 node_modules/
 /test-results/
@@ -8,3 +7,6 @@ node_modules/
 
 # Bitcoin-Core
 bitcoin-data
+
+# Environment variables
+.env
