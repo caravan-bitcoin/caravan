@@ -485,7 +485,7 @@ class OutputsForm extends React.Component {
                 </Tooltip>
               </h3>
               <Typography gutterBottom>
-                Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} Sats
+                Spend Waste Amount (SWA): {wasteAmount} Sats
                 <Tooltip
                   title="SWA indicates whether it is economical to spend a particular output now in a given transaction
 or wait to consolidate it later when fees could be low."
