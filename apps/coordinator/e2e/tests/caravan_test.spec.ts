@@ -151,12 +151,12 @@ test.describe("Caravan Wallet Creation", () => {
 
     await page.waitForTimeout(1000)
 
-    const p2sh_xpub1 = (await client?.extractAddressDescriptors(walletNames[0]))
-      ?.p2sh.xpub as string;
-    const p2sh_xpub2 = (await client?.extractAddressDescriptors(walletNames[1]))
-      ?.p2sh.xpub as string;
-    const p2sh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
-      ?.p2sh.xpub as string;
+    const p2pkh_xpub1 = (await client?.extractAddressDescriptors(walletNames[0]))
+      ?.p2pkh.xpub as string;
+    const p2pkh_xpub2 = (await client?.extractAddressDescriptors(walletNames[1]))
+      ?.p2pkh.xpub as string;
+    const p2pkh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
+      ?.p2pkh.xpub as string;
 
 
    //filling xpub1 
@@ -167,7 +167,7 @@ test.describe("Caravan Wallet Creation", () => {
     );
 
 
-    await page.locator('textarea[name="publicKey"]').fill(p2sh_xpub1);
+    await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub1);
 
 
     await page.click("button[type=button]:has-text('Enter')");
@@ -179,7 +179,7 @@ test.describe("Caravan Wallet Creation", () => {
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    await page.locator('textarea[name="publicKey"]').fill(p2sh_xpub2);
+    await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub2);
 
 
     await page.click("button[type=button]:has-text('Enter')");
@@ -192,7 +192,7 @@ test.describe("Caravan Wallet Creation", () => {
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    await page.locator('textarea[name="publicKey"]').fill(p2sh_xpub3);
+    await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub3);
 
     await page.waitForTimeout(1000);
 

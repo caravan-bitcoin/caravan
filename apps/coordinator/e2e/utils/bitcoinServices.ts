@@ -147,9 +147,9 @@ export class BitcoinCoreService {
       /^sh\(wpkh\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\)\#(.+)$/;
 
     const parsedAddressDescriptors: Record<AddressType, descStructure> = {
-      p2sh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
-      "p2sh-p2wsh": { checksum: "", fingerPrint: "", path: "", xpub: "" },
-      p2wsh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      p2pkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      "p2sh-p2wpkh": { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
     };
 
     for (let desc of allDesc.descriptors) {
@@ -158,7 +158,7 @@ export class BitcoinCoreService {
       if (descriptor.startsWith("sh(wpkh(")) {
         const match = descriptor.match(shWpkhDescRegex);
         if (match) {
-          parsedAddressDescriptors["p2sh-p2wsh"] = {
+          parsedAddressDescriptors["p2sh-p2wpkh"] = {
             fingerPrint: match[1],
             path: match[2],
             xpub: match[3],
@@ -169,14 +169,14 @@ export class BitcoinCoreService {
         const match = descriptor.match(standardDescRegex);
         if (match) {
           if (descriptor.startsWith("pkh")) {
-            parsedAddressDescriptors.p2sh = {
+            parsedAddressDescriptors.p2pkh = {
               fingerPrint: match[1],
               path: match[2],
               xpub: match[3],
               checksum: match[5],
             };
           } else if (descriptor.startsWith("wpkh")) {
-            parsedAddressDescriptors.p2wsh = {
+            parsedAddressDescriptors.p2wpkh = {
               fingerPrint: match[1],
               path: match[2],
               xpub: match[3],
