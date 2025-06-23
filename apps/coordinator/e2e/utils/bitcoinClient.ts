@@ -1,5 +1,6 @@
-import { BitcoinCoreService, rpcConfig } from "./bitcoinServices";
+import { BitcoinCoreService } from "./bitcoinServices";
 import dotenv from 'dotenv';
+import { rpcConfig } from "./types";
 
 // Load env variables from .env file
 dotenv.config();
@@ -8,7 +9,7 @@ export const clientConfig: rpcConfig = {
     username: process.env.BITCOIN_RPC_USER!,
     password: process.env.BITCOIN_RPC_PASSWORD!,
     port: parseInt(process.env.BITCOIN_RPC_PORT!),
-    host: `http://localhost:18443}`
+    host: `http://localhost:${process.env.BITCOIN_RPC_PORT}}`
 }
 
 function bitcoinClient(){

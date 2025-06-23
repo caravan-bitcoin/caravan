@@ -1,32 +1,5 @@
 import BitcoinCore from "bitcoin-core";
-
-export interface rpcConfig {
-  username: string;
-  password: string;
-  host: string;
-  port: number;
-  wallet?: string;
-}
-
-export interface walletConfig {
-  wallet_name: string;
-  disable_private_keys?: boolean;
-  blank?: boolean;
-  passphrase?: string;
-  avoid_reuse?: boolean;
-  descriptors?: boolean;
-  load_on_startup?: boolean;
-  external_signer?: boolean;
-}
-
-export type AddressType = "p2sh" | "p2sh-p2wsh" | "p2wsh";
-
-export interface descStructure {
-  checksum: string;
-  fingerPrint: string;
-  path: string;
-  xpub: string;
-}
+import {AddressType, descStructure, rpcConfig, walletConfig} from "./types"
 
 export class BitcoinCoreService {
   private clientConfig: rpcConfig;
@@ -35,10 +8,10 @@ export class BitcoinCoreService {
 
   constructor(clientConfig: rpcConfig) {
     this.clientConfig = {
-      username: clientConfig.username || "abhishek",
-      password: clientConfig.password || "abhishek",
-      port: clientConfig.port || 18443,
-      host: clientConfig.host || "http://localhost:18443",
+      username: clientConfig.username,
+      password: clientConfig.password,
+      port: clientConfig.port,
+      host: clientConfig.host,
     };
 
     this.client = new BitcoinCore(this.clientConfig);
