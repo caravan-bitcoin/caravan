@@ -125,11 +125,17 @@ export class WasteMetrics extends WalletMetrics {
       requiredSignerCount: number;
       totalSignerCount: number;
     },
-    estimatedLongTermFeeRate: number, // Long term estimated fee-rate
-  ): number {
-    const costOfTx: number = getInputWeight(scriptType, config) * feeRate;
-    return weight * (feeRate - estimatedLongTermFeeRate) + costOfTx;
-  }
+    estimatedLongTermFeeRate: number, // Future fee rate (sat/vbyte)
+): number {
+    // For P2SH 2-of-3 multisig, the input size is ~406 vbytes
+    const changeInputWeight = getInputWeight(scriptType, config);
+    
+    // Waste = (Cost of creating change now) + (Savings from spending later)
+    return (
+      (weight * feeRate) + 
+      (changeInputWeight * (estimatedLongTermFeeRate - feeRate))
+    );
+}
 
   /*
     Name : calculateDustLimits

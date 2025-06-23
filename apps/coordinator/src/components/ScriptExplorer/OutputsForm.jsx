@@ -255,15 +255,8 @@ class OutputsForm extends React.Component {
   };
 
   calculateWaste = () => {
-    console.log("🧮 [calculateWaste] Called");
-
     const { feeRate, fee } = this.props;
     const { longTermFeeEstimate } = this.state;
-
-    console.log("📊 Inputs:");
-    console.log("  • feeRate:", feeRate);
-    console.log("  • fee:", fee);
-    console.log("  • longTermFeeEstimate:", longTermFeeEstimate);
 
     if (!fee || !feeRate || parseFloat(feeRate) === 0) {
       console.warn(
@@ -292,8 +285,7 @@ class OutputsForm extends React.Component {
       longTermFeeEstimate,
     );
 
-    const wasteAmountInSats = 1000000 * rawWasteAmount;
-    console.log("✅ Waste amount (sats):", wasteAmountInSats);
+    const wasteAmountInSats = bitcoinsToSatoshis(rawWasteAmount);
 
     this.setState({ wasteAmount: wasteAmountInSats });
   };
@@ -494,7 +486,10 @@ class OutputsForm extends React.Component {
               </h3>
               <Typography gutterBottom>
                 Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} Sats
-                <Tooltip title="SWA represents the amount of waste in Satoshis spent during the transaction due to inefficiencies. Postive SWA means that it would be efficient to spend this transaction later when the feerate decreases. For Negative SWA, spending now could be the best decision.">
+                <Tooltip
+                  title="SWA indicates whether it is economical to spend a particular output now in a given transaction
+or wait to consolidate it later when fees could be low."
+                >
                   <IconButton size="small" sx={{ marginLeft: 1 }}>
                     <InfoIcon fontSize="small" />
                   </IconButton>
@@ -510,7 +505,7 @@ class OutputsForm extends React.Component {
               />
               <Typography id="long-term-fee-estimate-slider" gutterBottom>
                 Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
-                <Tooltip title="L refers to the long-term estimated fee rate in Satoshis per vByte for future transactions.">
+                <Tooltip title="L represents a hypothetical future fee rate (in sats/vB) used to evaluate whether the outputs of this transaction may become uneconomical (dust or waste) to spend later.">
                   <IconButton size="small" sx={{ marginLeft: 1 }}>
                     <InfoIcon fontSize="small" />
                   </IconButton>

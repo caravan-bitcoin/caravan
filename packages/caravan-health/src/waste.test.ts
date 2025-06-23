@@ -102,12 +102,12 @@ describe("Waste metric scoring", () => {
 
   describe("Spend Waste Amount (S.W.A)", () => {
     it("determines the cost of keeping or spending the UTXOs at given point of time", () => {
-            // Input UTXO Set : [0.1 BTC, 0.2 BTC, 0.3 BTC, 0.4 BTC]
+      // Input UTXO Set : [0.1 BTC, 0.2 BTC, 0.3 BTC, 0.4 BTC]
       // Weight : 30 vbytes
       // Current Fee Rate : 10 sat/vbyte
+      // Input Amount Sum : 10000 sats
+      // Spend Amount : 8000 sats
       // Estimated Long Term Fee Rate : 15 sat/vbyte
-      // Script Type : Walle script type since change will always be of same script type as wallet
-      // Config : { requiredSignerCount: 2, totalSignerCount: 3 }
       const weight = 30; // Estimated weight of the spending transaction
       const feeRate = 10; // Current Fee-Rate
       const estimatedLongTermFeeRate = 15; // Estimated long term fee rate
@@ -123,7 +123,8 @@ describe("Waste metric scoring", () => {
         config,
         estimatedLongTermFeeRate,
       );
-      expect(wasteAmount).toBe(2330);
+      console.log("Waste Amount:", wasteAmount);
+      expect(wasteAmount).toBe(1540);
       // This number is positive this means that in future if we spend the UTXOs now,
       // we will be saving 1850 sats in fees. This is because in future the fee rate
       // is expected to increase from 10 sat/vbyte to 15 sat/vbyte.
