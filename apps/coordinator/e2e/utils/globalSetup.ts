@@ -1,6 +1,9 @@
 import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
 import bitcoinClient from "./bitcoinClient";
+import path from "path";
+import fs from "fs";
+import {TestState} from "./testState"
 
 //will define the wallet type later (if can)
 const globalWalletData ={
@@ -30,7 +33,7 @@ async function globalSetup(_config: FullConfig){
 
     // const timestamp = Date.now();
     
-    const walletNames = [
+    const walletNames: string[] = [
         `test_wallet_1`,
         `test_wallet_2`,
         `test_wallet_3`,
@@ -57,16 +60,35 @@ async function globalSetup(_config: FullConfig){
 
     const testWallets = [wallet1, wallet2,wallet3,watcher_wallet];
 
-    globalWalletData.walletNames = walletNames;
-    globalWalletData.testWallets = testWallets;
+    // globalWalletData.walletNames = walletNames;
+    // globalWalletData.testWallets = testWallets;
 
     //storing in process.env to access in the test fle
-    process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
-    process.env.TEST_WALLETS = JSON.stringify(testWallets)
+    // process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
+    // process.env.TEST_WALLETS = JSON.stringify(testWallets)
 
     console.log("Test wallets created successfully globally")
 
-    
+    let testStateFile = path.join(__dirname,"../temp/test-state.json");
+    let tempDir = path.dirname(testStateFile);
+
+    if(!fs.existsSync(tempDir)){
+        fs.mkdirSync(tempDir, {recursive: true})
+    }
+     
+    //Storing initial state
+    const testState: TestState = {
+        downloadWalletFile: '',
+        test_wallet_names: walletNames,
+        test_wallets: testWallets,
+        walletAddress: '',
+        timestamp: Date.now()
+    }
+
+    fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
+    process.env.TEST_STATE_FILE = testStateFile
+
+
    } catch (error) {
     console.log("Global setup failed:", error)
     try {
