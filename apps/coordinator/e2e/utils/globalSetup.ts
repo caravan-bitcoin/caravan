@@ -77,16 +77,16 @@ async function globalSetup(_config: FullConfig){
     }
      
     //Storing initial state
-    const testState: TestState = {
-        downloadWalletFile: '',
-        test_wallet_names: walletNames,
-        test_wallets: testWallets,
-        walletAddress: '',
-        timestamp: Date.now()
-    }
+    // const testState: TestState = {
+    //     downloadWalletFile: '',
+    //     test_wallet_names: walletNames,
+    //     test_wallets: testWallets,
+    //     walletAddress: '',
+    //     timestamp: Date.now()
+    // }
 
-    fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
-    process.env.TEST_STATE_FILE = testStateFile
+    // fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
+    // process.env.TEST_STATE_FILE = testStateFile
 
 
    } catch (error) {
