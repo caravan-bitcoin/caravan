@@ -50,6 +50,18 @@ export interface SignatureInfo {
   signature: Buffer | string;
   pubkey: string;
   inputIndex: number;
+  signerIndex?: number; // Which signer in the multisig (0, 1, 2, etc.)
+  derivedPubkey: string; // The actual derived pubkey for this input
+}
+
+export /**
+ * Interface for signer identification across multiple inputs
+ */
+interface SignerIdentity {
+  signerIndex: number; // Position in the multisig setup (0, 1, 2, etc.)
+  masterFingerprint?: string; // Master key fingerprint if available
+  signatures: Buffer[] | string[]; // Signatures for each input (in order)
+  publicKeys: string[]; // Derived pubkeys for each input (in order)
 }
 
 /**
@@ -58,7 +70,6 @@ export interface SignatureInfo {
 export interface SignatureSet {
   signatures: Buffer[] | string[];
   publicKeys: string[];
-  signerPubkey: string;
 }
 
 /**

@@ -374,69 +374,56 @@ function setOutputsFromPSBT(psbt) {
  */
 export function setSignaturesFromPsbt(psbt) {
   return (dispatch, getState) => {
-    try {
-      // === STEP 1: Extract signature sets from the PSBT ===
-      // This uses our composed selectors to:
-      // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
-      // - Parse partial signatures from PSBT data
-      // - Group signatures by signer (one signer signs ALL inputs)
-      const state = getState();
-      const signatureSets = extractSignaturesFromPSBT(state, psbt);
+    // === STEP 1: Extract signature sets from the PSBT ===
+    // This uses our composed selectors to:
+    // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
+    // - Parse partial signatures from PSBT data
+    // - Group signatures by signer (one signer signs ALL inputs)
+    const state = getState();
+    const signatureSets = extractSignaturesFromPSBT(state, psbt);
+    // === STEP 2: Process signatures if any were found ===
+    if (signatureSets.length > 0) {
+      // Transform raw signature data into Caravan's signature importer format
+      // This maps each signature set to an "importer" (numbered 1, 2, 3...)
+      // that corresponds to Caravan's UI signature input slots
+      const importerData = mapSignaturesToImporters(signatureSets);
+      // === STEP 3: Update Redux state for each signature set ===
+      // For each complete signature set, we need to update multiple parts
+      // of the signature importer state. This is Caravan's pattern for
+      // managing signature data across the signing workflow.
+      importerData.forEach((sigData) => {
+        // Set the raw signature data (hex-encoded signatures)
+        dispatch(
+          setSignatureImporterSignature(
+            sigData.importerNumber,
+            sigData.signatures,
+          ),
+        );
 
-      // === STEP 2: Process signatures if any were found ===
-      if (signatureSets.length > 0) {
-        // Transform raw signature data into Caravan's signature importer format
-        // This maps each signature set to an "importer" (numbered 1, 2, 3...)
-        // that corresponds to Caravan's UI signature input slots
-        const importerData = mapSignaturesToImporters(signatureSets);
+        // Set the public keys that correspond to these signatures
+        // These are used for signature verification
+        dispatch(
+          setSignatureImporterPublicKeys(
+            sigData.importerNumber,
+            sigData.publicKeys,
+          ),
+        );
 
-        // === STEP 3: Update Redux state for each signature set ===
-        // For each complete signature set, we need to update multiple parts
-        // of the signature importer state. This is Caravan's pattern for
-        // managing signature data across the signing workflow.
-        importerData.forEach((sigData) => {
-          // Set the raw signature data (hex-encoded signatures)
-          dispatch(
-            setSignatureImporterSignature(
-              sigData.importerNumber,
-              sigData.signatures,
-            ),
-          );
+        // Mark this importer as "finalized" - meaning we have a complete
+        // signature set and it's ready for use in transaction construction
+        dispatch(setSignatureImporterFinalized(sigData.importerNumber, true));
 
-          // Set the public keys that correspond to these signatures
-          // These are used for signature verification
-          dispatch(
-            setSignatureImporterPublicKeys(
-              sigData.importerNumber,
-              sigData.publicKeys,
-            ),
-          );
-
-          // Mark this importer as "finalized" - meaning we have a complete
-          // signature set and it's ready for use in transaction construction
-          dispatch(setSignatureImporterFinalized(sigData.importerNumber, true));
-
-          // Set the complete signature data object
-          // This is Caravan's "master" action that bundles everything together
-          // and is used by the signing components to display signature status
-          dispatch(
-            setSignatureImporterComplete(sigData.importerNumber, {
-              signature: sigData.signatures,
-              publicKeys: sigData.publicKeys,
-              finalized: true,
-            }),
-          );
-        });
-      }
-    } catch (signatureError) {
-      // === ERROR HANDLING ===
-      // We intentionally don't re-throw here because signature extraction
-      // failing shouldn't break the entire PSBT import process. The user
-      // can still import the PSBT structure and sign it manually.
-      console.warn(
-        "⚠️ Failed to extract signatures, but continuing with PSBT import:",
-        signatureError.message,
-      );
+        // Set the complete signature data object
+        // This is Caravan's "master" action that bundles everything together
+        // and is used by the signing components to display signature status
+        dispatch(
+          setSignatureImporterComplete(sigData.importerNumber, {
+            signature: sigData.signatures,
+            publicKeys: sigData.publicKeys,
+            finalized: true,
+          }),
+        );
+      });
     }
   };
 }
@@ -467,52 +454,48 @@ export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
-    try {
-      // Handles both PSBTv0 and PSBTv2
-      const psbt = loadPsbt(psbtText, network);
-      if (!psbt) {
-        throw new Error("Could not parse PSBT.");
-      }
 
-      if (psbt.txInputs.length === 0) {
-        throw new Error("PSBT does not contain any inputs.");
-      }
-      if (psbt.txOutputs.length === 0) {
-        throw new Error("PSBT does not contain any outputs.");
-      }
-
-      dispatch(resetOutputs());
-      dispatch(setUnsignedPSBT(psbt.toBase64()));
-
-      // ==== PROCESS INPUTS ====
-      const inputs = selectInputsFromPSBT(getState(), psbt);
-
-      if (inputs.length === 0) {
-        throw new Error("PSBT does not contain any UTXOs from this wallet.");
-      }
-      if (inputs.length !== psbt.txInputs.length) {
-        throw new Error(
-          `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
-        );
-      }
-
-      dispatch(setInputs(inputs));
-
-      // ==== PROCESS INPUTS ====
-      const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
-
-      // Calculate and set fee
-      dispatch(setFeeFromState(outputsTotalSats));
-
-      // ==== Extract and import signatures (If they are present)====
-      dispatch(setSignaturesFromPsbt(psbt));
-
-      // Finalize the transaction
-      dispatch(finalizeOutputs(true));
-    } catch (error) {
-      console.error("❌ PSBT import failed:", error);
-      throw error;
+    // Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
+    if (!psbt) {
+      throw new Error("Could not parse PSBT.");
     }
+
+    if (psbt.txInputs.length === 0) {
+      throw new Error("PSBT does not contain any inputs.");
+    }
+    if (psbt.txOutputs.length === 0) {
+      throw new Error("PSBT does not contain any outputs.");
+    }
+
+    dispatch(resetOutputs());
+    dispatch(setUnsignedPSBT(psbt.toBase64()));
+
+    // ==== PROCESS INPUTS ====
+    const inputs = selectInputsFromPSBT(getState(), psbt);
+
+    if (inputs.length === 0) {
+      throw new Error("PSBT does not contain any UTXOs from this wallet.");
+    }
+    if (inputs.length !== psbt.txInputs.length) {
+      throw new Error(
+        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
+      );
+    }
+
+    dispatch(setInputs(inputs));
+
+    // ==== PROCESS INPUTS ====
+    const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
+
+    // Calculate and set fee
+    dispatch(setFeeFromState(outputsTotalSats));
+
+    // ==== Extract and import signatures (If they are present)====
+    dispatch(setSignaturesFromPsbt(psbt));
+
+    // Finalize the transaction
+    dispatch(finalizeOutputs(true));
   };
 }
 

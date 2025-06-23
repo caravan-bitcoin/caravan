@@ -2,6 +2,7 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
+import { multisigPublicKeys } from "@caravan/bitcoin";
 import { getSpendableSlices } from "./wallet";
 import {
   UTXO,
@@ -9,6 +10,7 @@ import {
   Slice,
   SignatureInfo,
   SignatureSet,
+  SignerIdentity,
 } from "utils/psbtUtils";
 
 /**
@@ -65,13 +67,18 @@ export const mapSignaturesToImporters = (signatureSets: SignatureSet[]) => {
     importerNumber: index + 1, // As in Caravan we use 1-based indexing
     signatures: sigSet.signatures,
     publicKeys: sigSet.publicKeys,
-    signerPubkey: sigSet.signerPubkey,
     finalized: true, // Mark as complete since we have all signatures
   }));
 };
 
 /**
- * Extracts signatures from a PSBT and organizes them by signer.
+ * Extracts signatures from a PSBT and groups them by signer (not by individual child pubkeys).
+ *
+ * Instead of grouping by each unique derived pubkey, we now group signatures
+ * by the actual signer (i.e., their position in the multisig setup). This fixes the issue where
+ * the same signer ends up using different child pubkeys across inputs because of varying derivation paths.
+ *
+ * This way, we correctly associate all signatures from a single signer, even if their keys differ input-to-input.
  *
  * @param  psbt - The PSBT object
  * @param  inputs - Array of input objects with multisig info
@@ -83,118 +90,158 @@ export const extractSignaturesFromPSBT = (state: any, psbt: Psbt) => {
   // Get Inputs to extract Signature from
   const inputs = selectInputsFromPSBT(state, psbt);
 
-  // Get all partial signatures from the PSBT
-  // Each input in a PSBT can have multiple partial signatures (one per signer)
-  const inputSignatures: SignatureInfo[][] = [];
-
-  for (let inputIndex = 0; inputIndex < psbt.data.inputs.length; inputIndex++) {
-    const input = psbt.data.inputs[inputIndex];
-    const inputSigs: SignatureInfo[] = [];
-
-    // So now , we Extract partial signatures from this input
-    // As partialSig is an array of {pubkey: Buffer, signature: Buffer
-    if (input.partialSig && input.partialSig.length > 0) {
-      for (const partialSig of input.partialSig) {
-        inputSigs.push({
-          signature: partialSig.signature.toString("hex"),
-          pubkey: partialSig.pubkey.toString("hex"),
-          inputIndex,
-        });
-      }
-    }
-
-    inputSignatures.push(inputSigs);
+  if (inputs.length === 0) {
+    throw new Error("No inputs found in PSBT that match wallet UTXOs");
   }
 
-  // Now we need to group signatures by signer
-  // In a multisig, each signer signs ALL inputs with the same key
-  // So we group signatures that use the same public key across all inputs
-  const signatureSets = groupSignaturesBySigner(psbt, inputSignatures, inputs);
+  // Get all partial signatures from the PSBT
+  // Each input in a PSBT can have multiple partial signatures (one per signer)
+  const inputSignatures: SignatureInfo[] = [];
+
+  for (let inputIndex = 0; inputIndex < psbt.data.inputs.length; inputIndex++) {
+    const psbtInput = psbt.data.inputs[inputIndex];
+    const walletInput = inputs[inputIndex];
+
+    // Now we extract partial signatures from this PSBT input
+    if (psbtInput.partialSig && psbtInput.partialSig.length > 0) {
+      for (const partialSig of psbtInput.partialSig) {
+        const signature = partialSig.signature.toString("hex");
+        const pubkeyFromPsbt = partialSig.pubkey.toString("hex");
+
+        // **STEP 1: Validate the signature**
+        const validatedPubkey = validateSignatureForInput(
+          partialSig.signature,
+          inputIndex,
+          psbt,
+          inputs,
+        );
+
+        if (!validatedPubkey) {
+          throw new Error(
+            `Invalid signature for input ${inputIndex}, pubkey ${pubkeyFromPsbt.slice(0, 16)}... `,
+          );
+        }
+
+        // **STEP 2: Verify the pubkey matches what we expect**
+        if (validatedPubkey !== pubkeyFromPsbt) {
+          throw new Error(
+            `⚠️ Validated pubkey ${validatedPubkey.slice(0, 16)}... doesn't match PSBT pubkey ${pubkeyFromPsbt.slice(0, 16)}... for input ${inputIndex}`,
+          );
+        }
+        // **STEP 3: Determine which signer this validated pubkey belongs to**
+        // Now here we determine which signer does this pubkey belongs to as we need it later to check if signer has signed all the inputs properly
+        const signerIndex = identifySignerFromPubkey(
+          validatedPubkey,
+          walletInput,
+        );
+        if (signerIndex !== -1) {
+          inputSignatures.push({
+            signature,
+            pubkey: pubkeyFromPsbt,
+            inputIndex,
+            signerIndex,
+            derivedPubkey: validatedPubkey,
+          });
+        }
+      }
+    }
+  }
+
+  if (inputSignatures.length === 0) {
+    return [];
+  }
+
+  // Now we need to group signatures by signer identity (not individual pubkeys)
+  const signerGroups = groupSignaturesBySigner(inputSignatures, inputs);
+  const signatureSets: SignatureSet[] = [];
+
+  signerGroups.forEach((signerGroup) => {
+    signatureSets.push({
+      signatures: signerGroup.signatures,
+      publicKeys: signerGroup.publicKeys,
+    });
+  });
   return signatureSets;
 };
 
 /**
- * Groups signatures by signer (same pubkey across all inputs = same signer).
+ * Identifies which signer (by index in multisig) a given public key belongs to.
  *
- * *Note* not a selector a plain util function
+ * This function derives the expected public keys for all signers at the given
+ * input's derivation path and matches the provided pubkey to determine the signer.
  *
- * @param  psbt - The PSBT object
- * @param  inputSignatures - Signatures organized by input
+ * @param pubkey - The public key to identify
+ * @param input - The input containing multisig and derivation information
+ * @returns The signer index (0, 1, 2, etc.) or -1 if not found
+ */
+function identifySignerFromPubkey(pubkey: string, input: Input): number {
+  try {
+    // Get all possible public keys for this input's derivation path
+    const expectedPubkeys: string[] = multisigPublicKeys(input.multisig);
+    // Find which signer this pubkey belongs to
+    const signerIndex = expectedPubkeys.findIndex(
+      (expectedPubkey: string) => expectedPubkey === pubkey,
+    );
+
+    return signerIndex;
+  } catch (e) {
+    console.error(`Error deriving pubkeys for input:`, e);
+    return -1;
+  }
+}
+
+/**
+ * Groups signatures by signer identity across all inputs.
+ *
+ * For each signer that has signed at least one input,
+ * collect ALL their signatures across ALL inputs. A complete signature
+ * set requires the signer to have signed every single input.
+ *
+ * @param  inputSignatures - Signatures with signer information
  * @param  inputs - Input objects for validation
  * @returns  Array of signature sets
  */
 function groupSignaturesBySigner(
-  psbt: Psbt,
-  inputSignatures: SignatureInfo[][],
+  inputSignatures: SignatureInfo[],
   inputs: Input[],
-): SignatureSet[] {
-  // Find all unique public keys across all inputs
-  const allPubkeys = new Set<string>();
-  inputSignatures.forEach((inputSigs) => {
-    inputSigs.forEach((sig) => allPubkeys.add(sig.pubkey));
-  });
+): Map<number, SignerIdentity> {
+  const signerGroups = new Map<number, SignerIdentity>();
 
-  const signatureSets: SignatureSet[] = [];
+  // Now we group signatures by their signer index
+  for (const sig of inputSignatures) {
+    const { signerIndex, inputIndex, signature, pubkey } = sig;
+    if (signerIndex === undefined) continue;
 
-  // For each unique pubkey, try to build a complete signature set
-  for (const pubkey of allPubkeys) {
-    const signatureSet: string[] = [];
-    const publicKeySet: string[] = [];
-    let isCompleteSet = true;
-
-    // Check if this pubkey has signed ALL inputs
-    for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
-      const inputSigs = inputSignatures[inputIndex];
-      const sigForThisPubkey = inputSigs.find((sig) => sig.pubkey === pubkey);
-
-      if (sigForThisPubkey) {
-        // Validate this signature to make sure it's correct
-        try {
-          const validatedPubkey = validateSignatureForInput(
-            sigForThisPubkey.signature as Buffer,
-            inputIndex,
-            psbt,
-            inputs,
-          );
-
-          if (validatedPubkey) {
-            signatureSet.push(sigForThisPubkey.signature as string);
-            publicKeySet.push(validatedPubkey);
-          } else {
-            console.warn(
-              `❌ Invalid signature for input ${inputIndex}, pubkey ${pubkey}`,
-            );
-            isCompleteSet = false;
-            break;
-          }
-        } catch (error) {
-          console.warn(
-            `❌ Error validating signature for input ${inputIndex}:`,
-            error.message,
-          );
-          isCompleteSet = false;
-          break;
-        }
-      } else {
-        // This pubkey didn't sign this input, so it's not a complete set
-        isCompleteSet = false;
-        break;
-      }
+    let signerGroup = signerGroups.get(signerIndex);
+    if (!signerGroup) {
+      signerGroup = {
+        signerIndex,
+        signatures: Array(inputs.length).fill(null),
+        publicKeys: Array(inputs.length).fill(null),
+      };
+      signerGroups.set(signerIndex, signerGroup);
     }
 
-    // Only add complete signature sets (where one signer signed ALL inputs)
-    if (isCompleteSet && signatureSet.length === inputs.length) {
-      signatureSets.push({
-        signatures: signatureSet,
-        publicKeys: publicKeySet,
-        signerPubkey: pubkey,
-      });
-    }
+    signerGroup.signatures[inputIndex] = signature;
+    signerGroup.publicKeys[inputIndex] = pubkey;
   }
 
-  return signatureSets;
-}
+  // Now some filtering logic to only add complete signature sets (i.e signer signed ALL inputs)
+  const completeSigners = new Map<number, SignerIdentity>();
 
+  signerGroups.forEach((signerGroup, signerIndex) => {
+    const hasAllSignatures = signerGroup.signatures.every(
+      (sig) => sig !== null,
+    );
+    const hasAllPubkeys = signerGroup.publicKeys.every((pk) => pk !== null);
+
+    if (hasAllSignatures && hasAllPubkeys) {
+      completeSigners.set(signerIndex, signerGroup);
+    }
+  });
+
+  return completeSigners;
+}
 /**
  * Validates a signature for a specific input.
  *
