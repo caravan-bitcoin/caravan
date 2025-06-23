@@ -73,7 +73,6 @@ function WalletSpend(props) {
     if (props.finalizedOutputs) {
       setSpendStep(SPEND_STEP_PREVIEW);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.finalizedOutputs]);
 
   const previewDisabled = useCallback(() => {

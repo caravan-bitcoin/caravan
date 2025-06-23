@@ -125,8 +125,8 @@ export function naiveCoinSelection(options) {
 
   if (spendAll) {
     // Add all UTXOs from all slices
-    slices.forEach(slice => {
-      slice.utxos.forEach(utxo => {
+    slices.forEach((slice) => {
+      slice.utxos.forEach((utxo) => {
         selectedUtxos.push({
           ...utxo,
           scriptType: addressType,
@@ -183,10 +183,14 @@ export function naiveCoinSelection(options) {
             feesPerByteInSatoshis,
           }),
         );
-        const requiredTotalWithChange = outputTotal.plus(estimatedFeeWithChange);
+        const requiredTotalWithChange = outputTotal.plus(
+          estimatedFeeWithChange,
+        );
 
         if (inputTotal.isGreaterThan(requiredTotalWithChange)) {
-          const changeAmount = inputTotal.minus(outputTotal).minus(estimatedFeeWithChange);
+          const changeAmount = inputTotal
+            .minus(outputTotal)
+            .minus(estimatedFeeWithChange);
           changeRequired = changeAmount.isGreaterThan(DUST_IN_SATOSHIS);
           return [selectedUtxos, changeRequired];
         }

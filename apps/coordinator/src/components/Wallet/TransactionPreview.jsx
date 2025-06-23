@@ -19,6 +19,7 @@ import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
 import TransactionAnalysis from "../TransactionAnalysis";
+import ScriptTypeChip from "../ScriptTypeChip";
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
@@ -49,27 +50,34 @@ class TransactionPreview extends React.Component {
         <TableCell>
           <code>{BigNumber(output.amount).toFixed(8)}</code>
         </TableCell>
+        <TableCell>
+          <ScriptTypeChip scriptType={output.scriptType} />
+        </TableCell>
       </TableRow>
     ));
   };
 
-  buildOutputsTable = () => (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Address</TableCell>
-          <TableCell>Amount (BTC)</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>{this.buildOutputRows()}</TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell>TOTAL:</TableCell>
-          <TableCell>{this.calculateOutputsTotal()}</TableCell>
-        </TableRow>
-      </TableFooter>
-    </Table>
-  );
+  buildOutputsTable = () => {
+    return (
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Address</TableCell>
+            <TableCell>Amount (BTC)</TableCell>
+            <TableCell>Script Type</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>{this.buildOutputRows()}</TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell>TOTAL:</TableCell>
+            <TableCell>{this.calculateOutputsTotal()}</TableCell>
+            <TableCell />
+          </TableRow>
+        </TableFooter>
+      </Table>
+    );
+  };
 
   calculateOutputsTotal = () => {
     const { outputs } = this.props;

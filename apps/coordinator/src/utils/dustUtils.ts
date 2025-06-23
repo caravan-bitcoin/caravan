@@ -2,45 +2,6 @@
  * Helper functions for checking dust outputs and privacy issues
  */
 
-export interface ScriptTypeConfig {
-  name: string;
-  inputScriptSize: number;
-  outputScriptSize: number;
-}
-
-// Different Bitcoin address types and their sizes
-export const SCRIPT_TYPES: Record<string, ScriptTypeConfig> = {
-  P2PKH: {
-    name: "Legacy",
-    inputScriptSize: 148,
-    outputScriptSize: 34,
-  },
-
-  P2SH: {
-    name: "Nested SegWit",
-    inputScriptSize: 91,
-    outputScriptSize: 32,
-  },
-
-  P2WPKH: {
-    name: "Native SegWit",
-    inputScriptSize: 68,
-    outputScriptSize: 31,
-  },
-
-  P2WSH: {
-    name: "SegWit Script",
-    inputScriptSize: 104,
-    outputScriptSize: 43,
-  },
-
-  P2TR: {
-    name: "Taproot",
-    inputScriptSize: 57,
-    outputScriptSize: 43,
-  },
-};
-
 // How much extra we multiply the fee by when checking for dust
 // This follows Bitcoin Core's approach - if it costs more than 3x the normal
 // fee to spend an output, it's considered dust
@@ -54,19 +15,12 @@ export function calculateDustThreshold(
   scriptType: string,
   feeRate: number,
 ): number {
-  const scriptConfig = SCRIPT_TYPES[scriptType];
-
-  if (!scriptConfig) {
-    console.warn(
-      `Don't recognize script type: ${scriptType}, falling back to P2WPKH`,
-    );
-    return calculateDustThreshold("P2WPKH", feeRate);
-  }
-
+  // TODO: Use actual input script size for each scriptType if needed
+  // For now, use a typical input size (e.g., 148 for P2PKH)
+  const inputScriptSize = 148;
   // Calculate how much it would cost to spend this output later
   // We use a higher fee rate (3x) to be safe
-  const costToSpend =
-    (scriptConfig.inputScriptSize * feeRate * DUST_FEE_MULTIPLIER) / 1000;
+  const costToSpend = (inputScriptSize * feeRate * DUST_FEE_MULTIPLIER) / 1000;
   return Math.ceil(costToSpend);
 }
 
@@ -80,13 +34,6 @@ export function isDustUTXO(
 ): boolean {
   const minAmount = calculateDustThreshold(scriptType, feeRate);
   return amountSats <= minAmount;
-}
-
-/**
- * Get a friendly name for the script type
- */
-export function getScriptTypeName(scriptType: string): string {
-  return SCRIPT_TYPES[scriptType]?.name || scriptType;
 }
 
 /**

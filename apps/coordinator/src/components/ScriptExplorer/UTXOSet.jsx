@@ -21,7 +21,7 @@ import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
 import DustChip from "../DustChip";
-import ScriptTypeChip from "../ScriptTypeChip";
+// import ScriptTypeChip from "../ScriptTypeChip";
 import { getFeeRate } from "../../selectors/transactionSelectors";
 
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -213,9 +213,6 @@ class UTXOSet extends React.Component {
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
           </TableCell>
           <TableCell>
-            <ScriptTypeChip scriptType={input.scriptType} />
-          </TableCell>
-          <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
               <OpenInNew />,
@@ -266,7 +263,6 @@ class UTXOSet extends React.Component {
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
-              <TableCell>Script Type</TableCell>
               <TableCell>View</TableCell>
               <TableCell align="right">
                 <Tooltip title="Shows if UTXO is dust at current fee rate">

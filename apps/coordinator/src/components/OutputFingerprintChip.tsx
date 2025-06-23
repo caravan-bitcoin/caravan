@@ -21,20 +21,9 @@ const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
   // Determine primary script type
   const primaryScriptType = scriptTypes.length > 0 ? scriptTypes[0] : "Unknown";
 
-  const getScriptTypeLabel = (scriptType: string): string => {
-    const labels = {
-      P2PKH: "Legacy",
-      P2SH: "Nested SegWit",
-      P2WPKH: "Native SegWit",
-      P2WSH: "SegWit Script",
-      P2TR: "Taproot",
-    };
-    return labels[scriptType as keyof typeof labels] || scriptType;
-  };
-
   const tooltipText = hasOutputFingerprinting
-    ? `Output fingerprinting detected! Mixed script types: ${uniqueScriptTypes.map(getScriptTypeLabel).join(", ")}. This may compromise privacy.`
-    : `All outputs use ${getScriptTypeLabel(primaryScriptType)}. No output fingerprinting detected.`;
+    ? `Output fingerprinting detected! Mixed script types: ${uniqueScriptTypes.join(", ")}. This may compromise privacy.`
+    : `All outputs use ${primaryScriptType}. No output fingerprinting detected.`;
 
   if (hasOutputFingerprinting) {
     return (
@@ -62,7 +51,7 @@ const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
     <Tooltip title={tooltipText} arrow>
       <Chip
         icon={<Security />}
-        label={getScriptTypeLabel(primaryScriptType)}
+        label={primaryScriptType}
         color="primary"
         variant="outlined"
         size="small"

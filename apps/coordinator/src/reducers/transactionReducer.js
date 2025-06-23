@@ -12,6 +12,7 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
   unsignedMultisigTransaction,
+  getAddressType,
 } from "@caravan/bitcoin";
 import {
   convertLegacyInput,
@@ -248,6 +249,8 @@ function updateOutputAddress(state, action) {
   }
   newOutputs[action.number - 1].address = address;
   newOutputs[action.number - 1].addressError = error;
+  newOutputs[action.number - 1].scriptType =
+    error === "" ? getAddressType(address, state.network) : "";
   return { ...state, ...{ outputs: newOutputs } };
 }
 

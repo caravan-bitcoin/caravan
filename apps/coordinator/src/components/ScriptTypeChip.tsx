@@ -1,6 +1,5 @@
 import React from "react";
 import { Chip, Tooltip } from "@mui/material";
-import { getScriptTypeName } from "../utils/dustUtils";
 
 /**
  * ScriptTypeChip displays a colored chip for a given Bitcoin script type.
@@ -24,13 +23,12 @@ const styleMap: { [key: string]: { backgroundColor: string; color: string } } =
   };
 
 const ScriptTypeChip: React.FC<ScriptTypeChipProps> = ({ scriptType }) => {
-  const scriptName = getScriptTypeName(scriptType);
   const chipStyle = styleMap[scriptType] || styleMap.default;
 
   return (
-    <Tooltip title={`Script Type: ${scriptName} (${scriptType})`} arrow>
+    <Tooltip title={`Script Type: ${scriptType}`} arrow>
       <Chip
-        label={scriptName}
+        label={scriptType}
         size="small"
         variant="outlined"
         sx={{
