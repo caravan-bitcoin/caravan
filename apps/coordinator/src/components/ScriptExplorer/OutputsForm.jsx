@@ -14,7 +14,6 @@ import {
   InputAdornment,
   Typography,
   FormHelperText,
-  Slider,
 } from "@mui/material";
 import { Speed } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
@@ -30,9 +29,6 @@ import { updateBlockchainClient } from "../../actions/clientActions";
 import { MIN_SATS_PER_BYTE_FEE } from "../Wallet/constants";
 import OutputEntry from "./OutputEntry";
 import styles from "./styles.module.scss";
-import InfoIcon from "@mui/icons-material/Info";
-import { WasteMetrics } from "@caravan/health";
-import { getWalletConfig } from "../../selectors/wallet";
 
 class OutputsForm extends React.Component {
   static unitLabel(label, options) {
@@ -60,15 +56,12 @@ class OutputsForm extends React.Component {
     super(props);
     this.state = {
       feeRateFetchError: "",
-      longTermFeeEstimate: 101,
-      wasteAmount: 0,
     };
   }
 
   componentDidMount = () => {
     this.initialOutputState();
     this.scrollToTitle();
-    this.calculateWaste();
   };
 
   scrollToTitle = () => {
@@ -156,13 +149,11 @@ class OutputsForm extends React.Component {
   handleAddOutput = () => {
     const { addOutput } = this.props;
     addOutput();
-    this.calculateWaste();
   };
 
   handleFeeRateChange = (event) => {
     const { setFeeRate } = this.props;
     let rate = event.target.value;
-    this.calculateWaste();
 
     if (
       rate === "" ||
@@ -176,7 +167,6 @@ class OutputsForm extends React.Component {
   handleFeeChange = (event) => {
     const { setFee } = this.props;
     setFee(event.target.value);
-    this.calculateWaste();
   };
 
   handleFinalize = () => {
@@ -191,7 +181,7 @@ class OutputsForm extends React.Component {
   };
 
   getFeeEstimate = async () => {
-    const { getBlockchainClient, setFeeRate, onFeeEstimate } = this.props;
+    const { getBlockchainClient, setFeeRate } = this.props;
     const client = await getBlockchainClient();
     let feeEstimate;
     let feeRateFetchError = "";
@@ -206,14 +196,6 @@ class OutputsForm extends React.Component {
           ? feeEstimate.toString()
           : MIN_SATS_PER_BYTE_FEE.toString(),
       );
-      if (onFeeEstimate) {
-        try {
-          onFeeEstimate(feeEstimate?.toString());
-        } catch (err) {
-          console.error("onFeeEstimate error:", err);
-          feeRateFetchError = "There was an error handling the fee estimate.";
-        }
-      }
       this.setState({ feeRateFetchError });
     }
   };
@@ -248,11 +230,6 @@ class OutputsForm extends React.Component {
     if (inputs.length && outputs[0].amount === "")
       setOutputAmount(1, outputAmount);
   }
-
-  handleLongTermFeeEstimateChange = (event, newValue) => {
-    this.setState({ longTermFeeEstimate: newValue });
-    this.calculateWaste();
-  };
 
   calculateWaste = () => {
     const { feeRate, fee } = this.props;
@@ -308,7 +285,6 @@ class OutputsForm extends React.Component {
     const totalMt = 7;
     const actionMt = 7;
     const gridSpacing = isWallet ? 10 : 1;
-    const { longTermFeeEstimate, wasteAmount } = this.state;
     return (
       <>
         <Box ref={this.titleRef}>
@@ -474,45 +450,6 @@ class OutputsForm extends React.Component {
             </Grid>
             <Grid item xs={2} />
           </Grid>
-          {wasteAmount ? (
-            <Grid item xs={12}>
-              <h3>
-                Waste Analysis
-                <Tooltip title="Waste analysis helps calculate inefficiencies in the transaction due to fees, UTXO consolidation, etc.">
-                  <IconButton size="small" sx={{ marginLeft: 1 }}>
-                    <InfoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </h3>
-              <Typography gutterBottom>
-                Spend Waste Amount (SWA): {wasteAmount} Sats
-                <Tooltip
-                  title="SWA indicates whether it is economical to spend a particular output now in a given transaction
-or wait to consolidate it later when fees could be low."
-                >
-                  <IconButton size="small" sx={{ marginLeft: 1 }}>
-                    <InfoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Typography>
-              <Slider
-                value={longTermFeeEstimate}
-                min={1}
-                max={500}
-                step={1}
-                onChange={this.handleLongTermFeeEstimateChange}
-                aria-labelledby="long-term-fee-estimate-slider"
-              />
-              <Typography id="long-term-fee-estimate-slider" gutterBottom>
-                Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
-                <Tooltip title="L represents a hypothetical future fee rate (in sats/vB) used to evaluate whether the outputs of this transaction may become uneconomical (dust or waste) to spend later.">
-                  <IconButton size="small" sx={{ marginLeft: 1 }}>
-                    <InfoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Typography>
-            </Grid>
-          ) : null}
         </Box>
 
         {!isWallet && (
@@ -587,8 +524,6 @@ OutputsForm.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updatesComplete: PropTypes.bool,
   getBlockchainClient: PropTypes.func.isRequired,
-  onFeeEstimate: PropTypes.func,
-  walletConfig: PropTypes.object,
 };
 
 OutputsForm.defaultProps = {
@@ -605,7 +540,6 @@ function mapStateToProps(state) {
     ...state.client,
     signatureImporters: state.spend.signatureImporters,
     change: state.wallet.change,
-    walletConfig: getWalletConfig(state),
   };
 }
 
