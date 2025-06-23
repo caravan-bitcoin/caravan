@@ -231,42 +231,6 @@ class OutputsForm extends React.Component {
       setOutputAmount(1, outputAmount);
   }
 
-  calculateWaste = () => {
-    const { feeRate, fee } = this.props;
-    const { longTermFeeEstimate } = this.state;
-
-    if (!fee || !feeRate || parseFloat(feeRate) === 0) {
-      console.warn(
-        "⚠️ Skipping waste calculation: missing or zero fee/feeRate",
-      );
-      return;
-    }
-
-    const weight = fee / satoshisToBitcoins(feeRate);
-    console.log("📏 Calculated weight:", weight);
-
-    const wasteMetrics = new WasteMetrics();
-    const walletConfig = this.props.walletConfig;
-    const scriptType = walletConfig.addressType;
-
-    const config = {
-      requiredSignerCount: walletConfig.quorum.requiredSigners,
-      totalSignerCount: walletConfig.quorum.totalSigners,
-    };
-
-    const rawWasteAmount = wasteMetrics.spendWasteAmount(
-      weight,
-      feeRate,
-      scriptType,
-      config,
-      longTermFeeEstimate,
-    );
-
-    const wasteAmountInSats = bitcoinsToSatoshis(rawWasteAmount);
-
-    this.setState({ wasteAmount: wasteAmountInSats });
-  };
-
   render() {
     const {
       feeRate,
