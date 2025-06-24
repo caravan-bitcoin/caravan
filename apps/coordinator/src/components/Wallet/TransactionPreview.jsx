@@ -91,7 +91,7 @@ const SignatureStatus = () => {
     needsSignatures,
   } = useSigningState();
 
-  // We Don't render anything if no signatures are present
+  // We don't render anything if no signatures are present
   if (signedCount === 0) {
     return null;
   }
@@ -123,17 +123,17 @@ const SignatureStatus = () => {
           variant={isFullySigned ? "filled" : "outlined"}
         />
         {isFullySigned && (
-          <Chip label="Fully Signed" color="success" size="small" />
+          <Chip label="Fully signed" color="success" size="small" />
         )}
         {hasPartialSignatures && (
-          <Chip label="Partially Signed" color="warning" size="small" />
+          <Chip label="Partially signed" color="warning" size="small" />
         )}
       </Box>
 
       {/* Status-specific alerts */}
       {hasPartialSignatures && (
         <Alert severity="info" sx={{ mb: 1 }}>
-          <AlertTitle>Partial Signatures Detected</AlertTitle>
+          <AlertTitle>Partial signatures detected</AlertTitle>
           This transaction has {signedCount} out of {requiredSigners} required
           signatures. You need {needsSignatures} more signature
           {needsSignatures > 1 ? "s" : ""} to broadcast.
@@ -142,7 +142,7 @@ const SignatureStatus = () => {
 
       {isFullySigned && (
         <Alert severity="success" sx={{ mb: 1 }}>
-          <AlertTitle>Transaction Ready</AlertTitle>
+          <AlertTitle>Transaction ready</AlertTitle>
           This transaction has all {requiredSigners} required signatures and is
           ready to broadcast.
         </Alert>
@@ -151,7 +151,7 @@ const SignatureStatus = () => {
       {/* Warning about editing clearing signatures */}
       {signedCount > 0 && (
         <Alert severity="warning" icon={<EditIcon />}>
-          <AlertTitle>Important: Editing Will Clear Signatures</AlertTitle>
+          <AlertTitle>Important: Editing will clear signatures</AlertTitle>
           If you edit this transaction (inputs, outputs, or fee), all existing
           signatures will be cleared and you&apos;ll need to collect signatures
           again from all signers.
