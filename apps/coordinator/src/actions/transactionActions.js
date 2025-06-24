@@ -6,8 +6,8 @@ import {
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
   selectInputsFromPSBT,
-  mapSignaturesToImporters,
-  extractSignaturesFromPSBT,
+  selectSignaturesFromPSBT,
+  selectSignaturesForImporters,
 } from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
@@ -380,13 +380,13 @@ export function setSignaturesFromPsbt(psbt) {
     // - Parse partial signatures from PSBT data
     // - Group signatures by signer (one signer signs ALL inputs)
     const state = getState();
-    const signatureSets = extractSignaturesFromPSBT(state, psbt);
+    const signatureSets = selectSignaturesFromPSBT(state, psbt);
     // === STEP 2: Process signatures if any were found ===
     if (signatureSets.length > 0) {
       // Transform raw signature data into Caravan's signature importer format
       // This maps each signature set to an "importer" (numbered 1, 2, 3...)
       // that corresponds to Caravan's UI signature input slots
-      const importerData = mapSignaturesToImporters(signatureSets);
+      const importerData = selectSignaturesForImporters(state, psbt);
       // === STEP 3: Update Redux state for each signature set ===
       // For each complete signature set, we need to update multiple parts
       // of the signature importer state. This is Caravan's pattern for

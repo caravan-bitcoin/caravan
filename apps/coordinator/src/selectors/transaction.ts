@@ -13,48 +13,21 @@ import {
   SignerIdentity,
 } from "utils/psbtUtils";
 
+// ====================
+// UTILITY FUNCTIONS (Pure functions, no state dependency) we need then for our selectors to work nicely :)
+// ====================
+
 /**
- * Processes inputs from PSBT and matches them with wallet UTXOs.
+ * Creates a unique identifier for a transaction input
  */
-export const selectInputsFromPSBT = createSelector(
-  // Need the state param as createSelector expects two args
-  [getSpendableSlices, (state: any, psbt: Psbt) => psbt],
-  (slices: any, psbt: Psbt) => {
-    const createInputIdentifier = (txid: string, index: number) =>
-      `${txid}:${index}`;
+const createInputIdentifier = (txid: string, index: number): string =>
+  `${txid}:${index}`;
 
-    const inputIdentifiers = new Set(
-      psbt.txInputs.map((input) => {
-        /*
-         * All input TXIDs are expected to be in **big-endian**
-         * format (human-readable format). Which we get from block explorers, wallets, APIs
-         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
-         * internal data structures and processing so here we convert the txid to little-endian format
-         */
-        const txid = reverseBuffer(input.hash).toString("hex");
-        return createInputIdentifier(txid, input.index);
-      }),
-    );
-
-    const inputs: Input[] = [];
-    slices.forEach((slice: Slice & { utxos: UTXO }) => {
-      Object.entries(slice.utxos).forEach(([, utxo]) => {
-        const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
-        if (inputIdentifiers.has(inputIdentifier)) {
-          const input = {
-            ...utxo,
-            multisig: slice.multisig,
-            bip32Path: slice.bip32Path,
-            change: slice.change,
-          };
-          inputs.push(input);
-        }
-      });
-    });
-
-    return inputs;
-  },
-);
+/**
+ * Converts transaction ID from big-endian to little-endian format
+ */
+const convertTxidToLittleEndian = (hash: Buffer): string =>
+  reverseBuffer(hash).toString("hex");
 
 /**
  * Maps extracted signature sets to Caravan's signature importer format.
@@ -86,10 +59,7 @@ export const mapSignaturesToImporters = (signatureSets: SignatureSet[]) => {
  * @param  network - Network (mainnet, testnet, etc.)
  * @returns  Array of signature sets, each containing signatures for all inputs
  */
-export const extractSignaturesFromPSBT = (state: any, psbt: Psbt) => {
-  // Get Inputs to extract Signature from
-  const inputs = selectInputsFromPSBT(state, psbt);
-
+export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
   if (inputs.length === 0) {
     throw new Error("No inputs found in PSBT that match wallet UTXOs");
   }
@@ -163,6 +133,78 @@ export const extractSignaturesFromPSBT = (state: any, psbt: Psbt) => {
   });
   return signatureSets;
 };
+
+// ====================
+// SELECTORS
+// ====================
+
+/**
+ * Processes inputs from PSBT and matches them with wallet UTXOs.
+ */
+export const selectInputsFromPSBT = createSelector(
+  // Need the state param as createSelector expects two args
+  [getSpendableSlices, (state: any, psbt: Psbt) => psbt],
+  (slices: any, psbt: Psbt) => {
+    const inputIdentifiers = new Set(
+      psbt.txInputs.map((input) =>
+        /*
+         * All input TXIDs are expected to be in **big-endian**
+         * format (human-readable format). Which we get from block explorers, wallets, APIs
+         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
+         * internal data structures and processing so here we convert the txid to little-endian format
+         */
+        createInputIdentifier(
+          convertTxidToLittleEndian(input.hash),
+          input.index,
+        ),
+      ),
+    );
+
+    const inputs: Input[] = [];
+    slices.forEach((slice: Slice & { utxos: UTXO }) => {
+      Object.entries(slice.utxos).forEach(([, utxo]) => {
+        const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
+        if (inputIdentifiers.has(inputIdentifier)) {
+          const input = {
+            ...utxo,
+            multisig: slice.multisig,
+            bip32Path: slice.bip32Path,
+            change: slice.change,
+          };
+          inputs.push(input);
+        }
+      });
+    });
+
+    return inputs;
+  },
+);
+
+/**
+ * Selector to extract signatures from PSBT
+ */
+export const selectSignaturesFromPSBT = createSelector(
+  [selectInputsFromPSBT, (state: any, psbt: Psbt) => psbt],
+  (inputs, psbt) => {
+    console.log(
+      "extractSignaturesFromPSBT",
+      extractSignaturesFromPSBT(psbt, inputs),
+    );
+    return extractSignaturesFromPSBT(psbt, inputs);
+  },
+);
+
+/**
+ * Selector to get signatures formatted for importers
+ */
+export const selectSignaturesForImporters = createSelector(
+  [selectSignaturesFromPSBT],
+  (signatureSets) => mapSignaturesToImporters(signatureSets),
+);
+
+// ====================
+// PRIVATE HELPER FUNCTIONS
+// ====================
 
 /**
  * Identifies which signer (by index in multisig) a given public key belongs to.
