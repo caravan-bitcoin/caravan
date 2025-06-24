@@ -185,13 +185,7 @@ export const selectInputsFromPSBT = createSelector(
  */
 export const selectSignaturesFromPSBT = createSelector(
   [selectInputsFromPSBT, (state: any, psbt: Psbt) => psbt],
-  (inputs, psbt) => {
-    console.log(
-      "extractSignaturesFromPSBT",
-      extractSignaturesFromPSBT(psbt, inputs),
-    );
-    return extractSignaturesFromPSBT(psbt, inputs);
-  },
+  (inputs, psbt) => extractSignaturesFromPSBT(psbt, inputs),
 );
 
 /**
