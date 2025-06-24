@@ -1,7 +1,12 @@
 {
   "name": "caravan",
   "private": true,
+  "engines": {
+    "node": ">=20.18.0 <21.0.0",
+    "npm": ">=10.5.0 <11.0.0"
+  },
   "scripts": {
+    "preinstall": "node scripts/check-node-versions.js",
     "build": "turbo build",
     "build:coordinator": "turbo build --filter=caravan-coordinator",
     "changeset": "changeset",
@@ -15,7 +20,8 @@
     "test:debug": "turbo test:debug",
     "version": "turbo run build lint test && changeset version && npm install --package-lock-only",
     "release": "turbo run build lint test && changeset publish",
-    "dev:coordinator": "turbo run dev --filter=caravan-coordinator"
+    "dev:coordinator": "turbo run dev --filter=caravan-coordinator",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@caravan/eslint-config": "*",
@@ -25,6 +31,7 @@
     "@vitest/coverage-istanbul": "^3.1.2",
     "esbuild": "^0.25.3",
     "esbuild-plugins-node-modules-polyfill": "^1.7.0",
+    "husky": "^9.1.7",
     "prettier": "^3.1.1",
     "tsup": "^8.0.0",
     "turbo": "^2.0.3",
@@ -33,9 +40,6 @@
   },
   "dependencies": {
     "@ledgerhq/hw-transport-webusb": "6.27.12"
-  },
-  "engines": {
-    "node": ">=20"
   },
   "overrides": {
     "material-table": {
