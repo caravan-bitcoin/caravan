@@ -9,7 +9,7 @@ export const clientConfig: rpcConfig = {
     username: process.env.BITCOIN_RPC_USER!,
     password: process.env.BITCOIN_RPC_PASSWORD!,
     port: parseInt(process.env.BITCOIN_RPC_PORT!),
-    host: `http://localhost:${process.env.BITCOIN_RPC_PORT}}`
+    host: `http://localhost:${process.env.BITCOIN_RPC_PORT}`
 }
 
 function bitcoinClient(){
