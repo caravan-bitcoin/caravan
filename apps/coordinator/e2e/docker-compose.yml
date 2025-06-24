@@ -38,7 +38,32 @@ services:
         condition: service_healthy
     networks:
      - caravan-e2e
-
+  
+  caravan:
+    build:
+      context: ../../
+      dockerfile: coordinator/Dockerfile
+      target: runner
+    container_name: caravan_coordinator
+    ports:
+     - "5173:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+      nginx: 
+        condition: service_healthy
+    networks:
+      - caravan-e2e
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    
 networks:
   caravan-e2e:
     driver: bridge

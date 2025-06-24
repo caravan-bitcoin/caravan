@@ -76,11 +76,4 @@ export default defineConfig({
   globalSetup: "./utils/globalSetup.ts",
   globalTeardown: "utils/globalTeardown.ts",
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'cd .. && npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
 });
