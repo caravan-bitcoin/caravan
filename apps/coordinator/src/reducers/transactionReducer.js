@@ -12,6 +12,7 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
   unsignedMultisigTransaction,
+  getAddressType,
 } from "@caravan/bitcoin";
 import {
   convertLegacyInput,
@@ -248,10 +249,9 @@ function updateOutputAddress(state, action) {
   }
   newOutputs[action.number - 1].address = address;
   newOutputs[action.number - 1].addressError = error;
-  return {
-    ...state,
-    ...{ outputs: newOutputs },
-  };
+  newOutputs[action.number - 1].scriptType =
+    error === "" ? getAddressType(address, state.network) : "";
+  return { ...state, ...{ outputs: newOutputs } };
 }
 
 function updateOutputMultisig(state, action) {
@@ -435,6 +435,11 @@ export default (state = initialState(), action) => {
       return validateTransaction(deleteOutput(state, action));
     case SET_FEE_RATE:
       return validateTransaction(updateFeeRate(state, action));
+    case "ANALYZE_TRANSACTION":
+      return {
+        ...state,
+        transactionAnalysis: action.analysis,
+      };
     case SET_FEE:
       return validateTransaction(updateFee(state, action));
     case FINALIZE_OUTPUTS:
