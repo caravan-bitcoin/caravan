@@ -34,7 +34,7 @@ export class BitcoinCoreService {
     }
   }
 
-  async testRpcConnection() {
+  async waitForBitcoinCore() {
     const maxRetries = 10;
     const delay = 2000;
 

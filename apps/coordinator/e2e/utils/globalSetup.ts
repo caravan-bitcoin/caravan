@@ -17,14 +17,12 @@ async function globalSetup(_config: FullConfig){
         stdio: "inherit",
         cwd: process.cwd()
     })
-
-    console.log("Waiting for continers to be ready...");
-    await new Promise(resolve => setTimeout(resolve,2000));
-
     const client = bitcoinClient();
 
-    const checkConnection = await client?.testRpcConnection();
-    console.log("checkConnection",checkConnection)
+    console.log("Waiting for continers to be ready...");
+    
+    await new Promise(resolve => setTimeout(resolve,2000));
+    await client?.waitForBitcoinCore();
 
     console.log("Creating test wallets in globally...")
 
