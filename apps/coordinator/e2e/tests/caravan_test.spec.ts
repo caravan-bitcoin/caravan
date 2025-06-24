@@ -148,9 +148,13 @@ test.describe("Caravan Wallet Creation", () => {
 
       await def_Url.fill('http://localhost:8080')
 
+      const watcher_wallet = walletNames[3];
+
       await page.locator('#bitcoind-username').fill(clientConfig.username);
 
       await page.locator('#bitcoind-password').fill(clientConfig.password);
+
+      await page.locator("#wallet-name").fill(watcher_wallet)
 
 
       await page.click('button:has-text("Test Connection")');
@@ -171,6 +175,8 @@ test.describe("Caravan Wallet Creation", () => {
       ?.p2sh.xpub as string;
     const p2sh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
       ?.p2sh.xpub as string;
+
+    
 
 
    //filling xpub1 

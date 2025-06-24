@@ -37,7 +37,7 @@ async function globalSetup(_config: FullConfig){
         `test_wallet_1`,
         `test_wallet_2`,
         `test_wallet_3`,
-        `watcher_wallet}`
+        `watcher_wallet`
     ]
 
     for (const walletName in walletNames){
@@ -76,17 +76,17 @@ async function globalSetup(_config: FullConfig){
         fs.mkdirSync(tempDir, {recursive: true})
     }
      
-    //Storing initial state
-    // const testState: TestState = {
-    //     downloadWalletFile: '',
-    //     test_wallet_names: walletNames,
-    //     test_wallets: testWallets,
-    //     walletAddress: '',
-    //     timestamp: Date.now()
-    // }
+    // Storing initial state
+    const testState: TestState = {
+        downloadWalletFile: '',
+        test_wallet_names: walletNames,
+        test_wallets: testWallets,
+        walletAddress: '',
+        timestamp: Date.now()
+    }
 
-    // fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
-    // process.env.TEST_STATE_FILE = testStateFile
+    fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
+    process.env.TEST_STATE_FILE = testStateFile
 
 
    } catch (error) {
