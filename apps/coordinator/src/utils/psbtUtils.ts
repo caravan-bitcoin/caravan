@@ -54,10 +54,10 @@ export interface SignatureInfo {
   derivedPubkey: string; // The actual derived pubkey for this input
 }
 
-export /**
+/**
  * Interface for signer identification across multiple inputs
  */
-interface SignerIdentity {
+export interface SignerIdentity {
   signerIndex: number; // Position in the multisig setup (0, 1, 2, etc.)
   masterFingerprint?: string; // Master key fingerprint if available
   signatures: Buffer[] | string[]; // Signatures for each input (in order)
