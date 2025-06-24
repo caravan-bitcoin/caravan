@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.1
+
+### Patch Changes
+
+- [#305](https://github.com/caravan-bitcoin/caravan/pull/305) [`c6f7607`](https://github.com/caravan-bitcoin/caravan/commit/c6f76071e151fd359bc12d05c9e038d32995bf5d) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Import Partially Signed PSBT works now
+
 ## 1.9.0
 
 ### Minor Changes
