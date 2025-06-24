@@ -41,8 +41,8 @@ services:
   
   caravan:
     build:
-      context: ../../
-      dockerfile: coordinator/Dockerfile
+      context: ../../../
+      dockerfile: apps/coordinator/Dockerfile
       target: runner
     container_name: caravan_coordinator
     ports:
@@ -53,7 +53,7 @@ services:
       bitcoind:
         condition: service_healthy
       nginx: 
-        condition: service_healthy
+        condition: service_started
     networks:
       - caravan-e2e
     healthcheck:
