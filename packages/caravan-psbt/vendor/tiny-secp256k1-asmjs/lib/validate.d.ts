@@ -20,8 +20,6 @@ export declare function validateTweak(tweak: Uint8Array): void;
 export declare function validateHash(h: Uint8Array): void;
 export declare function validateExtraData(e?: Uint8Array): void;
 export declare function validateSignature(signature: Uint8Array): void;
-export declare function validateSignatureCustom(
-  validatorFn: () => boolean,
-): void;
+export declare function validateSignatureCustom(validatorFn: () => boolean): void;
 export declare function validateSignatureNonzeroRS(signature: Uint8Array): void;
 export declare function validateSigrPMinusN(signature: Uint8Array): void;

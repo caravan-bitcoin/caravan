@@ -20,7 +20,7 @@ describe("CustomExportExtendedPublicKey", () => {
   describe("constructor", () => {
     it("fails with invalid network", () => {
       expect(() => interactionBuilder({ network: "foob" })).toThrow(
-        /Unknown network/i,
+        /Unknown network/i
       );
     });
     it("shows invalid bip32Path unsupported", () => {
@@ -34,7 +34,7 @@ describe("CustomExportExtendedPublicKey", () => {
           state: PENDING,
           level: ERROR,
           code: "custom.bip32_path.path_error",
-        }),
+        })
       ).toBe(true);
     });
   });
@@ -48,13 +48,13 @@ describe("CustomExportExtendedPublicKey", () => {
         bip32Path: "m/45'/1/0",
       });
       expect(() => interaction.parse(notJSON)).toThrow(
-        /Not a valid ExtendedPublicKey/i,
+        /Not a valid ExtendedPublicKey/i
       );
       expect(() => interaction.parse(definitelyNotJSON)).toThrow(
-        /Not a valid ExtendedPublicKey/i,
+        /Not a valid ExtendedPublicKey/i
       );
       expect(() => interaction.parse({})).toThrow(
-        /Not a valid ExtendedPublicKey/i,
+        /Not a valid ExtendedPublicKey/i
       );
     });
 
@@ -68,7 +68,7 @@ describe("CustomExportExtendedPublicKey", () => {
       };
       Reflect.deleteProperty(missingXpub, "xpub");
       expect(() => interaction.parse(missingXpub)).toThrow(
-        /Not a valid ExtendedPublicKey/i,
+        /Not a valid ExtendedPublicKey/i
       );
     });
 
@@ -108,7 +108,7 @@ describe("CustomExportExtendedPublicKey", () => {
         interaction.parse({
           xpub: customFixtures.validCustomTpubJSON.xpub,
           rootFingerprint: "zzzz",
-        }),
+        })
       ).toThrow(/Root fingerprint validation error/i);
     });
 
@@ -120,7 +120,7 @@ describe("CustomExportExtendedPublicKey", () => {
       });
 
       expect(() =>
-        interaction.parse(customFixtures.validCustomTpubJSON),
+        interaction.parse(customFixtures.validCustomTpubJSON)
       ).toThrow(/does not match depth of BIP32 path/i);
     });
 
@@ -132,7 +132,7 @@ describe("CustomExportExtendedPublicKey", () => {
       });
 
       expect(() =>
-        interaction.parse(customFixtures.validCustomTpubJSON),
+        interaction.parse(customFixtures.validCustomTpubJSON)
       ).toThrow(/does not match depth of BIP32 path/i);
     });
   });
@@ -147,7 +147,7 @@ describe("CustomExportExtendedPublicKey", () => {
         level: INFO,
         code: "custom.import_xpub",
         text: "Type or paste the extended public key here.",
-      }),
+      })
     ).toBe(true);
   });
 });
@@ -212,7 +212,7 @@ describe("CustomSignMultisigTransaction", () => {
     it("throws error as psbt has no signatures", () => {
       const interaction = interactionBuilder({ psbt: testMultisig.psbt });
       expect(() => interaction.parse(testMultisig.psbt)).toThrow(
-        /No signatures found/i,
+        /No signatures found/i
       );
     });
   });
@@ -227,7 +227,7 @@ describe("CustomSignMultisigTransaction", () => {
         level: INFO,
         code: "custom.download_psbt",
         text: "Download and save this PSBT file.",
-      }),
+      })
     ).toBe(true);
   });
   it("has a message about signing psbt", () => {
@@ -240,7 +240,7 @@ describe("CustomSignMultisigTransaction", () => {
         level: INFO,
         code: "custom.sign_psbt",
         text: `Add your signature to the PSBT.`,
-      }),
+      })
     ).toBe(true);
   });
   it("has a message about verify tx", () => {
@@ -253,7 +253,7 @@ describe("CustomSignMultisigTransaction", () => {
         level: INFO,
         code: "custom.sign_psbt",
         text: "Verify the transaction details and sign.",
-      }),
+      })
     ).toBe(true);
   });
   it("has a message about upload PSBT", () => {
@@ -266,7 +266,7 @@ describe("CustomSignMultisigTransaction", () => {
         level: INFO,
         code: "custom.upload_signed_psbt",
         text: "Upload the signed PSBT.",
-      }),
+      })
     ).toBe(true);
   });
 });

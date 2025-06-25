@@ -21,6 +21,7 @@ import {
   TrezorSignMessage,
 } from "./trezor";
 
+
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
     expect(
@@ -29,7 +30,7 @@ function itHasStandardMessages(interactionBuilder) {
         level: INFO,
         code: "device.connect",
         text: "plugged in",
-      }),
+      })
     ).toBe(true);
   });
 
@@ -40,7 +41,7 @@ function itHasStandardMessages(interactionBuilder) {
         level: INFO,
         code: "trezor.connect.generic",
         text: "enabled popups",
-      }),
+      })
     ).toBe(true);
   });
 }
@@ -119,7 +120,7 @@ describe("trezor", () => {
           revision: "ef8...862d7",
           unfinished_backup: null,
           vendor: "bitcointrezor.com",
-        }),
+        })
       ).toEqual({
         spec: "Model 1 v.1.6.3 w/PIN",
         model: "Model 1",
@@ -166,7 +167,7 @@ describe("trezor", () => {
           state: PENDING,
           level: ERROR,
           code: "trezor.bip32_path.path_error",
-        }),
+        })
       ).toBe(true);
     });
 
@@ -180,7 +181,7 @@ describe("trezor", () => {
           state: PENDING,
           level: ERROR,
           code: "trezor.bip32_path.minimum",
-        }),
+        })
       ).toBe(true);
     });
 
@@ -209,7 +210,7 @@ describe("trezor", () => {
 
     it("parses out the public key from the response payload", () => {
       expect(
-        interactionBuilder().parsePayload({ publicKey: "foobar" }),
+        interactionBuilder().parsePayload({ publicKey: "foobar" })
       ).toEqual("foobar");
     });
 
@@ -238,7 +239,7 @@ describe("trezor", () => {
 
     it("parses out the extended public key from the response payload", () => {
       expect(interactionBuilder().parsePayload({ xpub: "foobar" })).toEqual(
-        "foobar",
+        "foobar"
       );
     });
 
@@ -269,16 +270,16 @@ describe("trezor", () => {
           // The string length is however long the signature is minus these two starting bytes
           // plain signature without SIGHASH (foobar is 3 bytes, string length = 6, which is 3 bytes)
           expect(
-            interactionBuilder().parsePayload({ signatures: ["3003foobar"] }),
+            interactionBuilder().parsePayload({ signatures: ["3003foobar"] })
           ).toEqual(["3003foobar01"]);
           // signature actually ends in 0x01 (foob01 is 3 bytes, string length = 6, which is 3 bytes)
           expect(
-            interactionBuilder().parsePayload({ signatures: ["3003foob01"] }),
+            interactionBuilder().parsePayload({ signatures: ["3003foob01"] })
           ).toEqual(["3003foob0101"]);
           // signature with sighash already included (foobar is 3 bytes, string length = 8, which is 4 bytes) ...
           // we expect this to chop off the 01 and add it back
           expect(
-            interactionBuilder().parsePayload({ signatures: ["3003foobar01"] }),
+            interactionBuilder().parsePayload({ signatures: ["3003foobar01"] })
           ).toEqual(["3003foobar01"]);
         });
 
@@ -289,7 +290,7 @@ describe("trezor", () => {
           expect((params as any).coin).toEqual(trezorCoin(fixture.network));
           expect((params as any).inputs.length).toEqual(fixture.inputs.length);
           expect((params as any).outputs.length).toEqual(
-            fixture.outputs.length,
+            fixture.outputs.length
           );
           // FIXME check inputs & output details
         });
@@ -300,7 +301,7 @@ describe("trezor", () => {
       tx,
       keyDetails,
       returnSignatureArray,
-      addressType,
+      addressType
     ) {
       return new TrezorSignMultisigTransaction({
         network: tx.network,
@@ -320,12 +321,7 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/1'/100'",
       };
-      const interaction = psbtInteractionBuilder(
-        tx,
-        keyDetails,
-        false,
-        tx.braidDetails.addressType,
-      );
+      const interaction = psbtInteractionBuilder(tx, keyDetails, false, tx.braidDetails.addressType);
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));
@@ -333,7 +329,7 @@ describe("trezor", () => {
       expect((params as any).outputs.length).toEqual(tx.outputs.length);
 
       expect(interaction.parsePayload({ signatures: tx.signature })).toContain(
-        PSBT_MAGIC_B64,
+        PSBT_MAGIC_B64
       );
     });
 
@@ -343,19 +339,14 @@ describe("trezor", () => {
         xfp: ROOT_FINGERPRINT,
         path: "m/45'/0'/100'",
       };
-      const interaction = psbtInteractionBuilder(
-        tx,
-        keyDetails,
-        true,
-        tx.braidDetails.addressType,
-      );
+      const interaction = psbtInteractionBuilder(tx, keyDetails, true, tx.braidDetails.addressType);
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signTransaction);
       expect((params as any).coin).toEqual(trezorCoin(tx.network));
       expect((params as any).inputs.length).toEqual(tx.inputs.length);
       expect((params as any).outputs.length).toEqual(tx.outputs.length);
       expect(
-        interaction.parsePayload({ signatures: ["3003foobar01"] }),
+        interaction.parsePayload({ signatures: ["3003foobar01"] })
       ).toEqual(["3003foobar01"]);
     });
   });
@@ -403,14 +394,14 @@ describe("trezor", () => {
           expect((params as any).bundle[0].path).toEqual(fixture.bip32Path);
           expect((params as any).bundle[0].showOnTrezor).toBe(false);
           expect((params as any).bundle[0].coin).toEqual(
-            trezorCoin(fixture.network),
+            trezorCoin(fixture.network)
           );
           expect((params as any).bundle[0].crossChain).toBe(true);
           expect((params as any).bundle[1].path).toEqual(fixture.bip32Path);
           expect((params as any).bundle[1].address).toEqual(fixture.address);
           expect((params as any).bundle[1].showOnTrezor).toBe(true);
           expect((params as any).bundle[1].coin).toEqual(
-            trezorCoin(fixture.network),
+            trezorCoin(fixture.network)
           );
           expect((params as any).bundle[1].crossChain).toBe(true);
           // FIXME check multisig details
@@ -484,7 +475,7 @@ describe("trezor", () => {
           state: PENDING,
           level: ERROR,
           code: "trezor.bip32_path.path_error",
-        }),
+        })
       ).toBe(true);
     });
 

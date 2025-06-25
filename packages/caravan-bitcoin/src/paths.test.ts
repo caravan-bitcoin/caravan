@@ -62,7 +62,7 @@ describe("paths", () => {
     it("returns an error message when a derivation index is too high", () => {
       expect(validateBIP32Path("m/4294967296")).toMatch(/index is too high/i);
       expect(validateBIP32Path("m/45'/2147483648'/0")).toMatch(
-        /index is too high/i,
+        /index is too high/i
       );
     });
 
@@ -79,7 +79,7 @@ describe("paths", () => {
       expect(validateBIP32Path("m/45'/0")).toEqual("");
       expect(validateBIP32Path("m/45'/0'", { mode: "hardened" })).toEqual("");
       expect(validateBIP32Path("m/45'/0", { mode: "hardened" })).toMatch(
-        /fully-hardened/i,
+        /fully-hardened/i
       );
       expect(validateBIP32Path("m/45'/0'", { mode: "hardened" })).toEqual("");
     });
@@ -88,7 +88,7 @@ describe("paths", () => {
       expect(validateBIP32Path("m/45'/0")).toEqual("");
       expect(validateBIP32Path("m/45/0", { mode: "unhardened" })).toEqual("");
       expect(validateBIP32Path("m/45'/0", { mode: "unhardened" })).toMatch(
-        /cannot include hardened/i,
+        /cannot include hardened/i
       );
     });
   });
@@ -111,7 +111,7 @@ describe("paths", () => {
 
     it("returns an error message when the index is too high", () => {
       expect(
-        validateBIP32Index("85899345929999999999999999999999999999"),
+        validateBIP32Index("85899345929999999999999999999999999999")
       ).toMatch(/Invalid BIP32 index/i);
       expect(validateBIP32Index("4294967296")).toMatch(/index is too high/i);
       expect(validateBIP32Index("2147483648'")).toMatch(/index is too high/i);
@@ -133,10 +133,10 @@ describe("paths", () => {
       expect(validateBIP32Index("45'", { mode: "hardened" })).toEqual("");
 
       expect(validateBIP32Index("2147483648", { mode: "hardened" })).toEqual(
-        "",
+        ""
       );
       expect(validateBIP32Index("45", { mode: "hardened" })).toMatch(
-        /must be hardened/i,
+        /must be hardened/i
       );
     });
 
@@ -145,10 +145,10 @@ describe("paths", () => {
       expect(validateBIP32Index("45")).toEqual("");
       expect(validateBIP32Index("45", { mode: "unhardened" })).toEqual("");
       expect(validateBIP32Index("45'", { mode: "unhardened" })).toMatch(
-        /cannot be hardened/i,
+        /cannot be hardened/i
       );
       expect(validateBIP32Index("2147483648", { mode: "unhardened" })).toMatch(
-        /cannot be hardened/i,
+        /cannot be hardened/i
       );
     });
   });
@@ -158,16 +158,16 @@ describe("paths", () => {
       expect(multisigBIP32Root(P2SH, Network.MAINNET)).toEqual("m/45'/0'/0'");
       expect(multisigBIP32Root(P2SH, Network.TESTNET)).toEqual("m/45'/1'/0'");
       expect(multisigBIP32Root(P2SH_P2WSH, Network.MAINNET)).toEqual(
-        "m/48'/0'/0'/1'",
+        "m/48'/0'/0'/1'"
       );
       expect(multisigBIP32Root(P2SH_P2WSH, Network.TESTNET)).toEqual(
-        "m/48'/1'/0'/1'",
+        "m/48'/1'/0'/1'"
       );
       expect(multisigBIP32Root(P2WSH, Network.MAINNET)).toEqual(
-        "m/48'/0'/0'/2'",
+        "m/48'/0'/0'/2'"
       );
       expect(multisigBIP32Root(P2WSH, Network.TESTNET)).toEqual(
-        "m/48'/1'/0'/2'",
+        "m/48'/1'/0'/2'"
       );
     });
 
@@ -190,16 +190,16 @@ describe("paths", () => {
 
     it("returns a BIP32 path with the correct root for each combination of address type, network, and relative path", () => {
       expect(multisigBIP32Path(P2SH, Network.MAINNET, "1")).toEqual(
-        "m/45'/0'/0'/1",
+        "m/45'/0'/0'/1"
       );
       expect(multisigBIP32Path(P2SH, Network.TESTNET, "1'/2'")).toEqual(
-        "m/45'/1'/0'/1'/2'",
+        "m/45'/1'/0'/1'/2'"
       );
       expect(multisigBIP32Path(P2SH_P2WSH, Network.MAINNET, "0")).toEqual(
-        "m/48'/0'/0'/1'/0",
+        "m/48'/0'/0'/1'/0"
       );
       expect(multisigBIP32Path(P2WSH, Network.TESTNET, "3")).toEqual(
-        "m/48'/1'/0'/2'/3",
+        "m/48'/1'/0'/2'/3"
       );
     });
 
@@ -238,7 +238,7 @@ describe("paths", () => {
       expect(getRelativeBIP32Path("m/45'", "foo")).toMatch(/is invalid/i);
       expect(getRelativeBIP32Path("m/45'", "/45")).toMatch(/is invalid/i);
       expect(getRelativeBIP32Path("m/44'", "m/45'")).toMatch(
-        /bip32Path does not start with the chroot/i,
+        /bip32Path does not start with the chroot/i
       );
       const validPaths = [
         "m/45'",

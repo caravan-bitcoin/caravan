@@ -442,7 +442,7 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
    */
   request() {
     throw new Error(
-      "This interaction is direct and does not support a `request` method.",
+      "This interaction is direct and does not support a `request` method."
     );
   }
 
@@ -451,13 +451,13 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
    */
   parse() {
     throw new Error(
-      "This interaction is direct and does not support a `parse` method.",
+      "This interaction is direct and does not support a `parse` method."
     );
   }
 
   signatureFormatter<T extends FormatType = "hex">(
     inputSignature: string,
-    format: T = "hex" as T,
+    format: T = "hex" as T
   ) {
     // Ledger signatures include the SIGHASH byte (0x01) if signing for P2SH-P2WSH or P2WSH ...
     // but NOT for P2SH ... This function should always return the signature with SIGHASH byte appended.
@@ -466,12 +466,12 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
     // byte in case they do in the future.
 
     const signatureWithSigHashByte = `${signatureNoSighashType(
-      inputSignature,
+      inputSignature
     )}01`;
     if (format === "buffer") {
       return Buffer.from(
         signatureWithSigHashByte,
-        "hex",
+        "hex"
       ) as FormatReturnType<T>;
     } else {
       return signatureWithSigHashByte as FormatReturnType<T>;
@@ -480,10 +480,10 @@ export class DirectKeystoreInteraction extends KeystoreInteraction {
 
   parseSignature<T extends FormatType = "hex">(
     transactionSignature: string[],
-    format: T = "hex" as T,
+    format: T = "hex" as T
   ) {
     return (transactionSignature || []).map((inputSignature) =>
-      this.signatureFormatter(inputSignature, format),
+      this.signatureFormatter(inputSignature, format)
     ) as FormatReturnType<T>[];
   }
 }
@@ -577,7 +577,7 @@ export class IndirectKeystoreInteraction extends KeystoreInteraction {
    */
   async run() {
     throw new Error(
-      "This interaction is indirect and does not support a `run` method.",
+      "This interaction is indirect and does not support a `run` method."
     );
   }
 }

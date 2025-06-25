@@ -27,7 +27,7 @@ describe("multisig", () => {
       badone.network,
       badone.type,
       2,
-      ...badone.publicKeys,
+      ...badone.publicKeys
     );
     expect(badMultisig).toBe(null);
 
@@ -37,14 +37,14 @@ describe("multisig", () => {
           test.network,
           test.type,
           2,
-          ...test.publicKeys,
+          ...test.publicKeys
         );
         expect(multisigAddressType(multisig)).toEqual(test.type);
         expect(multisigRequiredSigners(multisig)).toEqual(2);
         expect(multisigTotalSigners(multisig)).toEqual(2);
         expect(multisigPublicKeys(multisig)).toEqual(test.publicKeys);
         expect(scriptToHex(multisigScript(multisig))).toEqual(
-          test.type === P2SH ? test.redeemScriptHex : test.witnessScriptHex,
+          test.type === P2SH ? test.redeemScriptHex : test.witnessScriptHex
         );
       });
     });
@@ -56,14 +56,14 @@ describe("multisig", () => {
         const multisig = generateMultisigFromHex(
           test.network,
           test.type,
-          test.type === P2SH ? test.redeemScriptHex : test.witnessScriptHex,
+          test.type === P2SH ? test.redeemScriptHex : test.witnessScriptHex
         );
         expect(multisigAddressType(multisig)).toEqual(test.type);
         expect(multisigRequiredSigners(multisig)).toEqual(2);
         expect(multisigTotalSigners(multisig)).toEqual(2);
         expect(multisigPublicKeys(multisig)).toEqual(test.publicKeys);
         expect(scriptToHex(multisigScript(multisig))).toEqual(
-          test.multisigScriptHex,
+          test.multisigScriptHex
         );
       });
     });
@@ -97,7 +97,7 @@ describe("multisig", () => {
     MULTISIGS.forEach((test) => {
       it(`returns the multisig script for a ${test.network} 2-of-2 ${test.type} address`, () => {
         expect(scriptToHex(multisigScript(test.braidAwareMultisig))).toEqual(
-          test.multisigScriptHex,
+          test.multisigScriptHex
         );
       });
     });
@@ -112,7 +112,7 @@ describe("multisig", () => {
       } else {
         it(`returns the redeem script for a ${test.network} 2-of-2 ${test.type} address`, () => {
           expect(
-            scriptToHex(multisigRedeemScript(test.braidAwareMultisig)),
+            scriptToHex(multisigRedeemScript(test.braidAwareMultisig))
           ).toEqual(test.redeemScriptHex);
         });
       }
@@ -128,7 +128,7 @@ describe("multisig", () => {
       } else {
         it(`returns the witness script for a ${test.network} 2-of-2 ${test.type} address`, () => {
           expect(
-            scriptToHex(multisigWitnessScript(test.braidAwareMultisig)),
+            scriptToHex(multisigWitnessScript(test.braidAwareMultisig))
           ).toEqual(test.witnessScriptHex);
         });
       }
@@ -139,7 +139,7 @@ describe("multisig", () => {
     MULTISIGS.forEach((test) => {
       it(`returns the public keys for a ${test.network} 2-of-2 ${test.type} address`, () => {
         expect(multisigPublicKeys(test.braidAwareMultisig)).toEqual(
-          test.publicKeys,
+          test.publicKeys
         );
       });
     });
@@ -162,7 +162,7 @@ describe("multisig", () => {
     MULTISIGS.forEach((test) => {
       it(`returns the braidDetails for a ${test.network} 2-of-2 ${test.type} address`, () => {
         expect(multisigBraidDetails(test.braidAwareMultisig)).toBe(
-          braidConfig(test.braidDetails),
+          braidConfig(test.braidDetails)
         );
       });
     });

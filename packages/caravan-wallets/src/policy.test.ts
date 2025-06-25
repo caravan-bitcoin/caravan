@@ -78,24 +78,24 @@ describe("MultisigWalletPolicy", () => {
     (vect) => {
       expect(() =>
         MultisigWalletPolicy.FromWalletConfig(
-          (<unknown>vect) as MultisigWalletConfig,
-        ),
+          (<unknown>vect) as MultisigWalletConfig
+        )
       ).not.toThrow();
-    },
+    }
   );
 
   test.each(cases)(
     `can return serialized list of key origins $case.name`,
     (vect) => {
       const policy = MultisigWalletPolicy.FromWalletConfig(
-        (<unknown>vect) as MultisigWalletConfig,
+        (<unknown>vect) as MultisigWalletConfig
       );
       expect(policy.keys).toHaveLength(vect.extendedPublicKeys.length);
       for (const key of vect.extendedPublicKeys) {
         const ko = new KeyOrigin({ ...key, network: vect.network });
         expect(policy.keys.includes(ko.toString())).toBeTruthy();
       }
-    },
+    }
   );
 
   it("trims wallet name with trailing space", () => {
@@ -121,7 +121,7 @@ describe("MultisigWalletPolicy", () => {
     };
 
     expect(MultisigWalletPolicy.FromWalletConfig(original).keys).toEqual(
-      MultisigWalletPolicy.FromWalletConfig(reversed).keys,
+      MultisigWalletPolicy.FromWalletConfig(reversed).keys
     );
   });
 });
@@ -136,7 +136,7 @@ describe("KeyOrigin", () => {
     };
 
     expect(new KeyOrigin(options).toString()).toEqual(
-      "[76223a6e/48'/1'/0'/2']tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF",
+      "[76223a6e/48'/1'/0'/2']tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
     );
   });
 
@@ -150,7 +150,7 @@ describe("KeyOrigin", () => {
       expect(keyOrigin.xfp).toEqual("76223a6e");
       expect(keyOrigin.bip32Path).toEqual("m/48'/1'/0'/2'");
       expect(keyOrigin.xpub).toEqual(
-        "tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF",
+        "tpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
       );
       expect(keyOrigin.network).toEqual(Network.TESTNET);
       expect(keyOrigin.toString()).toEqual(testKeyOrigin);
@@ -160,8 +160,8 @@ describe("KeyOrigin", () => {
       expect(() => KeyOrigin.fromString("invalid")).toThrow();
       expect(() =>
         KeyOrigin.fromString(
-          "[76223a6e/48'/1'/0'/2']rpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF",
-        ),
+          "[76223a6e/48'/1'/0'/2']rpubDE7NQymr4AFtewpAsWtnreyq9ghkzQBXpCZjWLFVRAvnbf7vya2eMTvT2fPapNqL8SuVvLQdbUbMfWLVDCZKnsEBqp6UK93QEzL8Ck23AwF"
+        )
       ).toThrow("Invalid key origin string");
     });
 
@@ -180,7 +180,7 @@ describe("getPolicyTemplateFromWalletConfig", () => {
   it("converts braids to valid policies", () => {
     for (const multisig of TEST_FIXTURES.multisigs) {
       const walletConfig = braidDetailsToWalletConfig(
-        (<unknown>multisig.braidDetails) as BraidDetails,
+        (<unknown>multisig.braidDetails) as BraidDetails
       );
       const template = getPolicyTemplateFromWalletConfig(walletConfig);
       validateMultisigPolicyTemplate(template);

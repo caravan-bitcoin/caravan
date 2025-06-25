@@ -65,6 +65,7 @@ export const LEDGER = "ledger";
 
 export const LEDGER_V2 = "ledger_v2";
 
+
 /**
  * Constant representing the action of pushing the left button on a
  * Ledger device.
@@ -364,7 +365,7 @@ export abstract class LedgerBitcoinInteraction extends LedgerInteraction {
     const isSupported = await this.isAppSupported();
     if (!isSupported) {
       throw new Error(
-        `Method not supported for this version of Ledger app (${this.appVersion})`,
+        `Method not supported for this version of Ledger app (${this.appVersion})`
       );
     }
     return isSupported;
@@ -442,22 +443,22 @@ export class LedgerGetMetadata extends LedgerDashboardInteraction {
       const targetId = targetIdStr.readUIntBE(0, 4);
       const seVersionLength = data[4];
       let seVersion = Buffer.from(
-        data.slice(5, 5 + seVersionLength),
+        data.slice(5, 5 + seVersionLength)
       ).toString();
       const flagsLength = data[5 + seVersionLength];
       let flags = Buffer.from(
         data.slice(
           5 + seVersionLength + 1,
-          5 + seVersionLength + 1 + flagsLength,
-        ),
+          5 + seVersionLength + 1 + flagsLength
+        )
       );
 
       const mcuVersionLength = data[5 + seVersionLength + 1 + flagsLength];
       let mcuVersion = Buffer.from(
         data.slice(
           7 + seVersionLength + flagsLength,
-          7 + seVersionLength + flagsLength + mcuVersionLength,
-        ),
+          7 + seVersionLength + flagsLength + mcuVersionLength
+        )
       );
       if (mcuVersion[mcuVersion.length - 1] === 0) {
         mcuVersion = mcuVersion.slice(0, mcuVersion.length - 1);
@@ -484,10 +485,10 @@ export class LedgerGetMetadata extends LedgerDashboardInteraction {
       /* eslint-enable */
 
       const [majorVersion, minorVersion, patchVersion] = (version || "").split(
-        ".",
+        "."
       );
       const [mcuMajorVersion, mcuMinorVersion] = (versionString || "").split(
-        ".",
+        "."
       );
 
       // https://gist.github.com/TamtamHero/b7651ffe6f1e485e3886bf4aba673348
@@ -688,7 +689,7 @@ abstract class LedgerExportHDNode extends LedgerBitcoinInteraction {
       return this.getXfp();
     } else {
       throw new Error(
-        `Method not supported for this version of Ledger app (${this.appVersion})`,
+        `Method not supported for this version of Ledger app (${this.appVersion})`
       );
     }
   }
@@ -857,7 +858,7 @@ export class LedgerExportExtendedPublicKey extends LedgerExportHDNode {
           walletPublicKey.publicKey,
           walletPublicKey.chainCode,
           Number(fingerprint),
-          this.network,
+          this.network
         );
 
         if (this.includeXFP) {
@@ -990,16 +991,16 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
         network,
         v2Options?.addressType || P2SH,
         this.psbt,
-        keyDetails,
+        keyDetails
       );
 
       this.inputs = translatedPsbt?.unchainedInputs;
       this.outputs = translatedPsbt?.unchainedOutputs;
       this.bip32Paths = translatedPsbt?.bip32Derivations.map(
-        (b32d) => b32d.path,
+        (b32d) => b32d.path
       );
       this.pubkeys = translatedPsbt?.bip32Derivations.map(
-        (b32d) => b32d.pubkey,
+        (b32d) => b32d.pubkey
       );
     }
     this.v2Options = v2Options;
@@ -1171,7 +1172,7 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
             this.network,
             this.psbt,
             this.pubkeys,
-            this.parseSignature(transactionSignature, "buffer"),
+            this.parseSignature(transactionSignature, "buffer")
           );
         } else {
           return this.parseSignature(transactionSignature, "hex");
@@ -1201,7 +1202,7 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
     const txHex = unsignedMultisigTransaction(
       this.network,
       this.inputs,
-      this.outputs,
+      this.outputs
     ).toHex();
     const splitTx = splitTransaction(txHex, this.anySegwitInputs());
     return serializeTransactionOutputs(splitTx).toString("hex");
@@ -1386,8 +1387,8 @@ export abstract class LedgerBitcoinV2WithRegistrationInteraction extends LedgerB
       ) {
         console.error(
           `Policy registrations did not match. Expected ${this.policyHmac.toString(
-            "hex",
-          )}; Actual: ${buff.toString("hex")}`,
+            "hex"
+          )}; Actual: ${buff.toString("hex")}`
         );
       }
 
@@ -1547,7 +1548,7 @@ export class LedgerConfirmMultisigAddress extends LedgerBitcoinV2WithRegistratio
           version: ">=2.1.0",
           text: `Then your Ledger will show the address across several screens. Verify this matches the address you are confirming.`,
           action: LEDGER_RIGHT_BUTTON,
-        },
+        }
       );
     }
     return messages;
@@ -1559,7 +1560,7 @@ export class LedgerConfirmMultisigAddress extends LedgerBitcoinV2WithRegistratio
       // before calling this method
       if (!this.POLICY_HMAC) {
         throw new Error(
-          "Can't get wallet address without a wallet registration",
+          "Can't get wallet address without a wallet registration"
         );
       }
       return app.getWalletAddress(
@@ -1567,7 +1568,7 @@ export class LedgerConfirmMultisigAddress extends LedgerBitcoinV2WithRegistratio
         Buffer.from(this.POLICY_HMAC, "hex"),
         this.braidIndex,
         this.addressIndex,
-        this.display,
+        this.display
       );
     });
   }
@@ -1650,20 +1651,20 @@ export class LedgerV2SignMultisigTransaction extends LedgerBitcoinV2WithRegistra
     return this.withApp(async (app: AppClient) => {
       const ledgerPsbt = new LedgerPsbtV2();
       ledgerPsbt.deserialize(
-        Buffer.from(this.psbt.serialize("base64"), "base64"),
+        Buffer.from(this.psbt.serialize("base64"), "base64")
       );
       this.signatures = await app.signPsbt(
         ledgerPsbt,
         this.walletPolicy.toLedgerPolicy(),
         Buffer.from(this.POLICY_HMAC, "hex") || null,
-        this.progressCallback,
+        this.progressCallback
       );
     });
   }
 
   get SIGNATURES() {
     return this.signatures.map((sig) =>
-      Buffer.from(sig[1].signature).toString("hex"),
+      Buffer.from(sig[1].signature).toString("hex")
     );
   }
 
@@ -1674,7 +1675,7 @@ export class LedgerV2SignMultisigTransaction extends LedgerBitcoinV2WithRegistra
       // array of pubkeys as buffers
       this.signatures.map((sig) => Buffer.from(sig[1].pubkey)),
       // array of sigs as buffers
-      this.signatures.map((sig) => Buffer.from(sig[1].signature)),
+      this.signatures.map((sig) => Buffer.from(sig[1].signature))
     );
   }
 

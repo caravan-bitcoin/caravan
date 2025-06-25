@@ -63,16 +63,16 @@ describe("braids", () => {
           extendedPublicKeys,
           requiredSigners,
           index,
-        }),
+        })
       );
 
       expect(braidNetwork(defaultBraid)).toBe(BRAIDS[0].network);
       expect(braidAddressType(defaultBraid)).toBe(BRAIDS[0].addressType);
       expect(braidExtendedPublicKeys(defaultBraid)).toBe(
-        BRAIDS[0].extendedPublicKeys,
+        BRAIDS[0].extendedPublicKeys
       );
       expect(braidRequiredSigners(defaultBraid)).toBe(
-        BRAIDS[0].requiredSigners,
+        BRAIDS[0].requiredSigners
       );
       expect(braidIndex(defaultBraid)).toBe(BRAIDS[0].index);
 
@@ -83,7 +83,7 @@ describe("braids", () => {
           extendedPublicKeys,
           requiredSigners,
           index,
-        }),
+        })
       ).toStrictEqual(defaultBraid);
     });
 
@@ -111,76 +111,76 @@ describe("braids", () => {
       });
 
       expect(generatePublicKeysAtIndex(stringBraid, 0)).toEqual(
-        pubKeySets.index[0],
+        pubKeySets.index[0]
       );
     });
 
     it("should generate pubkeys at an index", () => {
       expect(generatePublicKeysAtIndex(defaultBraid, 0)).toEqual(
-        pubKeySets.index[0],
+        pubKeySets.index[0]
       );
       expect(generatePublicKeysAtIndex(defaultBraid, 1)).toEqual(
-        pubKeySets.index[1],
+        pubKeySets.index[1]
       );
       expect(generatePublicKeysAtIndex(defaultBraid, 48349)).toEqual(
-        pubKeySets.index[48349],
+        pubKeySets.index[48349]
       );
     });
 
     it("should generate pubkeys at path", () => {
       expect(generatePublicKeysAtPath(defaultBraid, "0/0")).toEqual(
-        pubKeySets.path["0/0"],
+        pubKeySets.path["0/0"]
       );
       expect(generatePublicKeysAtPath(defaultBraid, "m/0/0")).toEqual(
-        pubKeySets.path["0/0"],
+        pubKeySets.path["0/0"]
       );
     });
 
     it("should fail to generate pubkeys at path", () => {
       expect(() => generatePublicKeysAtPath(defaultBraid, "1/0")).toThrow(
-        /Cannot derive paths outside of the braid's index/i,
+        /Cannot derive paths outside of the braid's index/i
       );
       expect(() =>
-        generatePublicKeysAtPath(defaultBraid, "48349/0/0/0"),
+        generatePublicKeysAtPath(defaultBraid, "48349/0/0/0")
       ).toThrow(/Cannot derive paths outside of the braid's index/i);
     });
 
     it("should generate getBip32Derivation at index", () => {
       expect(generateBip32DerivationByIndex(defaultBraid, 0)).toEqual(
-        bip32Derivations.index[0],
+        bip32Derivations.index[0]
       );
       expect(generateBip32DerivationByIndex(defaultBraid, 1)).toEqual(
-        bip32Derivations.index[1],
+        bip32Derivations.index[1]
       );
       expect(generateBip32DerivationByIndex(defaultBraid, 48349)).toEqual(
-        bip32Derivations.index[48349],
+        bip32Derivations.index[48349]
       );
     });
 
     it("should generate getBip32Derivation at path", () => {
       expect(generateBip32DerivationByPath(defaultBraid, "0/0")).toEqual(
-        bip32Derivations.path["0/0"],
+        bip32Derivations.path["0/0"]
       );
     });
 
     it("should fail to generate getBip32Derivation at path", () => {
       expect(() => generateBip32DerivationByPath(defaultBraid, "1/0")).toThrow(
-        /Cannot derive paths outside of the braid's index/i,
+        /Cannot derive paths outside of the braid's index/i
       );
       expect(() =>
-        generateBip32DerivationByPath(defaultBraid, "48349/0/0/0"),
+        generateBip32DerivationByPath(defaultBraid, "48349/0/0/0")
       ).toThrow(/Cannot derive paths outside of the braid's index/i);
     });
 
     it("should generate braid-aware multisig at index 0", () => {
       expect(deriveMultisigByIndex(defaultBraid, 0)).toEqual(
-        expect.objectContaining(MULTISIGS[0].braidAwareMultisig),
+        expect.objectContaining(MULTISIGS[0].braidAwareMultisig)
       );
     });
 
     it("should generate braid-aware multisig at path 0/0", () => {
       expect(deriveMultisigByPath(defaultBraid, "0/0")).toEqual(
-        expect.objectContaining(MULTISIGS[0].braidAwareMultisig),
+        expect.objectContaining(MULTISIGS[0].braidAwareMultisig)
       );
     });
 
@@ -198,8 +198,8 @@ describe("braids", () => {
           addressType,
           extendedPublicKeys,
           requiredSigners,
-          index,
-        ),
+          index
+        )
       ).toStrictEqual(defaultBraid);
     });
 

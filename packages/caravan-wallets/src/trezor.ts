@@ -57,6 +57,7 @@ import {
   ERROR,
 } from "./interaction";
 
+
 /**
  * What's going on with this TrezorConnect import?
  * For some reason the way trezor/connect and trezor/connect-web export their default
@@ -316,7 +317,7 @@ export class TrezorInteraction extends DirectKeystoreInteraction {
     return [
       () => {
         throw new Error(
-          "Override the `connectParams` method on a subclass of TrezorInteraction.",
+          "Override the `connectParams` method on a subclass of TrezorInteraction."
         );
       },
       {},
@@ -723,16 +724,16 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
         network,
         addressType,
         this.psbt,
-        keyDetails,
+        keyDetails
       );
 
       this.inputs = translatedPsbt?.unchainedInputs;
       this.outputs = translatedPsbt?.unchainedOutputs;
       this.bip32Paths = translatedPsbt?.bip32Derivations.map(
-        (b32d) => b32d.path,
+        (b32d) => b32d.path
       );
       this.pubkeys = translatedPsbt?.bip32Derivations.map(
-        (b32d) => b32d.pubkey,
+        (b32d) => b32d.pubkey
       );
     }
   }
@@ -801,7 +802,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
       TrezorConnect.signTransaction,
       {
         inputs: this.inputs.map((input, inputIndex) =>
-          trezorInput(input, this.bip32Paths[inputIndex]),
+          trezorInput(input, this.bip32Paths[inputIndex])
         ),
         outputs: this.outputs.map((output) => trezorOutput(output)),
         coin: this.trezorCoin,
@@ -822,7 +823,7 @@ export class TrezorSignMultisigTransaction extends TrezorInteraction {
         this.network,
         this.psbt,
         this.pubkeys,
-        this.parseSignature(payload.signatures, "buffer"),
+        this.parseSignature(payload.signatures, "buffer")
       );
     } else {
       return this.parseSignature(payload.signatures, "hex");
@@ -951,7 +952,7 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
               multisig: {
                 m: multisigRequiredSigners(this.multisig),
                 pubkeys: multisigPublicKeys(this.multisig).map((publicKey) =>
-                  trezorPublicKey(publicKey),
+                  trezorPublicKey(publicKey)
                 ),
               },
               scriptType:
@@ -972,7 +973,7 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
           multisig: {
             m: multisigRequiredSigners(this.multisig),
             pubkeys: multisigPublicKeys(this.multisig).map((publicKey) =>
-              trezorPublicKey(publicKey),
+              trezorPublicKey(publicKey)
             ),
           },
           scriptType: ADDRESS_SCRIPT_TYPES[multisigAddressType(this.multisig)],

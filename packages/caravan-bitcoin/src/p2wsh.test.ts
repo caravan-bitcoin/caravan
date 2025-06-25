@@ -15,7 +15,7 @@ describe("p2wsh", () => {
           numOutputs: 2,
           m: 2,
           n: 3,
-        }),
+        })
       ).toBe(202); // actual value from bitcoin core for P2PKH out
     });
     const vsize = estimateMultisigP2WSHTransactionVSize({

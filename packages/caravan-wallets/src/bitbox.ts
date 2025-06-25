@@ -20,7 +20,7 @@ import {
   BtcMultisigScriptType,
   BtcScriptConfig,
   PairedBitBox,
-} from "bitbox-api";
+} from 'bitbox-api';
 
 import {
   ACTIVE,
@@ -29,6 +29,7 @@ import {
   DirectKeystoreInteraction,
 } from "./interaction";
 import { MultisigWalletConfig } from "./types";
+
 
 /**
  * Constant defining BitBox interactions.
@@ -40,56 +41,46 @@ export type TShowPairingCode = (pairingCode: string) => (() => void) | null;
 
 function convertNetwork(network: BitcoinNetwork): BtcCoin {
   switch (network) {
-    case "mainnet":
-      return "btc";
-    case "regtest":
-      return "rbtc";
+    case 'mainnet':
+      return 'btc';
+    case 'regtest':
+      return 'rbtc';
     default:
-      return "tbtc";
+      return 'tbtc';
   }
 }
 
-function convertToBtcMultisigScriptType(
-  addressType: MultisigAddressType,
-): BtcMultisigScriptType {
+function convertToBtcMultisigScriptType(addressType: MultisigAddressType): BtcMultisigScriptType {
   switch (addressType) {
-    case "P2WSH":
-      return "p2wsh";
-    case "P2SH-P2WSH":
-      return "p2wshP2sh";
+    case 'P2WSH':
+      return 'p2wsh';
+    case 'P2SH-P2WSH':
+      return 'p2wshP2sh';
     default:
       throw new Error(`BitBox does not support ${addressType} multisig.`);
   }
 }
 
-async function convertMultisig(
-  pairedBitBox: PairedBitBox,
-  walletConfig: MultisigWalletConfig,
-): Promise<{ scriptConfig: BtcScriptConfig; keypathAccount: string }> {
+async function convertMultisig(pairedBitBox: PairedBitBox, walletConfig: MultisigWalletConfig): Promise<{ scriptConfig: BtcScriptConfig; keypathAccount: string; }> {
   const ourRootFingerprint = await pairedBitBox.rootFingerprint();
 
-  const ourXpubIndex = walletConfig.extendedPublicKeys.findIndex(
-    (key) => key.xfp == ourRootFingerprint,
-  );
+  const ourXpubIndex = walletConfig.extendedPublicKeys.findIndex(key => key.xfp == ourRootFingerprint);
   if (ourXpubIndex === -1) {
-    throw new Error(
-      "This BitBox02 seems to not be present in the multisig quorum.",
-    );
+    throw new Error('This BitBox02 seems to not be present in the multisig quorum.');
   }
   const scriptConfig = {
     multisig: {
       threshold: walletConfig.quorum.requiredSigners,
       scriptType: convertToBtcMultisigScriptType(walletConfig.addressType),
-      xpubs: walletConfig.extendedPublicKeys.map((key) => key.xpub),
+      xpubs: walletConfig.extendedPublicKeys.map(key => key.xpub),
       ourXpubIndex,
     },
   };
-  const keypathAccount =
-    walletConfig.extendedPublicKeys[ourXpubIndex].bip32Path;
+  const keypathAccount = walletConfig.extendedPublicKeys[ourXpubIndex].bip32Path;
   return {
     scriptConfig,
     keypathAccount,
-  };
+  }
 }
 
 /**
@@ -178,7 +169,11 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
   </body>
 </html>
 `;
-    const popup = window.open("", "popupWindow", "width=400,height=300");
+    const popup = window.open(
+      '',
+      'popupWindow',
+      'width=400,height=300',
+    );
     if (popup) {
       popup.document.write(htmlContent);
       popup.document.close();
@@ -195,7 +190,7 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
   }
 
   async withDevice<T>(f: (device: PairedBitBox) => Promise<T>): Promise<T> {
-    const bitbox = await import("bitbox-api");
+    const bitbox = await import('bitbox-api');
 
     let hidePairingCode: (() => void) | null = null;
     try {
@@ -203,27 +198,27 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
         if (hidePairingCode) {
           hidePairingCode();
         }
-      });
-      const pairing = await unpaired.unlockAndPair();
-      const pairingCode = pairing.getPairingCode();
+      })
+      const pairing = await unpaired.unlockAndPair()
+      const pairingCode = pairing.getPairingCode()
       if (pairingCode) {
         hidePairingCode = this.showPairingCodePopup(pairingCode);
         // TODO: display pairing code to the user.
-        console.log("Pairing code:", pairingCode);
+        console.log('Pairing code:', pairingCode);
       }
-      const pairedBitBox = await pairing.waitConfirm();
+      const pairedBitBox = await pairing.waitConfirm()
       if (hidePairingCode) {
         hidePairingCode();
       }
       try {
-        return await f(pairedBitBox);
+        return await f(pairedBitBox)
       } finally {
-        pairedBitBox.close();
+        pairedBitBox.close()
       }
     } catch (err) {
-      const typedErr = bitbox.ensureError(err);
-      const isErrorUnknown = typedErr.code === "unknown-js";
-      const errorMessage = isErrorUnknown ? typedErr.err! : typedErr.message;
+      const typedErr = bitbox.ensureError(err)
+      const isErrorUnknown = typedErr.code === 'unknown-js'
+      const errorMessage = isErrorUnknown ? typedErr.err! : typedErr.message
       throw new Error(errorMessage);
     } finally {
       if (hidePairingCode) {
@@ -232,14 +227,8 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
     }
   }
 
-  async maybeRegisterMultisig(
-    pairedBitBox: PairedBitBox,
-    walletConfig: MultisigWalletConfig,
-  ): Promise<{ scriptConfig: BtcScriptConfig; keypathAccount: string }> {
-    const { scriptConfig, keypathAccount } = await convertMultisig(
-      pairedBitBox,
-      walletConfig,
-    );
+  async maybeRegisterMultisig(pairedBitBox: PairedBitBox, walletConfig: MultisigWalletConfig): Promise<{ scriptConfig: BtcScriptConfig, keypathAccount: string; }> {
+    const { scriptConfig, keypathAccount } = await convertMultisig(pairedBitBox, walletConfig);
     const isRegistered = await pairedBitBox.btcIsScriptConfigRegistered(
       convertNetwork(walletConfig.network),
       scriptConfig,
@@ -253,7 +242,7 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
         convertNetwork(walletConfig.network),
         scriptConfig,
         keypathAccount,
-        "autoXpubTpub",
+        'autoXpubTpub',
         name,
       );
     }
@@ -261,7 +250,8 @@ export class BitBoxInteraction extends DirectKeystoreInteraction {
   }
 
   // Dummy to satsify the return types of all subclass run() functions.
-  async run(): Promise<any> {}
+  async run(): Promise<any> {
+  }
 }
 
 /**
@@ -295,7 +285,7 @@ export class BitBoxGetMetadata extends BitBoxInteraction {
       const product = pairedBitBox.product();
       const version = pairedBitBox.version();
       const [majorVersion, minorVersion, patchVersion] = (version || "").split(
-        ".",
+        "."
       );
       return {
         spec: `${product} v${version}`,
@@ -325,12 +315,7 @@ export class BitBoxExportPublicKey extends BitBoxInteraction {
    * @param {string} bip32Path path
    * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
-  constructor({
-    showPairingCode,
-    network,
-    bip32Path,
-    includeXFP,
-  }: {
+  constructor({ showPairingCode, network, bip32Path, includeXFP }: {
     showPairingCode?: TShowPairingCode;
     network: BitcoinNetwork;
     bip32Path: string;
@@ -354,9 +339,8 @@ export class BitBoxExportPublicKey extends BitBoxInteraction {
       const xpub = await pairedBitBox.btcXpub(
         convertNetwork(this.network),
         this.bip32Path,
-        this.network === "mainnet" ? "xpub" : "tpub",
-        false,
-      );
+        this.network === 'mainnet' ? 'xpub' : 'tpub',
+        false);
       const publicKey = ExtendedPublicKey.fromBase58(xpub).pubkey;
       if (this.includeXFP) {
         const rootFingerprint = await pairedBitBox.rootFingerprint();
@@ -382,12 +366,7 @@ export class BitBoxExportExtendedPublicKey extends BitBoxInteraction {
    * @param {string} network bitcoin network
    * @param {boolean} includeXFP - return xpub with root fingerprint concatenated
    */
-  constructor({
-    showPairingCode,
-    bip32Path,
-    network,
-    includeXFP,
-  }: {
+  constructor({ showPairingCode, bip32Path, network, includeXFP }: {
     showPairingCode?: TShowPairingCode;
     network: BitcoinNetwork;
     bip32Path: string;
@@ -416,9 +395,8 @@ export class BitBoxExportExtendedPublicKey extends BitBoxInteraction {
       const xpub = await pairedBitBox.btcXpub(
         convertNetwork(this.network),
         this.bip32Path,
-        this.network === "mainnet" ? "xpub" : "tpub",
-        false,
-      );
+        this.network === 'mainnet' ? 'xpub' : 'tpub',
+        false);
       if (this.includeXFP) {
         const rootFingerprint = await pairedBitBox.rootFingerprint();
         return { xpub, rootFingerprint };
@@ -433,7 +411,7 @@ export class BitBoxRegisterWalletPolicy extends BitBoxInteraction {
 
   constructor({
     showPairingCode,
-    walletConfig,
+    walletConfig
   }: {
     showPairingCode?: TShowPairingCode;
     walletConfig: MultisigWalletConfig;
@@ -462,12 +440,7 @@ export class BitBoxConfirmMultisigAddress extends BitBoxInteraction {
 
   walletConfig: MultisigWalletConfig;
 
-  constructor({
-    showPairingCode,
-    network,
-    bip32Path,
-    walletConfig,
-  }: {
+  constructor({ showPairingCode, network, bip32Path, walletConfig }: {
     showPairingCode?: TShowPairingCode;
     network: BitcoinNetwork;
     bip32Path: string;
@@ -490,10 +463,7 @@ export class BitBoxConfirmMultisigAddress extends BitBoxInteraction {
   async run() {
     const display = true;
     return await this.withDevice(async (pairedBitBox) => {
-      const { scriptConfig } = await this.maybeRegisterMultisig(
-        pairedBitBox,
-        this.walletConfig,
-      );
+      const { scriptConfig } = await this.maybeRegisterMultisig(pairedBitBox, this.walletConfig);
       const address = await pairedBitBox.btcAddress(
         convertNetwork(this.network),
         this.bip32Path,
@@ -549,10 +519,7 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
 
   async run() {
     return await this.withDevice(async (pairedBitBox) => {
-      const { scriptConfig, keypathAccount } = await this.maybeRegisterMultisig(
-        pairedBitBox,
-        this.walletConfig,
-      );
+      const { scriptConfig, keypathAccount } = await this.maybeRegisterMultisig(pairedBitBox, this.walletConfig);
       const signedPsbt = await pairedBitBox.btcSignPSBT(
         convertNetwork(this.walletConfig.network),
         this.unsignedPsbt,
@@ -560,7 +527,7 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
           scriptConfig,
           keypath: keypathAccount,
         },
-        "default",
+        'default',
       );
       if (this.returnSignatureArray) {
         // Extract the sigs for that belong to us (identified by the root fingerprint).
@@ -572,22 +539,18 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
         for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
           const bip32Derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
           if (!Array.isArray(bip32Derivations)) {
-            throw new Error("bip32 derivations expected to be an array");
+            throw new Error('bip32 derivations expected to be an array');
           }
-          const bip32Derivation = bip32Derivations.find(
-            (entry) => entry.value!.substr(0, 8) == ourRootFingerprint,
-          );
+          const bip32Derivation = bip32Derivations.find(entry => entry.value!.substr(0, 8) == ourRootFingerprint);
           if (!bip32Derivation) {
-            throw new Error("could not find our pubkey in the signed PSBT");
+            throw new Error('could not find our pubkey in the signed PSBT');
           }
           // First byte of the key is 0x06, the PSBT key.
           const pubKey = bip32Derivation.key.substr(2);
           // First byte of the key is 0x02, the PSBT key.
-          const partialSig = parsedPsbt.PSBT_IN_PARTIAL_SIG[i].find(
-            (e) => e.key.substr(2) === pubKey,
-          );
+          const partialSig = parsedPsbt.PSBT_IN_PARTIAL_SIG[i].find(e => e.key.substr(2) === pubKey);
           if (!partialSig) {
-            throw new Error("could not find our signature in the signed PSBT");
+            throw new Error('could not find our signature in the signed PSBT');
           }
           sigArray.push(partialSig.value!);
         }
