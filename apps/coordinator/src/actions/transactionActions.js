@@ -25,6 +25,7 @@ export const SET_REQUIRED_SIGNERS = "SET_REQUIRED_SIGNERS";
 export const SET_TOTAL_SIGNERS = "SET_TOTAL_SIGNERS";
 
 export const SET_INPUTS = "SET_INPUTS";
+export const SET_ENABLE_RBF = "SET_ENABLE_RBF";
 
 export const ADD_OUTPUT = "ADD_OUTPUT";
 export const SET_OUTPUT_ADDRESS = "SET_OUTPUT_ADDRESS";
@@ -538,5 +539,12 @@ export function importLegacyPSBT(psbtText) {
       throw new Error("Could not parse PSBT.");
     }
     return psbt;
+  };
+}
+
+export function setRBF(enabled) {
+  return {
+    type: SET_ENABLE_RBF,
+    value: enabled,
   };
 }
