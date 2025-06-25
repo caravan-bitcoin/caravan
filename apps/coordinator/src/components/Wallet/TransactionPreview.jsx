@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import BigNumber from "bignumber.js";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
@@ -27,6 +27,139 @@ import {
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+
+/**
+ * Custom hook to get current signing state
+ * @returns {Object} { signedCount, requiredSigners, isFullySigned, hasPartialSignatures, needsSignatures }
+ */
+export const useSigningState = () => {
+  // Get signature data from Redux store
+  const signatureImporters = useSelector(
+    (state) => state.spend.signatureImporters,
+  );
+  const requiredSigners = useSelector(
+    (state) => state.settings.requiredSigners,
+  );
+
+  /**
+   * Calculate current signature status
+   * Only recalculates when signatureImporters or requiredSigners change
+   */
+  const signingState = useMemo(() => {
+    if (!signatureImporters) {
+      return {
+        signedCount: 0,
+        requiredSigners: requiredSigners || 0,
+        isFullySigned: false,
+        hasPartialSignatures: false,
+        needsSignatures: requiredSigners || 0,
+      };
+    }
+
+    // Count signature importers that have finalized signatures
+    const signedCount = Object.values(signatureImporters).filter(
+      (importer) =>
+        importer.finalized &&
+        importer.signature &&
+        importer.signature.length > 0,
+    ).length;
+
+    const effectiveRequiredSigners = requiredSigners || 0;
+    const isFullySigned = signedCount >= effectiveRequiredSigners;
+    const hasPartialSignatures =
+      signedCount > 0 && signedCount < effectiveRequiredSigners;
+    const needsSignatures = Math.max(0, effectiveRequiredSigners - signedCount);
+
+    return {
+      signedCount,
+      requiredSigners: effectiveRequiredSigners,
+      isFullySigned,
+      hasPartialSignatures,
+      needsSignatures,
+    };
+  }, [signatureImporters, requiredSigners]);
+
+  return signingState;
+};
+
+const SignatureStatus = () => {
+  const {
+    signedCount,
+    requiredSigners,
+    isFullySigned,
+    hasPartialSignatures,
+    needsSignatures,
+  } = useSigningState();
+
+  // We don't render anything if no signatures are present
+  if (signedCount === 0) {
+    return null;
+  }
+
+  return (
+    <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+      <Box display="flex" alignItems="center" mb={1}>
+        {isFullySigned ? (
+          <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+        ) : (
+          <WarningIcon color="warning" sx={{ mr: 1 }} />
+        )}
+        <Typography variant="h6" component="div">
+          Signature Status
+        </Typography>
+      </Box>
+
+      {/* Status chips */}
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <Chip
+          label={`${signedCount} of ${requiredSigners} signatures`}
+          color={
+            isFullySigned
+              ? "success"
+              : hasPartialSignatures
+                ? "warning"
+                : "default"
+          }
+          variant={isFullySigned ? "filled" : "outlined"}
+        />
+        {isFullySigned && (
+          <Chip label="Fully signed" color="success" size="small" />
+        )}
+        {hasPartialSignatures && (
+          <Chip label="Partially signed" color="warning" size="small" />
+        )}
+      </Box>
+
+      {/* Status-specific alerts */}
+      {hasPartialSignatures && (
+        <Alert severity="info" sx={{ mb: 1 }}>
+          <AlertTitle>Partial signatures detected</AlertTitle>
+          This transaction has {signedCount} out of {requiredSigners} required
+          signatures. You need {needsSignatures} more signature
+          {needsSignatures > 1 ? "s" : ""} to broadcast.
+        </Alert>
+      )}
+
+      {isFullySigned && (
+        <Alert severity="success" sx={{ mb: 1 }}>
+          <AlertTitle>Transaction ready</AlertTitle>
+          This transaction has all {requiredSigners} required signatures and is
+          ready to broadcast.
+        </Alert>
+      )}
+
+      {/* Warning about editing clearing signatures */}
+      {signedCount > 0 && (
+        <Alert severity="warning" icon={<EditIcon />}>
+          <AlertTitle>Important: Editing will clear signatures</AlertTitle>
+          If you edit this transaction (inputs, outputs, or fee), all existing
+          signatures will be cleared and you&apos;ll need to collect signatures
+          again from all signers.
+        </Alert>
+      )}
+    </Paper>
+  );
+};
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
@@ -165,95 +298,6 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtBase64, "transaction.psbt");
   };
 
-  getSignatureStatus = () => {
-    const { signatureImporters, requiredSigners } = this.props;
-
-    if (!signatureImporters) {
-      return { signedCount: 0, requiredSigners: requiredSigners || 0 };
-    }
-
-    const signedCount = Object.values(signatureImporters).filter(
-      (importer) =>
-        importer.finalized &&
-        importer.signature &&
-        importer.signature.length > 0,
-    ).length;
-
-    return { signedCount, requiredSigners: requiredSigners || 0 };
-  };
-
-  renderSignatureStatus = () => {
-    const { signedCount, requiredSigners } = this.getSignatureStatus();
-    const isFullySigned = signedCount >= requiredSigners;
-    const hasPartialSignatures =
-      signedCount > 0 && signedCount < requiredSigners;
-
-    if (signedCount === 0) {
-      return null; // Don't show anything if no signatures
-    }
-
-    return (
-      <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-        <Box display="flex" alignItems="center" mb={1}>
-          {isFullySigned ? (
-            <CheckCircleIcon color="success" sx={{ mr: 1 }} />
-          ) : (
-            <WarningIcon color="warning" sx={{ mr: 1 }} />
-          )}
-          <Typography variant="h6" component="div">
-            Signature Status
-          </Typography>
-        </Box>
-
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <Chip
-            label={`${signedCount} of ${requiredSigners} signatures`}
-            color={
-              isFullySigned
-                ? "success"
-                : hasPartialSignatures
-                  ? "warning"
-                  : "default"
-            }
-            variant={isFullySigned ? "filled" : "outlined"}
-          />
-          {isFullySigned && (
-            <Chip label="Fully Signed" color="success" size="small" />
-          )}
-          {hasPartialSignatures && (
-            <Chip label="Partially Signed" color="warning" size="small" />
-          )}
-        </Box>
-
-        {hasPartialSignatures && (
-          <Alert severity="info" sx={{ mb: 1 }}>
-            <AlertTitle>Partial Signatures Detected</AlertTitle>
-            This transaction has {signedCount} out of {requiredSigners} required
-            signatures. You need {requiredSigners - signedCount} more signature
-            {requiredSigners - signedCount > 1 ? "s" : ""} to broadcast.
-          </Alert>
-        )}
-
-        {isFullySigned && (
-          <Alert severity="success" sx={{ mb: 1 }}>
-            <AlertTitle>Transaction Ready</AlertTitle>
-            This transaction has all {requiredSigners} required signatures and
-            is ready to broadcast.
-          </Alert>
-        )}
-
-        {signedCount > 0 && (
-          <Alert severity="warning" icon={<EditIcon />}>
-            <AlertTitle>Important: Editing Will Clear Signatures</AlertTitle>
-            If you edit this transaction (inputs, outputs, or fee), all existing
-            signatures will be cleared and you&aposll need to collect signatures
-            again from all signers.
-          </Alert>
-        )}
-      </Paper>
-    );
-  };
-
   render = () => {
     const {
       feeRate,
@@ -269,7 +313,7 @@ class TransactionPreview extends React.Component {
         <h2>Transaction Preview</h2>
 
         {/* Signature Status Section */}
-        {this.renderSignatureStatus()}
+        <SignatureStatus />
         <UnsignedTransaction />
         <h3>Inputs</h3>
         {this.renderInputs()}
