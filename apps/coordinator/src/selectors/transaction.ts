@@ -12,8 +12,6 @@ import {
   SignerIdentity,
   createInputIdentifier,
   convertTxidToLittleEndian,
-  matchPsbtInputsToUtxos,
-  reconstructUtxosFromPendingTransactions,
 } from "../utils/psbtUtils";
 
 /**
