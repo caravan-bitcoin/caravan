@@ -281,6 +281,7 @@ export const createCancelRbfTransaction = (
     scriptType: options.scriptType,
     requiredSigners: options.requiredSigners,
     totalSigners: options.totalSigners,
+    ...(options.globalXpubs && { globalXpubs: options.globalXpubs }), // Only add if user-code provides us globalXpubs
   });
 
   // Step 4: Add inputs from the original transaction
@@ -420,6 +421,7 @@ export const createAcceleratedRbfTransaction = (
     scriptType: options.scriptType,
     requiredSigners: options.requiredSigners,
     totalSigners: options.totalSigners,
+    ...(options.globalXpubs && { globalXpubs: options.globalXpubs }), // Only add if user-code provides us globalXpubs
   });
 
   // Step 5: Add inputs from the original transaction

@@ -1,7 +1,8 @@
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 
-import { Satoshis, BTC, UTXO } from "./types";
+import { RBF_SEQUENCE } from "./constants";
+import { Satoshis, BTC, UTXO, InputDerivation } from "./types";
 import { validateNonWitnessUtxo, validateSequence } from "./utils";
 
 /**
@@ -61,7 +62,7 @@ export abstract class BtcTxComponent {
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export class BtcTxInputTemplate extends BtcTxComponent {
-  private readonly _txid: string;
+  private readonly _txid: string; // Note internally in this class we retain the `txid` in **big-endian** form throughout our internal structures.
   private readonly _vout: number;
   private _nonWitnessUtxo?: Buffer;
   private _witnessUtxo?: {
@@ -69,6 +70,9 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     value: number;
   };
   private _sequence?: number;
+  private _redeemScript?: Buffer;
+  private _witnessScript?: Buffer;
+  private _bip32Derivations: InputDerivation[] = [];
 
   /**
    * @param {Object} params - The parameters for creating a BtcTxInputTemplate
@@ -81,8 +85,28 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     this._txid = params.txid;
     this._vout = params.vout;
   }
+
   /**
-   * Creates a BtcTxInputTemplate from a UTXO object.
+   * Creates a `BtcTxInputTemplate` from a user-provided `UTXO` object.
+   *
+   * This function prepares the UTXO for internal PSBT construction by:
+   * - Mapping UTXO metadata such as amount, witness/non-witness data, scripts, derivation paths, and sequence number into the PSBT-compatible format.
+   * - Keeping the `txid` stored in its original **big-endian** (human-readable) form internally.
+   * - Only converting the `txid` to **little-endian** at the time of serialization during PSBT construction (inside `toPSBT()` method of `BtcTransactionTemplate`), as required by Bitcoin’s internal protocol format.
+   *
+   * @param utxo - The UTXO provided by the user, where `txid` is expected to be in **big-endian** format
+   *               (as commonly seen in block explorers and UIs).
+   *
+   * @returns A `BtcTxInputTemplate` instance representing the PSBT input.
+   *
+   * @remarks
+   * Bitcoin internally uses **little-endian** format for transaction IDs during transaction serialization and signing.
+   * However, for clarity and consistency with human-readable sources (like block explorers),
+   * we retain the `txid` in **big-endian** form throughout our internal structures.
+   * The conversion to little-endian is deferred until the final serialization step (`toPSBT()`).
+   *
+   * For more information on byte order in Bitcoin, see:
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   static fromUTXO(utxo: UTXO): BtcTxInputTemplate {
     const template = new BtcTxInputTemplate({
@@ -92,13 +116,26 @@ export class BtcTxInputTemplate extends BtcTxComponent {
     });
 
     if (utxo.prevTxHex) {
-      template.setNonWitnessUtxo(Buffer.from(utxo.prevTxHex, "hex"));
+      template.nonWitnessUtxo = Buffer.from(utxo.prevTxHex, "hex");
     }
 
     if (utxo.witnessUtxo) {
-      template.setWitnessUtxo(utxo.witnessUtxo);
+      template.witnessUtxo = utxo.witnessUtxo;
+    }
+    if (utxo.redeemScript) {
+      template.redeemScript = utxo.redeemScript;
     }
 
+    if (utxo.witnessScript) {
+      template.witnessScript = utxo.witnessScript;
+    }
+
+    if (utxo.bip32Derivations) {
+      template.bip32Derivations = utxo.bip32Derivations;
+    }
+    if (utxo.sequence) {
+      template.sequence = utxo.sequence;
+    }
     return template;
   }
   /**
@@ -127,7 +164,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Optional, but useful for RBF signaling.
    * @param {number} sequence - The sequence number
    */
-  setSequence(sequence: number): void {
+  set sequence(sequence: number) {
     if (!validateSequence(sequence)) {
       throw new Error("Invalid sequence number");
     }
@@ -139,7 +176,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Sets the sequence number to 0xfffffffd .
    */
   enableRBF(): void {
-    this.setSequence(0xfffffffd);
+    this.sequence = 0xfffffffd;
   }
 
   /**
@@ -147,7 +184,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Sets the sequence number to 0xffffffff.
    */
   disableRBF(): void {
-    this.setSequence(0xffffffff);
+    this.sequence = 0xffffffff;
   }
 
   /**
@@ -170,7 +207,7 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * Required for non-segwit inputs in PSBTs.
    * @param {Buffer} value - The full transaction containing the UTXO being spent
    */
-  setNonWitnessUtxo(value: Buffer): void {
+  set nonWitnessUtxo(value: Buffer) {
     if (!validateNonWitnessUtxo(value, this._txid, this._vout)) {
       throw new Error("Invalid non-witness UTXO");
     }
@@ -191,8 +228,65 @@ export class BtcTxInputTemplate extends BtcTxComponent {
    * @param {Buffer} value.script - The scriptPubKey of the output
    * @param {number} value.value - The value of the output in satoshis
    */
-  setWitnessUtxo(value: { script: Buffer; value: number }): void {
+  set witnessUtxo(value: { script: Buffer; value: number }) {
     this._witnessUtxo = value;
+  }
+
+  /**
+   * Gets the redeem script for P2SH inputs.
+   * The redeem script contains the actual spending conditions for P2SH outputs.
+   * For multisig P2SH, this is the multisig script with the signature requirements.
+   */
+  get redeemScript(): Buffer | undefined {
+    return this._redeemScript;
+  }
+
+  /**
+   * Sets the redeem script for P2SH inputs.
+   * Required for spending P2SH outputs in PSBTs.
+   *
+   * @param script - The redeem script buffer
+   */
+  set redeemScript(script: Buffer) {
+    this._redeemScript = script;
+  }
+
+  /**
+   * Gets the witness script for segwit inputs (P2WSH, P2SH-P2WSH).
+   * The witness script contains the actual spending conditions for segwit script outputs.
+   * For multisig segwit, this is the multisig script with the signature requirements.
+   */
+  get witnessScript(): Buffer | undefined {
+    return this._witnessScript;
+  }
+
+  /**
+   * Sets the witness script for segwit inputs.
+   * Required for spending P2WSH and P2SH-P2WSH outputs in PSBTs.
+   *
+   * @param script - The witness script buffer
+   */
+  set witnessScript(script: Buffer) {
+    this._witnessScript = script;
+  }
+
+  /**
+   * Gets the BIP32 derivation information for all public keys in this input.
+   * This information is crucial for hardware wallets and multisig coordinators
+   * to identify which keys they control and how to derive them.
+   */
+  get bip32Derivations(): readonly InputDerivation[] {
+    return this._bip32Derivations;
+  }
+
+  /**
+   * Sets the BIP32 derivation information for all public keys in this input.
+   * Each derivation entry maps a public key to its derivation path and master fingerprint.
+   *
+   * @param derivations - Array of BIP32 derivation information
+   */
+  set bip32Derivations(derivations: InputDerivation[]) {
+    this._bip32Derivations = [...derivations];
   }
 
   /**
@@ -222,8 +316,12 @@ export class BtcTxInputTemplate extends BtcTxComponent {
       txid: this._txid,
       vout: this._vout,
       value: this._amountSats.toString(),
+      sequence: this._sequence || RBF_SEQUENCE, // Default it to signal RBF if not provided
       prevTxHex: this._nonWitnessUtxo?.toString("hex"),
       witnessUtxo: this._witnessUtxo,
+      redeemScript: this._redeemScript,
+      witnessScript: this._witnessScript,
+      bip32Derivations: this._bip32Derivations || undefined,
     };
   }
 }
