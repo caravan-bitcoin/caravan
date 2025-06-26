@@ -168,18 +168,12 @@ export const useRBF = () => {
 
         if (userProvidedChangeAddress) {
           // Priority 1: User explicitly provided a change address in the RBF form
-          console.log(
-            "Using user-provided change address:",
-            userProvidedChangeAddress,
-          );
           changeOptions = { changeAddress: userProvidedChangeAddress };
         } else if (changeIndex !== undefined) {
           // Priority 3: Use detected change index from transaction
-          console.log("Using detected change index:", changeIndex);
           changeOptions = { changeIndex };
           // Priority 2: Use the wallet's default change address
         } else if (defaultChangeAddress) {
-          console.log("Using default wallet change address:", changeAddress);
           changeOptions = { changeAddress: defaultChangeAddress };
         } else {
           // No valid change destination found
@@ -207,14 +201,8 @@ export const useRBF = () => {
           globalXpubs, // **ADD GLOBAL XPUBS**
         };
 
-        console.log(
-          "UTXOs used for fee bumping: createAcceleratedRbfTransaction",
-          availableInputs.map((input) => `${input.txid}:${input.vout}`),
-        );
-
         // Create the accelerated RBF transaction
         const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
-        console.log("PSBT", psbtBase64);
         // Calculate estimated new fee
         const txVsize = transaction.vsize || transaction.size;
         const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
@@ -340,10 +328,6 @@ export const useRBF = () => {
           reuseAllInputs: true,
           globalXpubs, // **ADD GLOBAL XPUBS**
         };
-        console.log(
-          "UTXOs used for fee bumping: createCancelRbfTransaction",
-          availableInputs.map((input) => `${input.txid}:${input.vout}`),
-        );
 
         // Create the cancel RBF transaction
         const psbtBase64 = createCancelRbfTransaction(options);
@@ -362,7 +346,7 @@ export const useRBF = () => {
           priority: selectedPriority,
           createdAt: new Date().toISOString(),
         };
-        console.log("cancel", psbtBase64);
+
         feeBumpDispatch(setFeeBumpResult(result));
 
         return psbtBase64;

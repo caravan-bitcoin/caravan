@@ -268,8 +268,6 @@ const extractBip32MetadataFromSlice = (
 ): object => {
   const metadata: any = {};
   try {
-    console.log("extraction", slice);
-
     // Extract BIP32 derivation path
     if (slice.bip32Path) {
       metadata.bip32Path = slice.bip32Path;
@@ -377,20 +375,10 @@ const extractBip32MetadataFromSlice = (
       metadata.nonWitnessUtxo = nonWitnessUtxo;
       metadata.witnessUtxo = tx.outs[vout];
     }
-    console.log(`Extracted BIP32 metadata:`, {
-      address: metadata.address,
-      addressType: metadata.addressType,
-      scriptType: metadata.scriptType,
-      bip32Path: metadata.bip32Path,
-      derivationCount: metadata.bip32Derivations?.length || 0,
-      hasWitnessScript: !!metadata.witnessScript,
-      hasRedeemScript: !!metadata.redeemScript,
-      needsWitnessUtxo: metadata.needsWitnessUtxo,
-    });
   } catch (error) {
     console.error("Error extracting BIP32 metadata from slice:", error);
   }
-  console.log("metta", metadata);
+
   return metadata;
 };
 
@@ -418,7 +406,6 @@ export const extractUtxosForFeeBumping = async (
 ): Promise<FeeUTXO[]> => {
   // Array to store
   const utxos: FeeUTXO[] = [];
-  console.log("fullTX", transaction);
   try {
     // STEP 0: PREPARE WALLET SLICES FOR BIP32 RECOVERY
     // ------------------------------------------------
@@ -427,10 +414,6 @@ export const extractUtxosForFeeBumping = async (
       ...Object.values(depositNodes),
       ...Object.values(changeNodes),
     ].filter((slice: any) => slice?.multisig?.address); // Only include slices with valid addresses
-
-    console.log(
-      `Prepared ${allSlices.length} wallet slices for BIP32 recovery`,
-    );
 
     // STEP 1: COLLECT WALLET UTXOS
     // ---------------------------
@@ -456,7 +439,7 @@ export const extractUtxosForFeeBumping = async (
       //   https://github.com/blockstream/esplora/blob/master/API.md#transaction-format
       const txid = input.txid;
       const vout = input.vout;
-      console.log("inpt", input);
+
       // Skip if we don't have valid identifiers
       if (!txid || vout === undefined) continue;
 
@@ -490,16 +473,12 @@ export const extractUtxosForFeeBumping = async (
 
         // Extract the output address that was spent by this input
         const outputAddress = extractOutputAddressFromTransaction(fullTx, vout);
-        console.log(
-          `Extracted output address for ${txid}:${vout} -> ${outputAddress}`,
-        );
 
         // Find the corresponding wallet slice for this address
         const matchingSlice = findMatchingWalletSlice(allSlices, outputAddress);
 
         let recoveredMetadata: any = {};
         if (matchingSlice) {
-          console.log(`Found matching slice for address ${outputAddress}`);
           recoveredMetadata = extractBip32MetadataFromSlice(
             matchingSlice,
             prevTxHex,
@@ -549,13 +528,6 @@ export const extractUtxosForFeeBumping = async (
           continue;
         }
 
-        console.log("Successfully processed input:", {
-          txid,
-          vout,
-          value,
-          recoveredMetadata,
-        });
-
         // **Create transaction object for PSBT fields**
         // ============================================
         const tx = Transaction.fromHex(prevTxHex);
@@ -603,16 +575,6 @@ export const extractUtxosForFeeBumping = async (
         }
 
         utxos.push(baseUtxo);
-        console.log("Pushed formatted UTXO:", {
-          txid: baseUtxo.txid,
-          vout: baseUtxo.vout,
-          addressType: recoveredMetadata.addressType,
-          hasNonWitnessUtxo: !!baseUtxo.nonWitnessUtxo,
-          hasWitnessUtxo: !!baseUtxo.witnessUtxo,
-          hasRedeemScript: !!baseUtxo.redeemScript,
-          hasWitnessScript: !!baseUtxo.witnessScript,
-          hasBip32Derivations: !!baseUtxo.bip32Derivations,
-        });
       } catch (error) {
         console.warn(`Error processing input ${txid}:${vout}:`, error);
       }
@@ -816,11 +778,6 @@ export const extractGlobalXpubsFromWallet = (
   if (changeNodes) {
     Object.values(changeNodes).forEach(processNode);
   }
-
-  console.log(
-    `Extracted ${globalXpubs.length} global xpubs for PSBT:`,
-    globalXpubs.map((x) => `${x.masterFingerprint}:${x.path}`),
-  );
 
   return globalXpubs;
 };
