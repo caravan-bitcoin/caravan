@@ -27,6 +27,20 @@ export const CONFIRMATION_TARGETS = {
 };
 
 /**
+ * Default fee rates for different priority levels (in sat/vB)
+ * Used as fallback when blockchain client fails
+ *
+ * Fallback values based on :
+ * https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
+ * These values are reasonable defaults but will be less accurate
+ */
+const DEFAULT_FEE_RATES = {
+  HIGH: 32.75,
+  MEDIUM: 32.75,
+  LOW: 20.09,
+};
+
+/**
  * Gets fee estimate from the blockchain client with fallback mechanisms
  *
  * This function retrieves fee estimates from the blockchain client and provides
@@ -50,34 +64,73 @@ export const getFeeEstimate = async (
     const feeRate = await blockchainClient.getFeeEstimate(withinBlocks);
     // Fallback values if the `getFeeEstimate` returns NaN
     if (!feeRate) {
-      switch (withinBlocks) {
-        case CONFIRMATION_TARGETS.HIGH:
-          return 32.75; // Higher priority
-        case CONFIRMATION_TARGETS.MEDIUM:
-          return 32.75; // Medium priority
-        case CONFIRMATION_TARGETS.LOW:
-          return 20.09; // Lower priority
-        default:
-          return 32.75; // Default medium priority
-      }
+      // Use default based on priority
+      return getDefaultFeeRate(withinBlocks);
     }
     return Math.max(1, Math.ceil(feeRate)); // Ensure we have at least 1 sat/vB
   } catch (error) {
     console.error("Error fetching fee estimate:", error);
 
-    // Fallback values based on :
-    // https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
-    // These values are reasonable defaults but will be less accurate
-    switch (withinBlocks) {
-      case CONFIRMATION_TARGETS.HIGH:
-        return 32.75; // Higher priority
-      case CONFIRMATION_TARGETS.MEDIUM:
-        return 32.75; // Medium priority
-      case CONFIRMATION_TARGETS.LOW:
-        return 20.09; // Lower priority
-      default:
-        return 32.75; // Default medium priority
-    }
+    return getDefaultFeeRate(withinBlocks);
+  }
+};
+
+/**
+ * Gets default fee rate based on confirmation target
+ *
+ * Fallback values based on :
+ * https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
+ * These values are reasonable defaults but will be less accurate
+ */
+const getDefaultFeeRate = (withinBlocks: number): number => {
+  switch (withinBlocks) {
+    case CONFIRMATION_TARGETS.HIGH:
+      return DEFAULT_FEE_RATES.HIGH;
+    case CONFIRMATION_TARGETS.MEDIUM:
+      return DEFAULT_FEE_RATES.MEDIUM;
+    case CONFIRMATION_TARGETS.LOW:
+      return DEFAULT_FEE_RATES.LOW;
+    default:
+      return DEFAULT_FEE_RATES.MEDIUM;
+  }
+};
+
+/**
+ * Selects target fee rate based on priority
+ */
+const selectTargetFeeRate = (
+  priority: FeePriority,
+  feeRates: { high: number; medium: number; low: number },
+): number => {
+  switch (priority) {
+    case FeePriority.HIGH:
+      return feeRates.high;
+    case FeePriority.LOW:
+      return feeRates.low;
+    case FeePriority.MEDIUM:
+    default:
+      return feeRates.medium;
+  }
+};
+
+/**
+ * Validates transaction inputs for analysis
+ */
+const validateTransactionInputs = (
+  txHex: string,
+  fee: number,
+  availableUtxos: FeeUTXO[],
+): void => {
+  if (!txHex || typeof txHex !== "string") {
+    throw new Error("Transaction hex must be a string");
+  }
+
+  if (isNaN(fee) || fee < 0) {
+    console.warn("Invalid fee provided, using 0");
+  }
+
+  if (!availableUtxos?.length) {
+    throw new Error("No UTXOs available for fee bumping");
   }
 };
 
@@ -107,54 +160,22 @@ export const analyzeTransaction = async (
   feePriority: FeePriority = FeePriority.MEDIUM,
 ): Promise<FeeBumpRecommendation> => {
   // Get fee estimates for different confirmation targets
-  const highPriorityFee = await getFeeEstimate(
-    blockchainClient,
-    CONFIRMATION_TARGETS.HIGH,
-  );
-  const mediumPriorityFee = await getFeeEstimate(
-    blockchainClient,
-    CONFIRMATION_TARGETS.MEDIUM,
-  );
-  const lowPriorityFee = await getFeeEstimate(
-    blockchainClient,
-    CONFIRMATION_TARGETS.LOW,
-  );
+  const [highPriorityFee, mediumPriorityFee, lowPriorityFee] =
+    await Promise.all([
+      getFeeEstimate(blockchainClient, CONFIRMATION_TARGETS.HIGH),
+      getFeeEstimate(blockchainClient, CONFIRMATION_TARGETS.MEDIUM),
+      getFeeEstimate(blockchainClient, CONFIRMATION_TARGETS.LOW),
+    ]);
 
   // Select target fee rate based on user priority
-  let targetFeeRate: number;
-  switch (feePriority) {
-    case FeePriority.HIGH:
-      targetFeeRate = highPriorityFee;
-      break;
-    case FeePriority.MEDIUM:
-      targetFeeRate = mediumPriorityFee;
-      break;
-    case FeePriority.LOW:
-      targetFeeRate = lowPriorityFee;
-      break;
-    default:
-      targetFeeRate = mediumPriorityFee; // Default to medium if somehow invalid
-  }
+  const targetFeeRate = selectTargetFeeRate(feePriority, {
+    high: highPriorityFee,
+    medium: mediumPriorityFee,
+    low: lowPriorityFee,
+  });
 
   // Validate inputs
-  if (!txHex || typeof txHex !== "string") {
-    console.error("Invalid txHex:", typeof txHex, txHex);
-    throw new Error("Transaction hex must be a string");
-  }
-
-  if (isNaN(fee) || fee < 0) {
-    console.error("Invalid fee:", fee);
-    fee = 0; // Use a default value
-  }
-
-  // Check if we have valid UTXOs
-  if (
-    !availableUtxos ||
-    !Array.isArray(availableUtxos) ||
-    availableUtxos.length === 0
-  ) {
-    throw new Error("No UTXOs available for fee bumping");
-  }
+  validateTransactionInputs(txHex, fee, availableUtxos);
 
   // Create analyzer with wallet-specific parameters
   const analyzer = new TransactionAnalyzer({
@@ -183,6 +204,10 @@ export const analyzeTransaction = async (
     userSelectedPriority: feePriority, // Telling us which FeePriority user choosed
   };
 };
+
+// ============================================================================
+// UTXO EXTRACTION AND FORMATTING
+// ============================================================================
 
 // UTILITY FUNCTIONS FOR extractUtxosForFeeBumping`
 

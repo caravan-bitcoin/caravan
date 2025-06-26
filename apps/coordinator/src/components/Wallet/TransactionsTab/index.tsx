@@ -22,6 +22,7 @@ import {
   useHandleExplorerLinkClick,
 } from "./hooks";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
+import { FeeBumpProvider } from "./FeeBumping/context";
 
 /**
  * TRANSACTIONS HISTORY LIMITATION
@@ -113,20 +114,22 @@ const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
   // Render actual content with key to force remount
   return (
     <>
-      <TransactionsTabContent
-        key={mountKey}
-        onRefresh={handleRefresh}
-        onAccelerate={handleAccelerateClick}
-      />
-      {/* Acceleration Modal */}
-      {selectedTransaction && (
-        <AccelerationModal
-          open={accelerationModalOpen}
-          onClose={handleAccelerationModalClose}
-          transaction={selectedTransaction}
-          txHex={txHex}
+      <FeeBumpProvider>
+        <TransactionsTabContent
+          key={mountKey}
+          onRefresh={handleRefresh}
+          onAccelerate={handleAccelerateClick}
         />
-      )}
+        {/* Acceleration Modal */}
+        {selectedTransaction && (
+          <AccelerationModal
+            open={accelerationModalOpen}
+            onClose={handleAccelerationModalClose}
+            transaction={selectedTransaction}
+            txHex={txHex}
+          />
+        )}
+      </FeeBumpProvider>
     </>
   );
 };

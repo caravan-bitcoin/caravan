@@ -153,3 +153,55 @@ export interface FeeBumpRecommendation extends TxAnalysis {
   userSelectedFeeRate: number;
   userSelectedPriority: FeePriority;
 }
+
+/**
+ * Wallet slice interface for type safety based on how we have slices stored in redux state
+ */
+export interface WalletSlice {
+  multisig?: {
+    address?: string;
+    braidDetails?: string;
+    bip32Derivation?: Array<{
+      masterFingerprint: string;
+      path: string;
+      pubkey: string;
+    }>;
+    redeem?: {
+      output?: Buffer;
+      redeem?: {
+        output?: Buffer;
+      };
+    };
+    output?: Buffer;
+    hash?: string;
+    name?: string;
+    network?: string;
+  };
+  bip32Path?: string;
+  change?: boolean;
+}
+
+/**
+ * UTXO metadata for PSBT construction
+ */
+export interface UtxoMetadata {
+  addressType: string;
+  address?: string;
+  bip32Path?: string;
+  bip32Derivations?: Array<{
+    masterFingerprint: string;
+    path: string;
+    pubkey: string;
+  }>;
+  redeemScript?: Buffer;
+  witnessScript?: Buffer;
+  nonWitnessUtxo?: Buffer;
+  witnessUtxo?: {
+    script: Buffer;
+    value: number;
+  };
+  scriptHash?: string;
+  scriptType?: string;
+  isChange: boolean;
+  network?: string;
+}
