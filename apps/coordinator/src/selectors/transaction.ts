@@ -1,9 +1,8 @@
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
 import { multisigPublicKeys } from "@caravan/bitcoin";
-import { getSpendableSlices } from "./wallet";
+import { getSpendableSlices, getAllSlices } from "./wallet";
 import {
   UTXO,
   Input,
@@ -11,23 +10,11 @@ import {
   SignatureInfo,
   SignatureSet,
   SignerIdentity,
-} from "utils/psbtUtils";
-
-// ====================
-// UTILITY FUNCTIONS (Pure functions, no state dependency) we need then for our selectors to work nicely :)
-// ====================
-
-/**
- * Creates a unique identifier for a transaction input
- */
-const createInputIdentifier = (txid: string, index: number): string =>
-  `${txid}:${index}`;
-
-/**
- * Converts transaction ID from big-endian to little-endian format
- */
-const convertTxidToLittleEndian = (hash: Buffer): string =>
-  reverseBuffer(hash).toString("hex");
+  createInputIdentifier,
+  convertTxidToLittleEndian,
+  matchPsbtInputsToUtxos,
+  reconstructUtxosFromPendingTransactions,
+} from "../utils/psbtUtils";
 
 /**
  * Maps extracted signature sets to Caravan's signature importer format.
@@ -194,6 +181,35 @@ export const selectSignaturesFromPSBT = createSelector(
 export const selectSignaturesForImporters = createSelector(
   [selectSignaturesFromPSBT],
   (signatureSets) => mapSignaturesToImporters(signatureSets),
+);
+
+/**
+ * Selector for RBFed PSBTs
+ */
+export const selectPsbtInputContext = createSelector(
+  [
+    getSpendableSlices,
+    getAllSlices,
+    (state) => state.client.blockchainClient,
+    (state, psbt) => psbt,
+  ],
+  (spendableSlices, allSlices, blockchainClient, psbt) => {
+    // Return context object that actions can use
+    return {
+      spendableSlices,
+      allSlices,
+      blockchainClient,
+      psbt,
+      inputIdentifiers: new Set(
+        psbt.txInputs.map((input: any) =>
+          createInputIdentifier(
+            convertTxidToLittleEndian(input.hash),
+            input.index,
+          ),
+        ),
+      ),
+    };
+  },
 );
 
 // ====================

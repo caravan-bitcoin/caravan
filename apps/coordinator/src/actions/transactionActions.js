@@ -5,6 +5,7 @@ import {
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
+  selectPsbtInputContext,
   selectInputsFromPSBT,
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
@@ -17,7 +18,12 @@ import {
 } from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
-import { loadPsbt } from "../utils/psbtUtils";
+import {
+  loadPsbt,
+  matchPsbtInputsToUtxos,
+  reconstructUtxosFromPendingTransactions,
+  createInputIdentifier,
+} from "../utils/psbtUtils";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -452,8 +458,9 @@ export function setFeeFromState(outputsTotalSats) {
 }
 
 export function importPSBT(psbtText) {
-  return (dispatch, getState) => {
+  return async (dispatch, getState) => {
     let state = getState();
+    let isRBFedPSBT = false;
     const { network } = state.settings;
 
     // Handles both PSBTv0 and PSBTv2
@@ -473,8 +480,74 @@ export function importPSBT(psbtText) {
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
-    const inputs = selectInputsFromPSBT(getState(), psbt);
+    let inputs;
 
+    try {
+      // Strategy 1: Try spendable slices first (normal PSBT case)
+      inputs = selectInputsFromPSBT(getState(), psbt);
+
+      if (inputs.length === psbt.txInputs.length) {
+        // All inputs found in spendable UTXOs
+        isRBFedPSBT = false; // This is a normal PSBT
+      } else {
+        // Some inputs missing - this indicates RBF scenario
+        throw new Error(
+          "Missing inputs detected - switching to RBF reconstruction",
+        );
+      }
+    } catch (e) {
+      // Strategy 2: If we didn't find all inputs, reconstruct from pending transactions (RBF case)
+      // This is the key innovation - instead of fighting with listunspent, we use pending
+      // transaction data to reconstruct the UTXO details we need
+
+      isRBFedPSBT = true; // Flag this as an RBF PSBT
+
+      const context = selectPsbtInputContext(state, psbt);
+
+      // Try normal matching first (redundant but safer)
+      inputs = matchPsbtInputsToUtxos(
+        context.inputIdentifiers,
+        context.spendableSlices,
+      );
+
+      // If we're still missing inputs, reconstruct from pending transactions
+      if (inputs.length < psbt.txInputs.length) {
+        if (!context.blockchainClient) {
+          throw new Error(
+            "No blockchain client available for UTXO reconstruction. " +
+              "RBF PSBT imports require an active blockchain connection.",
+          );
+        }
+
+        // Calculate which specific input IDs we still need
+        const foundInputIds = new Set(
+          inputs.map((inp) => createInputIdentifier(inp.txid, inp.index)),
+        );
+
+        const neededInputIds = new Set(
+          Array.from(context.inputIdentifiers).filter(
+            (id) => !foundInputIds.has(id),
+          ),
+        );
+
+        // Note this is an Expensive operation: reconstructing UTXOs from pending transactions
+        const reconstructedUtxos =
+          await reconstructUtxosFromPendingTransactions(
+            context.blockchainClient,
+            context.allSlices,
+            neededInputIds,
+          );
+
+        // Combine normal inputs with reconstructed ones
+        inputs = matchPsbtInputsToUtxos(
+          context.inputIdentifiers,
+          context.spendableSlices,
+          reconstructedUtxos,
+        );
+      }
+    }
+
+    // Validate we found all required inputs
     if (inputs.length === 0) {
       throw new Error("PSBT does not contain any UTXOs from this wallet.");
     }
@@ -484,6 +557,7 @@ export function importPSBT(psbtText) {
       );
     }
 
+    // Set inputs without modifying wallet state
     dispatch(setInputs(inputs));
 
     // ==== PROCESS INPUTS ====
@@ -493,7 +567,15 @@ export function importPSBT(psbtText) {
     dispatch(setFeeFromState(outputsTotalSats));
 
     // ==== Extract and import signatures (If they are present)====
-    dispatch(setSignaturesFromPsbt(psbt));
+    // For RBF PSBTs, we skip signature extraction because:
+    // 1. The UTXOs used for signature verification aren't in wallet state
+    // 2. The signature extraction functions expect UTXOs to be in spendable slices
+    // 3. RBF PSBTs are typically unsigned anyway (they're new replacement transactions)
+    // 4. Attempting signature extraction would throw errors ...
+    //
+    if (!isRBFedPSBT) {
+      dispatch(setSignaturesFromPsbt(psbt));
+    }
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));
