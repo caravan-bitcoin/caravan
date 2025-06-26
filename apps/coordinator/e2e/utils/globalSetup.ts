@@ -2,7 +2,6 @@ import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
 import bitcoinClient from "./bitcoinClient";
 
-//will define the wallet type later (if can)
 const globalWalletData ={
     walletNames: [] as string[],
     testWallets: [] as any[]
@@ -12,19 +11,14 @@ const globalWalletData ={
 async function globalSetup(_config: FullConfig){
 
    try {
-    console.log("Starting docker containers");
     execSync("docker compose up -d", {
         stdio: "inherit",
         cwd: process.cwd()
     })
     const client = bitcoinClient();
-
-    console.log("Waiting for continers to be ready...");
     
     await new Promise(resolve => setTimeout(resolve,2000));
     await client?.waitForBitcoinCore();
-
-    console.log("Creating test wallets in globally...")
 
     const timestamp = Date.now();
     
@@ -39,7 +33,7 @@ async function globalSetup(_config: FullConfig){
         try {
             const exist = await client?.walletexists(walletName);
         if(exist){
-            console.log("Cleaning up the existing wallets")
+            // Cleaning up the existing wallets
             await client?.unloadWallet(walletName);
         }
         } catch (error) {
@@ -62,19 +56,16 @@ async function globalSetup(_config: FullConfig){
     process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
     process.env.TEST_WALLETS = JSON.stringify(testWallets)
 
-    console.log("Test wallets created successfully globally")
 
     
    } catch (error) {
     console.log("Global setup failed:", error)
     try {
         //cleaning up on failures
-
         execSync("docker compose down",{
             stdio: "inherit",
             cwd: process.cwd()
         })
-        console.log("")
         
     } catch (clearupError) {
         console.log("Error while cleaning up",clearupError)

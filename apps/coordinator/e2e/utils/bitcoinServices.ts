@@ -41,8 +41,7 @@ export class BitcoinCoreService {
     for (let i = 1; i <= maxRetries; i++) {
       try {
         const res = await this.client.command("getblockchaininfo");
-
-        console.log("Connected to Bitcoin Core successfully");
+        
         return res;
       } catch (error) {
         console.log(`Attempt: ${i}/${maxRetries} & error: ${error} `);

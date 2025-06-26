@@ -5,7 +5,8 @@ import bitcoinClient from "./bitcoinClient";
 async function globalTeardown(_config: FullConfig) {
   try {
     const client = bitcoinClient();
-    console.log("Cleaning up test wallets...");
+
+    // Cleaning up test wallets...
 
     if (process.env.TEST_WALLET_NAMES) {
       const walletNames = JSON.parse(process.env.TEST_WALLET_NAMES);
@@ -22,9 +23,8 @@ async function globalTeardown(_config: FullConfig) {
       }
     }
 
-    console.log("Stopping docker containers...");
     //removing docker containers after use
-    execSync("docker compose down", {
+    execSync("docker compose stop", {
       cwd: process.cwd(),
       stdio: "inherit",
     });
