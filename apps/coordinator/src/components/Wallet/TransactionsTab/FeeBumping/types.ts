@@ -182,26 +182,16 @@ export interface WalletSlice {
 }
 
 /**
- * UTXO metadata for PSBT construction
+ * Interface for PSBT fields needed for different address types
  */
-export interface UtxoMetadata {
-  addressType: string;
-  address?: string;
-  bip32Path?: string;
-  bip32Derivations?: Array<{
-    masterFingerprint: string;
-    path: string;
-    pubkey: string;
-  }>;
-  redeemScript?: Buffer;
-  witnessScript?: Buffer;
+export interface PSBTFields {
   nonWitnessUtxo?: Buffer;
   witnessUtxo?: {
     script: Buffer;
     value: number;
   };
-  scriptHash?: string;
-  scriptType?: string;
-  isChange: boolean;
-  network?: string;
+  redeemScript?: Buffer;
+  witnessScript?: Buffer;
+  bip32Derivations?: any[];
+  sequence?: number;
 }
