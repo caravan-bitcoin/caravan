@@ -19,6 +19,7 @@ import {
   SET_CANCEL_ADDRESS,
   SET_CHANGE_ADDRESS,
   RESET_FEE_BUMP_STATE,
+  SET_PSBT_VERSION,
 } from "./feeBumpActions";
 
 export interface FeeBumpingState {
@@ -40,6 +41,7 @@ export interface FeeBumpingState {
   changeAddress: string;
   // Results
   result: FeeBumpResult | null;
+  psbtVersion: "v2" | "v0";
 }
 
 export const initialState: FeeBumpingState = {
@@ -61,6 +63,7 @@ export const initialState: FeeBumpingState = {
   changeAddress: "",
   // Results
   result: null,
+  psbtVersion: "v2",
 };
 
 export function feeBumpingReducer(
@@ -169,7 +172,11 @@ export function feeBumpingReducer(
         ...state,
         changeAddress: action.payload,
       };
-
+    case SET_PSBT_VERSION:
+      return {
+        ...state,
+        psbtVersion: action.payload,
+      };
     case RESET_FEE_BUMP_STATE:
       return initialState;
 

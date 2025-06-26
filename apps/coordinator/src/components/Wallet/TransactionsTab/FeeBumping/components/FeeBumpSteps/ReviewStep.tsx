@@ -20,6 +20,7 @@ interface ReviewStepProps {
   transaction: Transaction;
   onDownloadPSBT: () => void;
   downloadClicked: boolean;
+  selectedPSBTVersion?: "v2" | "v0";
 }
 
 /**

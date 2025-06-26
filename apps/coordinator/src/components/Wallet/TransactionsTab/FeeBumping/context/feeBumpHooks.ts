@@ -62,6 +62,11 @@ export function useChangeAddress() {
   return state.changeAddress;
 }
 
+export function usePsbtVersion() {
+  const { state } = useFeeBumpContext();
+  return state.psbtVersion;
+}
+
 // Result hooks
 export function useFeeBumpResult() {
   const { state } = useFeeBumpContext();

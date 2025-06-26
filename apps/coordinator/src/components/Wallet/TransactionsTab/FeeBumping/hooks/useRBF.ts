@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { BlockchainClient } from "@caravan/clients";
+import { PsbtV2 } from "@caravan/psbt";
 import {
   createAcceleratedRbfTransaction,
   createCancelRbfTransaction,
@@ -27,6 +28,7 @@ import {
   setFeeBumpStatus,
   setFeeBumpError,
   setFeeBumpResult,
+  usePsbtVersion,
 } from "../context";
 
 /**
@@ -56,6 +58,7 @@ export const useRBF = () => {
   const changeAddress = useChangeAddress();
   const rbfType = useRbfType();
   const selectedStrategy = useSelectedFeeBumpStrategy();
+  const psbtVersion = usePsbtVersion();
 
   // Get wallet settings from Redux store
   const network = useSelector((state: any) => state.settings.network);
@@ -203,13 +206,20 @@ export const useRBF = () => {
 
         // Create the accelerated RBF transaction
         const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
+
+        // Convert PSBT version if needed ( based on how user wants to download it )
+        const finalPsbtBase64 =
+          psbtVersion === "v0"
+            ? new PsbtV2(psbtBase64).toV0("base64")
+            : psbtBase64;
+
         // Calculate estimated new fee
         const txVsize = transaction.vsize || transaction.size;
         const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
 
         // Create result
         const result: FeeBumpResult = {
-          psbtBase64,
+          psbtBase64: finalPsbtBase64,
           newFee: estimatedNewFee,
           newFeeRate: selectedFeeRate,
           strategy: selectedStrategy,
@@ -331,14 +341,18 @@ export const useRBF = () => {
 
         // Create the cancel RBF transaction
         const psbtBase64 = createCancelRbfTransaction(options);
-
+        // Convert PSBT version if needed ( based on how user wants to download it )
+        const finalPsbtBase64 =
+          psbtVersion === "v0"
+            ? new PsbtV2(psbtBase64).toV0("base64")
+            : psbtBase64;
         // Calculate estimated new fee
         const txVsize = transaction.vsize || transaction.size;
         const estimatedNewFee = Math.ceil(txVsize * selectedFeeRate).toString();
 
         // Create result
         const result: FeeBumpResult = {
-          psbtBase64,
+          psbtBase64: finalPsbtBase64,
           newFee: estimatedNewFee,
           newFeeRate: selectedFeeRate,
           strategy: selectedStrategy,

@@ -18,6 +18,7 @@ export const SET_RBF_TYPE = "SET_RBF_TYPE";
 export const SET_CANCEL_ADDRESS = "SET_CANCEL_ADDRESS";
 export const SET_CHANGE_ADDRESS = "SET_CHANGE_ADDRESS";
 export const RESET_FEE_BUMP_STATE = "RESET_FEE_BUMP_STATE";
+export const SET_PSBT_VERSION = "SET_PSBT_VERSION";
 
 export interface SetFeeBumpTransactionAction {
   type: typeof SET_FEE_BUMP_TRANSACTION;
@@ -81,6 +82,11 @@ export interface ResetFeeBumpStateAction {
   type: typeof RESET_FEE_BUMP_STATE;
 }
 
+export interface SetPsbtVersionAction {
+  type: typeof SET_PSBT_VERSION;
+  payload: "v2" | "v0";
+}
+
 export type FeeBumpActionTypes =
   | SetFeeBumpTransactionAction
   | SetFeeBumpStatusAction
@@ -93,6 +99,7 @@ export type FeeBumpActionTypes =
   | SetRbfTypeAction
   | SetCancelAddressAction
   | SetChangeAddressAction
+  | SetPsbtVersionAction
   | ResetFeeBumpStateAction;
 
 export const setFeeBumpTransaction = (
@@ -169,4 +176,9 @@ export const setChangeAddress = (address: string): SetChangeAddressAction => ({
 
 export const resetFeeBumpState = (): ResetFeeBumpStateAction => ({
   type: RESET_FEE_BUMP_STATE,
+});
+
+export const setPsbtVersion = (version: "v2" | "v0"): SetPsbtVersionAction => ({
+  type: SET_PSBT_VERSION,
+  payload: version,
 });
