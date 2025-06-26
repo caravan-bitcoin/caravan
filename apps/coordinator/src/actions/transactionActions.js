@@ -1,14 +1,23 @@
 import BigNumber from "bignumber.js";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils.js";
 import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
-  networkData,
-  autoLoadPSBT,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
+import {
+  selectInputsFromPSBT,
+  selectSignaturesFromPSBT,
+  selectSignaturesForImporters,
+} from "../selectors/transaction";
+import {
+  setSignatureImporterSignature,
+  setSignatureImporterPublicKeys,
+  setSignatureImporterFinalized,
+  setSignatureImporterComplete,
+} from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
+import { loadPsbt } from "../utils/psbtUtils";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -300,11 +309,154 @@ export function setMaxSpendOnOutput(outputIndex) {
   };
 }
 
+/**
+ * Sets outputs from a PSBT into Redux state.
+ * This thunk:
+ *  - Iterates over each PSBT output
+ *  - Dispatches actions to reflect each output in the UI state
+ *  - Identifies and sets the change output if applicable
+ *
+ * @param psbt - The partially signed Bitcoin transaction
+ * @returns A thunk function for Redux
+ */
+function setOutputsFromPSBT(psbt) {
+  return (dispatch) => {
+    let outputsTotalSats = new BigNumber(0);
+
+    psbt.txOutputs.forEach((output, outputIndex) => {
+      const number = outputIndex + 1;
+      outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
+
+      if (number > 1) {
+        dispatch(addOutput());
+      }
+
+      // Check if this is a change output (has script/witness script)
+      if (output.script) {
+        dispatch(setChangeOutputIndex(number));
+        dispatch(setChangeAddressAction(output.address));
+      }
+
+      dispatch(setOutputAddress(number, output.address));
+      dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
+    });
+
+    return { outputsTotalSats };
+  };
+}
+
+/**
+ * Extracts and imports partial signatures from a PSBT into Caravan's signature importers.
+ *
+ * This is the main entry point for processing signatures when importing a PSBT that
+ * has already been partially signed by other wallets/tools. It handles the entire
+ * workflow from signature extraction to updating the Redux state.
+ *
+ * @description The function performs these key steps:
+ *   1. Extracts signature data from the PSBT using our composed selectors
+ *   2. Transforms the signatures into Caravan's internal format
+ *   3. Updates the signature importers state via multiple Redux actions
+ *   4. Handles errors gracefully without breaking the PSBT import flow
+ *
+ * @param {Psbt} psbt - The PSBT object containing partial signatures to extract
+ *
+ * @returns {Function} Redux thunk function that takes (dispatch, getState)
+ *
+ * @example
+ * // In your PSBT import flow:
+ * dispatch(setSignaturesFromPsbt(psbt));
+ *
+ * @see extractSignaturesFromPSBT - For the core signature extraction logic
+ * @see mapSignaturesToImporters - For signature format transformation
+ *
+ * @throws {Error} Logs warnings for signature extraction failures but doesn't throw
+ *                 to avoid breaking the overall PSBT import process
+ */
+export function setSignaturesFromPsbt(psbt) {
+  return (dispatch, getState) => {
+    // === STEP 1: Extract signature sets from the PSBT ===
+    // This uses our composed selectors to:
+    // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
+    // - Parse partial signatures from PSBT data
+    // - Group signatures by signer (one signer signs ALL inputs)
+    const state = getState();
+    const signatureSets = selectSignaturesFromPSBT(state, psbt);
+    // === STEP 2: Process signatures if any were found ===
+    if (signatureSets.length > 0) {
+      // Transform raw signature data into Caravan's signature importer format
+      // This maps each signature set to an "importer" (numbered 1, 2, 3...)
+      // that corresponds to Caravan's UI signature input slots
+      const importerData = selectSignaturesForImporters(state, psbt);
+      // === STEP 3: Update Redux state for each signature set ===
+      // For each complete signature set, we need to update multiple parts
+      // of the signature importer state. This is Caravan's pattern for
+      // managing signature data across the signing workflow.
+      importerData.forEach((sigData) => {
+        // Set the raw signature data (hex-encoded signatures)
+        dispatch(
+          setSignatureImporterSignature(
+            sigData.importerNumber,
+            sigData.signatures,
+          ),
+        );
+
+        // Set the public keys that correspond to these signatures
+        // These are used for signature verification
+        dispatch(
+          setSignatureImporterPublicKeys(
+            sigData.importerNumber,
+            sigData.publicKeys,
+          ),
+        );
+
+        // Mark this importer as "finalized" - meaning we have a complete
+        // signature set and it's ready for use in transaction construction
+        dispatch(setSignatureImporterFinalized(sigData.importerNumber, true));
+
+        // Set the complete signature data object
+        // This is Caravan's "master" action that bundles everything together
+        // and is used by the signing components to display signature status
+        dispatch(
+          setSignatureImporterComplete(sigData.importerNumber, {
+            signature: sigData.signatures,
+            publicKeys: sigData.publicKeys,
+            finalized: true,
+          }),
+        );
+      });
+    }
+  };
+}
+
+/**
+ * Calculates and sets the transaction fee based on current state.
+ *
+ * This action creator encapsulates the fee calculation logic by:
+ * 1. Getting the current inputsTotalSats from state
+ * 2. Calculating fee as the difference between inputs and outputs
+ * 3. Converting from satoshis to bitcoins
+ * 4. Dispatching the setFee action
+ *
+ * @param {BigNumber} outputsTotalSats - Total satoshis in all outputs
+ * @returns {Function} Redux thunk function
+ */
+export function setFeeFromState(outputsTotalSats) {
+  return (dispatch, getState) => {
+    const state = getState();
+    const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
+    const feeSats = inputsTotalSats.minus(outputsTotalSats);
+    const fee = satoshisToBitcoins(feeSats);
+    dispatch(setFee(fee));
+  };
+}
+
 export function importPSBT(psbtText) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+
+    // Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
@@ -319,30 +471,8 @@ export function importPSBT(psbtText) {
     dispatch(resetOutputs());
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
-    const createInputIdentifier = (txid, index) => `${txid}:${index}`;
-
-    const inputIdentifiers = new Set(
-      psbt.txInputs.map((input) => {
-        const txid = reverseBuffer(input.hash).toString("hex");
-        return createInputIdentifier(txid, input.index);
-      }),
-    );
-
-    const inputs = [];
-    getSpendableSlices(state).forEach((slice) => {
-      Object.entries(slice.utxos).forEach(([, utxo]) => {
-        const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
-        if (inputIdentifiers.has(inputIdentifier)) {
-          const input = {
-            ...utxo,
-            multisig: slice.multisig,
-            bip32Path: slice.bip32Path,
-            change: slice.change,
-          };
-          inputs.push(input);
-        }
-      });
-    });
+    // ==== PROCESS INPUTS ====
+    const inputs = selectInputsFromPSBT(getState(), psbt);
 
     if (inputs.length === 0) {
       throw new Error("PSBT does not contain any UTXOs from this wallet.");
@@ -355,34 +485,17 @@ export function importPSBT(psbtText) {
 
     dispatch(setInputs(inputs));
 
-    let outputsTotalSats = new BigNumber(0);
-    psbt.txOutputs.forEach((output, outputIndex) => {
-      const number = outputIndex + 1;
-      outputsTotalSats = outputsTotalSats.plus(BigNumber(output.value));
-      if (number > 1) {
-        dispatch(addOutput());
-      }
+    // ==== PROCESS INPUTS ====
+    const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
-      if (output.script) {
-        dispatch(setChangeOutputIndex(number));
-        dispatch(setChangeAddressAction(output.address));
-      }
-      dispatch(setOutputAddress(number, output.address));
-      dispatch(setOutputAmount(number, satoshisToBitcoins(output.value)));
-    });
+    // Calculate and set fee
+    dispatch(setFeeFromState(outputsTotalSats));
 
-    state = getState();
-    const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
-    const feeSats = inputsTotalSats - outputsTotalSats;
-    const fee = satoshisToBitcoins(feeSats);
-    dispatch(setFee(fee));
+    // ==== Extract and import signatures (If they are present)====
+    dispatch(setSignaturesFromPsbt(psbt));
 
+    // Finalize the transaction
     dispatch(finalizeOutputs(true));
-
-    // In the future, if we want to support loading in signatures
-    // (or sets of signatures) included in a PSBT, we likely need to do
-    // that work here. Initial implementation just ignores any signatures
-    // included with the uploaded PSBT.
   };
 }
 
@@ -390,7 +503,8 @@ export function importHermitPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
@@ -418,7 +532,8 @@ export function importLegacyPSBT(psbtText) {
   return (dispatch, getState) => {
     const state = getState();
     const { network } = state.settings;
-    const psbt = autoLoadPSBT(psbtText, { network: networkData(network) });
+    //Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
       throw new Error("Could not parse PSBT.");
     }
