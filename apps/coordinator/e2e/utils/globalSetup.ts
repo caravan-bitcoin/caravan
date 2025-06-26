@@ -68,6 +68,7 @@ async function globalSetup(_config: FullConfig){
 
     console.log("fundAddress  🔥",fundAddress)
 
+
     // globalWalletData.walletNames = walletNames;
     // globalWalletData.testWallets = testWallets;
 
@@ -89,8 +90,8 @@ async function globalSetup(_config: FullConfig){
         downloadWalletFile: '',
         test_wallet_names: walletNames,
         test_wallets: testWallets,
-        walletAddress: '',
-        timestamp: Date.now()
+        walletAddress: newAddress,
+        timestamp: Date.now(),
     }
 
     fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))

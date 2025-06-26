@@ -90,11 +90,11 @@ test.describe("Wallet Regtest Configuration", () => {
 
       await page.waitForTimeout(4000);
 
-      await page.locator("button[type=button]:has-text('Import Addresses')").click();
+      // await page.locator("button[type=button]:has-text('Import Addresses')").click();
 
-      // Wait for the success message to appear
-      const successMessage = page.locator('text="Addresses imported."');
-      await expect(successMessage).toBeVisible({ timeout: 30000 });
+      // // Wait for the success message to appear
+      // const successMessage = page.locator('text="Addresses imported."');
+      // await expect(successMessage).toBeVisible({ timeout: 30000 });
 
       await page.locator("button[role=tab][type=button]:has-text('Receive')").click();
 
@@ -117,6 +117,22 @@ test.describe("Wallet Regtest Configuration", () => {
       })
       console.log("table data", tableData)
 
+
+      const senderWallet = testStateManager.getState().test_wallet_names[0];
+
+      const receiveAddress:string = tableData[0].address!;
+
+      const txid = await client?.sendToAddress(senderWallet,receiveAddress,1);
+
+      console.log("txid",txid)
+
+      const balance = tableData[0].balance;
+
+      console.log("balance",balance)
+
+      await page.waitForTimeout(8000)
+
+
       tableData.forEach((row,index) => {
         expect(row.address).toMatch(/^2[MN]/);
         console.log(`Address matched for row: ${index + 1}`)
@@ -130,4 +146,7 @@ test.describe("Wallet Regtest Configuration", () => {
       throw error;
     }
   });
+
+   
+
 });

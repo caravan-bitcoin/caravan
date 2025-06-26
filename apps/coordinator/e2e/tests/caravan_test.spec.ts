@@ -218,17 +218,13 @@ test.describe("Caravan Wallet Creation", () => {
 
     await page.click("button[type=button]:has-text('Enter')");
 
-    // await page.waitForTimeout(1000)
-
-    // await page.locator("button#confirm-wallet[type='button']").click()
     await page.waitForTimeout(1000)
 
-    //wait for the file to start on curr page and then will return a download obj
     const downloadPromise = page.waitForEvent('download');
 
     await page.click('button[type=button]:has-text("Download Wallet Details")');
 
-    //wait for download to complete
+    //Wait for download to complete
     const download = await downloadPromise;
 
     const suggestedFilename = download.suggestedFilename();

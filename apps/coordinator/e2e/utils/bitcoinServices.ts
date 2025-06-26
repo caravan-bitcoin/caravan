@@ -269,4 +269,17 @@ export class BitcoinCoreService {
     }
   }
 
+  async sendToAddress(WalletName: string, toAddress: string, amount: number){
+    try {
+      const walletClient = this.getWalletClient(WalletName);
+
+      let txid = await walletClient?.command("sendtoaddress",toAddress,amount);
+
+      return txid;
+      
+    } catch (error) {
+      console.log("error",error)
+      return null;
+    }
+  }
 }
