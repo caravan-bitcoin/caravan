@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- [#299](https://github.com/caravan-bitcoin/caravan/pull/299) [`f3e9b27`](https://github.com/caravan-bitcoin/caravan/commit/f3e9b2751b3673451fe637b42fc96ac6fea518ab) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - This introduces a support for exporting xpubs in caravan through BCUR2 Qr codes making wallets like seedsigner, jade etc compatible for the mentioned purpose.
+
 ## 0.6.2
 
 ### Patch Changes

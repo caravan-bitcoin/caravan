@@ -52,6 +52,17 @@ interface ValidatedAnalyzerOptions {
  * const analyzer = new TransactionAnalyzer({txHex,...other-options});
  * const analysis = analyzer.analyze();
  *
+ * @remarks
+ * As this is a **public-facing class**, any input transaction IDs (`txid`) returned
+ * by its methods are provided in **big-endian format**, consistent with how they appear
+ * in UIs and block explorers.
+ *
+ * If you are using these `txid`s internally for raw Bitcoin protocol operations,
+ * you may need to reverse them to **little-endian** using a helper such as `reverseHex()`.
+ *
+ * For more information on byte order in Bitcoin, see:
+ * @see https://learnmeabitcoin.com/technical/general/byte-order
+ *
  * @class
  */
 export class TransactionAnalyzer {
@@ -123,6 +134,16 @@ export class TransactionAnalyzer {
   /**
    * Gets the deserialized inputs of the transaction.
    * @returns {BtcTxInputTemplate[]} An array of transaction inputs
+   *
+   * @remarks
+   * Each input's `txid` will be in **big-endian** format, consistent with how TXIDs are typically
+   * displayed in block explorers and user interfaces.
+   *
+   * If you are performing any low-level Bitcoin protocol operations with these inputs (e.g. signing,
+   * hashing, or PSBT creation), ensure that you **convert the `txid` to little-endian** byte order
+   * as required by the Bitcoin protocol.
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   get inputs(): BtcTxInputTemplate[] {
     return this.deserializeInputs();
@@ -451,6 +472,16 @@ export class TransactionAnalyzer {
    *          the inputs of the analyzed transaction. These templates will not have
    *          amounts set and will need to be populated later with data from an external
    *          source (e.g., bitcoind wallet, blockchain explorer, or local UTXO set).
+   *
+   * @remarks
+   * Each input's `txid` will be in **big-endian** format, consistent with how TXIDs are typically
+   * displayed in block explorers and user interfaces.
+   *
+   * If you are performing any low-level Bitcoin protocol operations with these inputs (e.g. signing,
+   * hashing, or PSBT creation), ensure that you **convert the `txid` to little-endian** byte order
+   * as required by the Bitcoin protocol.
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   public getInputTemplates(): BtcTxInputTemplate[] {
     return this.inputs.map((input) => {
@@ -518,7 +549,7 @@ export class TransactionAnalyzer {
       });
 
       // Set sequence
-      template.setSequence(input.sequence);
+      template.sequence = input.sequence;
       return template;
     });
   }
