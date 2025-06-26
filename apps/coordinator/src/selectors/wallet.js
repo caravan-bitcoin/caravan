@@ -229,6 +229,21 @@ export const getDepositableSlices = createSelector(getDepositSlices, (slices) =>
 );
 
 /**
+ * Selector to get all wallet slices (both deposits and change addresses).
+ *
+ * ## Why This Selector Exists
+ *
+ * The existing `getSpendableSlices` selector only returns slices with currently
+ * spendable UTXOs. However, for RBF PSBT imports, we need to match addresses
+ * even when their UTXOs have been spent in pending transactions.
+ *
+ * This selector provides access to ALL wallet slices regardless of their UTXO
+ * status, which is essential for:
+ *
+ * 1. **Address Verification**: Ensuring reconstructed UTXOs belong to our wallet
+ * 2. **Metadata Retrieval**: Getting multisig configs and BIP32 paths for signing
+ * 3. **RBF Support**: Matching spent UTXOs to their original wallet addresses
+ *
  * @description Returns a all slices of the wallet
  */
 export const getAllSlices = createSelector(
