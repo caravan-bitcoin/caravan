@@ -60,6 +60,14 @@ async function globalSetup(_config: FullConfig){
 
     const testWallets = [wallet1, wallet2,wallet3,watcher_wallet];
 
+    const newAddress = await client?.getNewAddress(walletNames[0]);
+
+    console.log("new Address",newAddress)
+
+    let fundAddress = await client?.fundAddress(newAddress,walletNames[0]);
+
+    console.log("fundAddress  🔥",fundAddress)
+
     // globalWalletData.walletNames = walletNames;
     // globalWalletData.testWallets = testWallets;
 

@@ -45,7 +45,7 @@ test.describe("Wallet Regtest Configuration", () => {
     //   const modifiedFile = downloadedWalletFile.replace('.json', '-regtest-modified.json');
       fs.writeFileSync(downloadedWalletFile, JSON.stringify(walletConfig, null, 2));
       
-    //   // Update shared state
+    // Update shared state
     //   testStateManager.updateState({ 
     //     downloadWalletFile: JSON.stringify(walletConfig, null ,2)
     //   });
@@ -59,7 +59,7 @@ test.describe("Wallet Regtest Configuration", () => {
     }
   });
 
-  test("should import modified wallet config in Caravan", async ({ page }) => {
+  test("should import modified wallet config in Caravan & match the address", async ({ page }) => {
     console.log('Starting wallet import test');
     
     try {
@@ -77,25 +77,53 @@ test.describe("Wallet Regtest Configuration", () => {
       await page.goto("/#/wallet");
       
       await page.waitForTimeout(2000);
-
     
       const inputExists = await page.locator('input#upload-config').count();
       console.log("Number of upload-config inputs found:", inputExists);
-      
     
       console.log("Setting input files...");
       await page.setInputFiles('input#upload-config', modifiedWalletFile);
-      
-      // Wait a bit for the file to be set
-      await page.waitForTimeout(3000);
 
       await page.locator("#bitcoind-password").fill(clientConfig.password)
       
       await page.locator("#confirm-wallet").click();
 
-      await page.waitForTimeout(40000);
+      await page.waitForTimeout(4000);
 
-      console.log('Loading completed, wallet should be imported');
+      await page.locator("button[type=button]:has-text('Import Addresses')").click();
+
+      // Wait for the success message to appear
+      const successMessage = page.locator('text="Addresses imported."');
+      await expect(successMessage).toBeVisible({ timeout: 30000 });
+
+      await page.locator("button[role=tab][type=button]:has-text('Receive')").click();
+
+      await page.waitForSelector('table');
+
+      //Extract complete table data 
+      const tableData = await page.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll('tbody tr'));
+        console.log("rows:", rows)
+
+        return rows.map(row => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          return {
+            pathSuffix: cells[1]?.textContent?.trim(),
+            utxos: cells[2]?.textContent?.trim(),
+            balance: cells[3]?.textContent?.trim(),
+            address: cells[4]?.querySelector('code')?.textContent?.trim()
+          }
+        })
+      })
+      console.log("table data", tableData)
+
+      tableData.forEach((row,index) => {
+        expect(row.address).toMatch(/^2[MN]/);
+        console.log(`Address matched for row: ${index + 1}`)
+      })
+      
+
+      console.log('Wallet uploaded successfully - "Addresses imported." message appeared');
       
     } catch (error) {
       console.log("Error in wallet import:", error);
