@@ -1,5 +1,5 @@
 ---
-"@caravan/health": major
+"@caravan/health": patch
 "caravan-coordinator": minor
 ---
 
