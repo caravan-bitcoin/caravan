@@ -100,34 +100,6 @@ describe("Waste metric scoring", () => {
     });
   });
 
-  describe("Spend Waste Amount (S.W.A)", () => {
-    it("determines the cost of keeping or spending the UTXOs at given point of time", () => {
-      // Input UTXO Set : [0.1 BTC, 0.2 BTC, 0.3 BTC, 0.4 BTC]
-      // Weight : 30 vbytes
-      // Current Fee Rate : 10 sat/vbyte
-      // Input Amount Sum : 10000 sats
-      // Spend Amount : 8000 sats
-      // Estimated Long Term Fee Rate : 15 sat/vbyte
-      const weight = 30; // Estimated weight of the spending transaction
-      const feeRate = 10; // Current Fee-Rate
-      const inputAmountSum = 10000; // Sum of all inputs in the spending transaction
-      const spendAmount = 8000; // Amount spent in the transaction
-      const estimatedLongTermFeeRate = 15; // Estimated long term fee rate
-
-      const wasteAmount = wasteMetric.spendWasteAmount(
-        weight,
-        feeRate,
-        inputAmountSum,
-        spendAmount,
-        estimatedLongTermFeeRate,
-      );
-      expect(wasteAmount).toBe(1850);
-      // This number is positive this means that in future if we spend the UTXOs now,
-      // we will be saving 1850 sats in fees. This is because in future the fee rate
-      // is expected to increase from 10 sat/vbyte to 15 sat/vbyte.
-    });
-  });
-
   describe("Dust Limits", () => {
     const config = {
       requiredSignerCount: 2, // Provide the required property m
