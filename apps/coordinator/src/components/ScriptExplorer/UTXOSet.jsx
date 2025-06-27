@@ -19,6 +19,7 @@ import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
+import DustChip from "./DustChip";
 
 // Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -171,7 +172,7 @@ class UTXOSet extends React.Component {
   };
 
   renderInputs = () => {
-    const { network, showSelection, finalizedOutputs } = this.props;
+    const { network, showSelection, finalizedOutputs, feeRate } = this.props;
     const { localInputs } = this.state;
     return localInputs.map((input, inputIndex) => {
       const confirmedStyle = `${styles.utxoTxid}${
@@ -202,6 +203,9 @@ class UTXOSet extends React.Component {
           </TableCell>
           <TableCell>
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
+          </TableCell>
+          <TableCell>
+            <DustChip amountSats={input.amountSats} feeRate={feeRate} />
           </TableCell>
           <TableCell>
             {externalLink(
@@ -248,6 +252,7 @@ class UTXOSet extends React.Component {
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
               <TableCell>View</TableCell>
+              <TableCell>Dust Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>{this.renderInputs()}</TableBody>
@@ -284,6 +289,7 @@ UTXOSet.propTypes = {
   existingTransactionInputs: PropTypes.arrayOf(PropTypes.shape({})),
   setSpendCheckbox: PropTypes.func,
   autoSpend: PropTypes.bool.isRequired,
+  feeRate: PropTypes.string,
 };
 
 UTXOSet.defaultProps = {
