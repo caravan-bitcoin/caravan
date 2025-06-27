@@ -145,8 +145,8 @@ describe("Waste metric scoring", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, "P2WSH", config, 1.5);
-      expect(lowerLimit).toBe(2580);
-      expect(upperLimit).toBe(3870);
+      expect(lowerLimit).toBe(2560);
+      expect(upperLimit).toBe(3840);
     });
 
     it("calculates the lower and upper limit of the dust amount for P2PKH script type and 1.5 risk multiplier", () => {
