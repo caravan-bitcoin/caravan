@@ -5,7 +5,6 @@ import BigNumber from "bignumber.js";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { WasteMetrics } from "@caravan/health";
 import { getWalletConfig } from "../../selectors/wallet";
-import InfoIcon from "@mui/icons-material/Info";
 import {
   Button,
   Box,
@@ -16,14 +15,12 @@ import {
   TableRow,
   TableCell,
   Grid,
-  Slider,
-  Typography,
-  Tooltip,
-  IconButton,
 } from "@mui/material";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
+import { TransactionAnalysis } from "./TransactionAnalysis";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import "./styles.css";
 
 class TransactionPreview extends React.Component {
   state = {
@@ -87,6 +84,10 @@ class TransactionPreview extends React.Component {
     );
 
     this.setState({ wasteAmount: rawWaste });
+  };
+
+  handleFeeEstimateChange = (value) => {
+    this.setState({ longTermFeeEstimate: value });
   };
 
   renderAddresses = () => {
@@ -228,41 +229,17 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(inputsTotalSats)} BTC</div>
           </Grid>
         </Grid>
-        {/* Spend Waste Amount Slider & Display */}
-        <Box mt={4}>
-          <h3>
-            Waste Analysis
-            <Tooltip title="Waste analysis calculates inefficiencies due to fees and UTXO consolidation.">
-              <IconButton size="small" sx={{ ml: 1 }}>
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </h3>
-          <Typography gutterBottom>
-            Spend Waste Amount (SWA): {wasteAmount.toFixed(2)} sats
-            <Tooltip title="SWA indicates whether it is economical to spend now or wait to consolidate later when fees could be low.">
-              <IconButton size="small" sx={{ ml: 1 }}>
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Typography>
-          <Slider
-            value={longTermFeeEstimate}
-            min={1}
-            max={500}
-            step={1}
-            onChange={(e, v) => this.setState({ longTermFeeEstimate: v })}
-            aria-labelledby="long-term-fee-estimate-slider"
+
+        {/* Transaction Analysis Component */}
+        <Box mt={3}>
+          <TransactionAnalysis
+            wasteAmount={wasteAmount}
+            longTermFeeEstimate={longTermFeeEstimate}
+            onFeeEstimateChange={this.handleFeeEstimateChange}
+            defaultExpanded={true}
           />
-          <Typography id="long-term-fee-estimate-slider" gutterBottom>
-            Long Term Fee Estimate (L): {longTermFeeEstimate} sats/vB
-            <Tooltip title="L is a hypothetical future fee rate used to evaluate output viability (dust/waste).">
-              <IconButton size="small" sx={{ ml: 1 }}>
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Typography>
         </Box>
+
         <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>
