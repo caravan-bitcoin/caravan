@@ -67,7 +67,6 @@ test.describe("Wallet Regtest Configuration", () => {
       const modifiedWalletFile = testStateManager.getDownloadedWalletFile();
       console.log("modifiedwalletFile", modifiedWalletFile);
       
-      // Debug: Check if file exists
       if (!fs.existsSync(modifiedWalletFile)) {
         throw new Error(`File does not exist at path: ${modifiedWalletFile}`);
       }
@@ -75,8 +74,6 @@ test.describe("Wallet Regtest Configuration", () => {
       
       // Navigate to wallet page
       await page.goto("/#/wallet");
-      
-      await page.waitForTimeout(2000);
     
       const inputExists = await page.locator('input#upload-config').count();
       console.log("Number of upload-config inputs found:", inputExists);
@@ -88,13 +85,13 @@ test.describe("Wallet Regtest Configuration", () => {
       
       await page.locator("#confirm-wallet").click();
 
-      await page.waitForTimeout(4000);
+      await page.waitForTimeout(1000);
 
-      // await page.locator("button[type=button]:has-text('Import Addresses')").click();
+      await page.locator("button[type=button]:has-text('Import Addresses')").click();
 
-      // // Wait for the success message to appear
-      // const successMessage = page.locator('text="Addresses imported."');
-      // await expect(successMessage).toBeVisible({ timeout: 30000 });
+      // Wait for the success message to appear
+      const successMessage = page.locator('text="Addresses imported."');
+      await expect(successMessage).toBeVisible({ timeout: 30000 });
 
       await page.locator("button[role=tab][type=button]:has-text('Receive')").click();
 
@@ -129,8 +126,13 @@ test.describe("Wallet Regtest Configuration", () => {
       const balance = tableData[0].balance;
 
       console.log("balance",balance)
+      await page.locator("button[role=tab][type=button]:has-text('Addresses')").click();
+      await page.locator("button[role=tab][type=button]:has-text('Pending Transactions')").click();
 
-      await page.waitForTimeout(8000)
+      await page.locator('[data-testid="RefreshIcon"]').click();
+
+
+      await page.waitForTimeout(4000)
 
 
       tableData.forEach((row,index) => {

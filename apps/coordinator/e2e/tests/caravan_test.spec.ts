@@ -176,9 +176,6 @@ test.describe("Caravan Wallet Creation", () => {
     const p2sh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
       ?.p2sh.xpub as string;
 
-    
-
-
    //filling xpub1 
     await page.click("div#public-key-1-importer-select[role='combobox']");
 
