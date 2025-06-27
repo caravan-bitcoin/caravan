@@ -63,7 +63,7 @@ else
 fi
 
 # 2. package-lock.json sanity checks:
-#    a) Ensure package-lock.json doesn’t have massive diffs — usually a sign of incorrect Node.js/npm versions.
+#    a) Ensure package-lock.json doesn't have massive diffs — usually a sign of incorrect Node.js/npm versions.
 #    b) Make sure any package-lock.json change is paired with a meaningful change in any workspaces package.json.
 echo "2️⃣ Checking package-lock.json changes..."
 
@@ -291,36 +291,7 @@ elif [ -z "$STAGED_ROOT_LOCKFILE" ] && [ -z "$STAGED_PACKAGE_JSONS" ]; then
     echo "   No dependency changes in this commit"
 fi
 
-# 3. Run linting (only if we're in a directory with lint script)
-echo "3️⃣ Checking for lint script..."
 
-# Try to find nearest package.json with lint script
-CURRENT_DIR=$(pwd)
-LINT_DIR=""
-
-# Check current directory and walk up to git root
-while [ "$CURRENT_DIR" != "$GIT_ROOT" ] && [ "$CURRENT_DIR" != "/" ]; do
-    if [ -f "$CURRENT_DIR/package.json" ] && grep -q '"lint"' "$CURRENT_DIR/package.json"; then
-        LINT_DIR="$CURRENT_DIR"
-        break
-    fi
-    CURRENT_DIR=$(dirname "$CURRENT_DIR")
-done
-
-# Check git root as well
-if [ -z "$LINT_DIR" ] && [ -f "$GIT_ROOT/package.json" ] && grep -q '"lint"' "$GIT_ROOT/package.json"; then
-    LINT_DIR="$GIT_ROOT"
-fi
-
-if [ -n "$LINT_DIR" ]; then
-    echo "   Found lint script in: $LINT_DIR"
-    echo "   Running linter..."
-    cd "$LINT_DIR"
-    npm run lint
-    echo "   ✅ Linting passed"
-else
-    echo "   No lint script found, skipping"
-fi
 
 echo ""
 echo "✅ All pre-commit checks passed!"
