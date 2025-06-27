@@ -10,7 +10,7 @@ describe("p2sh", () => {
           m: 2,
           n: 3,
         }),
-      ).toBe(387);
+      ).toBe(371); // from bitcoin optech calculator
     });
   });
 });
