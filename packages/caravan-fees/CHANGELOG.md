@@ -1,5 +1,11 @@
 # @caravan/fees
 
+## 1.0.1
+
+### Patch Changes
+
+- [#304](https://github.com/caravan-bitcoin/caravan/pull/304) [`c583667`](https://github.com/caravan-bitcoin/caravan/commit/c583667f136331539098c70a7c2247e580e7ce47) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - To validate that the fees-package correctly generates updated PSBTs for both RBF and CPFP when provided with valid input data.
+
 ## 1.0.1-beta
 
 ### Patch Changes
