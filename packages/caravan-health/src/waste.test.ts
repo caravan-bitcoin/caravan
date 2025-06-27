@@ -109,16 +109,16 @@ describe("Waste metric scoring", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, "P2SH", config, 1.5);
-      expect(lowerLimit).toBe(2480);
-      expect(upperLimit).toBe(3720);
+      expect(lowerLimit).toBe(2970);
+      expect(upperLimit).toBe(4455);
     });
 
     it("calculates the lower and upper limit of the dust amount for P2WSH script type and 1.5 risk multiplier", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, "P2WSH", config, 1.5);
-      expect(lowerLimit).toBe(2560);
-      expect(upperLimit).toBe(3840);
+      expect(lowerLimit).toBe(1045);
+      expect(upperLimit).toBe(1567.5);
     });
 
     it("calculates the lower and upper limit of the dust amount for P2PKH script type and 1.5 risk multiplier", () => {
@@ -146,8 +146,8 @@ describe("Waste metric scoring", () => {
           config,
           1.5,
         );
-      expect(lowerLimit).toBe(610);
-      expect(upperLimit).toBe(915);
+      expect(lowerLimit).toBe(1265);
+      expect(upperLimit).toBe(1897.5);
     });
   });
 
