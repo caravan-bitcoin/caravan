@@ -25,30 +25,11 @@ export const usePendingTransactions = () => {
   const pendingTransactionIds = useSelector(getPendingTransactionIds);
   const blockchainClient = useGetClient();
 
-  console.log("usePendingTransactions:", {
-    pendingTransactionIds,
-    hasClient: !!blockchainClient,
-    count: pendingTransactionIds.length,
-  });
-
   return useQueries({
     queries: pendingTransactionIds.map((txid) => ({
       queryKey: transactionKeys.pendingTransaction(txid),
       queryFn: () => fetchTransactionDetails(txid, blockchainClient),
       enabled: !!blockchainClient && !!txid,
-      // Refetch every 30 seconds to check for confirmation status changes
-      refetchInterval: 30000,
-      // Stop refetching when window is not focused
-      refetchIntervalInBackground: false,
-      // Keep retrying on error
-      retry: 3,
-      // Retry with exponential backoff
-      retryDelay: (attemptIndex: number) =>
-        Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Ensure refetch on window focus works
-      refetchOnWindowFocus: true,
-      // Keep data fresh
-      staleTime: 0,
     })),
   });
 };
@@ -61,15 +42,6 @@ export const useFetchPendingTransactions = () => {
   // Calculate loading and error states
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
-
-  console.log("useFetchPendingTransactions:", {
-    queryCount: transactionQueries.length,
-    isLoading,
-    hasError: !!error,
-    dataCount: transactionQueries.filter((q) => q.data).length,
-    confirmedCount: transactionQueries.filter((q) => q.data?.status?.confirmed)
-      .length,
-  });
 
   // Process transactions with calculated values and filter out confirmed ones
   const transactions = transactionQueries
@@ -85,8 +57,6 @@ export const useFetchPendingTransactions = () => {
             : calculateTransactionValue(tx, walletAddresses) > 0,
       };
     });
-
-  console.log("Filtered transactions:", transactions.length);
 
   return {
     transactions,
