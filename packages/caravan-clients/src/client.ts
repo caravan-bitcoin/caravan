@@ -43,12 +43,12 @@ export enum ClientType {
   PRIVATE = "private",
   PUBLIC = "public",
   MEMPOOL = "mempool",
-  BLOCKSTREAM = "blockstream"
+  BLOCKSTREAM = "blockstream",
 }
 
 export enum PublicBitcoinProvider {
   BLOCKSTREAM = "blockstream",
-  MEMPOOL = "mempool"
+  MEMPOOL = "mempool",
 }
 
 const delay = () => {
@@ -258,7 +258,11 @@ export class BlockchainClient extends ClientBase {
     }
 
     // Blockstream does not support Signet
-    if (type === ClientType.PUBLIC && provider === PublicBitcoinProvider.BLOCKSTREAM && network === Network.SIGNET) {
+    if (
+      type === ClientType.PUBLIC &&
+      provider === PublicBitcoinProvider.BLOCKSTREAM &&
+      network === Network.SIGNET
+    ) {
       throw new Error("Invalid network: Blockstream does not support Signet");
     }
 
@@ -275,9 +279,9 @@ export class BlockchainClient extends ClientBase {
     }
 
     if (type === ClientType.PUBLIC && !provider) {
-        // Default to mempool if no provider is specified for a public client
-        // eslint-disable-next-line no-param-reassign
-        provider = PublicBitcoinProvider.MEMPOOL;
+      // Default to mempool if no provider is specified for a public client
+      // eslint-disable-next-line no-param-reassign
+      provider = PublicBitcoinProvider.MEMPOOL;
     }
 
     let hostURL = "";
@@ -300,25 +304,14 @@ export class BlockchainClient extends ClientBase {
     this.bitcoindParams = bitcoindParams(client);
   }
 
-  public async getAddressUtxos(
-    address: string,
-    includeUnsafe: boolean = false,
-  ): Promise<any> {
+  public async getAddressUtxos(address: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        // For private Bitcoin Core nodes, we can control whether to include
-        // "unsafe" UTXOs (those already spent in pending transactions).
-        // This is essential for RBF functionality.
         return bitcoindListUnspent({
           address,
-          includeUnsafe,
           ...this.bitcoindParams,
         });
       }
-
-      // Public block explorers (like Blockstream, Mempool.space) don't support
-      // the includeUnsafe parameter and typically only return spendable UTXOs.
-      // RBF with public clients may be limited or require different approaches ... will need to see how to test it
       return await this.Get(`/address/${address}/utxo`);
     } catch (error: any) {
       throw new Error(
@@ -474,7 +467,10 @@ export class BlockchainClient extends ClientBase {
         );
       }
     } catch (error: Error | any) {
-      if (this.type === ClientType.PRIVATE && isWalletAddressNotFoundError(error)) {
+      if (
+        this.type === ClientType.PRIVATE &&
+        isWalletAddressNotFoundError(error)
+      ) {
         updates = {
           utxos: [],
           balanceSats: BigNumber(0),
@@ -709,7 +705,10 @@ export class BlockchainClient extends ClientBase {
           });
           break;
         case ClientType.PUBLIC:
-          if (this.provider === PublicBitcoinProvider.BLOCKSTREAM || this.provider === PublicBitcoinProvider.MEMPOOL) {
+          if (
+            this.provider === PublicBitcoinProvider.BLOCKSTREAM ||
+            this.provider === PublicBitcoinProvider.MEMPOOL
+          ) {
             txData = await this.Get(`/tx/${txid}`);
           } else {
             throw new Error("Invalid provider for public client."); // Should not happen with constructor guards

@@ -227,7 +227,6 @@ describe("Wallet Functions", () => {
           minconf: 0,
           maxconf: 9999999,
           addresses: [address],
-          include_unsafe: false,
         },
       );
 
