@@ -22,16 +22,21 @@ const store = createStore(
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Cache data for 5 minutes by default
-      staleTime: 5 * 60 * 1000,
-      // Keep data in cache for 10 minutes
-      cacheTime: 10 * 60 * 1000,
-      // Retry failed requests 3 times
-      retry: 3,
-      // Don't refetch on window focus by default
-      refetchOnWindowFocus: false,
-      // Don't refetch on reconnect by default
-      refetchOnReconnect: false,
+      /**
+       * This is the RQ default, but let's make it explicit.
+       *
+       * Queries are immediately considered "stale", meaning if (and only if)
+       *
+       * - the window is blurred and then refocused, or...
+       * - another component renders the same query, or...
+       * - the current component unmounts and remounts...
+       *
+       * then the query will be requested once again, and the stale data updated.
+       * */
+      staleTime: 0,
+
+      // Another explicitly stated default. See above staleTime note for context.
+      refetchOnWindowFocus: true,
     },
   },
 });

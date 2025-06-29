@@ -1,26 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { Transaction, SortDirection, SortBy } from "./types";
-import { useGetClient } from "../../../hooks/client";
-import {
-  getPendingTransactionIds,
-  getWalletAddresses,
-  getTransactionExplorerUrl,
-} from "../../../selectors/wallet";
-import { calculateTransactionValue } from "../../../utils/transactionCalculations";
+import { getTransactionExplorerUrl } from "selectors/wallet";
 
 /**
  * NOTE: This version only shows pending transactions
  *
- * We're currently only tracking pending (unconfirmed) transactions and have
- * commented out the code for confirmed/spent transactions. This is because:
+ * We're currently only tracking pending (unconfirmed) transactions. This is because:
  *
  * - Once UTXOs are spent, their txid's disappear from the wallet state
  * - We'd need to query address histories for private clients, which has privacy issues
  * - We don't have a great way to track transaction history right now
  *
- * The commented code is still here in case we figure out a better approach later.
- * For now, we're keeping it simple and just showing what's pending.
+ * When we add confirmed transaction support later, we can create separate hooks
+ * for confirmed transactions with their own sorting, pagination, and explorer link handling.
  */
 
 /**
@@ -28,103 +21,6 @@ import { calculateTransactionValue } from "../../../utils/transactionCalculation
  * CUSTOM HOOKS
  * ==============================================================================
  */
-
-/**
- * Custom hook to manage transaction fetching and state
- */
-export const useFetchTransactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(true);
-
-  // Use selectors to get state from Redux store
-  const pendingTransactionIds = useSelector(getPendingTransactionIds);
-  const walletAddresses = useSelector(getWalletAddresses);
-
-  const blockchainClient = useGetClient();
-
-  // Helper function to fetch individual transaction details
-  const fetchTransactionDetails = async (txid: string) => {
-    try {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-      return await blockchainClient.getTransaction(txid);
-    } catch (err) {
-      console.error(`Error fetching tx ${txid}:`, err);
-      return null;
-    }
-  };
-
-  // Fetch transactions
-  const fetchTransactions = useCallback(async () => {
-    if (!mounted) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
-      // Fetch transaction details in parallel
-      const txPromises = pendingTransactionIds.map((txid) =>
-        fetchTransactionDetails(txid),
-      );
-
-      const txDetails = await Promise.all(txPromises);
-
-      if (mounted) {
-        const processedTransactions = txDetails
-          .filter((tx): tx is any => tx !== null)
-          .map((tx) => {
-            // Calculate value to wallet
-            const valueToWallet = calculateTransactionValue(
-              tx,
-              walletAddresses,
-            );
-            // Determine if transaction is received based on value if not already set
-            const isReceived =
-              tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0;
-
-            return {
-              ...tx,
-              valueToWallet,
-              isReceived,
-            };
-          });
-        setTransactions(processedTransactions);
-        setError(null);
-      }
-    } catch (err) {
-      if (mounted) {
-        setError((err as Error).message);
-      }
-    } finally {
-      if (mounted) {
-        setIsLoading(false);
-      }
-    }
-  }, [blockchainClient, pendingTransactionIds, mounted, walletAddresses]);
-
-  // Initialize and clean up
-  useEffect(() => {
-    fetchTransactions();
-
-    return () => {
-      setMounted(false);
-    };
-  }, [fetchTransactions]);
-
-  return {
-    transactions,
-    isLoading,
-    error,
-    fetchTransactions,
-  };
-};
 
 /**
  * Custom hook to manage transaction sorting
@@ -184,32 +80,21 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
     [sortBy, sortDirection],
   );
 
-  // Split and sort transactions
-  const pendingTxs = getSortedTransactions(
-    transactions.filter((tx) => !tx.status.confirmed),
-  );
-
-  // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
-  /*
-  const confirmedTxs = getSortedTransactions(
-    transactions.filter((tx) => tx.status.confirmed),
-  );
-  */
+  // Sort transactions
+  const sortedTransactions = getSortedTransactions(transactions);
 
   return {
     sortBy,
     sortDirection,
     handleSort,
-    pendingTxs,
-    // COMMENTED FOR PENDING-ONLY IMPLEMENTATION
-    // confirmedTxs,
+    sortedTransactions,
   };
 };
 
 /**
- * Custom hook to manage pagination
+ * Custom hook to manage pagination for transactions
  */
-export const usePagination = (totalItems: number) => {
+export const useTransactionPagination = (totalItems: number) => {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -255,9 +140,9 @@ export const usePagination = (totalItems: number) => {
 };
 
 /**
- * Custom hook to handle clicking on transaction links
+ * Custom hook to handle clicking on transaction explorer links
  */
-export const useHandleExplorerLinkClick = () => {
+export const useHandleTransactionExplorerLinkClick = () => {
   const client = useSelector((state: any) => state.client);
   const getExplorerUrl = useSelector(getTransactionExplorerUrl);
 

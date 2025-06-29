@@ -433,7 +433,7 @@ export const getWalletAddresses = createSelector(
 );
 
 /**
- * @description Returns an array of transaction IDs from active UTXOs (pending transactions)
+ * @description Returns an array of transaction IDs from unconfirmed UTXOs (pending transactions only)
  */
 export const getPendingTransactionIds = createSelector(
   getWalletSlices,
@@ -443,7 +443,10 @@ export const getPendingTransactionIds = createSelector(
     slices.forEach((slice: Slice) => {
       if (slice.utxos && slice.utxos.length > 0) {
         slice.utxos.forEach((utxo: UTXO) => {
-          if (utxo.txid) txids.add(utxo.txid);
+          // Only include transaction IDs from unconfirmed UTXOs
+          if (utxo.txid && !utxo.confirmed) {
+            txids.add(utxo.txid);
+          }
         });
       }
     });
