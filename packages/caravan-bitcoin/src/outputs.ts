@@ -6,6 +6,10 @@
 import { BigNumber } from "bignumber.js";
 
 import { validateAddress } from "./addresses";
+import { getP2SHOutputSize, P2SH } from "./p2sh";
+import { getP2SH_P2WSHOutputSize, P2SH_P2WSH } from "./p2sh_p2wsh";
+import { getP2WSHOutputSize, P2WSH } from "./p2wsh";
+import { MultisigAddressType } from "./types";
 import { ZERO } from "./utils";
 
 /**
@@ -116,4 +120,17 @@ export function validateOutputAmount(
     }
   }
   return "";
+}
+
+export function getOutputSize(scriptType: MultisigAddressType) {
+  switch (scriptType) {
+    case P2SH:
+      return getP2SHOutputSize();
+    case P2WSH:
+      return getP2WSHOutputSize();
+    case P2SH_P2WSH:
+      return getP2SH_P2WSHOutputSize();
+    default:
+      throw new Error(`Unsupported script type: ${scriptType}`);
+  }
 }

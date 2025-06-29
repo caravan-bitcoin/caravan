@@ -1,5 +1,7 @@
 import { encoding } from "bufio";
 
+import { compactSize } from "./utils";
+
 /**
  * This module provides functions and constants for the P2WSH address type.
  */
@@ -15,7 +17,7 @@ export const P2WSH = "P2WSH";
  * Each input field will look like:
  * prevhash (32 bytes) + prevIndex (4) + scriptsig (1) + sequence bytes (4)
  */
-function txinSize() {
+export function getP2WSHInputSize() {
   const PREVHASH_BYTES = 32;
   const PREV_INDEX_BYTES = 4;
   const SCRIPT_LENGTH_BYTES = 1;
@@ -31,7 +33,7 @@ function txinSize() {
  * Calculated by adding value field (8 bytes), field providing length
  * scriptPubkey and the script pubkey itself
  */
-function txoutSize(scriptPubkeySize = 34) {
+export function getP2WSHOutputSize(scriptPubkeySize = 34) {
   // per_output: value (8) + script length (1) +
   const VAL_BYTES = 8;
   const scriptLengthBytes = encoding.sizeVarint(scriptPubkeySize);
@@ -59,28 +61,39 @@ export function getRedeemScriptSize(n) {
 
 /**
  * Calculates the value of a multisig witness given m-of-n values
- * Calculation is of the following form:
- * witness_items count (varint 1+) + null_data (1 byte) + size of each signature (1 byte * OP_M) + signatures (73 * M) +
- * redeem script length (1 byte) + redeem script size (4 + 34 * N bytes)
+ *
+ * According to Bitcoin Optech calculator (https://bitcoinops.org/en/tools/calc-size/):
+ * - P2WSH 2-of-3 witness: 63.5 vbytes (254 bytes / 4)
+ * - Format: (1) size(0) (empty) + (73) size(72) ecdsa_signature + (73) size(72) ecdsa_signature + (106) size(105) redeem_script
+ *
+ * Witness structure:
+ * - Witness item count (varint)
+ * - Size
+ * - m signatures, each with size prefix
+ * - Redeem script with size prefix
  */
 export function getWitnessSize(m, n) {
-  const OP_NULL_BYTES = 1; // needs to be added b/c of bug in multisig implementation
-  const opDataBytes = m;
-  // assumes largest possible signature size which could be 71, 72, or 73
-  const signaturesSize = 73 * m;
-  const REDEEM_SCRIPT_LENGTH = 1;
-  const redeemScriptSize = getRedeemScriptSize(n);
-  // total witness stack will be null bytes + each signature (m) + redeem script
   const WITNESS_ITEMS_COUNT = encoding.sizeVarint(1 + m + 1);
+  const SIZE_PREFIX = 1;
+
+  // Each signature: size prefix (1 byte for 72-byte signature) + signature (72 bytes)
+  const SIGNATURE_SIZE_PREFIX = 1;
+  const SIGNATURE_SIZE = 72; // Conservative estimate per Optech
+  const SIGNATURES_SIZE = m * (SIGNATURE_SIZE_PREFIX + SIGNATURE_SIZE);
+
+  // Redeem script: size prefix + script content
+  const redeemScriptSize = getRedeemScriptSize(n);
+  // https://btcinformation.org/en/developer-reference#compactsize-unsigned-integers
+  const redeemScriptSizePrefix = compactSize(redeemScriptSize);
+  const REDEEM_SCRIPT_SIZE = redeemScriptSizePrefix + redeemScriptSize;
 
   return (
-    WITNESS_ITEMS_COUNT +
-    OP_NULL_BYTES +
-    opDataBytes +
-    signaturesSize +
-    REDEEM_SCRIPT_LENGTH +
-    redeemScriptSize
+    WITNESS_ITEMS_COUNT + SIZE_PREFIX + SIGNATURES_SIZE + REDEEM_SCRIPT_SIZE
   );
+}
+
+export function getWitnessWeight(m, n) {
+  return getWitnessSize(m, n) / 4;
 }
 
 /**
@@ -94,9 +107,9 @@ export function calculateBase(inputsCount, outputsCount) {
   total += 4; // locktime
 
   total += encoding.sizeVarint(inputsCount); // inputs length
-  total += inputsCount * txinSize();
+  total += inputsCount * getP2WSHInputSize();
   total += encoding.sizeVarint(outputsCount);
-  total += outputsCount * txoutSize();
+  total += outputsCount * getP2WSHOutputSize();
   return total;
 }
 

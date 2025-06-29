@@ -5,6 +5,7 @@ import {
   satoshisToBitcoins,
   bitcoinsToSatoshis,
   hash160,
+  compactSize,
 } from "./utils";
 
 describe("utils", () => {
@@ -122,13 +123,22 @@ describe("utils", () => {
     it("should take a buffer and hash it with sha256 and ripemd160", () => {
       const val = Buffer.from(
         "a2bc6de234a4b2fe10fe582f29c39de52b8161624ef310ca6cccff5d6d7d591a",
-        "hex"
+        "hex",
       );
       const expected = Buffer.from(
         "d06d0dadca1f9cf3aedd5514e0669c2fffa7bc81",
-        "hex"
+        "hex",
       );
       expect(hash160(val)).toEqual(expected);
+    });
+  });
+
+  describe("compactSize", () => {
+    it("returns the size including the bytes required to represent the size", () => {
+      expect(compactSize(0)).toEqual(1);
+      expect(compactSize(252)).toEqual(1);
+      expect(compactSize(0xffff)).toEqual(3);
+      expect(compactSize(0xffffffff)).toEqual(5);
     });
   });
 });

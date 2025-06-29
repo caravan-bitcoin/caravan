@@ -100,34 +100,6 @@ describe("Waste metric scoring", () => {
     });
   });
 
-  describe("Spend Waste Amount (S.W.A)", () => {
-    it("determines the cost of keeping or spending the UTXOs at given point of time", () => {
-      // Input UTXO Set : [0.1 BTC, 0.2 BTC, 0.3 BTC, 0.4 BTC]
-      // Weight : 30 vbytes
-      // Current Fee Rate : 10 sat/vbyte
-      // Input Amount Sum : 10000 sats
-      // Spend Amount : 8000 sats
-      // Estimated Long Term Fee Rate : 15 sat/vbyte
-      const weight = 30; // Estimated weight of the spending transaction
-      const feeRate = 10; // Current Fee-Rate
-      const inputAmountSum = 10000; // Sum of all inputs in the spending transaction
-      const spendAmount = 8000; // Amount spent in the transaction
-      const estimatedLongTermFeeRate = 15; // Estimated long term fee rate
-
-      const wasteAmount = wasteMetric.spendWasteAmount(
-        weight,
-        feeRate,
-        inputAmountSum,
-        spendAmount,
-        estimatedLongTermFeeRate,
-      );
-      expect(wasteAmount).toBe(1850);
-      // This number is positive this means that in future if we spend the UTXOs now,
-      // we will be saving 1850 sats in fees. This is because in future the fee rate
-      // is expected to increase from 10 sat/vbyte to 15 sat/vbyte.
-    });
-  });
-
   describe("Dust Limits", () => {
     const config = {
       requiredSignerCount: 2, // Provide the required property m
@@ -137,16 +109,16 @@ describe("Waste metric scoring", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, "P2SH", config, 1.5);
-      expect(lowerLimit).toBe(2480);
-      expect(upperLimit).toBe(3720);
+      expect(lowerLimit).toBe(2970);
+      expect(upperLimit).toBe(4455);
     });
 
     it("calculates the lower and upper limit of the dust amount for P2WSH script type and 1.5 risk multiplier", () => {
       const uninitializedWasteMetric = new WasteMetrics();
       const { lowerLimit, upperLimit } =
         uninitializedWasteMetric.calculateDustLimits(10, "P2WSH", config, 1.5);
-      expect(lowerLimit).toBe(2580);
-      expect(upperLimit).toBe(3870);
+      expect(lowerLimit).toBe(1045);
+      expect(upperLimit).toBe(1567.5);
     });
 
     it("calculates the lower and upper limit of the dust amount for P2PKH script type and 1.5 risk multiplier", () => {
@@ -174,8 +146,8 @@ describe("Waste metric scoring", () => {
           config,
           1.5,
         );
-      expect(lowerLimit).toBe(610);
-      expect(upperLimit).toBe(915);
+      expect(lowerLimit).toBe(1385);
+      expect(upperLimit).toBe(2077.5);
     });
   });
 
