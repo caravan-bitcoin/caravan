@@ -298,7 +298,7 @@ export const rbfFixtures = {
         inputCount: 2,
         outputCount: 2,
         fee: "905",
-        expectedFee: "1248",
+        expectedFee: "1357",
         feeRate: 6.029,
       },
     },

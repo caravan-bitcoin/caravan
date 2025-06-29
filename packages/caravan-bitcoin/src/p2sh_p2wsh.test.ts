@@ -10,7 +10,7 @@ describe("p2sh_p2wsh", () => {
           m: 3,
           n: 5,
         }),
-      ).toBe(348); // actual value from bitcoin core for P2PKH out
+      ).toBe(366); // actual value from bitcoin core for P2PKH out
     });
   });
 });

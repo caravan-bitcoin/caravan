@@ -267,7 +267,7 @@ describe("inputs", () => {
         scriptType: P2SH_P2WSH,
         m: 2,
         n: 3,
-        expectedWeight: 126.5,
+        expectedWeight: 138.5,
       },
       {
         scriptType: P2SH,
@@ -297,13 +297,13 @@ describe("inputs", () => {
         scriptType: P2SH_P2WSH,
         m: 1,
         n: 2,
-        expectedWeight: 99.75,
+        expectedWeight: 111.75,
       },
       {
         scriptType: P2SH_P2WSH,
         m: 3,
         n: 5,
-        expectedWeight: 161.75,
+        expectedWeight: 173.75,
       },
     ];
 

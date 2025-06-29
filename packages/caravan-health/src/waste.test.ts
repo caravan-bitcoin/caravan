@@ -146,8 +146,8 @@ describe("Waste metric scoring", () => {
           config,
           1.5,
         );
-      expect(lowerLimit).toBe(1265);
-      expect(upperLimit).toBe(1897.5);
+      expect(lowerLimit).toBe(1385);
+      expect(upperLimit).toBe(2077.5);
     });
   });
 

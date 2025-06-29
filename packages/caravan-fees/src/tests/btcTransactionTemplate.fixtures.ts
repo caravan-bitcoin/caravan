@@ -70,9 +70,9 @@ export const fixtures: TestFixture[] = [
       totalSigners: 1,
     },
     expected: {
-      vsize: 275,
+      vsize: 284,
       fee: "1192",
-      feeRate: "4.33",
+      feeRate: "4.19",
     },
   },
   {
@@ -126,9 +126,9 @@ export const fixtures: TestFixture[] = [
       totalSigners: 3,
     },
     expected: {
-      vsize: 196,
+      vsize: 205,
       fee: "3285",
-      feeRate: "16.76",
+      feeRate: "16.02",
     },
   },
 ];

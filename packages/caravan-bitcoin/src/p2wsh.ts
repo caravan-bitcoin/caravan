@@ -1,5 +1,7 @@
 import { encoding } from "bufio";
 
+import { compactSize } from "./utils";
+
 /**
  * This module provides functions and constants for the P2WSH address type.
  */
@@ -82,7 +84,7 @@ export function getWitnessSize(m, n) {
   // Redeem script: size prefix + script content
   const redeemScriptSize = getRedeemScriptSize(n);
   // https://btcinformation.org/en/developer-reference#compactsize-unsigned-integers
-  const redeemScriptSizePrefix = redeemScriptSize <= 255 ? 1 : 3;
+  const redeemScriptSizePrefix = compactSize(redeemScriptSize);
   const REDEEM_SCRIPT_SIZE = redeemScriptSizePrefix + redeemScriptSize;
 
   return (

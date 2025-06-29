@@ -1,3 +1,4 @@
+import { compactSize } from "./utils";
 /**
  * This module provides functions and constants for the P2SH address type.
  */
@@ -26,7 +27,8 @@ export function estimateMultisigP2SHTransactionVSize(config: {
   const totalOutputSize = outputSize * config.numOutputs;
 
   // Transaction overhead: version (4) + locktime (4) + input count (1) + output count (1)
-  const transactionOverhead = 4 + 4 + 1 + 1;
+  const transactionOverhead =
+    4 + 4 + compactSize(config.numInputs) + compactSize(config.numOutputs);
 
   const vsize = totalInputSize + totalOutputSize + transactionOverhead;
   return vsize;
@@ -82,7 +84,7 @@ export function getP2SHInputSize(m: number, n: number): number {
   // Script length field is a varint
   // For scripts <= 252 bytes: 1 byte
   // For scripts <= 65535 bytes: 3 bytes (0xfd + 2-byte length)
-  const scriptLengthBytes = scriptSize <= 252 ? 1 : 3;
+  const scriptLengthBytes = compactSize(scriptSize);
 
   return (
     PREVHASH_BYTES +

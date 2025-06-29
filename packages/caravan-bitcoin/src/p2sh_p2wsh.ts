@@ -59,14 +59,14 @@ export function getP2SH_P2WSHInputSize(): number {
   const PREVHASH_BYTES = 32;
   const PREV_INDEX_BYTES = 4;
   const SCRIPT_LENGTH_BYTES = 1;
-  const P2SH_REDEEM_SCRIPT_SIZE = 22; // This is the P2SH redeem script (hash of witness script)
+  const P2SH_P2WSH_SCRIPT_SIG_SIZE = 34; // This is the P2SH redeem script (hash of witness script)
   const SEQUENCE_BYTES = 4;
 
   return (
     PREVHASH_BYTES +
     PREV_INDEX_BYTES +
     SCRIPT_LENGTH_BYTES +
-    P2SH_REDEEM_SCRIPT_SIZE +
+    P2SH_P2WSH_SCRIPT_SIG_SIZE +
     SEQUENCE_BYTES
   );
 }
