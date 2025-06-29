@@ -11,7 +11,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
-import { useFetchPendingTransactions } from "clients/transactions";
+import { usePendingTransactions } from "clients/transactions";
 import {
   useSortedTransactions,
   useTransactionPagination,
@@ -36,7 +36,7 @@ const TransactionsTab: React.FC = () => {
   const network = useSelector((state: any) => state.settings.network);
 
   // Use our custom hooks for pending transactions
-  const { transactions, isLoading, error } = useFetchPendingTransactions();
+  const { transactions, isLoading, error } = usePendingTransactions();
   const { sortBy, sortDirection, handleSort, sortedTransactions } =
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();

@@ -5,7 +5,7 @@ import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 
 // Query key factory for pending transactions
-export const transactionKeys = {
+const transactionKeys = {
   all: ["transactions"] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
   pendingTransaction: (txid: string) =>
@@ -21,7 +21,7 @@ const fetchTransactionDetails = async (txid: string, client: any) => {
 };
 
 // Hook for fetching all pending transactions
-export const usePendingTransactions = () => {
+const useFetchPendingTransactions = () => {
   const pendingTransactionIds = useSelector(getPendingTransactionIds);
   const blockchainClient = useGetClient();
 
@@ -35,9 +35,9 @@ export const usePendingTransactions = () => {
 };
 
 // Hook for processed pending transactions with calculated values
-export const useFetchPendingTransactions = () => {
+export const usePendingTransactions = () => {
   const walletAddresses = useSelector(getWalletAddresses);
-  const transactionQueries = usePendingTransactions();
+  const transactionQueries = useFetchPendingTransactions();
 
   // Calculate loading and error states
   const isLoading = transactionQueries.some((query) => query.isLoading);
