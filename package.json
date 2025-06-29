@@ -16,6 +16,7 @@
     "gen": "turbo gen run",
     "lint": "turbo lint",
     "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
     "test:watch": "turbo test:watch",
     "test:debug": "turbo test:debug",
     "version": "turbo run build lint test && changeset version && npm install --package-lock-only",
