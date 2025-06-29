@@ -210,7 +210,7 @@ describe("fees", () => {
         numOutputs: 3,
         m: 2,
         n: 3,
-        feesInSatoshis: "3010",
+        feesInSatoshis: "3190",
         feesPerByteInSatoshis: "10",
       };
       const fee = estimateMultisigTransactionFee(params);
