@@ -7,7 +7,6 @@ import { getWalletConfig } from "../../selectors/wallet";
 interface DustChipProps {
   amountSats: number;
   feeRate: number;
-  /** Optional custom tooltip text; falls back to default description */
   tooltipText?: string;
 }
 /**

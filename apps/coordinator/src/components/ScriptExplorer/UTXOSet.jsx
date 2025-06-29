@@ -253,6 +253,7 @@ class UTXOSet extends React.Component {
               <TableCell>Amount (BTC)</TableCell>
               <TableCell>Dust Status</TableCell>
               <TableCell>View</TableCell>
+              <TableCell>Dust Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>{this.renderInputs()}</TableBody>
