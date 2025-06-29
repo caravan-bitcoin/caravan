@@ -3,6 +3,8 @@ import PropTypes from "prop-types";
 import { connect, useSelector } from "react-redux";
 import BigNumber from "bignumber.js";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
+import { WasteMetrics } from "@caravan/health";
+import { getWalletConfig } from "../../selectors/wallet";
 import {
   Button,
   Box,
@@ -26,7 +28,9 @@ import {
 } from "@mui/icons-material";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
+import { TransactionAnalysis } from "./TransactionAnalysis";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import "./styles.css";
 
 /**
  * Custom hook to get current signing state
@@ -162,6 +166,12 @@ const SignatureStatus = () => {
 };
 
 class TransactionPreview extends React.Component {
+  state = {
+    longTermFeeEstimate: 101,
+    wasteAmount: 0,
+    changeOutputIndex: 0,
+  };
+
   componentDidMount() {
     const {
       outputs,
@@ -170,71 +180,107 @@ class TransactionPreview extends React.Component {
       changeNode,
       setChangeOutputMultisig,
     } = this.props;
-    outputs.forEach((output) => {
-      if (output.address === changeAddress) {
-        setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
-      }
-    });
+
+    if (outputs && changeOutputIndex !== undefined) {
+      outputs.forEach((output) => {
+        if (output.address === changeAddress) {
+          setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
+        }
+      });
+    }
+
+    this.calculateWaste(); // Initialize waste calculation
   }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (
+      prevProps.fee !== this.props.fee ||
+      prevProps.feeRate !== this.props.feeRate ||
+      prevProps.inputsTotalSats !== this.props.inputsTotalSats ||
+      prevProps.outputs !== this.props.outputs ||
+      prevState.longTermFeeEstimate !== this.state.longTermFeeEstimate
+    ) {
+      this.calculateWaste();
+    }
+  }
+
+  calculateWaste = () => {
+    const { feeRate, fee } = this.props;
+    const { longTermFeeEstimate } = this.state;
+
+    if (!fee || !feeRate || parseFloat(feeRate) === 0) return;
+
+    const weight = fee / satoshisToBitcoins(feeRate);
+    const walletConfig = this.props.walletConfig;
+
+    // CORRECTED PARAMETER ORDER + NUMBER CONVERSION
+    const rawWaste = new WasteMetrics().spendWasteAmount(
+      weight,
+      parseFloat(feeRate), // Ensure number
+      {
+        // config
+        requiredSignerCount: walletConfig.quorum.requiredSigners,
+        totalSignerCount: walletConfig.quorum.totalSigners,
+      },
+      walletConfig.addressType, // scriptType
+      longTermFeeEstimate,
+    );
+
+    this.setState({ wasteAmount: rawWaste });
+  };
+
+  handleFeeEstimateChange = (value) => {
+    this.setState({ longTermFeeEstimate: value });
+  };
 
   renderAddresses = () => {
     const addressWithUtxos = this.mapAddresses();
-    return Object.keys(addressWithUtxos).map((address) => {
-      return (
-        <TableRow key={address}>
-          <TableCell>
-            <code>{address}</code>
-          </TableCell>
-          <TableCell>{addressWithUtxos[address].utxos.length}</TableCell>
-          <TableCell>
-            <code>{addressWithUtxos[address].amount.toFixed(8)}</code>
-          </TableCell>
-        </TableRow>
-      );
-    });
+    return Object.keys(addressWithUtxos).map((address) => (
+      <TableRow key={address}>
+        <TableCell>
+          <code>{address}</code>
+        </TableCell>
+        <TableCell>{addressWithUtxos[address].utxos.length}</TableCell>
+        <TableCell>
+          <code>{addressWithUtxos[address].amount.toFixed(8)}</code>
+        </TableCell>
+      </TableRow>
+    ));
   };
 
   renderOutputAddresses = () => {
     const { changeAddress, outputs } = this.props;
 
-    return outputs.map((output) => {
-      return (
-        <TableRow key={output.address}>
-          <TableCell>
-            <code>{output.address}</code>
-            {output.address === changeAddress ? (
-              <small>&nbsp;(change)</small>
-            ) : (
-              ""
-            )}
-          </TableCell>
-          <TableCell>
-            <code>{BigNumber(output.amount).toFixed(8)}</code>
-          </TableCell>
-        </TableRow>
-      );
-    });
+    return outputs.map((output) => (
+      <TableRow key={output.address}>
+        <TableCell>
+          <code>{output.address}</code>
+          {output.address === changeAddress && <small>&nbsp;(change)</small>}
+        </TableCell>
+        <TableCell>
+          <code>{BigNumber(output.amount).toFixed(8)}</code>
+        </TableCell>
+      </TableRow>
+    ));
   };
 
-  renderOutputs = () => {
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.renderOutputAddresses()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell>TOTAL:</TableCell>
-            <TableCell>{this.outputsTotal()}</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
+  renderOutputs = () => (
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Address</TableCell>
+          <TableCell>Amount (BTC)</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>{this.renderOutputAddresses()}</TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell>TOTAL:</TableCell>
+          <TableCell>{this.outputsTotal()}</TableCell>
+        </TableRow>
+      </TableFooter>
+    </Table>
+  );
 
   renderInputs = () => {
     const { inputsTotalSats } = this.props;
@@ -262,25 +308,20 @@ class TransactionPreview extends React.Component {
   mapAddresses = () => {
     const { inputs } = this.props;
     return inputs.reduce((mapped, input) => {
-      const mappedAddresses = mapped;
       const { confirmed, txid, index, amount } = input;
-
-      mappedAddresses[input.multisig.address] = mapped[
-        input.multisig.address
-      ] || {
-        amount: BigNumber(0),
-        utxos: [],
-      };
-      mappedAddresses[input.multisig.address].utxos.push({
+      if (!mapped[input.multisig.address]) {
+        mapped[input.multisig.address] = { amount: BigNumber(0), utxos: [] };
+      }
+      mapped[input.multisig.address].utxos.push({
         confirmed,
         txid,
         index,
         amount,
       });
-      mappedAddresses[input.multisig.address].amount = mapped[
+      mapped[input.multisig.address].amount = mapped[
         input.multisig.address
       ].amount.plus(BigNumber(input.amount));
-      return mappedAddresses;
+      return mapped;
     }, {});
   };
 
@@ -298,7 +339,7 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtBase64, "transaction.psbt");
   };
 
-  render = () => {
+  render() {
     const {
       feeRate,
       fee,
@@ -307,6 +348,7 @@ class TransactionPreview extends React.Component {
       handleSignTransaction,
       unsignedPSBT,
     } = this.props;
+    const { longTermFeeEstimate, wasteAmount } = this.state;
 
     return (
       <Box>
@@ -319,10 +361,10 @@ class TransactionPreview extends React.Component {
         {this.renderInputs()}
         <h3>Outputs</h3>
         {this.renderOutputs()}
-        <Grid container>
+        <Grid container spacing={2}>
           <Grid item xs={4}>
             <h3>Fee</h3>
-            <div>{BigNumber(fee).toFixed(8)} BTC </div>
+            <div>{BigNumber(fee).toFixed(8)} BTC</div>
           </Grid>
           <Grid item xs={4}>
             <h3>Fee Rate</h3>
@@ -330,9 +372,20 @@ class TransactionPreview extends React.Component {
           </Grid>
           <Grid item xs={4}>
             <h3>Total</h3>
-            <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
+            <div>{satoshisToBitcoins(inputsTotalSats)} BTC</div>
           </Grid>
         </Grid>
+
+        {/* Transaction Analysis Component */}
+        <Box mt={3}>
+          <TransactionAnalysis
+            wasteAmount={wasteAmount}
+            longTermFeeEstimate={longTermFeeEstimate}
+            onFeeEstimateChange={this.handleFeeEstimateChange}
+            defaultExpanded={true}
+          />
+        </Box>
+
         <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>
@@ -370,23 +423,48 @@ class TransactionPreview extends React.Component {
         </Box>
       </Box>
     );
-  };
+  }
 }
 
 TransactionPreview.propTypes = {
-  changeAddress: PropTypes.string.isRequired,
-  changeNode: PropTypes.shape({
-    multisig: PropTypes.shape({}),
-  }).isRequired,
-  changeOutputIndex: PropTypes.number.isRequired,
-  editTransaction: PropTypes.func.isRequired,
+  inputs: PropTypes.arrayOf(
+    PropTypes.shape({
+      multisig: PropTypes.shape({ address: PropTypes.string.isRequired })
+        .isRequired,
+      amount: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      txid: PropTypes.string,
+      index: PropTypes.number,
+      confirmed: PropTypes.bool,
+    }),
+  ).isRequired,
+  inputsTotalSats: PropTypes.oneOfType([
+    PropTypes.number,
+    PropTypes.string,
+    PropTypes.shape({ toNumber: PropTypes.func }),
+  ]).isRequired,
+  outputs: PropTypes.arrayOf(
+    PropTypes.shape({
+      address: PropTypes.string.isRequired,
+      amount: PropTypes.string,
+      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    }),
+  ).isRequired,
   fee: PropTypes.string.isRequired,
   feeRate: PropTypes.string.isRequired,
-  inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
-  inputsTotalSats: PropTypes.shape({}).isRequired,
-  outputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  changeAddress: PropTypes.string.isRequired,
+  changeNode: PropTypes.shape({ multisig: PropTypes.object }).isRequired,
+  changeOutputIndex: PropTypes.number,
+  editTransaction: PropTypes.func.isRequired,
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
+  walletConfig: PropTypes.shape({
+    quorum: PropTypes.shape({
+      requiredSigners: PropTypes.number,
+      totalSigners: PropTypes.number,
+    }).isRequired,
+    addressType: PropTypes.string.isRequired,
+  }).isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
   signatureImporters: PropTypes.shape({}),
   requiredSigners: PropTypes.number,
@@ -394,11 +472,13 @@ TransactionPreview.propTypes = {
 
 function mapStateToProps(state) {
   return {
-    changeOutputIndex: state.spend.transaction.changeOutputIndex,
-    network: state.settings.network,
     inputs: state.spend.transaction.inputs,
+    inputsTotalSats: state.spend.transaction.inputsTotalSats,
     outputs: state.spend.transaction.outputs,
+    fee: state.spend.transaction.fee,
+    feeRate: state.spend.transaction.feeRate,
     unsignedPSBT: state.spend.transaction.unsignedPSBT,
+    walletConfig: getWalletConfig(state),
     signatureImporters: state.spend.signatureImporters,
     requiredSigners: state.settings.requiredSigners,
   };

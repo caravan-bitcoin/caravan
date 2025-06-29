@@ -1,0 +1,273 @@
+/* Transaction Analysis Container */
+.transaction-analysis-container {
+  max-width: 800px;
+  margin: 0;
+
+}
+
+.transaction-analysis-header {
+  padding: 16px;
+}
+
+.transaction-analysis-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.transaction-analysis-subtitle {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+}
+
+.transaction-analysis-content {
+  padding: 16px;
+}
+
+/* SWA Slider Styles */
+.swa-slider-container {
+  width: 100%;
+}
+
+.waste-analysis-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #0f4275;
+}
+
+.waste-analysis-description {
+  margin-bottom: 24px;
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
+}
+
+.potential-fee-waste-container {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.potential-fee-waste-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.waste-amount-container {
+  display: flex;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.waste-amount-text {
+  font-weight: 700;
+  color: #060606;
+  margin-right: 8px;
+}
+
+.info-icon-button {
+  padding: 4px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.info-icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.info-icon {
+  font-size: 16px;
+}
+
+/* Slider Styles */
+.slider-container {
+  position: relative;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.gradient-track {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(to right, #4caf50, #ffeb3b, #ff9800, #f44336);
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.custom-slider {
+  position: relative;
+  z-index: 1;
+}
+
+.custom-slider .MuiSlider-track {
+  background-color: transparent !important;
+}
+
+.custom-slider .MuiSlider-thumb {
+  background-color: #fff;
+  border: 2px solid #1976d2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  width: 20px;
+  height: 20px;
+}
+
+.custom-slider .MuiSlider-thumb:hover,
+.custom-slider .MuiSlider-thumb.Mui-focusVisible {
+  box-shadow: 0 0 0 8px rgba(25, 118, 210, 0.16);
+}
+
+.custom-slider .MuiSlider-rail {
+  background-color: transparent;
+}
+
+/* Fee Estimate Text */
+.fee-estimate-text {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* Fee Level Indicators */
+.fee-level-indicator {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fee-level-very-low {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #4caf50;
+}
+
+.fee-level-low {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ff9800;
+}
+
+.fee-level-medium {
+  background-color: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #ffeb3b;
+}
+
+.fee-level-high {
+  background-color: #fce4ec;
+  color: #c2185b;
+  border: 1px solid #e91e63;
+}
+
+.fee-level-very-high {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #f44336;
+}
+
+/* SWA Description */
+.swa-description {
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 3px solid #1976d2;
+  padding-left: 12px;
+  margin-top: 16px;
+}
+
+/* Accordion Overrides */
+.transaction-analysis-accordion {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.transaction-analysis-accordion::before {
+  display: none;
+}
+
+.transaction-analysis-accordion-summary {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.transaction-analysis-accordion-summary:hover {
+  background-color: #f0f0f0;
+}
+
+.transaction-analysis-accordion-details {
+  padding: 24px 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .transaction-analysis-container {
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  .waste-amount-text {
+    font-size: 1.5rem;
+  }
+  
+  .potential-fee-waste-container {
+    padding: 12px;
+  }
+  
+  .slider-container {
+    padding: 0 4px;
+  }
+  
+  .gradient-track {
+    left: 4px;
+    right: 4px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .transaction-analysis-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .waste-analysis-description {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .potential-fee-waste-container {
+    background-color: #2a2a2a;
+    color: #ffffff;
+  }
+  
+  .potential-fee-waste-title {
+    color: #ffffff;
+  }
+  
+  .info-icon-button {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .info-icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .swa-description {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .transaction-analysis-accordion-summary {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333;
+  }
+  
+  .transaction-analysis-accordion-summary:hover {
+    background-color: #2a2a2a;
+  }
+}
