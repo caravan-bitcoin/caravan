@@ -2,7 +2,6 @@ import { Network } from "@caravan/bitcoin";
 import { UR } from "@ngraveio/bc-ur";
 import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
 import { BCURDecoder2 } from "../decoder";
-
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 
 // Mock implementation for decoder instance
@@ -13,10 +12,59 @@ const mockDecoderInstance = {
   getProgress: vi.fn().mockReturnValue(0)
 };
 
-// Mock implementation of URRegistryDecoder class
-vi.mock("@keystonehq/bc-ur-registry", () => ({
-  URRegistryDecoder: vi.fn().mockImplementation(() => mockDecoderInstance)
-}));
+// Mock the bc-ur-registry module
+vi.mock("@keystonehq/bc-ur-registry", () => {
+  // Valid compressed public key for testing
+  const testKey = Buffer.from('0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798', 'hex');
+  const testChain = Buffer.from('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f', 'hex');
+
+  // Create HDKey mock class
+  class MockCryptoHDKey {
+    getKey() { return testKey; }
+    getChainCode() { return testChain; }
+    getParentFingerprint() { return Buffer.from('F57EC65D', 'hex'); }
+    getOrigin() {
+      return {
+        getPath: () => "m/45'/1'/0'",
+        getSourceFingerprint: () => Buffer.from('F57EC65D', 'hex'),
+        getComponents: () => [{
+          isHardened: () => true,
+          getIndex: () => 0
+        }]
+      };
+    }
+  }
+
+  // Create mock implementations
+  const mockHDKey = new MockCryptoHDKey();
+  const mockOutputDescriptor = {
+    getCryptoKey: vi.fn().mockReturnValue(mockHDKey)
+  };
+
+  const mockAccount = {
+    getOutputDescriptors: vi.fn().mockReturnValue([mockOutputDescriptor]),
+    masterFingerprint: Buffer.from('F57EC65D', 'hex'),
+    outputDescriptors: [mockOutputDescriptor]
+  };
+
+  // Create proper constructor functions for instanceof checks
+  const MockCryptoHDKeyConstructor = function(...args: any[]) {
+    return new MockCryptoHDKey();
+  } as any;
+  MockCryptoHDKeyConstructor.fromCBOR = vi.fn().mockReturnValue(mockHDKey);
+  MockCryptoHDKeyConstructor.prototype = MockCryptoHDKey.prototype;
+  
+  // Make the mockHDKey an instance of the constructor
+  Object.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
+
+  return {
+    URRegistryDecoder: vi.fn().mockImplementation(() => mockDecoderInstance),
+    CryptoAccount: {
+      fromCBOR: vi.fn().mockReturnValue(mockAccount)
+    },
+    CryptoHDKey: MockCryptoHDKeyConstructor
+  };
+});
 
 describe("BCURDecoder2", () => {
   let decoder: BCURDecoder2;
@@ -31,10 +79,7 @@ describe("BCURDecoder2", () => {
   describe("receivePart", () => {
     it("should process valid UR text", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
-      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
-      
       decoder.receivePart(urText);
-      
       expect(mockDecoderInstance.receivePart).toHaveBeenCalledWith(urText);
       expect(decoder.getError()).toBeNull();
     });
@@ -60,6 +105,7 @@ describe("BCURDecoder2", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       mockDecoderInstance.isComplete.mockReturnValue(false);
       mockDecoderInstance.getProgress.mockReturnValue(0.5);
+      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Processing QR parts: 50%");
@@ -69,6 +115,7 @@ describe("BCURDecoder2", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       mockDecoderInstance.isComplete.mockReturnValue(true);
       mockDecoderInstance.getProgress.mockReturnValue(1);
+      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Complete");
@@ -92,7 +139,10 @@ describe("BCURDecoder2", () => {
 
       const result = decoder.getDecodedData(Network.TESTNET);
       expect(result).toMatchObject({
-        type: "crypto-account"
+        type: "crypto-account",
+        xpub: expect.any(String),
+        rootFingerprint: expect.any(String),
+        bip32Path: expect.any(String)
       });
     });
 
@@ -106,7 +156,10 @@ describe("BCURDecoder2", () => {
 
       const result = decoder.getDecodedData(Network.TESTNET);
       expect(result).toMatchObject({
-        type: "crypto-hdkey"
+        type: "crypto-hdkey",
+        xpub: expect.any(String),
+        rootFingerprint: expect.any(String),
+        bip32Path: expect.any(String)
       });
     });
 
@@ -136,14 +189,12 @@ describe("BCURDecoder2", () => {
 
   describe("reset", () => {
     it("should reset decoder state", () => {
-      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
-      mockDecoderInstance.getProgress.mockReturnValue(0.5);
-      decoder.receivePart("UR:CRYPTO-ACCOUNT/TEST");
+      decoder.receivePart("INVALID");
+      expect(decoder.getError()).not.toBeNull();
       
       decoder.reset();
-      
-      expect(decoder.getProgress()).toBe("Idle");
       expect(decoder.getError()).toBeNull();
+      expect(decoder.getProgress()).toBe("Idle");
       expect(decoder.isComplete()).toBe(false);
     });
   });
