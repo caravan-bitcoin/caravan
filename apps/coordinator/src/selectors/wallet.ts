@@ -1,25 +1,104 @@
 import { createSelector } from "reselect";
 
+// Type definitions for the Redux state
+interface UTXO {
+  amountSats: string;
+  confirmed: boolean;
+  time: number;
+}
+
+interface Slice {
+  utxos: UTXO[];
+  addressUsed: boolean;
+  addressKnown: boolean;
+  change?: boolean;
+  balanceSats: {
+    isEqualTo: (value: number) => boolean;
+    isGreaterThan: (value: number) => boolean;
+  };
+  multisig: {
+    address: string;
+  };
+  lastUsed?: string;
+  lastUsedTime?: number;
+}
+
+interface ExtendedPublicKeyImporter {
+  name: string;
+  method: string;
+  bip32Path: string;
+  extendedPublicKey: string;
+  rootXfp: string;
+}
+
+interface LedgerPolicyHmac {
+  xfp: string;
+  policyHmac: string;
+}
+
+interface WalletState {
+  wallet: {
+    deposits: {
+      nodes: Record<string, Slice>;
+    };
+    change: {
+      nodes: Record<string, Slice>;
+    };
+    common: {
+      walletName: string;
+      walletUuid: string;
+      ledgerPolicyHmacs: LedgerPolicyHmac[];
+    };
+  };
+  settings: {
+    addressType: string;
+    network: string;
+    totalSigners: number;
+    requiredSigners: number;
+    startingAddressIndex: number;
+  };
+  quorum: {
+    extendedPublicKeyImporters: Record<string, ExtendedPublicKeyImporter>;
+  };
+  client: {
+    type: string;
+    url?: string;
+    username?: string;
+    walletName?: string;
+    provider?: string;
+  };
+}
+
 // convert slice objects to array of slice values
 // only care about inbound to deposit account, not change
-const getDepositSlices = (state) => Object.values(state.wallet.deposits.nodes);
-const getWalletSlices = (state) => [
+const getDepositSlices = (state: WalletState): Slice[] =>
+  Object.values(state.wallet.deposits.nodes);
+const getWalletSlices = (state: WalletState): Slice[] => [
   ...Object.values(state.wallet.deposits.nodes),
   ...Object.values(state.wallet.change.nodes),
 ];
 
-const getAddressType = (state) => state.settings.addressType;
-const getNetwork = (state) => state.settings.network;
-const getTotalSigners = (state) => state.settings.totalSigners;
-const getRequiredSigners = (state) => state.settings.requiredSigners;
-const getStartingAddressIndex = (state) => state.settings.startingAddressIndex;
-const getWalletName = (state) => state.wallet.common.walletName;
-const getWalletUuid = (state) => state.wallet.common.walletUuid;
-const getExtendedPublicKeyImporters = (state) =>
+const getAddressType = (state: WalletState): string =>
+  state.settings.addressType;
+const getNetwork = (state: WalletState): string => state.settings.network;
+const getTotalSigners = (state: WalletState): number =>
+  state.settings.totalSigners;
+const getRequiredSigners = (state: WalletState): number =>
+  state.settings.requiredSigners;
+const getStartingAddressIndex = (state: WalletState): number =>
+  state.settings.startingAddressIndex;
+const getWalletName = (state: WalletState): string =>
+  state.wallet.common.walletName;
+const getWalletUuid = (state: WalletState): string =>
+  state.wallet.common.walletUuid;
+const getExtendedPublicKeyImporters = (
+  state: WalletState,
+): Record<string, ExtendedPublicKeyImporter> =>
   state.quorum.extendedPublicKeyImporters;
-const getWalletLedgerPolicyHmacs = (state) =>
+const getWalletLedgerPolicyHmacs = (state: WalletState): LedgerPolicyHmac[] =>
   state.wallet.common.ledgerPolicyHmacs;
-const getClientDetails = (state) => {
+
+const getClientDetails = (state: WalletState): string => {
   if (state.client.type === "private") {
     return `{
     "type": "private",
@@ -39,7 +118,10 @@ const getClientDetails = (state) => {
   }`;
 };
 
-const extendedPublicKeyImporterBIP32Path = (state, number) => {
+const extendedPublicKeyImporterBIP32Path = (
+  state: WalletState,
+  number: number,
+): string => {
   const { extendedPublicKeyImporters } = state.quorum;
   const extendedPublicKeyImporter = extendedPublicKeyImporters[number];
   const bip32Path =
@@ -66,9 +148,9 @@ const extendedPublicKeyImporterBIP32Path = (state, number) => {
       }`;
 };
 
-const getExtendedPublicKeysBIP32Paths = (state) => {
+const getExtendedPublicKeysBIP32Paths = (state: WalletState): string => {
   const totalSigners = getTotalSigners(state);
-  const extendedPublicKeyImporterBIP32Paths = [];
+  const extendedPublicKeyImporterBIP32Paths: string[] = [];
   for (let i = 1; i <= totalSigners; i += 1) {
     extendedPublicKeyImporterBIP32Paths.push(
       `${extendedPublicKeyImporterBIP32Path(state, i)}${
@@ -83,29 +165,35 @@ const getExtendedPublicKeysBIP32Paths = (state) => {
  * @description cycle through all slices to calculate total balance of all utxos
  * from all slices including pending.
  */
-export const getTotalBalance = createSelector(getWalletSlices, (slices) => {
-  return slices.reduce((balance, slice) => {
-    const sliceTotal = slice.utxos.reduce((total, utxo) => {
-      return total + parseInt(utxo.amountSats, 10);
+export const getTotalBalance = createSelector(
+  getWalletSlices,
+  (slices: Slice[]): number => {
+    return slices.reduce((balance: number, slice: Slice) => {
+      const sliceTotal = slice.utxos.reduce((total: number, utxo: UTXO) => {
+        return total + parseInt(utxo.amountSats, 10);
+      }, 0);
+      return balance + sliceTotal;
     }, 0);
-    return balance + sliceTotal;
-  }, 0);
-});
+  },
+);
 
 export const getPendingBalance = createSelector(
   getDepositSlices,
   // iterate through all slices to add up the pending balance
-  (slices) => {
+  (slices: Slice[]): number => {
     // reduce slices to calculate unconfirmed utxos from each slice
-    return slices.reduce((balance, currentSlice) => {
+    return slices.reduce((balance: number, currentSlice: Slice) => {
       // if the current slice has no UTXOs, then continue
       if (!currentSlice.utxos.length) return balance;
       // otherwise, loop through available utxos and add balance of those
       // that are unconfirmed
-      const sliceBalance = currentSlice.utxos.reduce((total, utxo) => {
-        if (!utxo.confirmed) return total + parseInt(utxo.amountSats, 10);
-        return total;
-      }, 0);
+      const sliceBalance = currentSlice.utxos.reduce(
+        (total: number, utxo: UTXO) => {
+          if (!utxo.confirmed) return total + parseInt(utxo.amountSats, 10);
+          return total;
+        },
+        0,
+      );
 
       // add slice's pending balance to aggregated balance
       return sliceBalance + balance;
@@ -119,8 +207,14 @@ export const getPendingBalance = createSelector(
  */
 export const getConfirmedBalance = createSelector(
   [getTotalBalance, getPendingBalance],
-  (totalBalance, pendingBalance) => totalBalance - pendingBalance,
+  (totalBalance: number, pendingBalance: number): number =>
+    totalBalance - pendingBalance,
 );
+
+interface SliceWithLastUsed extends Slice {
+  lastUsed?: string;
+  lastUsedTime?: number;
+}
 
 /**
  * @description Returns a selector with all slices from both deposit and change braids
@@ -128,8 +222,8 @@ export const getConfirmedBalance = createSelector(
  */
 export const getSlicesWithLastUsed = createSelector(
   getWalletSlices,
-  (slices) => {
-    return slices.map((slice) => {
+  (slices: Slice[]): SliceWithLastUsed[] => {
+    return slices.map((slice: Slice): SliceWithLastUsed => {
       if (!slice.utxos.length && slice.addressUsed)
         return { ...slice, lastUsed: "Spent" };
 
@@ -137,7 +231,7 @@ export const getSlicesWithLastUsed = createSelector(
       if (!slice.utxos.length && slice.balanceSats.isEqualTo(0)) return slice;
 
       // find the last UTXO time for the last used time for that slice
-      const maxtime = Math.max(...slice.utxos.map((utxo) => utxo.time));
+      const maxtime = Math.max(...slice.utxos.map((utxo: UTXO) => utxo.time));
 
       // if no max was able to be found, but we still have a balanceSats
       // then we can can assume the utxo is pending
@@ -161,9 +255,9 @@ export const getSlicesWithLastUsed = createSelector(
  */
 export const getSpendableSlices = createSelector(
   getSlicesWithLastUsed,
-  (slices) => {
+  (slices: SliceWithLastUsed[]): SliceWithLastUsed[] => {
     return slices.filter(
-      (slice) =>
+      (slice: SliceWithLastUsed) =>
         // pending change is considered spendable
         (slice.lastUsed !== "Pending" || slice.change) &&
         slice.lastUsed !== "Spent" &&
@@ -176,8 +270,13 @@ export const getSpendableSlices = createSelector(
  * @description Returns a selector that provides all spent slices, i.e.
  * All slices that have been used but have no balance left.
  */
-export const getSpentSlices = createSelector(getSlicesWithLastUsed, (slices) =>
-  slices.filter((slice) => slice.addressUsed && slice.balanceSats.isEqualTo(0)),
+export const getSpentSlices = createSelector(
+  getSlicesWithLastUsed,
+  (slices: SliceWithLastUsed[]): SliceWithLastUsed[] =>
+    slices.filter(
+      (slice: SliceWithLastUsed) =>
+        slice.addressUsed && slice.balanceSats.isEqualTo(0),
+    ),
 );
 
 /**
@@ -185,7 +284,10 @@ export const getSpentSlices = createSelector(getSlicesWithLastUsed, (slices) =>
  */
 export const getSlicesWithBalance = createSelector(
   getSlicesWithLastUsed,
-  (slices) => slices.filter((slice) => slice.balanceSats.isGreaterThan(0)),
+  (slices: SliceWithLastUsed[]): SliceWithLastUsed[] =>
+    slices.filter((slice: SliceWithLastUsed) =>
+      slice.balanceSats.isGreaterThan(0),
+    ),
 );
 
 /**
@@ -194,9 +296,10 @@ export const getSlicesWithBalance = createSelector(
  */
 export const getZeroBalanceSlices = createSelector(
   getSlicesWithLastUsed,
-  (slices) =>
+  (slices: SliceWithLastUsed[]): SliceWithLastUsed[] =>
     slices.filter(
-      (slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
+      (slice: SliceWithLastUsed) =>
+        slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
     ),
 );
 
@@ -206,7 +309,8 @@ export const getZeroBalanceSlices = createSelector(
  */
 export const getUnknownAddressSlices = createSelector(
   getWalletSlices,
-  (slices) => slices.filter((slice) => !slice.addressKnown),
+  (slices: Slice[]): Slice[] =>
+    slices.filter((slice: Slice) => !slice.addressKnown),
 );
 
 /**
@@ -215,17 +319,20 @@ export const getUnknownAddressSlices = createSelector(
  */
 export const getUnknownAddresses = createSelector(
   [getWalletSlices, getUnknownAddressSlices],
-  (slices) => slices.map((slice) => slice.multisig.address),
+  (slices: Slice[]): string[] =>
+    slices.map((slice: Slice) => slice.multisig.address),
 );
 
 /**
  * @description Returns a selector of all slices from the _deposit_ braid
  * where the address hasn't been used yet.
  */
-export const getDepositableSlices = createSelector(getDepositSlices, (slices) =>
-  slices.filter(
-    (slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
-  ),
+export const getDepositableSlices = createSelector(
+  getDepositSlices,
+  (slices: Slice[]): Slice[] =>
+    slices.filter(
+      (slice: Slice) => slice.balanceSats.isEqualTo(0) && !slice.addressUsed,
+    ),
 );
 
 /**
@@ -246,17 +353,17 @@ export const getWalletDetailsText = createSelector(
     getWalletLedgerPolicyHmacs,
   ],
   (
-    walletName,
-    walletUuid,
-    addressType,
-    network,
-    clientDetails,
-    requiredSigners,
-    totalSigners,
-    extendedPublicKeys,
-    startingAddressIndex,
-    ledgerPolicyHmacs = [],
-  ) => {
+    walletName: string,
+    walletUuid: string,
+    addressType: string,
+    network: string,
+    clientDetails: string,
+    requiredSigners: number,
+    totalSigners: number,
+    extendedPublicKeys: string,
+    startingAddressIndex: number,
+    ledgerPolicyHmacs: LedgerPolicyHmac[] = [],
+  ): string => {
     return `{
   "name": "${walletName}",
   "uuid": "${walletUuid}",
@@ -271,27 +378,40 @@ export const getWalletDetailsText = createSelector(
     ${extendedPublicKeys}
   ],
   "startingAddressIndex": ${startingAddressIndex},
-  "ledgerPolicyHmacs": [${ledgerPolicyHmacs.map(JSON.stringify).join(", ")}]
+  "ledgerPolicyHmacs": [${ledgerPolicyHmacs.map((hmac: LedgerPolicyHmac) => JSON.stringify(hmac)).join(", ")}]
 }`;
   },
 );
 
 export const getWalletConfig = createSelector(
   [getWalletDetailsText],
-  JSON.parse,
+  (walletDetailsText: string) => JSON.parse(walletDetailsText),
 );
+
+interface HmacWithName {
+  policyHmac: string;
+  name: string;
+}
 
 export const getHmacsWithName = createSelector(
   getExtendedPublicKeyImporters,
   getWalletLedgerPolicyHmacs,
-  (extendedPublicKeys, policyHmacs) => {
+  (
+    extendedPublicKeys: Record<string, ExtendedPublicKeyImporter>,
+    policyHmacs: LedgerPolicyHmac[],
+  ): HmacWithName[] => {
     return Object.values(extendedPublicKeys)
-      .map((importer) => {
+      .map((importer: ExtendedPublicKeyImporter) => {
         const policyHmac = policyHmacs.find(
-          (hmac) => hmac.xfp === importer.rootXfp,
+          (hmac: LedgerPolicyHmac) => hmac.xfp === importer.rootXfp,
         )?.policyHmac;
         return { policyHmac, name: importer.name };
       })
-      .filter((registration) => registration.policyHmac);
+      .filter(
+        (registration: {
+          policyHmac?: string;
+          name: string;
+        }): registration is HmacWithName => Boolean(registration.policyHmac),
+      );
   },
 );
