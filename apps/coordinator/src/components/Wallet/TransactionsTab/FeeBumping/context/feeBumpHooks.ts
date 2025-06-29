@@ -145,3 +145,16 @@ export function useFeeBumpDispatch() {
   const { dispatch } = useFeeBumpContext();
   return dispatch;
 }
+//CPFP
+export function useSpendableOutputIndex() {
+  const { state } = useFeeBumpContext();
+  return state.spendableOutputIndex;
+}
+
+export function useIsCpfpFormValid() {
+  const { state } = useFeeBumpContext();
+  return useMemo(() => {
+    // CPFP is valid if we have a selected output index
+    return state.spendableOutputIndex >= 0;
+  }, [state.spendableOutputIndex]);
+}

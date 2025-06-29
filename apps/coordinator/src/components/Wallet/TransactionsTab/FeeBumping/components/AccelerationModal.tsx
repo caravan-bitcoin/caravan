@@ -38,6 +38,7 @@ import {
   ConfigurationStep,
   ReviewStep,
 } from "./FeeBumpSteps";
+import { useCPFP } from "../hooks/useCPFP";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -88,6 +89,10 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   // Get hooks - no state management in hooks now ...
   const { setTransactionForBumping, reset } = useFeeBumping();
   const { createFeeBumpedTransaction, isCreating: isCreatingRBF } = useRBF();
+  const { createCPFPTx, isCreating: isCreatingCPFP } = useCPFP();
+
+  // Update isCreating to handle both RBF and CPFP
+  const isCreating = isCreatingRBF || isCreatingCPFP;
 
   // Handle step navigation ( Memoizing step changes to prevent re-renders)
   const handleNext = useCallback(() => {
@@ -107,6 +112,20 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     // Create the fee-bumped transaction with the specified options
     await createFeeBumpedTransaction(options);
     handleNext(); // Move to the next step when done
+  };
+  const handleSubmitCPFP = async (options: {
+    spendableOutputIndex: number;
+    changeAddress?: string;
+  }) => {
+    await createCPFPTx(options);
+    handleNext();
+  };
+  const handleFormSubmit = (options: any) => {
+    if (selectedStrategy === FeeBumpStrategy.RBF) {
+      return handleSubmitRBF(options);
+    } else if (selectedStrategy === FeeBumpStrategy.CPFP) {
+      return handleSubmitCPFP(options);
+    }
   };
 
   // Handle PSBT download
@@ -158,8 +177,8 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         component: ConfigurationStep,
         props: {
           transaction,
-          onSubmit: handleSubmitRBF,
-          isCreating: isCreatingRBF,
+          onSubmit: handleFormSubmit,
+          isCreating,
         },
       },
       {

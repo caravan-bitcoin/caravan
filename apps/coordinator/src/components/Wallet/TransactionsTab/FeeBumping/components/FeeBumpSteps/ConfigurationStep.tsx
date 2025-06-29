@@ -2,16 +2,16 @@ import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "../RBF/RBFForm";
-import { useSelectedFeeBumpStrategy } from "../../context";
+import { CPFPForm } from "../CPFP/CPFPForm";
+import {
+  useSelectedFeeBumpStrategy,
+  useFeeBumpTransaction,
+} from "../../context";
 import { Transaction } from "../../../types";
 
 interface ConfigurationStepProps {
   transaction: Transaction;
-  onSubmit: (options: {
-    isCancel: boolean;
-    cancelAddress?: string;
-    changeAddress?: string;
-  }) => void;
+  onSubmit: (options: any) => void;
   isCreating: boolean;
 }
 
@@ -36,6 +36,27 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
     return txSize ? transaction.fee / txSize : 0;
   };
 
+  // Helper to identify spendable outputs for CPFP
+  const getSpendableOutputs = () => {
+    if (!transaction?.vout) return [];
+
+    return transaction.vout
+      .map((output: any, index: number) => ({
+        index,
+        address:
+          output.scriptPubkeyAddress ||
+          output.scriptpubkey_address ||
+          "Unknown",
+        value: output.value?.toString() || "0",
+        belongsToWallet: output.belongsToWallet || false,
+      }))
+      .filter(
+        (output: any) =>
+          // Only include outputs that belong to the wallet or have value > dust threshold
+          output.belongsToWallet || parseInt(output.value) > 546,
+      );
+  };
+
   // Show RBF form if RBF strategy is selected
   if (selectedStrategy === FeeBumpStrategy.RBF) {
     return (
@@ -48,14 +69,29 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
     );
   }
 
-  // Show CPFP placeholder (not implemented yet)
+  // Show CPFP form if CPFP strategy is selected
   if (selectedStrategy === FeeBumpStrategy.CPFP) {
+    const spendableOutputs = getSpendableOutputs();
+
+    if (spendableOutputs.length === 0) {
+      return (
+        <Alert severity="error">
+          <AlertTitle>No Spendable Outputs Found</AlertTitle>
+          This transaction has no outputs that can be spent for CPFP. You need
+          to control at least one output from this transaction to use CPFP.
+        </Alert>
+      );
+    }
+
     return (
-      <Alert severity="warning">
-        <AlertTitle>CPFP Support Coming Soon</AlertTitle>
-        Child-Pays-for-Parent (CPFP) support is coming in a future update.
-        Please use Replace-by-Fee (RBF) for now.
-      </Alert>
+      <CPFPForm
+        originalTx={transaction}
+        originalFeeRate={calculateOriginalFeeRate()}
+        originalFee={transaction.fee.toString()}
+        spendableOutputs={spendableOutputs}
+        onSubmit={onSubmit}
+        isCreating={isCreating}
+      />
     );
   }
 

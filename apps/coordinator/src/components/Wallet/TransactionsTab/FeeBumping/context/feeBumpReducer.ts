@@ -20,6 +20,8 @@ import {
   SET_CHANGE_ADDRESS,
   RESET_FEE_BUMP_STATE,
   SET_PSBT_VERSION,
+  SET_SPENDABLE_OUTPUT_INDEX,
+  SetSpendableOutputIndexAction,
 } from "./feeBumpActions";
 
 export interface FeeBumpingState {
@@ -39,6 +41,8 @@ export interface FeeBumpingState {
   rbfType: "accelerate" | "cancel";
   cancelAddress: string;
   changeAddress: string;
+  // CPFP form data
+  spendableOutputIndex: number;
   // Results
   result: FeeBumpResult | null;
   psbtVersion: "v2" | "v0";
@@ -61,6 +65,8 @@ export const initialState: FeeBumpingState = {
   rbfType: "accelerate",
   cancelAddress: "",
   changeAddress: "",
+  // CPFP form data
+  spendableOutputIndex: 0,
   // Results
   result: null,
   psbtVersion: "v2",
@@ -180,6 +186,11 @@ export function feeBumpingReducer(
     case RESET_FEE_BUMP_STATE:
       return initialState;
 
+    case SET_SPENDABLE_OUTPUT_INDEX:
+      return {
+        ...state,
+        spendableOutputIndex: action.payload,
+      };
     default:
       return state;
   }

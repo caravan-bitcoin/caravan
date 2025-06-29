@@ -262,7 +262,7 @@ export const analyzeTransaction = async (
     txHex,
     network,
     targetFeeRate,
-    absoluteFee: fee.toString(),
+    absoluteFee: fee.toString() || "10",
     availableUtxos,
     requiredSigners: walletConfig.requiredSigners,
     totalSigners: walletConfig.totalSigners,

@@ -67,7 +67,7 @@ export const FeeStrategySelector: React.FC = () => {
             "Creates a new transaction that spends outputs from the original with a higher fee",
           icon: <ChildCareIcon fontSize="large" />,
           learnMoreUrl: "https://bitcoinops.org/en/topics/cpfp/",
-          disabled: !recommendation.canCPFP || true, // Force disable CPFP for now as we'll add it later
+          disabled: !recommendation.canCPFP, // Force disable CPFP for now as we'll add it later
           disabledReason: !recommendation.canCPFP
             ? "This transaction doesn't have suitable outputs for CPFP"
             : "CPFP support is coming in a future update",

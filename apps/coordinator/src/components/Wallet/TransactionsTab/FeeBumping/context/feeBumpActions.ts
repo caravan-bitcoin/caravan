@@ -19,6 +19,12 @@ export const SET_CANCEL_ADDRESS = "SET_CANCEL_ADDRESS";
 export const SET_CHANGE_ADDRESS = "SET_CHANGE_ADDRESS";
 export const RESET_FEE_BUMP_STATE = "RESET_FEE_BUMP_STATE";
 export const SET_PSBT_VERSION = "SET_PSBT_VERSION";
+export const SET_SPENDABLE_OUTPUT_INDEX = "SET_SPENDABLE_OUTPUT_INDEX";
+
+export interface SetSpendableOutputIndexAction {
+  type: typeof SET_SPENDABLE_OUTPUT_INDEX;
+  payload: number;
+}
 
 export interface SetFeeBumpTransactionAction {
   type: typeof SET_FEE_BUMP_TRANSACTION;
@@ -100,7 +106,8 @@ export type FeeBumpActionTypes =
   | SetCancelAddressAction
   | SetChangeAddressAction
   | SetPsbtVersionAction
-  | ResetFeeBumpStateAction;
+  | ResetFeeBumpStateAction
+  | SetSpendableOutputIndexAction;
 
 export const setFeeBumpTransaction = (
   transaction: any,
@@ -181,4 +188,11 @@ export const resetFeeBumpState = (): ResetFeeBumpStateAction => ({
 export const setPsbtVersion = (version: "v2" | "v0"): SetPsbtVersionAction => ({
   type: SET_PSBT_VERSION,
   payload: version,
+});
+
+export const setSpendableOutputIndex = (
+  index: number,
+): SetSpendableOutputIndexAction => ({
+  type: SET_SPENDABLE_OUTPUT_INDEX,
+  payload: index,
 });

@@ -149,10 +149,19 @@ const TransactionsTabContent: React.FC<{
   const handleExplorerLinkClick = useHandleExplorerLinkClick();
 
   const renderActions = (tx: any) => {
-    // Don't show acceleration options for received transactions
-    if (tx.isReceived) {
+    // For RBF: Only allow for sent transactions that signal RBF
+    const canUseRBF = tx.isRBFSignaled;
+
+    // For CPFP: Allow for any transaction (sent or received) if we control outputs
+    const canUseCPFP = true;
+
+    if (!canUseRBF && !canUseCPFP) {
+      const tooltip = tx.isReceived
+        ? "No spendable outputs found for CPFP acceleration"
+        : "Transaction doesn't signal RBF and no CPFP outputs available";
+
       return (
-        <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+        <Tooltip title={tooltip}>
           <Box>
             <Button
               variant="outlined"
@@ -167,7 +176,6 @@ const TransactionsTabContent: React.FC<{
       );
     }
 
-    // Show acceleration button for pending sent transactions
     return (
       <Button
         variant="outlined"
@@ -182,7 +190,6 @@ const TransactionsTabContent: React.FC<{
       </Button>
     );
   };
-
   // Get the correct transaction list based on selected tab
   // const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
   const currentTabTxs = pendingTxs;

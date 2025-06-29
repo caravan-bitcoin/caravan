@@ -114,20 +114,22 @@ export const useFeeBumping = () => {
         // Analyze transaction for fee bumping options
         const analysis = await analyzeTransaction(
           initialTxHex,
-          tx.fee, // Fee in satoshis
+          10, // Fee in satoshis
           network,
           availableUtxos,
           blockchainClient,
           walletConfig,
           priority,
         );
+
+        const canCPFP = analysis.canCPFP;
         // We add some additional UI-friendly details which we'll use to show the user
         const feeBumpRecommendation: FeeBumpRecommendation = {
           ...analysis,
           // Add more user-friendly fields
           currentFeeRate: analysis.feeRate,
-          canRBF: analysis.canRBF,
-          canCPFP: analysis.canCPFP,
+          canRBF: analysis.canRBF && !tx.isReceived,
+          canCPFP: true,
           suggestedRBFFeeRate: Math.max(
             analysis.userSelectedFeeRate,
             Number(analysis.estimatedRBFFee) / analysis.vsize, // Is this correct ??
