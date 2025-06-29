@@ -5,6 +5,7 @@ interface UTXO {
   amountSats: string;
   confirmed: boolean;
   time: number;
+  txid?: string;
 }
 
 interface Slice {
@@ -66,6 +67,9 @@ interface WalletState {
     username?: string;
     walletName?: string;
     provider?: string;
+    blockchainClient?: {
+      type: string;
+    };
   };
 }
 
@@ -413,5 +417,61 @@ export const getHmacsWithName = createSelector(
           name: string;
         }): registration is HmacWithName => Boolean(registration.policyHmac),
       );
+  },
+);
+
+/**
+ * @description Returns an array of all wallet addresses from both deposit and change nodes
+ */
+export const getWalletAddresses = createSelector(
+  getWalletSlices,
+  (slices: Slice[]): string[] => {
+    return slices
+      .map((slice: Slice) => slice.multisig?.address)
+      .filter(Boolean) as string[];
+  },
+);
+
+/**
+ * @description Returns an array of transaction IDs from active UTXOs (pending transactions)
+ */
+export const getPendingTransactionIds = createSelector(
+  getWalletSlices,
+  (slices: Slice[]): string[] => {
+    const txids = new Set<string>();
+
+    slices.forEach((slice: Slice) => {
+      if (slice.utxos && slice.utxos.length > 0) {
+        slice.utxos.forEach((utxo: UTXO) => {
+          if (utxo.txid) txids.add(utxo.txid);
+        });
+      }
+    });
+
+    return Array.from(txids);
+  },
+);
+
+/**
+ * @description Returns the appropriate block explorer URL for a transaction based on network and client
+ */
+export const getTransactionExplorerUrl = createSelector(
+  [getNetwork, (state: WalletState) => state.client],
+  (network: string, client: WalletState["client"]) => {
+    return (txid: string): string => {
+      // Determine which block explorer to use based on the blockchain client type
+      let explorerUrl = `https://blockstream.info/${network === "mainnet" ? "" : "testnet/"}tx/${txid}`;
+
+      if (client.blockchainClient?.type) {
+        const clientType = client.blockchainClient.type;
+        if (clientType === "mempool") {
+          explorerUrl = `https://${network === "mainnet" ? "" : "testnet."}mempool.space/tx/${txid}`;
+        } else if (clientType === "blockstream") {
+          explorerUrl = `https://blockstream.info/${network === "mainnet" ? "" : "testnet/"}tx/${txid}`;
+        }
+      }
+
+      return explorerUrl;
+    };
   },
 );
