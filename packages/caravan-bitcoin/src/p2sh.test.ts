@@ -22,5 +22,15 @@ describe("p2sh", () => {
         }),
       ).toBe(75514);
     });
+    it("estimates the transaction size in vbytes for 253 outputs", () => {
+      expect(
+        estimateMultisigP2SHTransactionVSize({
+          numInputs: 1,
+          numOutputs: 253,
+          m: 2,
+          n: 3,
+        }),
+      ).toBe(8405);
+    });
   });
 });
