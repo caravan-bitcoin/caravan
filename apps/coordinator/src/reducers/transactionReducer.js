@@ -299,9 +299,7 @@ function finalizeOutputs(state, action) {
     const args = {
       network: state.network,
       inputs: state.inputs.map((input) => {
-        console.log("input-legacy", input, state.inputs);
         const convertedInput = convertLegacyInput(input);
-        console.log("converted-legacy", convertedInput);
         return {
           ...convertedInput,
           sequence: sequence, // Apply RBF
