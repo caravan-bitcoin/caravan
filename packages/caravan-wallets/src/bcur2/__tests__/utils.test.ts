@@ -1,5 +1,8 @@
-import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "../utils";
+import { Network } from "@caravan/bitcoin";
+import { CryptoAccount, CryptoHDKey } from "@keystonehq/bc-ur-registry";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+
+import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "../utils";
 
 // Valid compressed public key for testing
 const testKey = Buffer.from(
@@ -17,6 +20,7 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
     isHardened() {
       return true;
     }
+
     getIndex() {
       return 0;
     }
@@ -26,9 +30,11 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
     getPath() {
       return "m/45'/1'/0'";
     }
+
     getSourceFingerprint() {
       return Buffer.from("F57EC65D", "hex");
     }
+
     getComponents() {
       return [new MockComponent()];
     }
@@ -38,19 +44,22 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
     getKey() {
       return testKey;
     }
+
     getChainCode() {
       return testChain;
     }
+
     getParentFingerprint() {
       return Buffer.from("F57EC65D", "hex");
     }
+
     getOrigin() {
       return new MockOrigin();
     }
   }
 
   // Make the mock constructor function that returns instances of MockCryptoHDKey
-  const MockCryptoHDKeyConstructor = function(...args: any[]) {
+  const MockCryptoHDKeyConstructor = function MockCryptoHDKeyConstructor() {
     return new MockCryptoHDKey();
   } as any;
   MockCryptoHDKeyConstructor.fromCBOR = vi.fn().mockReturnValue(new MockCryptoHDKey());
@@ -61,7 +70,7 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   // Create an instance that will be returned by getCryptoKey - must be created after setting up the constructor
   const mockHDKey = new MockCryptoHDKey();
   // Set the prototype chain to make instanceof work
-  Object.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
+  Reflect.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
 
   const mockOutputDescriptor = {
     getCryptoKey: vi.fn().mockReturnValue(mockHDKey),
@@ -89,13 +98,10 @@ vi.mock("@caravan/bitcoin", () => {
     },
     ExtendedPublicKey: vi.fn().mockImplementation(({ network }) => ({
       toBase58: () =>
-        network === "testnet" ? "tpubMockedKey" : "xpubMockedKey",
+        (network === "testnet" ? "tpubMockedKey" : "xpubMockedKey"),
     })),
   };
 });
-
-import { Network } from "@caravan/bitcoin";
-import { CryptoAccount, CryptoHDKey } from "@keystonehq/bc-ur-registry";
 
 describe("BCUR2 Utils", () => {
   beforeEach(() => {
@@ -168,18 +174,16 @@ describe("BCUR2 Utils", () => {
         getKey: () => testKey,
         getChainCode: () => testChain,
         getParentFingerprint: () => Buffer.from("F57EC65D", "hex"),
-        getOrigin: vi.fn().mockReturnValue(undefined)
+        getOrigin: vi.fn().mockReturnValue(null)
       };
 
       vi.mocked(CryptoHDKey.fromCBOR).mockReturnValueOnce(mockHDKeyNoOrigin as any);
 
       const result = processCryptoHDKeyCBOR(Buffer.from("test"), Network.TESTNET);
+      expect(result.type).toBe("crypto-hdkey");
+      expect(result.bip32Path).toBeUndefined();
+      expect(result.rootFingerprint).toBeUndefined();
 
-      expect(result).toMatchObject({
-        type: "crypto-hdkey",
-        bip32Path: undefined,
-        rootFingerprint: undefined,
-      });
       expect(result.xpub).toMatch(/^tpub/); // Should still generate xpub
     });
   });

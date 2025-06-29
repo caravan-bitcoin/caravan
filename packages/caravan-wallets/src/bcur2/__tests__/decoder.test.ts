@@ -1,8 +1,9 @@
 import { Network } from "@caravan/bitcoin";
 import { UR } from "@ngraveio/bc-ur";
-import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
-import { BCURDecoder2 } from "../decoder";
 import { vi, beforeEach, describe, it, expect } from 'vitest';
+
+import { BCURDecoder2 } from "../decoder";
+
 
 // Mock implementation for decoder instance
 const mockDecoderInstance = {
@@ -21,8 +22,11 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   // Create HDKey mock class
   class MockCryptoHDKey {
     getKey() { return testKey; }
+
     getChainCode() { return testChain; }
+
     getParentFingerprint() { return Buffer.from('F57EC65D', 'hex'); }
+
     getOrigin() {
       return {
         getPath: () => "m/45'/1'/0'",
@@ -48,14 +52,14 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   };
 
   // Create proper constructor functions for instanceof checks
-  const MockCryptoHDKeyConstructor = function(...args: any[]) {
+  const MockCryptoHDKeyConstructor = function MockCryptoHDKeyConstructor() {
     return new MockCryptoHDKey();
   } as any;
   MockCryptoHDKeyConstructor.fromCBOR = vi.fn().mockReturnValue(mockHDKey);
   MockCryptoHDKeyConstructor.prototype = MockCryptoHDKey.prototype;
   
   // Make the mockHDKey an instance of the constructor
-  Object.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
+  Reflect.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
 
   return {
     URRegistryDecoder: vi.fn().mockImplementation(() => mockDecoderInstance),
@@ -105,7 +109,7 @@ describe("BCURDecoder2", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       mockDecoderInstance.isComplete.mockReturnValue(false);
       mockDecoderInstance.getProgress.mockReturnValue(0.5);
-      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
+      mockDecoderInstance.receivePart.mockImplementation(() => null);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Processing QR parts: 50%");
@@ -115,7 +119,7 @@ describe("BCURDecoder2", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       mockDecoderInstance.isComplete.mockReturnValue(true);
       mockDecoderInstance.getProgress.mockReturnValue(1);
-      mockDecoderInstance.receivePart.mockImplementation(() => undefined);
+      mockDecoderInstance.receivePart.mockImplementation(() => null);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Complete");
