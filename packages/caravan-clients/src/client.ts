@@ -21,7 +21,6 @@ import {
   TransactionDetails,
   RawTransactionData,
   ListTransactionsItem,
-  TransactionResponse,
   WalletTransactionResponse,
 } from "./types";
 import {
@@ -30,6 +29,7 @@ import {
   bitcoindListUnspent,
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
+  callBitcoindWallet,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -43,12 +43,12 @@ export enum ClientType {
   PRIVATE = "private",
   PUBLIC = "public",
   MEMPOOL = "mempool",
-  BLOCKSTREAM = "blockstream"
+  BLOCKSTREAM = "blockstream",
 }
 
 export enum PublicBitcoinProvider {
   BLOCKSTREAM = "blockstream",
-  MEMPOOL = "mempool"
+  MEMPOOL = "mempool",
 }
 
 const delay = () => {
@@ -258,7 +258,11 @@ export class BlockchainClient extends ClientBase {
     }
 
     // Blockstream does not support Signet
-    if (type === ClientType.PUBLIC && provider === PublicBitcoinProvider.BLOCKSTREAM && network === Network.SIGNET) {
+    if (
+      type === ClientType.PUBLIC &&
+      provider === PublicBitcoinProvider.BLOCKSTREAM &&
+      network === Network.SIGNET
+    ) {
       throw new Error("Invalid network: Blockstream does not support Signet");
     }
 
@@ -275,9 +279,9 @@ export class BlockchainClient extends ClientBase {
     }
 
     if (type === ClientType.PUBLIC && !provider) {
-        // Default to mempool if no provider is specified for a public client
-        // eslint-disable-next-line no-param-reassign
-        provider = PublicBitcoinProvider.MEMPOOL;
+      // Default to mempool if no provider is specified for a public client
+      // eslint-disable-next-line no-param-reassign
+      provider = PublicBitcoinProvider.MEMPOOL;
     }
 
     let hostURL = "";
@@ -463,7 +467,10 @@ export class BlockchainClient extends ClientBase {
         );
       }
     } catch (error: Error | any) {
-      if (this.type === ClientType.PRIVATE && isWalletAddressNotFoundError(error)) {
+      if (
+        this.type === ClientType.PRIVATE &&
+        isWalletAddressNotFoundError(error)
+      ) {
         updates = {
           utxos: [],
           balanceSats: BigNumber(0),
@@ -603,12 +610,26 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        return await callBitcoind<TransactionResponse>(
-          this.bitcoindParams.url,
-          this.bitcoindParams.auth,
-          "gettransaction",
-          [txid],
-        );
+        // Check if wallet name is provided for private clients
+        if (!this.bitcoindParams.walletName) {
+          throw new Error(
+            "Wallet name is required for private client transaction lookups",
+          );
+        }
+
+        const response = (await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "gettransaction",
+          params: [txid, true, true], // [txid, include_watchonly, verbose]
+        })) as any;
+
+        if (response?.result?.hex) {
+          return response.result.hex;
+        }
+
+        throw new Error("Transaction not found in wallet or missing hex data");
       }
       return await this.Get(`/tx/${txid}/hex`);
     } catch (error: any) {
@@ -684,7 +705,10 @@ export class BlockchainClient extends ClientBase {
           });
           break;
         case ClientType.PUBLIC:
-          if (this.provider === PublicBitcoinProvider.BLOCKSTREAM || this.provider === PublicBitcoinProvider.MEMPOOL) {
+          if (
+            this.provider === PublicBitcoinProvider.BLOCKSTREAM ||
+            this.provider === PublicBitcoinProvider.MEMPOOL
+          ) {
             txData = await this.Get(`/tx/${txid}`);
           } else {
             throw new Error("Invalid provider for public client."); // Should not happen with constructor guards

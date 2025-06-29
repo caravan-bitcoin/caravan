@@ -11,6 +11,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Button,
 } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
 import { TransactionTable } from "./TransactionsTable";
@@ -20,6 +21,8 @@ import {
   usePagination,
   useHandleExplorerLinkClick,
 } from "./hooks";
+import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
+import { FeeBumpProvider } from "./FeeBumping/context";
 
 /**
  * TRANSACTIONS HISTORY LIMITATION
@@ -42,6 +45,19 @@ const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
 }) => {
   // This key state controls remounting
   const [mountKey, setMountKey] = useState(0);
+  // State for the selected transaction for acceleration
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
+    null,
+  );
+  // State for the acceleration modal
+  const [accelerationModalOpen, setAccelerationModalOpen] = useState(false);
+  // State for the raw tx hex
+  const [txHex, setTxHex] = useState<string>("");
+
+  // Get blockchain client from Redux store
+  const blockchainClient = useSelector(
+    (state: any) => state.client.blockchainClient,
+  );
 
   // Handle refresh by forcing remount
   const handleRefresh = () => {
@@ -61,13 +77,67 @@ const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
     }
   };
 
+  // Handle acceleration button click
+  const handleAccelerateClick = async (tx: any) => {
+    if (!tx || !blockchainClient) return;
+
+    try {
+      // Fetch the raw transaction he
+      const TxHex = await blockchainClient.getTransactionHex(tx.txid);
+      console.log("clickedTx", tx);
+      if (!TxHex || typeof txHex !== "string") {
+        throw new Error("Invalid transaction hex received");
+      }
+
+      // Set the selected transaction and raw tx hex
+      setSelectedTransaction(tx);
+      setTxHex(TxHex);
+
+      // Open the acceleration modal
+      setAccelerationModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching raw transaction:", error);
+      alert("Error fetching transaction details. Please try again.");
+    }
+  };
+
+  // Handle acceleration modal close
+  const handleAccelerationModalClose = () => {
+    setAccelerationModalOpen(false);
+    setSelectedTransaction(null);
+    setTxHex("");
+
+    // Refresh the transaction list to show updated status
+    handleRefresh();
+  };
+
   // Render actual content with key to force remount
-  return <TransactionsTabContent key={mountKey} onRefresh={handleRefresh} />;
+  return (
+    <>
+      <FeeBumpProvider>
+        <TransactionsTabContent
+          key={mountKey}
+          onRefresh={handleRefresh}
+          onAccelerate={handleAccelerateClick}
+        />
+        {/* Acceleration Modal */}
+        {selectedTransaction && (
+          <AccelerationModal
+            open={accelerationModalOpen}
+            onClose={handleAccelerationModalClose}
+            transaction={selectedTransaction}
+            txHex={txHex}
+          />
+        )}
+      </FeeBumpProvider>
+    </>
+  );
 };
 
-const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
-  onRefresh,
-}) => {
+const TransactionsTabContent: React.FC<{
+  onRefresh: () => void;
+  onAccelerate: (tx: any) => void;
+}> = ({ onRefresh, onAccelerate }) => {
   // const [tabValue, setTabValue] = useState(0);
   const network = useSelector((state: any) => state.settings.network);
 
@@ -77,6 +147,41 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
   const { sortBy, sortDirection, handleSort, pendingTxs } =
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleExplorerLinkClick();
+
+  const renderActions = (tx: any) => {
+    // Don't show acceleration options for received transactions
+    if (tx.isReceived) {
+      return (
+        <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+          <Box>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              disabled={true}
+            >
+              Accelerate
+            </Button>
+          </Box>
+        </Tooltip>
+      );
+    }
+
+    // Show acceleration button for pending sent transactions
+    return (
+      <Button
+        variant="outlined"
+        size="small"
+        color="primary"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAccelerate(tx);
+        }}
+      >
+        Accelerate
+      </Button>
+    );
+  };
 
   // Get the correct transaction list based on selected tab
   // const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
@@ -152,6 +257,7 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
               sortDirection={sortDirection}
               network={network}
               onClickTransaction={handleExplorerLinkClick}
+              renderActions={renderActions}
             />
             {/* Pagination controls */}
             {currentTabTxs.length > 0 && (

@@ -223,7 +223,11 @@ describe("Wallet Functions", () => {
         expectedWalletPath,
         auth,
         "listunspent",
-        { minconf: 0, maxconf: 9999999, addresses: [address] },
+        {
+          minconf: 0,
+          maxconf: 9999999,
+          addresses: [address],
+        },
       );
 
       expect(mockCallBitcoind).toHaveBeenNthCalledWith(
