@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { BitcoinCoreService } from "./bitcoinServices";
 
 
-async function createTestWallets(client: BitcoinCoreService){
+export default async function createTestWallets(client: BitcoinCoreService){
 
     const timestamp = Date.now();
     
@@ -51,4 +51,3 @@ export async function checkDockerAvailability(){
     }
 }
 
-export default createTestWallets;

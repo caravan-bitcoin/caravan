@@ -1,5 +1,5 @@
 import BitcoinCore from "bitcoin-core";
-import {AddressType, descStructure, rpcConfig, walletConfig} from "./types"
+import {SingleSigAddressType, descStructure, rpcConfig, walletConfig} from "./types"
 
 export class BitcoinCoreService {
   private clientConfig: rpcConfig;
@@ -137,7 +137,7 @@ export class BitcoinCoreService {
 
   async extractAddressDescriptors(
     walletName: string,
-  ): Promise<Record<AddressType, descStructure>> {
+  ): Promise<Record<SingleSigAddressType, descStructure>> {
     const walletClient = this.getWalletClient(walletName);
     const allDesc = await walletClient?.command("listdescriptors");
 
@@ -145,9 +145,9 @@ export class BitcoinCoreService {
     const shWpkhDescRegex =
       /^sh\(wpkh\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\)\#(.+)$/;
 
-    const parsedAddressDescriptors: Record<AddressType, descStructure> = {
+    const parsedAddressDescriptors: Record<SingleSigAddressType, descStructure> = {
       p2pkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
-      "p2sh-p2wpkh": { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      "p2sh_p2wpkh": { checksum: "", fingerPrint: "", path: "", xpub: "" },
       p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
     };
 
@@ -157,7 +157,7 @@ export class BitcoinCoreService {
       if (descriptor.startsWith("sh(wpkh(")) {
         const match = descriptor.match(shWpkhDescRegex);
         if (match) {
-          parsedAddressDescriptors["p2sh-p2wpkh"] = {
+          parsedAddressDescriptors["p2sh_p2wpkh"] = {
             fingerPrint: match[1],
             path: match[2],
             xpub: match[3],

@@ -17,7 +17,7 @@ export interface rpcConfig {
     external_signer?: boolean;
   }
   
-  export type AddressType = "p2pkh" | "p2sh-p2wpkh" | "p2wpkh";
+  export type SingleSigAddressType = "p2pkh" | "p2sh_p2wpkh" | "p2wpkh";
   
   export interface descStructure {
     checksum: string;
