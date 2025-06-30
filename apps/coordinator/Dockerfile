@@ -1,5 +1,5 @@
 # Caravan coordinator app is platform agnostic, the build platform output can be reused.
-FROM --platform=$BUILDPLATFORM node:20-buster-slim AS base
+FROM --platform=$BUILDPLATFORM node:20.19.3-bookworm-slim AS base
 
 # Install all OS dependencies
 FROM base AS builder
@@ -25,6 +25,8 @@ WORKDIR /app
 COPY .gitignore .gitignore
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/package-lock.json ./package-lock.json
+# Copy the scripts directory that contains check-node-versions.js
+COPY --from=builder /app/scripts ./scripts
 RUN npm ci
 
 # Build the project
