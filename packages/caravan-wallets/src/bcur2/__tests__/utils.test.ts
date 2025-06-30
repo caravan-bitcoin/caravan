@@ -1,6 +1,5 @@
 import { Network } from "@caravan/bitcoin";
 import { CryptoAccount, CryptoHDKey } from "@keystonehq/bc-ur-registry";
-import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "../utils";
 

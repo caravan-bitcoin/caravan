@@ -1,6 +1,5 @@
 import { Network } from "@caravan/bitcoin";
 import { UR } from "@ngraveio/bc-ur";
-import { vi, beforeEach, describe, it, expect } from 'vitest';
 
 import { BCURDecoder2 } from "../decoder";
 
