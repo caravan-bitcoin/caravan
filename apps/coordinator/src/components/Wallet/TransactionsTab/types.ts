@@ -26,6 +26,7 @@ export interface TransactionTableProps {
   sortDirection: "asc" | "desc";
   network?: string;
   onClickTransaction?: (txid: string) => void;
+  onAccelerateTransaction?: (tx: TransactionT) => void;
   renderActions?: (tx: TransactionT) => React.ReactNode;
 }
 
