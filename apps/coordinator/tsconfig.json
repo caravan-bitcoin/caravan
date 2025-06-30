@@ -24,6 +24,15 @@
     "paths": {
       "utils/*": [
         "utils/*"
+      ],
+      "selectors/*": [
+        "selectors/*"
+      ],
+      "clients/*": [
+        "clients/*"
+      ],
+      "hooks/*": [
+        "hooks/*"
       ]
     },
     "useUnknownInCatchVariables": false,
