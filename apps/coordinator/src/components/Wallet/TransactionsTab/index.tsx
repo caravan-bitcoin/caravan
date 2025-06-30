@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
 import {
   Box,
   Typography,
-  Tooltip,
-  IconButton,
   CircularProgress,
   Pagination,
   FormControl,
@@ -12,76 +10,38 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import { Refresh } from "@mui/icons-material";
 import { TransactionTable } from "./TransactionsTable";
+import { usePendingTransactions } from "clients/transactions";
 import {
-  useFetchTransactions,
   useSortedTransactions,
-  usePagination,
-  useHandleExplorerLinkClick,
+  useTransactionPagination,
+  useHandleTransactionExplorerLinkClick,
 } from "./hooks";
 
 /**
- * TRANSACTIONS HISTORY LIMITATION
+ * TRANSACTIONS TAB - PENDING TRANSACTIONS ONLY
  *
- * Only pending transactions are shown in this implementation.
- *
- * The commented code reflects the changes done to comment out the Completed Transactions for now .
+ * This implementation currently only shows pending (unconfirmed) transactions.
  *
  * Tracking confirmed/spent transactions is challenging because as UTXOs are spent,
  * they disappear from the wallet state. In private clients, we need a different
  * approach to track historical transactions since we can't collect transaction IDs
  * directly from UTXO data that no longer exists in the wallet.
  *
- * This would require maintaining a separate transaction history database or querying
- * all address histories, which has privacy implications.
+ * When we add confirmed transaction support later, we can create separate tabs
+ * and hooks for confirmed transactions.
  */
 
-const TransactionsTab: React.FC<{ refreshWallet?: () => Promise<any> }> = ({
-  refreshWallet,
-}) => {
-  // This key state controls remounting
-  const [mountKey, setMountKey] = useState(0);
-
-  // Handle refresh by forcing remount
-  const handleRefresh = () => {
-    if (refreshWallet) {
-      refreshWallet()
-        .then(() => {
-          // Force remount by incrementing key
-          setMountKey((k) => k + 1);
-        })
-        .catch((err) => {
-          console.error("Error refreshing wallet:", err);
-          setMountKey((k) => k + 1);
-        });
-    } else {
-      // No wallet refresh function, just force remount
-      setMountKey((k) => k + 1);
-    }
-  };
-
-  // Render actual content with key to force remount
-  return <TransactionsTabContent key={mountKey} onRefresh={handleRefresh} />;
-};
-
-const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
-  onRefresh,
-}) => {
-  // const [tabValue, setTabValue] = useState(0);
+const TransactionsTab: React.FC = () => {
   const network = useSelector((state: any) => state.settings.network);
 
-  // Use our custom hooks
-  const { transactions, isLoading, error, fetchTransactions } =
-    useFetchTransactions();
-  const { sortBy, sortDirection, handleSort, pendingTxs } =
+  // Use our custom hooks for pending transactions
+  const { transactions, isLoading, error } = usePendingTransactions();
+  const { sortBy, sortDirection, handleSort, sortedTransactions } =
     useSortedTransactions(transactions);
-  const handleExplorerLinkClick = useHandleExplorerLinkClick();
+  const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
-  // Get the correct transaction list based on selected tab
-  // const currentTabTxs = tabValue === 0 ? pendingTxs : confirmedTxs;
-  const currentTabTxs = pendingTxs;
-  // Set up pagination for the current tab's transactions
+  // Set up pagination for pending transactions
   const {
     page,
     rowsPerPage,
@@ -89,54 +49,18 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
     getCurrentPageItems,
     handlePageChange,
     handleRowsPerPageChange,
-  } = usePagination(currentTabTxs.length);
+  } = useTransactionPagination(sortedTransactions.length);
 
   // Get transactions for current page
-  const currentPageTxs = getCurrentPageItems(currentTabTxs);
-
-  const handleRefreshClick = () => {
-    fetchTransactions();
-    onRefresh();
-  };
+  const currentPageTxs = getCurrentPageItems(sortedTransactions);
 
   return (
     <div>
-      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={2}>
-        <Tooltip title="Refresh transactions">
-          <IconButton onClick={handleRefreshClick} disabled={isLoading}>
-            <Refresh />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
       {error && (
         <Typography color="error" gutterBottom>
           Error: {error}
         </Typography>
       )}
-
-      {/* <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)}>
-        <Tab
-          label={
-            <Box display="flex" alignItems="center" gap={1}>
-              <span>Pending</span>
-              <Chip
-                label={pendingTxs.length}
-                size="small"
-                color={pendingTxs.length > 0 ? "primary" : "default"}
-              />
-            </Box>
-          }
-        />
-        <Tab
-          label={
-            <Box display="flex" alignItems="center" gap={1}>
-              <span>Confirmed</span>
-              <Chip label={confirmedTxs.length} size="small" />
-            </Box>
-          }
-        />
-      </Tabs> */}
 
       <Box mt={2}>
         {isLoading ? (
@@ -154,7 +78,7 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
               onClickTransaction={handleExplorerLinkClick}
             />
             {/* Pagination controls */}
-            {currentTabTxs.length > 0 && (
+            {sortedTransactions.length > 0 && (
               <Box
                 display="flex"
                 justifyContent="space-between"
@@ -183,7 +107,7 @@ const TransactionsTabContent: React.FC<{ onRefresh: () => void }> = ({
 
                 <Box display="flex" alignItems="center">
                   <Typography variant="body2" color="textSecondary" mr={2}>
-                    {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, currentTabTxs.length)} of ${currentTabTxs.length}`}
+                    {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
                   </Typography>
                   <Pagination
                     count={totalPages}
