@@ -123,7 +123,6 @@ describe("Waste metric scoring", () => {
         config,
         estimatedLongTermFeeRate,
       );
-      console.log("Waste Amount:", wasteAmount);
       expect(wasteAmount).toBe(1540);
       // This number is positive this means that in future if we spend the UTXOs now,
       // we will be saving 1850 sats in fees. This is because in future the fee rate
