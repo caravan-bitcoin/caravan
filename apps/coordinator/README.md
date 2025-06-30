@@ -164,6 +164,7 @@ bitcoin-cli -named createwallet wallet_name="watcher" blank=true disable_private
 ```
 
 What does this do:
+
 - `-named` means you can pass named params rather than having to do them in exactly the right order
 - `createwallet` this creates our wallet (available since [v22](https://bitcoincore.org/en/doc/22.0.0/rpc/wallet/createwallet/))
 - `wallet_name`: the name of the wallet you will use to import your descriptors (multiple descriptors can be imported to the same wallet)
@@ -190,7 +191,6 @@ IMPORTANT: if you're importing a wallet that has prior history into a node that 
 previously watching the addresses and did not have txindex enabled, you will have
 to re-index your node (sync all blocks from the beginning checking for relevant history
 that the node previously didn't care about) in order to see your balance reflected.
-
 
 #### Adding CORS Headers
 
