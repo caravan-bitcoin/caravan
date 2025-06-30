@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.2
+
+### Patch Changes
+
+- [#319](https://github.com/caravan-bitcoin/caravan/pull/319) [`33f8c17`](https://github.com/caravan-bitcoin/caravan/commit/33f8c17400bad7996c6a201cf22582b3d051c27d) Thanks [@ice-009](https://github.com/ice-009)! - Introduced the DustChip for coordinator.
+
 ## 1.9.1
 
 ### Patch Changes
