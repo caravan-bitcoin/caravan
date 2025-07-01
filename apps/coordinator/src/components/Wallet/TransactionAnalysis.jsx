@@ -11,42 +11,43 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { SWASlider } from "./SWASlider";
 
 export const TransactionAnalysis = ({
-  wasteAmount,
+  metrics = {
+    ratio: 0,
+    dustLimits: { lowerLimit: 0, upperLimit: 0 },
+    wasteAmount: 0,
+  },
   longTermFeeEstimate,
   onFeeEstimateChange,
+  defaultExpanded = false,
 }) => {
+  const { wasteAmount = 0 } = metrics || {};
+
   return (
     <Box className="transaction-analysis-container">
-      <Accordion className="transaction-analysis-accordion">
+      <Accordion defaultExpanded={defaultExpanded}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           aria-controls="transaction-analysis-content"
           id="transaction-analysis-header"
-          className="transaction-analysis-accordion-summary"
         >
-          <Box className="transaction-analysis-header">
-            <Typography
-              variant="h6"
-              component="h2"
-              className="transaction-analysis-title"
-            >
-              Transaction Analysis
-            </Typography>
-            <Typography
-              variant="body2"
-              className="transaction-analysis-subtitle"
-            >
+          <Box>
+            <Typography variant="h6">Transaction Analysis</Typography>
+            <Typography variant="body2">
               Optimize your Bitcoin spending efficiency
             </Typography>
           </Box>
         </AccordionSummary>
-
-        <AccordionDetails className="transaction-analysis-accordion-details">
+        <AccordionDetails>
           <SWASlider
             wasteAmount={wasteAmount}
             longTermFeeEstimate={longTermFeeEstimate}
             onFeeEstimateChange={onFeeEstimateChange}
           />
+          <Box mt={2}>
+            <Typography variant="body2">
+              <strong>Analysis:</strong>
+            </Typography>
+          </Box>
         </AccordionDetails>
       </Accordion>
     </Box>
@@ -54,8 +55,24 @@ export const TransactionAnalysis = ({
 };
 
 TransactionAnalysis.propTypes = {
-  wasteAmount: PropTypes.number.isRequired,
+  metrics: PropTypes.shape({
+    ratio: PropTypes.number,
+    dustLimits: PropTypes.shape({
+      lowerLimit: PropTypes.number,
+      upperLimit: PropTypes.number,
+    }),
+    wasteAmount: PropTypes.number,
+  }),
   longTermFeeEstimate: PropTypes.number.isRequired,
   onFeeEstimateChange: PropTypes.func.isRequired,
   defaultExpanded: PropTypes.bool,
+};
+
+TransactionAnalysis.defaultProps = {
+  metrics: {
+    ratio: 0,
+    dustLimits: { lowerLimit: 0, upperLimit: 0 },
+    wasteAmount: 0,
+  },
+  defaultExpanded: false,
 };

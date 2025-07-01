@@ -2,7 +2,12 @@ import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { connect, useSelector } from "react-redux";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
+import {
+  satoshisToBitcoins,
+  bitcoinsToSatoshis,
+  getP2SH_P2WSHOutputSize,
+  getP2SHOutputSize,
+} from "@caravan/bitcoin";
 import { WasteMetrics } from "@caravan/health";
 import { getWalletConfig } from "../../selectors/wallet";
 import {
@@ -170,6 +175,12 @@ class TransactionPreview extends React.Component {
     longTermFeeEstimate: 101,
     wasteAmount: 0,
     changeOutputIndex: 0,
+    wasteMetrics: {
+      relativeScore: 0,
+      weightedScore: 0,
+      ratio: 0,
+      dustLimits: { lowerLimit: 0, upperLimit: 0 },
+    },
   };
 
   componentDidMount() {
@@ -204,29 +215,157 @@ class TransactionPreview extends React.Component {
     }
   }
 
+  // in your container/component
+  // Updated calculateWaste function in TransactionPreview.jsx
   calculateWaste = () => {
-    const { feeRate, fee } = this.props;
-    const { longTermFeeEstimate } = this.state;
+    const {
+      feeRate,
+      fee,
+      inputsTotalSats,
+      outputs = [], // Default empty array
+      changeAddress,
+      walletConfig,
+    } = this.props;
+    const { longTermFeeEstimate: L = 101 } = this.state; // Default value
 
-    if (!fee || !feeRate || parseFloat(feeRate) === 0) return;
+    // Early return if essential data is missing
+    if (!fee || !feeRate || !inputsTotalSats || !walletConfig) {
+      return this.setState({
+        wasteMetrics: {
+          relativeScore: 0,
+          weightedScore: 0,
+          ratio: 0,
+          dustLimits: { lowerLimit: 0, upperLimit: 0 },
+          wasteAmount: 0,
+        },
+      });
+    }
 
-    const weight = fee / satoshisToBitcoins(feeRate);
-    const walletConfig = this.props.walletConfig;
+    try {
+      // Convert all amounts to numbers safely
+      const feeInSats = bitcoinsToSatoshis(Number(fee));
+      const feeRateSatPerVb = Number(feeRate);
+      const inputsTotal = Number(inputsTotalSats);
 
-    // CORRECTED PARAMETER ORDER + NUMBER CONVERSION
-    const rawWaste = new WasteMetrics().spendWasteAmount(
-      weight,
-      parseFloat(feeRate), // Ensure number
-      {
-        // config
-        requiredSignerCount: walletConfig.quorum.requiredSigners,
-        totalSignerCount: walletConfig.quorum.totalSigners,
-      },
-      walletConfig.addressType, // scriptType
-      longTermFeeEstimate,
-    );
+      // Calculate weight more accurately
+      const weight = feeInSats / feeRateSatPerVb;
 
-    this.setState({ wasteAmount: rawWaste });
+      // Validate wallet config
+      if (!walletConfig.quorum || !walletConfig.addressType) {
+        throw new Error("Invalid wallet configuration");
+      }
+
+      // Calculate outputs
+      let nonChangeOutputsTotalSats = 0;
+      let outputsTotal = 0;
+
+      outputs.forEach((output) => {
+        const amountSats = output.amountSats
+          ? Number(output.amountSats)
+          : Number(output.amount) * 1e8;
+
+        outputsTotal += amountSats;
+
+        if (output.address !== changeAddress) {
+          nonChangeOutputsTotalSats += amountSats;
+        }
+      });
+
+      // Calculate ratio safely
+      const ratio =
+        nonChangeOutputsTotalSats > 0
+          ? (feeInSats / nonChangeOutputsTotalSats) * 100
+          : 0;
+
+      // Calculate dust limits
+      const wm = new WasteMetrics();
+      const riskMultiplier = Math.max(L / feeRateSatPerVb, 1.1);
+      const dustLimits = wm.calculateDustLimits(
+        feeRateSatPerVb,
+        walletConfig.addressType,
+        {
+          requiredSignerCount: walletConfig.quorum.requiredSigners,
+          totalSignerCount: walletConfig.quorum.totalSigners,
+        },
+        riskMultiplier,
+      );
+
+      // Calculate change cost (more accurate size calculation)
+      let changeCost = 0;
+      const changeOutput = outputs.find((o) => o.address === changeAddress);
+      if (changeOutput) {
+        let changeOutputSize;
+
+        // Use Caravan's precise functions if available
+        if (
+          typeof getP2SH_P2WSHOutputSize === "function" &&
+          typeof getP2SHOutputSize === "function" &&
+          typeof getWitnessSize === "function"
+        ) {
+          switch (walletConfig.addressType) {
+            case "P2WSH":
+              // P2WSH output: 8 (value) + 1 (script length) + 34 (witness script hash)
+              changeOutputSize = 8 + 1 + 34;
+              break;
+            case "P2SH-P2WSH":
+              changeOutputSize = getP2SH_P2WSHOutputSize();
+              break;
+            case "P2SH":
+              changeOutputSize = getP2SHOutputSize();
+              break;
+            default:
+              changeOutputSize =
+                walletConfig.addressType === "P2WSH"
+                  ? 31
+                  : walletConfig.addressType === "P2SH-P2WSH"
+                    ? 44
+                    : 90;
+          }
+        } else {
+          // Fallback to our previous estimates if Caravan functions not available
+          changeOutputSize =
+            walletConfig.addressType === "P2WSH"
+              ? 31
+              : walletConfig.addressType === "P2SH-P2WSH"
+                ? 44
+                : 90;
+        }
+
+        changeCost = changeOutputSize * L;
+      }
+
+      // Calculate excess (more robust calculation)
+      const excess = Math.max(0, inputsTotal - (outputsTotal + feeInSats));
+
+      // Final waste calculation with all components
+      const wasteAmount = Math.max(
+        0,
+        weight * (feeRateSatPerVb - L) + // Fee difference component
+          changeCost + // Change output cost
+          excess, // Input excess
+      );
+
+      this.setState({
+        wasteMetrics: {
+          relativeScore: 0,
+          weightedScore: 0,
+          ratio,
+          dustLimits,
+          wasteAmount,
+        },
+      });
+    } catch (err) {
+      console.error("Error calculating waste metrics:", err);
+      this.setState({
+        wasteMetrics: {
+          relativeScore: 0,
+          weightedScore: 0,
+          ratio: 0,
+          dustLimits: { lowerLimit: 0, upperLimit: 0 },
+          wasteAmount: 0,
+        },
+      });
+    }
   };
 
   handleFeeEstimateChange = (value) => {
@@ -348,7 +487,7 @@ class TransactionPreview extends React.Component {
       handleSignTransaction,
       unsignedPSBT,
     } = this.props;
-    const { longTermFeeEstimate, wasteAmount } = this.state;
+    const { longTermFeeEstimate, wasteMetrics } = this.state;
 
     return (
       <Box>
@@ -368,7 +507,7 @@ class TransactionPreview extends React.Component {
           </Grid>
           <Grid item xs={4}>
             <h3>Fee Rate</h3>
-            <div>{feeRate} sats/byte</div>
+            <div>{feeRate} sats/vB</div>
           </Grid>
           <Grid item xs={4}>
             <h3>Total</h3>
@@ -379,7 +518,7 @@ class TransactionPreview extends React.Component {
         {/* Transaction Analysis Component */}
         <Box mt={3}>
           <TransactionAnalysis
-            wasteAmount={wasteAmount}
+            metrics={wasteMetrics}
             longTermFeeEstimate={longTermFeeEstimate}
             onFeeEstimateChange={this.handleFeeEstimateChange}
             defaultExpanded={true}
@@ -468,6 +607,7 @@ TransactionPreview.propTypes = {
   unsignedPSBT: PropTypes.string.isRequired,
   signatureImporters: PropTypes.shape({}),
   requiredSigners: PropTypes.number,
+  feeRatePercentileHistory: PropTypes.arrayOf(PropTypes.number),
 };
 
 function mapStateToProps(state) {

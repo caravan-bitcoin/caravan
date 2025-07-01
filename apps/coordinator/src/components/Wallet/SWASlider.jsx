@@ -101,8 +101,9 @@ export const SWASlider = ({
       </Box>
 
       <Typography variant="body2" className="swa-description">
-        SWA indicates whether it is economical to spend now or wait to
-        consolidate later when fees could be low.
+        Waste analysis indicates whether it is economical to spend UTXOs now or
+        wait to consolidate later when fees could be lower, based on the
+        calculated waste metrics.
       </Typography>
     </Box>
   );
