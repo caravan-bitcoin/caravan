@@ -482,20 +482,15 @@ export function importPSBT(psbtText) {
     // ==== PROCESS INPUTS ====
     let inputs;
 
-    try {
-      // Strategy 1: Try spendable slices first (normal PSBT case)
-      inputs = selectInputsFromPSBT(getState(), psbt);
+    // Strategy 1: Try spendable slices first (normal PSBT case)
+    inputs = selectInputsFromPSBT(getState(), psbt);
 
-      if (inputs.length === psbt.txInputs.length) {
-        // All inputs found in spendable UTXOs
-        isRBFedPSBT = false; // This is a normal PSBT
-      } else {
-        // Some inputs missing - this indicates RBF scenario
-        throw new Error(
-          "Missing inputs detected - switching to RBF reconstruction",
-        );
-      }
-    } catch (e) {
+    if (inputs.length === psbt.txInputs.length) {
+      // All inputs found in spendable UTXOs
+      isRBFedPSBT = false; // This is a normal PSBT
+    } else {
+      // Some inputs missing - this indicates RBF scenario since inputs that are in a pending tx in the mempool are not selectable in caravan.
+
       // Strategy 2: If we didn't find all inputs, reconstruct from pending transactions (RBF case)
       // This is the key innovation - instead of fighting with listunspent, we use pending
       // transaction data to reconstruct the UTXO details we need
