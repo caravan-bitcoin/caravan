@@ -175,7 +175,7 @@ class WalletSpend extends React.Component {
               const uint8Array = new Uint8Array(arrayBuffer);
               importPSBT(uint8Array);
             } catch (bufferError) {
-              // If direct binary fails, convert to base64
+              // If direct binary fails, convert to base64 if needed
               console.warn(
                 "Direct binary import failed, trying base64:",
                 bufferError.message,
@@ -254,19 +254,26 @@ class WalletSpend extends React.Component {
           {transactionAnalysis.dust.hasDustInputs && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               <AlertTitle>Dust Inputs Detected</AlertTitle>
-              {transactionAnalysis.dust.inputCount} of your selected inputs may be
-              considered dust at {feeRate} sat/vB. This could result in higher
-              fees or uneconomical spending.
+              {transactionAnalysis.dust.inputCount} of your selected inputs may
+              be considered dust at {feeRate} sat/vB. This could result in
+              higher fees or uneconomical spending.
             </Alert>
           )}
-          {transactionAnalysis.walletFingerprinting && transactionAnalysis.walletFingerprinting.hasWalletFingerprinting && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
-              This transaction leaks privacy: exactly one output matches the wallet's script type, making it easy to identify change and link future transactions.
-              <br />
-              Output types: {transactionAnalysis.walletFingerprinting.scriptTypes.join(", ")}
-            </Alert>
-          )}
+          {transactionAnalysis.walletFingerprinting &&
+            transactionAnalysis.walletFingerprinting
+              .hasWalletFingerprinting && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
+                This transaction leaks privacy: exactly one output matches the
+                wallet&#39;s script type, making it easy to identify change and
+                link future transactions.
+                <br />
+                Output types:{" "}
+                {transactionAnalysis.walletFingerprinting.scriptTypes.join(
+                  ", ",
+                )}
+              </Alert>
+            )}
           <Grid container>
             {spendingStep === SPEND_STEP_SIGN && (
               <Grid item md={12}>

@@ -15,8 +15,7 @@ export const UPDATE_BRAID_SLICE = "UPDATE_BRAID_SLICE";
  * @param {array<object>} slices - array of slices from one or more braids
  */
 export const fetchSliceData = async (slices) => {
-  return async (dispatch, getState) => {
-    const { addressType } = getState().settings;
+  return async (dispatch) => {
     const blockchainClient = dispatch(updateBlockchainClient());
     if (!blockchainClient) return;
 

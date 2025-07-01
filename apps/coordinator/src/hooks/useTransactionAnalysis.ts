@@ -53,8 +53,14 @@ export function analyzeTransaction({
   );
 
   // Use @caravan/bitcoin for fee and size estimation
-  const inputTotal = inputs.reduce((total, input) => total + input.amountSats, 0);
-  const outputTotal = outputs.reduce((total, output) => total + output.amountSats, 0);
+  const inputTotal = inputs.reduce(
+    (total, input) => total + input.amountSats,
+    0,
+  );
+  const outputTotal = outputs.reduce(
+    (total, output) => total + output.amountSats,
+    0,
+  );
   const calculatedFee = inputTotal - outputTotal;
 
   const estimatedFee = estimateMultisigTransactionFee({

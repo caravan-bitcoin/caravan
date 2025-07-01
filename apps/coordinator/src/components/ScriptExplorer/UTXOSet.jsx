@@ -14,13 +14,14 @@ import {
   TableCell,
   Typography,
   Checkbox,
+  Tooltip,
 } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
 import DustChip from "./DustChip";
-import ScriptTypeChip from "../ScriptTypeChip";
+import { getFeeRate } from "../../selectors/transactionSelectors";
 
 // Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -44,6 +45,16 @@ class UTXOSet extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
+    // Update local inputs when props change
+    if (prevProps.inputs !== this.props.inputs) {
+      this.setState({
+        localInputs: this.props.inputs.map((input) => ({
+          ...input,
+          checked: this.props.selectAll,
+        })),
+      });
+    }
+
     // This function exists because we need to respond to the parent node having
     // its select/spend checkbox clicked (toggling select-all or select-none).
     // None of this needs to happen on the redeem script interface.
@@ -68,7 +79,7 @@ class UTXOSet extends React.Component {
       // but that's not quite enough because if a single UTXO is selected
       // then it is also marked from not spend -> spend ... so don't want
       // to toggleAll in that case. Furthermore, if you have 5 UTXOs and
-      // 2 selected and *then* click select all ... we also need to toggelAll.
+      // 2 selected and then click select all ... we also need to toggelAll.
       if (
         (prevProps.node.spend !== node.spend ||
           myInputsBeingSpent !== prevMyInputsBeingSpent) &&
@@ -175,6 +186,14 @@ class UTXOSet extends React.Component {
   renderInputs = () => {
     const { network, showSelection, finalizedOutputs, feeRate } = this.props;
     const { localInputs } = this.state;
+
+    // Get fee rate - with improved fallback logic
+    const currentFeeRate =
+      feeRate ||
+      (typeof window !== "undefined" && window.__REDUX_STORE__
+        ? getFeeRate(window.__REDUX_STORE__.getState())
+        : 1);
+
     return localInputs.map((input, inputIndex) => {
       const confirmedStyle = `${styles.utxoTxid}${
         input.confirmed ? "" : ` ${styles.unconfirmed}`
@@ -206,16 +225,13 @@ class UTXOSet extends React.Component {
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
           </TableCell>
           <TableCell>
-            <DustChip amountSats={input.amountSats} feeRate={feeRate} />
-          </TableCell>
-          <TableCell>
-            {input.scriptType ? <ScriptTypeChip scriptType={input.scriptType} /> : null}
-          </TableCell>
-          <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
               <OpenInNew />,
             )}
+          </TableCell>
+          <TableCell>
+            <DustChip amountSats={input.amountSats} feeRate={currentFeeRate} />
           </TableCell>
         </TableRow>
       );
@@ -255,9 +271,12 @@ class UTXOSet extends React.Component {
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
-              <TableCell>Script Type</TableCell>
               <TableCell>View</TableCell>
-              <TableCell>Dust Status</TableCell>
+              <TableCell>
+                <Tooltip title="Shows if UTXO is dust at current fee rate">
+                  <span>Dust Status</span>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>{this.renderInputs()}</TableBody>

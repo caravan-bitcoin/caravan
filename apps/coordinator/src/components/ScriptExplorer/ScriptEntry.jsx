@@ -214,7 +214,6 @@ class ScriptEntry extends React.Component {
       setInputs,
       setFrozen,
       choosePerformSpend,
-      addressType,
     } = this.props;
     const multisig = this.generateMultisig();
     const fetchUTXOsResult = await this.fetchUTXOs(multisig);
@@ -233,7 +232,6 @@ class ScriptEntry extends React.Component {
         // that provides input info such as address
         const inputs = utxos.map((utxo) => {
           const input = { ...utxo, multisig };
-          // No need to inject scriptType, as all inputs are already the same as settings
           return input;
         });
         setInputs(inputs);

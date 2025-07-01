@@ -1,11 +1,18 @@
 import React from "react";
-import { Chip, ChipProps } from "@mui/material";
+import { Chip } from "@mui/material";
 
 interface ScriptTypeChipProps {
   scriptType: string;
-  color?: ChipProps["color"];
+  color?:
+    | "default"
+    | "primary"
+    | "secondary"
+    | "error"
+    | "info"
+    | "success"
+    | "warning";
   icon?: React.ReactElement;
-  variant?: ChipProps["variant"];
+  variant?: "filled" | "outlined";
   sx?: object;
 }
 

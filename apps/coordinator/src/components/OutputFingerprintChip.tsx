@@ -10,19 +10,19 @@ interface OutputFingerprintChipProps {
     amount: number;
     address?: string;
   }>;
-  warning?: boolean;
   label?: string;
   sx?: object;
 }
 
 const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
   outputs,
-  warning = false,
   label,
   sx = {},
 }) => {
   // Pull wallet script type from settings
-  const walletScriptType = useSelector((state: any) => state.settings?.addressType || "Unknown");
+  const walletScriptType = useSelector(
+    (state: any) => state.settings?.addressType || "Unknown",
+  );
   // Use walletFingerprintAnalysis for privacy logic
   const analysis = walletFingerprintAnalysis(outputs, walletScriptType);
   const hasOutputFingerprinting = analysis.hasWalletFingerprinting;
@@ -36,7 +36,12 @@ const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
     <Tooltip title={tooltipText}>
       <Chip
         icon={hasOutputFingerprinting ? <Fingerprint /> : <Security />}
-        label={label || (hasOutputFingerprinting ? "Output Fingerprinting" : primaryScriptType || "Output")}
+        label={
+          label ||
+          (hasOutputFingerprinting
+            ? "Output Fingerprinting"
+            : primaryScriptType || "Output")
+        }
         color={hasOutputFingerprinting ? "warning" : "info"}
         variant={hasOutputFingerprinting ? "filled" : "outlined"}
         size="small"

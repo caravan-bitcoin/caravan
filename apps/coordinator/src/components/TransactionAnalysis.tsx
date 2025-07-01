@@ -17,7 +17,12 @@ interface TransactionAnalysisProps {
 /**
  * Shows wallet fingerprinting for transaction outputs.
  */
-const WalletFingerprintAnalysis: React.FC<{ outputs: TransactionOutput[]; addressType: string; requiredSigners: number; totalSigners: number }> = ({ outputs, addressType, requiredSigners, totalSigners }) => {
+const WalletFingerprintAnalysis: React.FC<{
+  outputs: TransactionOutput[];
+  addressType: string;
+  requiredSigners: number;
+  totalSigners: number;
+}> = ({ outputs, addressType, requiredSigners, totalSigners }) => {
   // Ensure scriptType is always a string
   const fixedOutputs = outputs.map((o) => ({
     ...o,
@@ -33,12 +38,14 @@ const WalletFingerprintAnalysis: React.FC<{ outputs: TransactionOutput[]; addres
   });
 
   //  tooltips for each case
-  let tooltip = '';
+  let tooltip = "";
   if (walletFingerprinting.hasWalletFingerprinting) {
     if (fixedOutputs.length === 1) {
-      tooltip = "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
+      tooltip =
+        "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
     } else {
-      tooltip = "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.";
+      tooltip =
+        "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.";
     }
     return (
       <Tooltip title={tooltip}>
@@ -48,34 +55,51 @@ const WalletFingerprintAnalysis: React.FC<{ outputs: TransactionOutput[]; addres
               ...o,
               amount: o.amountSats,
             }))}
-            warning
-            label={fixedOutputs.length === 1 ? addressType : "Output Fingerprinting"}
+            label={
+              fixedOutputs.length === 1 ? addressType : "Output Fingerprinting"
+            }
           />
         </span>
       </Tooltip>
     );
   }
 
-  if (summary.outputCount > 0 && walletFingerprinting.matchingOutputCount === fixedOutputs.length) {
-    tooltip = "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
+  if (
+    summary.outputCount > 0 &&
+    walletFingerprinting.matchingOutputCount === fixedOutputs.length
+  ) {
+    tooltip =
+      "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
     return (
       <Tooltip title={tooltip}>
         <span>
-          <ScriptTypeChip scriptType={addressType} color="success" icon={undefined} variant="filled" />
+          <ScriptTypeChip
+            scriptType={addressType}
+            color="success"
+            icon={undefined}
+            variant="filled"
+          />
         </span>
       </Tooltip>
     );
   }
 
   if (walletFingerprinting.matchingOutputCount === 0) {
-    tooltip = "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
+    tooltip =
+      "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
   } else {
-    tooltip = "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
+    tooltip =
+      "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
   }
   return (
     <Tooltip title={tooltip}>
       <span>
-        <ScriptTypeChip scriptType="N/A" color="default" icon={undefined} variant="outlined" />
+        <ScriptTypeChip
+          scriptType="N/A"
+          color="default"
+          icon={undefined}
+          variant="outlined"
+        />
       </span>
     </Tooltip>
   );
@@ -84,14 +108,21 @@ const WalletFingerprintAnalysis: React.FC<{ outputs: TransactionOutput[]; addres
 /**
  * Shows dust analysis for transaction inputs.
  */
-const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number; addressType: string; requiredSigners: number; totalSigners: number }> = ({
-  inputs,
-  feeRate,
-  addressType,
-  requiredSigners,
-  totalSigners,
-}) => {
-  const { dust } = analyzeTransaction({ inputs, outputs: [], feeRate, addressType, requiredSigners, totalSigners });
+const DustAnalysis: React.FC<{
+  inputs: UTXO[];
+  feeRate: number;
+  addressType: string;
+  requiredSigners: number;
+  totalSigners: number;
+}> = ({ inputs, feeRate, addressType, requiredSigners, totalSigners }) => {
+  const { dust } = analyzeTransaction({
+    inputs,
+    outputs: [],
+    feeRate,
+    addressType,
+    requiredSigners,
+    totalSigners,
+  });
 
   if (!dust.hasDustInputs) {
     return (
@@ -124,11 +155,13 @@ const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
   feeRate,
 }) => {
   // Get required config from Redux
-  const { addressType, requiredSigners, totalSigners } = useSelector((state: any) => ({
-    addressType: state.settings?.addressType,
-    requiredSigners: state.settings?.requiredSigners,
-    totalSigners: state.settings?.totalSigners,
-  }));
+  const { addressType, requiredSigners, totalSigners } = useSelector(
+    (state: any) => ({
+      addressType: state.settings?.addressType,
+      requiredSigners: state.settings?.requiredSigners,
+      totalSigners: state.settings?.totalSigners,
+    }),
+  );
 
   return (
     <Box>
@@ -147,7 +180,12 @@ const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
           <Typography variant="subtitle1">Wallet Fingerprinting</Typography>
         </Grid>
         <Grid item>
-          <WalletFingerprintAnalysis outputs={outputs} addressType={addressType} requiredSigners={requiredSigners} totalSigners={totalSigners} />
+          <WalletFingerprintAnalysis
+            outputs={outputs}
+            addressType={addressType}
+            requiredSigners={requiredSigners}
+            totalSigners={totalSigners}
+          />
         </Grid>
       </Grid>
 
@@ -162,7 +200,13 @@ const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
           <Typography variant="subtitle1">Input Dust</Typography>
         </Grid>
         <Grid item>
-          <DustAnalysis inputs={inputs} feeRate={feeRate} addressType={addressType} requiredSigners={requiredSigners} totalSigners={totalSigners} />
+          <DustAnalysis
+            inputs={inputs}
+            feeRate={feeRate}
+            addressType={addressType}
+            requiredSigners={requiredSigners}
+            totalSigners={totalSigners}
+          />
         </Grid>
       </Grid>
     </Box>

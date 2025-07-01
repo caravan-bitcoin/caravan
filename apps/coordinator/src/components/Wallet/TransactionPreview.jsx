@@ -186,16 +186,16 @@ class TransactionPreview extends React.Component {
   }
 
   buildOutputRows = () => {
-    const { 
-      changeAddress, 
-      outputs, 
-      inputs, 
-      feeRate, 
-      addressType, 
-      requiredSigners, 
-      totalSigners 
+    const {
+      changeAddress,
+      outputs,
+      inputs,
+      feeRate,
+      addressType,
+      requiredSigners,
+      totalSigners,
     } = this.props;
-    
+
     const { walletFingerprinting } = analyzeTransaction({
       inputs: inputs || [],
       outputs: outputs || [],
@@ -206,12 +206,13 @@ class TransactionPreview extends React.Component {
     });
 
     return outputs.map((output, idx) => {
-      const isPoisoned = walletFingerprinting.hasWalletFingerprinting && 
-                        walletFingerprinting.poisonedOutputIndex === idx;
-      
+      const isPoisoned =
+        walletFingerprinting.hasWalletFingerprinting &&
+        walletFingerprinting.poisonedOutputIndex === idx;
+
       return (
-        <TableRow 
-          key={output.address} 
+        <TableRow
+          key={output.address}
           style={isPoisoned ? { background: "#fff3e0" } : {}}
         >
           <TableCell>
@@ -219,10 +220,10 @@ class TransactionPreview extends React.Component {
             {output.address === changeAddress && <small>&nbsp;(change)</small>}
             {isPoisoned && (
               <Tooltip title="This output matches your wallet's address type and is likely to be identified as change by an outside observer.">
-                <WarningAmberIcon 
-                  color="warning" 
-                  fontSize="small" 
-                  style={{ marginLeft: 4, verticalAlign: "middle" }} 
+                <WarningAmberIcon
+                  color="warning"
+                  fontSize="small"
+                  style={{ marginLeft: 4, verticalAlign: "middle" }}
                 />
               </Tooltip>
             )}
@@ -298,7 +299,7 @@ class TransactionPreview extends React.Component {
 
         {/* Signature Status Section */}
         <SignatureStatus />
-        
+
         <UnsignedTransaction />
 
         <h3>Inputs</h3>
