@@ -251,7 +251,6 @@ class UTXOSet extends React.Component {
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
-              <TableCell>Dust Status</TableCell>
               <TableCell>View</TableCell>
               <TableCell>Dust Status</TableCell>
             </TableRow>
