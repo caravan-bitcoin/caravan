@@ -228,7 +228,7 @@ export const rbfFixtures = {
         inputCount: 3, // 2 inputs + 1 extra UTXO added for fees
         outputCount: 4, //  3 original + 1 change output
         fee: "20880", // absolute fees of tx
-        expectedfee: "39840", // rationalized above
+        expectedfee: "39760", // rationalized above
         feeRate: 80, // rationalized above
       },
     },
@@ -298,7 +298,7 @@ export const rbfFixtures = {
         inputCount: 2,
         outputCount: 2,
         fee: "905",
-        expectedFee: "1845",
+        expectedFee: "1357",
         feeRate: 6.029,
       },
     },

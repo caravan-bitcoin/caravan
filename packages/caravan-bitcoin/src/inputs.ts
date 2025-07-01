@@ -4,6 +4,10 @@
  */
 
 import { multisigBraidDetails } from "./multisig";
+import { getP2SHInputSize, P2SH } from "./p2sh";
+import { getP2SH_P2WSHInputSize, P2SH_P2WSH } from "./p2sh_p2wsh";
+import { getP2WSHInputSize, getWitnessWeight, P2WSH } from "./p2wsh";
+import { MultisigAddressType } from "./types";
 import { validateHex } from "./utils";
 
 /**
@@ -90,6 +94,34 @@ export function validateMultisigInput(input) {
     return "Does not have a multisig object ('multisig') property.";
   }
   return "";
+}
+
+/**
+ * Calculates the weight (virtual size) of a single input based on the script type and signing parameters.
+ *
+ * @param scriptType - The type of script (P2SH, P2WSH, P2SH-P2WSH)
+ * @param m - Number of required signers
+ * @param n - Total number of signers
+ * @returns The input weight in virtual bytes (vbytes) accounting for witness discount
+ */
+export function calculateInputWeight(
+  scriptType: MultisigAddressType,
+  m: number,
+  n: number,
+): number {
+  switch (scriptType) {
+    case P2SH:
+      // P2SH has no witness discount, return actual size including signatures
+      return getP2SHInputSize(m, n);
+    case P2WSH: {
+      return getP2WSHInputSize() + getWitnessWeight(m, n);
+    }
+    case P2SH_P2WSH: {
+      return getP2SH_P2WSHInputSize() + getWitnessWeight(m, n);
+    }
+    default:
+      throw new Error(`Unsupported script type: ${scriptType}`);
+  }
 }
 
 const TXID_LENGTH = 64;
