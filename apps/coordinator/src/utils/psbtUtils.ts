@@ -1,12 +1,12 @@
 import { networkData, Network, bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { BlockchainClient, TransactionDetails } from "@caravan/clients";
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 import {
   getPsbtVersionNumber,
   PsbtV2,
   autoLoadPSBT as psbtPackageAutoLoad,
 } from "@caravan/psbt";
 import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt as `autoLoadPSBT` uses this Psbt Object
+import { createInputIdentifier } from "./transactionCalculations";
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
@@ -139,37 +139,6 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
     return false;
   }
 }
-
-/**
- * Creates a unique identifier for a UTXO input by combining transaction ID and output index.
- *
- * This is used throughout the PSBT import process to match UTXOs across different data sources.
- * The format ensures we can easily compare inputs from PSBTs with UTXOs in our wallet state.
- *
- * @param txid - Transaction ID in big-endian (human-readable) format
- * @param index - Output index (vout) within the transaction
- * @returns Unique string identifier in format "txid:index"
- *
- * @example
- * ```ts
- * const id = createInputIdentifier("abc123...", 0); // "abc123...:0"
- * ```
- */
-export const createInputIdentifier = (txid: string, index: number): string =>
-  `${txid}:${index}`;
-
-/**
- * Converts a PSBT input hash buffer to a big-endian transaction ID string.
- *
- * PSBTs store transaction hashes in little-endian format (Bitcoin's internal format),
- * but we need big-endian format (human-readable) to match with our wallet state and
- * blockchain API responses. This function handles the conversion.
- *
- * @param hash - Buffer containing the transaction hash in little-endian format
- * @returns Transaction ID string in big-endian (human-readable) format
- */
-export const convertTxidToLittleEndian = (hash: Buffer): string =>
-  reverseBuffer(hash).toString("hex");
 
 /**
  * Matches a PSBT's required inputs to available UTXOs using a two-phase strategy.
