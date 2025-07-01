@@ -1,10 +1,10 @@
 # E2E Tests
 
-End-to-end tests for Caravan Coordinator using Playwright with **fully automated** Docker setup.
+End-to-end tests for Caravan Coordinator using Playwright.
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- Docker
 - Node.js (see `.nvmrc` in project root)
 
 ## Quick Start
@@ -25,11 +25,9 @@ npm run test:install  # Install Playwright browsers
 
 ### 3. Run Tests
 
-That's it! Everything else is automated:
-
 ```bash
 # Run all tests (everything automated)
-npm test
+npm run test
 
 # Run tests with interactive UI
 npm run test:ui
@@ -42,15 +40,15 @@ npm run test:headed
 
 When you run any test command, the system automatically:
 
-1. ✅ **Checks Docker availability** - Ensures Docker is running
-2. ✅ **Pulls images** - Downloads Bitcoin regtest node if needed  
-3. ✅ **Starts containers** - Spins up Bitcoin node and Caravan coordinator
-4. ✅ **Waits for connections** - Ensures all services are ready
-5. ✅ **Creates test wallets** - Sets up Bitcoin wallets for testing
-6. ✅ **Runs tests** - Executes Playwright tests
-7. ✅ **Cleans up** - Removes test wallets and stops containers
+1. **Checks Docker availability** - Ensures Docker is running
+2. **Pulls images** - Downloads Bitcoin regtest node if needed  
+3. **Starts containers** - Spins up Bitcoin node and Caravan coordinator
+4. **Waits for connections** - Ensures all services are ready
+5. **Creates test wallets** - Sets up Bitcoin wallets for testing
+6. **Runs tests** - Executes Playwright tests
+7. **Cleans up** - Removes test wallets and stops containers
 
-No manual Docker commands needed! 🎉
+No manual Docker commands needed! 
 
 ## Test Structure
 
