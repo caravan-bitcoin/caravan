@@ -1,0 +1,13 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+temp
+
+# Bitcoin-Core
+bitcoin-data
+downloads
+
