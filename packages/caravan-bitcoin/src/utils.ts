@@ -89,3 +89,23 @@ export const ZERO = new BigNumber(0);
 export function hash160(buf: Buffer) {
   return crypto.ripemd160(crypto.sha256(buf));
 }
+
+/**
+ * @description returns the size including the bytes required to represent the size;
+ * https://btcinformation.org/en/developer-reference#compactsize-unsigned-integers
+ * > For numbers from 0 to 252, compactSize unsigned integers look like regular
+ * > unsigned integers. For other numbers up to 0xffffffffffffffff, a byte is
+ * > prefixed to the number to indicate its length—but otherwise the numbers
+ * > look like regular unsigned integers in little-endian order.
+ */
+export function compactSize(size: number) {
+  if (size >= 0 && size <= 252) {
+    return 1;
+  } else if (size >= 253 && size <= 0xffff) {
+    return 3;
+  } else if (size >= 0x10000 && size <= 0xffffffff) {
+    return 5;
+  } else {
+    throw new Error(`Invalid size ${size}`);
+  }
+}
