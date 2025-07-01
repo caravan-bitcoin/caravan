@@ -40,10 +40,10 @@ jobs:
 
       # workaround for https://github.com/changesets/changesets/issues/1055
       - name: Checkout default branch
-        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.event.repository.default_branch }} && git checkout ${{ github.event.repository.default_branch }}
+        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.event.repository.default_branch }} && git checkout --progress --force ${{ github.event.repository.default_branch }}
 
       - name: Checkout current branch
-        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.ref_name }} && git checkout ${{ github.ref_name }}
+        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.ref }} && git checkout --progress --force ${{ github.ref }}
       
       - name: Setup Node.js 20
         uses: actions/setup-node@v3
