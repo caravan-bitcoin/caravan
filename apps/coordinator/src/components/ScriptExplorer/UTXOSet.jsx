@@ -291,6 +291,7 @@ UTXOSet.propTypes = {
   autoSpend: PropTypes.bool.isRequired,
   feeRate: PropTypes.string,
 };
+
 UTXOSet.defaultProps = {
   multisig: false,
   bip32Path: "",
