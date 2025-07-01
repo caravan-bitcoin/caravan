@@ -20,6 +20,7 @@ import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
 import DustChip from "./DustChip";
+import ScriptTypeChip from "../ScriptTypeChip";
 
 // Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -208,6 +209,9 @@ class UTXOSet extends React.Component {
             <DustChip amountSats={input.amountSats} feeRate={feeRate} />
           </TableCell>
           <TableCell>
+            {input.scriptType ? <ScriptTypeChip scriptType={input.scriptType} /> : null}
+          </TableCell>
+          <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
               <OpenInNew />,
@@ -251,6 +255,7 @@ class UTXOSet extends React.Component {
               <TableCell>TXID</TableCell>
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
+              <TableCell>Script Type</TableCell>
               <TableCell>View</TableCell>
               <TableCell>Dust Status</TableCell>
             </TableRow>

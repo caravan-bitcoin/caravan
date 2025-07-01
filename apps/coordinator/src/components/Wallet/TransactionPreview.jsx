@@ -18,15 +18,21 @@ import {
   Chip,
   Typography,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
+  WarningAmber as WarningAmberIcon,
 } from "@mui/icons-material";
+import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import TransactionAnalysis from "../TransactionAnalysis";
+import ScriptTypeChip from "../ScriptTypeChip";
+import { analyzeTransaction } from "../../hooks/useTransactionAnalysis";
 
 /**
  * Custom hook to get current signing state
@@ -163,6 +169,7 @@ const SignatureStatus = () => {
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
+    // Set up change output multisig details when component loads
     const {
       outputs,
       changeAddress,
@@ -170,6 +177,7 @@ class TransactionPreview extends React.Component {
       changeNode,
       setChangeOutputMultisig,
     } = this.props;
+
     outputs.forEach((output) => {
       if (output.address === changeAddress) {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
@@ -177,128 +185,96 @@ class TransactionPreview extends React.Component {
     });
   }
 
-  renderAddresses = () => {
-    const addressWithUtxos = this.mapAddresses();
-    return Object.keys(addressWithUtxos).map((address) => {
-      return (
-        <TableRow key={address}>
-          <TableCell>
-            <code>{address}</code>
-          </TableCell>
-          <TableCell>{addressWithUtxos[address].utxos.length}</TableCell>
-          <TableCell>
-            <code>{addressWithUtxos[address].amount.toFixed(8)}</code>
-          </TableCell>
-        </TableRow>
-      );
+  buildOutputRows = () => {
+    const { 
+      changeAddress, 
+      outputs, 
+      inputs, 
+      feeRate, 
+      addressType, 
+      requiredSigners, 
+      totalSigners 
+    } = this.props;
+    
+    const { walletFingerprinting } = analyzeTransaction({
+      inputs: inputs || [],
+      outputs: outputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
     });
-  };
 
-  renderOutputAddresses = () => {
-    const { changeAddress, outputs } = this.props;
-
-    return outputs.map((output) => {
+    return outputs.map((output, idx) => {
+      const isPoisoned = walletFingerprinting.hasWalletFingerprinting && 
+                        walletFingerprinting.poisonedOutputIndex === idx;
+      
       return (
-        <TableRow key={output.address}>
+        <TableRow 
+          key={output.address} 
+          style={isPoisoned ? { background: "#fff3e0" } : {}}
+        >
           <TableCell>
             <code>{output.address}</code>
-            {output.address === changeAddress ? (
-              <small>&nbsp;(change)</small>
-            ) : (
-              ""
+            {output.address === changeAddress && <small>&nbsp;(change)</small>}
+            {isPoisoned && (
+              <Tooltip title="This output matches your wallet's address type and is likely to be identified as change by an outside observer.">
+                <WarningAmberIcon 
+                  color="warning" 
+                  fontSize="small" 
+                  style={{ marginLeft: 4, verticalAlign: "middle" }} 
+                />
+              </Tooltip>
             )}
           </TableCell>
           <TableCell>
             <code>{BigNumber(output.amount).toFixed(8)}</code>
           </TableCell>
+          <TableCell>
+            <ScriptTypeChip scriptType={output.scriptType} />
+          </TableCell>
         </TableRow>
       );
     });
   };
 
-  renderOutputs = () => {
+  buildOutputsTable = () => {
     return (
       <Table>
         <TableHead>
           <TableRow>
             <TableCell>Address</TableCell>
             <TableCell>Amount (BTC)</TableCell>
+            <TableCell>Script Type</TableCell>
           </TableRow>
         </TableHead>
-        <TableBody>{this.renderOutputAddresses()}</TableBody>
+        <TableBody>{this.buildOutputRows()}</TableBody>
         <TableFooter>
           <TableRow>
             <TableCell>TOTAL:</TableCell>
-            <TableCell>{this.outputsTotal()}</TableCell>
+            <TableCell>{this.calculateOutputsTotal()}</TableCell>
+            <TableCell />
           </TableRow>
         </TableFooter>
       </Table>
     );
   };
 
-  renderInputs = () => {
-    const { inputsTotalSats } = this.props;
-
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>UTXO count</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.renderAddresses()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={2}>TOTAL:</TableCell>
-            <TableCell>{satoshisToBitcoins(inputsTotalSats)}</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
-
-  mapAddresses = () => {
-    const { inputs } = this.props;
-    return inputs.reduce((mapped, input) => {
-      const mappedAddresses = mapped;
-      const { confirmed, txid, index, amount } = input;
-
-      mappedAddresses[input.multisig.address] = mapped[
-        input.multisig.address
-      ] || {
-        amount: BigNumber(0),
-        utxos: [],
-      };
-      mappedAddresses[input.multisig.address].utxos.push({
-        confirmed,
-        txid,
-        index,
-        amount,
-      });
-      mappedAddresses[input.multisig.address].amount = mapped[
-        input.multisig.address
-      ].amount.plus(BigNumber(input.amount));
-      return mappedAddresses;
-    }, {});
-  };
-
-  outputsTotal = () => {
+  calculateOutputsTotal = () => {
     const { outputs } = this.props;
     return satoshisToBitcoins(
       outputs.reduce(
-        (total, output) => total.plus(BigNumber(output.amountSats || 0)),
+        (sum, output) => sum.plus(BigNumber(output.amountSats || 0)),
         BigNumber(0),
       ),
     );
   };
 
-  handleDownloadPSBT = (psbtBase64) => {
-    downloadFile(psbtBase64, "transaction.psbt");
+  downloadPSBT = (psbtData) => {
+    downloadFile(psbtData, "transaction.psbt");
   };
 
-  render = () => {
+  render() {
     const {
       feeRate,
       fee,
@@ -306,23 +282,40 @@ class TransactionPreview extends React.Component {
       editTransaction,
       handleSignTransaction,
       unsignedPSBT,
+      inputs,
+      outputs,
     } = this.props;
 
     return (
       <Box>
+        <TransactionAnalysis
+          inputs={inputs || []}
+          outputs={outputs || []}
+          feeRate={feeRate || 1}
+        />
+
         <h2>Transaction Preview</h2>
 
         {/* Signature Status Section */}
         <SignatureStatus />
+        
         <UnsignedTransaction />
+
         <h3>Inputs</h3>
-        {this.renderInputs()}
+        <UTXOSet
+          inputs={inputs || []}
+          inputsTotalSats={inputsTotalSats}
+          showSelection={false}
+          finalizedOutputs
+        />
+
         <h3>Outputs</h3>
-        {this.renderOutputs()}
+        {this.buildOutputsTable()}
+
         <Grid container>
           <Grid item xs={4}>
             <h3>Fee</h3>
-            <div>{BigNumber(fee).toFixed(8)} BTC </div>
+            <div>{BigNumber(fee).toFixed(8)} BTC</div>
           </Grid>
           <Grid item xs={4}>
             <h3>Fee Rate</h3>
@@ -333,6 +326,7 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
         </Grid>
+
         <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>
@@ -360,7 +354,7 @@ class TransactionPreview extends React.Component {
                 <Button
                   variant="contained"
                   color="secondary"
-                  onClick={() => this.handleDownloadPSBT(unsignedPSBT)}
+                  onClick={() => this.downloadPSBT(unsignedPSBT)}
                 >
                   Download Unsigned PSBT
                 </Button>
@@ -370,7 +364,7 @@ class TransactionPreview extends React.Component {
         </Box>
       </Box>
     );
-  };
+  }
 }
 
 TransactionPreview.propTypes = {
@@ -388,21 +382,22 @@ TransactionPreview.propTypes = {
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
-  signatureImporters: PropTypes.shape({}),
+  addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
+  totalSigners: PropTypes.number,
 };
 
-function mapStateToProps(state) {
-  return {
-    changeOutputIndex: state.spend.transaction.changeOutputIndex,
-    network: state.settings.network,
-    inputs: state.spend.transaction.inputs,
-    outputs: state.spend.transaction.outputs,
-    unsignedPSBT: state.spend.transaction.unsignedPSBT,
-    signatureImporters: state.spend.signatureImporters,
-    requiredSigners: state.settings.requiredSigners,
-  };
-}
+const mapStateToProps = (state) => ({
+  changeOutputIndex: state.spend.transaction.changeOutputIndex,
+  network: state.settings.network,
+  inputs: state.spend.transaction.inputs,
+  outputs: state.spend.transaction.outputs,
+  unsignedPSBT: state.spend.transaction.unsignedPSBT,
+  signatureImporters: state.spend.signatureImporters,
+  requiredSigners: state.settings.requiredSigners,
+  addressType: state.settings.addressType,
+  totalSigners: state.settings.totalSigners,
+});
 
 const mapDispatchToProps = {
   setChangeOutputMultisig: setChangeOutputMultisigAction,
