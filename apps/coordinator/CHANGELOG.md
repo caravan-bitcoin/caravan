@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.9.3
+
+### Patch Changes
+
+- [#322](https://github.com/caravan-bitcoin/caravan/pull/322) [`468d833`](https://github.com/caravan-bitcoin/caravan/commit/468d83311d977c0c06c313037093f60586ebfaa5) Thanks [@bucko13](https://github.com/bucko13)! - introduce tanstack query and patch transactions fetching
+
+- [#326](https://github.com/caravan-bitcoin/caravan/pull/326) [`050b739`](https://github.com/caravan-bitcoin/caravan/commit/050b739a460df80dc5ef0777875f8f2969b3e9e3) Thanks [@robertshuford](https://github.com/robertshuford)! - Add docker image validation to test pipeline.
+
+- Updated dependencies [[`8d22ab5`](https://github.com/caravan-bitcoin/caravan/commit/8d22ab5178b1b731858b2fd08683e7d3a1b0aa44)]:
+  - @caravan/bitcoin@0.4.0
+  - @caravan/psbt@2.0.0
+
 ## 1.9.2
 
 ### Patch Changes
