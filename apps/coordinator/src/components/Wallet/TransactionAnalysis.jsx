@@ -43,11 +43,6 @@ export const TransactionAnalysis = ({
             longTermFeeEstimate={longTermFeeEstimate}
             onFeeEstimateChange={onFeeEstimateChange}
           />
-          <Box mt={2}>
-            <Typography variant="body2">
-              <strong>Analysis:</strong>
-            </Typography>
-          </Box>
         </AccordionDetails>
       </Accordion>
     </Box>
