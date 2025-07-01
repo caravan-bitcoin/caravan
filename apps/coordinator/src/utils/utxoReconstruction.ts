@@ -1,5 +1,5 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { BlockchainClient, TransactionDetails } from "@caravan/clients";
+import { TransactionDetails } from "@caravan/clients";
 import { createInputIdentifier } from "./transactionCalculations";
 import { Slice } from "./psbtUtils";
 
@@ -45,6 +45,49 @@ export interface ReconstructedUtxos {
 }
 
 /**
+ * Derives a list of transaction IDs that are required to reconstruct specific UTXOs.
+ *
+ * This utility scans through a set of unconfirmed (pending) transactions and identifies
+ * which of their inputs correspond to UTXOs we are attempting to reconstruct. It then
+ * extracts the unique `txid`s associated with those relevant inputs.
+ *
+ * This step is useful when we need to selectively fetch original transaction data
+ * (e.g., from a Bitcoin node) for only the inputs that matter to our PSBT reconstruction.
+ *
+ * @param pendingTransactions - Array of pending wallet transactions (unconfirmed).
+ * @param neededInputIds - Set of input identifiers (in `txid:vout` format) that need reconstruction.
+ * @returns Array of unique transaction IDs (`txid`s) required for reconstruction.
+ */
+export function extractNeededTransactionIds(
+  pendingTransactions: TransactionDetails[],
+  neededInputIds: Set<string>,
+): string[] {
+  // Set used to track unique txids of interest
+  const txidsSet = new Set<string>();
+
+  for (const pendingTx of pendingTransactions) {
+    // Defensive: Skip transactions without a valid 'vin' field
+    if (!Array.isArray(pendingTx.vin)) continue;
+
+    for (const input of pendingTx.vin) {
+      // Ensure input is well-formed
+      if (input.txid && input.vout !== undefined) {
+        // Create a unique input identifier: "txid:vout"
+        const inputId = createInputIdentifier(input.txid, input.vout);
+
+        // If this input is one we're interested in, add its txid to the result set
+        if (neededInputIds.has(inputId)) {
+          txidsSet.add(input.txid);
+        }
+      }
+    }
+  }
+
+  // Convert the Set to an array before returning
+  return Array.from(txidsSet);
+}
+
+/**
  * Utility function that reconstructs a single UTXO from transaction data.
  *
  * This function inspects a transaction's outputs to locate the one referenced
@@ -57,7 +100,7 @@ export interface ReconstructedUtxos {
  * @param walletSlices - All wallet addresses to verify ownership
  * @returns Reconstructed UTXO object or null if not owned by wallet
  */
-export function reconstructSingleUtxo(
+function reconstructSingleUtxo(
   input: { txid: string; vout: number },
   originalTransaction: TransactionDetails,
   originalTransactionHex: string,
@@ -110,31 +153,6 @@ export function reconstructSingleUtxo(
 }
 
 /**
- * Analyzes a single pending transaction to find consumed UTXOs that we need to reconstruct.
- *
- * @param pendingTransaction - The pending transaction to analyze
- * @param neededInputIds - Set of UTXO IDs we're looking for (format: "txid:vout")
- * @returns Array of consumed UTXO references that match our needs
- */
-export function findConsumedUtxosInTransaction(
-  pending: TransactionDetails,
-  neededInputIds: Set<string>,
-): Array<{ txid: string; vout: number; pendingTxid: string }> {
-  if (!Array.isArray(pending.vin)) return [];
-
-  return pending.vin
-    .filter((input) => input.txid && input.vout !== undefined)
-    .map((input) => ({
-      txid: input.txid!,
-      vout: input.vout!,
-      pendingTxid: pending.txid,
-    }))
-    .filter((ref) =>
-      neededInputIds.has(createInputIdentifier(ref.txid, ref.vout)),
-    );
-}
-
-/**
  * Orchestrates UTXO reconstruction from provided pending transactions.
  *
  * Given a set of known pending wallet transactions, this function attempts to
@@ -142,136 +160,57 @@ export function findConsumedUtxosInTransaction(
  * behavior with unconfirmed outputs.
  *
  * Steps:
- * 1. Find relevant UTXOs consumed in the provided pending transactions.
- * 2. Fetch original transactions that created those UTXOs.
- * 3. Rebuild the UTXO data using `reconstructSingleUtxo()`
+ * 1. Iterate over pending transactions and their inputs.
+ * 2. Match inputs against the set of UTXO identifiers we care about.
+ * 3. For each match, fetch the original transaction that created the UTXO.
+ * 4. Use `reconstructSingleUtxo()` to rebuild a usable UTXO object.
  *
- * @param pendingTransactions - Array of unconfirmed transactions from wallet
- * @param allSlices - Every address in our wallet (needed to verify UTXO ownership)
- * @param neededInputIds - Specific UTXOs we're trying to reconstruct (from the PSBT)
- * @param blockchainClient - Client for fetching original transaction details
- * @returns Promise resolving to array of reconstructed UTXO objects
+ * @param pendingTransactions - Unconfirmed transactions from our wallet (used as data source).
+ * @param originalTxLookup - Lookup map of txid → original transaction and hex data.
+ * @param allSlices - Wallet metadata (used to verify ownership of reconstructed UTXOs).
+ * @param neededInputIds - Set of UTXO input IDs (txid:vout) we want to reconstruct.
  *
  * @throws {Error} When network is unavailable or reconstruction fails
  */
-export async function reconstructUtxosFromPendingTransactions(
+export function reconstructUtxosFromPendingTransactions(
   pendingTransactions: TransactionDetails[],
+  originalTxLookup: Map<
+    string,
+    { transaction: TransactionDetails; transactionHex: string }
+  >,
   allSlices: Slice[],
   neededInputIds: Set<string>,
-  blockchainClient: BlockchainClient,
-): Promise<ReconstructedUtxos[]> {
-  if (!blockchainClient) {
-    throw new Error("Blockchain client is required for UTXO reconstruction.");
-  }
-  if (!pendingTransactions.length || !neededInputIds.size) {
-    return [];
-  }
+): ReconstructedUtxos[] {
   const reconstructedUtxos: ReconstructedUtxos[] = [];
 
-  // Step 1: Firstly we Identify consumed UTXO references we need to rebuild
-  // We analyze each pending transaction to identify which UTXOs it consumed.
-  // We only care about UTXOs that we actually need.
-  const allConsumedUtxos: Array<{
-    txid: string;
-    vout: number;
-    pendingTxid: string;
-  }> = [];
-
+  // Loop through each unconfirmed transaction
   for (const pendingTx of pendingTransactions) {
-    const consumedInThisTx = findConsumedUtxosInTransaction(
-      pendingTx,
-      neededInputIds,
-    );
-    allConsumedUtxos.push(...consumedInThisTx);
-  }
+    if (!Array.isArray(pendingTx.vin)) continue;
 
-  if (allConsumedUtxos.length === 0) {
-    return [];
-  }
+    for (const input of pendingTx.vin) {
+      if (!input.txid || input.vout === undefined) continue;
 
-  // Step 2: Fetch original transaction details
-  // For each consumed UTXO, we need to fetch the original transaction that
-  // created it. This gives us the output details needed for reconstruction.
-  const uniqueOriginalTxids = new Set(
-    allConsumedUtxos.map((utxo) => utxo.txid),
-  );
-  const originalTransactionPromises = Array.from(uniqueOriginalTxids).map(
-    async (txid) => {
-      try {
-        const [transaction, transactionHex] = await Promise.all([
-          blockchainClient.getTransaction(txid),
-          blockchainClient.getTransactionHex(txid),
-        ]);
-        return { txid, transaction, transactionHex };
-      } catch (error) {
-        console.warn(
-          `Failed to fetch original transaction ${txid}: ${error.message}`,
-        );
-        return null;
-      }
-    },
-  );
+      const inputId = createInputIdentifier(input.txid, input.vout);
+      // Only proceed if this input is one we're looking to reconstruct
+      if (!neededInputIds.has(inputId)) continue;
 
-  const originalTransactions = (
-    await Promise.all(originalTransactionPromises)
-  ).filter((result): result is NonNullable<typeof result> => result !== null);
-  // Create a lookup map for efficient access
-  const originalTxLookup = new Map(
-    originalTransactions.map(({ txid, transaction, transactionHex }) => [
-      txid,
-      { transaction, transactionHex },
-    ]),
-  );
+      const originalTxData = originalTxLookup.get(input.txid);
+      if (!originalTxData) continue;
 
-  // Step 3: Attempt reconstruction of each consumed UTXO
-  // Now we have all the data needed to reconstruct the UTXOs.
-  // We use our utility function for the actual reconstruction logic.
-  for (const consumedUtxo of allConsumedUtxos) {
-    const originalTxData = originalTxLookup.get(consumedUtxo.txid);
-    if (!originalTxData) {
-      console.warn(
-        `Could not find original transaction data for ${consumedUtxo.txid}, skipping UTXO reconstruction`,
+      const utxo = reconstructSingleUtxo(
+        { txid: input.txid, vout: input.vout },
+        originalTxData.transaction,
+        originalTxData.transactionHex,
+        allSlices,
       );
-      continue;
-    }
 
-    const reconstructedUtxo = reconstructSingleUtxo(
-      { txid: consumedUtxo.txid, vout: consumedUtxo.vout },
-      originalTxData.transaction,
-      originalTxData.transactionHex,
-      allSlices,
-    );
-
-    if (reconstructedUtxo) {
-      // Add metadata about which pending transaction consumed this UTXO
-      (reconstructedUtxo as any)._pendingTxid = consumedUtxo.pendingTxid;
-      reconstructedUtxos.push(reconstructedUtxo);
+      // Only include valid reconstructions
+      if (utxo) {
+        (utxo as any)._pendingTxid = pendingTx.txid;
+        reconstructedUtxos.push(utxo);
+      }
     }
   }
+
   return reconstructedUtxos;
-}
-
-/**
- * Convenience wrapper
- */
-export async function reconstructUtxosForRbf(
-  walletSlices: Slice[],
-  neededInputIds: Set<string>,
-  client: BlockchainClient,
-  pendingTransactions: TransactionDetails[] = [],
-): Promise<ReconstructedUtxos[]> {
-  if (!pendingTransactions.length) {
-    // If no pending transactions provided, return empty array
-    // The caller should use usePendingTransactions() to get them
-    console.warn(
-      "No pending transactions provided. Use usePendingTransactions().",
-    );
-    return [];
-  }
-  return reconstructUtxosFromPendingTransactions(
-    pendingTransactions,
-    walletSlices,
-    neededInputIds,
-    client,
-  );
 }
