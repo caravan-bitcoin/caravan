@@ -19,5 +19,5 @@ export const getTransactionOutputs = (state) => {
 
 export const getWalletConfig = (state) => {
   // Pull wallet configuration settings
-  return state.wallet?.config || {};
+  return state.settings || {};
 };

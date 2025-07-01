@@ -20,10 +20,8 @@ import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
-import DustChip from "../DustChip";
-// import ScriptTypeChip from "../ScriptTypeChip";
+import DustChip from "./DustChip";
 import { getFeeRate } from "../../selectors/transactionSelectors";
-
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
 import styles from "./styles.module.scss";
 
@@ -82,6 +80,7 @@ class UTXOSet extends React.Component {
     }
   }
 
+  // Filter inputs based on whether they match the transaction store inputs
   getFilteredInputs = (localInputs, storeInputs, includeMatches) => {
     return localInputs.filter((input) => {
       const matches = storeInputs.filter((utxo) => {
@@ -99,6 +98,7 @@ class UTXOSet extends React.Component {
     this.updateInputSelection(currentInputs);
   };
 
+  // Update the selection state for all inputs
   handleSelectAll = (forceState = null) => {
     const { currentInputs, selectAllToggle } = this.state;
     const newState = !selectAllToggle;
@@ -111,6 +111,7 @@ class UTXOSet extends React.Component {
     this.setState({ selectAllToggle: newState });
   };
 
+  // Update the selected inputs and propagate to parent
   updateInputSelection = (inputs) => {
     const {
       setInputs,
@@ -222,7 +223,6 @@ class UTXOSet extends React.Component {
             <DustChip
               amountSats={input.amountSats}
               feeRate={feeRate || 1}
-              scriptType={input.scriptType || "P2WPKH"}
             />
           </TableCell>
         </TableRow>

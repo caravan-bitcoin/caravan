@@ -1,5 +1,7 @@
 /**
- * Helper functions for checking dust outputs and privacy issues
+ * Helper functions for transaction analysis:
+ * - Dust detection
+ * - Wallet fingerprinting/privacy analysis
  */
 
 // How much extra we multiply the fee by when checking for dust
@@ -37,21 +39,52 @@ export function isDustUTXO(
 }
 
 /**
- * Check if transaction outputs mix different address types
- * This can be a privacy issue since it makes transactions more identifiable
+ * Wallet fingerprinting privacy analysis (Buck's review logic):
+ * - Single output: never a privacy leak (no warning, no info)
+ * - Multiple outputs: warn only if exactly one matches wallet type (or any of wallet types if array)
+ * - All outputs wallet type, or none wallet type: no warning
+ * - Multiple outputs match wallet type: no warning
  */
-export function analyzeOutputFingerprinting(
+export function walletFingerprintAnalysis(
   outputs: Array<{ scriptType: string; amount: number }>,
+  walletScriptType: string | string[],
 ) {
-  const addressTypes = outputs.map((output) => output.scriptType);
-  const uniqueTypes = [...new Set(addressTypes)];
+  const totalOutputs = outputs.length;
+  const scriptTypes = [...new Set(outputs.map((output) => output.scriptType))];
 
-  const hasPrivacyIssue = uniqueTypes.length > 1;
+  // Single output: never a privacy leak
+  if (totalOutputs === 1) {
+    return {
+      hasWalletFingerprinting: false,
+      matchingOutputCount: 1,
+      scriptTypes,
+      reason: "Single output transactions don't leak wallet information.",
+      poisonedOutputIndex: null,
+      info: "",
+    };
+  }
+
+  // Support multiple wallet script types (future-proof)
+  const isMatch = (o: { scriptType: string; amount: number }) =>
+    Array.isArray(walletScriptType)
+      ? walletScriptType.includes(o.scriptType)
+      : o.scriptType === walletScriptType;
+  const matchingOutputs = outputs.filter(isMatch);
+  const matchingCount = matchingOutputs.length;
+
+  // Only warn if exactly one output matches wallet type
+  const hasWalletFingerprinting = matchingCount === 1;
 
   return {
-    hasFingerprinting: hasPrivacyIssue,
-    scriptTypes: uniqueTypes,
-    primaryScriptType: addressTypes[0],
-    mixedTypes: hasPrivacyIssue ? uniqueTypes : null,
+    hasWalletFingerprinting,
+    matchingOutputCount: matchingCount,
+    scriptTypes,
+    reason: hasWalletFingerprinting
+      ? "Exactly one output matches the wallet's script type, making it easy to identify change and link future transactions."
+      : "",
+    poisonedOutputIndex: hasWalletFingerprinting
+      ? outputs.findIndex(isMatch)
+      : null,
+    info: "",
   };
 }

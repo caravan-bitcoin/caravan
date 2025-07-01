@@ -13,6 +13,7 @@ import {
   TableRow,
   TableCell,
   Grid,
+  Tooltip,
 } from "@mui/material";
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
@@ -20,6 +21,8 @@ import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
 import TransactionAnalysis from "../TransactionAnalysis";
 import ScriptTypeChip from "../ScriptTypeChip";
+import { analyzeTransaction } from "../../hooks/useTransactionAnalysis";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
@@ -40,21 +43,37 @@ class TransactionPreview extends React.Component {
   }
 
   buildOutputRows = () => {
-    const { changeAddress, outputs } = this.props;
-    return outputs.map((output) => (
-      <TableRow key={output.address}>
-        <TableCell>
-          <code>{output.address}</code>
-          {output.address === changeAddress && <small>&nbsp;(change)</small>}
-        </TableCell>
-        <TableCell>
-          <code>{BigNumber(output.amount).toFixed(8)}</code>
-        </TableCell>
-        <TableCell>
-          <ScriptTypeChip scriptType={output.scriptType} />
-        </TableCell>
-      </TableRow>
-    ));
+    const { changeAddress, outputs, inputs, feeRate, addressType, requiredSigners, totalSigners } = this.props;
+    const { walletFingerprinting } = analyzeTransaction({
+      inputs: inputs || [],
+      outputs: outputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    return outputs.map((output, idx) => {
+      const isPoisoned = walletFingerprinting.hasWalletFingerprinting && walletFingerprinting.poisonedOutputIndex === idx;
+      return (
+        <TableRow key={output.address} style={isPoisoned ? { background: "#fff3e0" } : {}}>
+          <TableCell>
+            <code>{output.address}</code>
+            {output.address === changeAddress && <small>&nbsp;(change)</small>}
+            {isPoisoned && (
+              <Tooltip title="This output matches your wallet's address type and is likely to be identified as change by an outside observer.">
+                <WarningAmberIcon color="warning" fontSize="small" style={{ marginLeft: 4, verticalAlign: "middle" }} />
+              </Tooltip>
+            )}
+          </TableCell>
+          <TableCell>
+            <code>{BigNumber(output.amount).toFixed(8)}</code>
+          </TableCell>
+          <TableCell>
+            <ScriptTypeChip scriptType={output.scriptType} />
+          </TableCell>
+        </TableRow>
+      );
+    });
   };
 
   buildOutputsTable = () => {
@@ -205,6 +224,9 @@ const mapStateToProps = (state) => ({
   inputs: state.spend.transaction.inputs,
   outputs: state.spend.transaction.outputs,
   unsignedPSBT: state.spend.transaction.unsignedPSBT,
+  addressType: state.settings.addressType,
+  requiredSigners: state.settings.requiredSigners,
+  totalSigners: state.settings.totalSigners,
 });
 
 const mapDispatchToProps = {

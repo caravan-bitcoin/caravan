@@ -233,10 +233,7 @@ class ScriptEntry extends React.Component {
         // that provides input info such as address
         const inputs = utxos.map((utxo) => {
           const input = { ...utxo, multisig };
-          // Inject scriptType if not present
-          if (!input.scriptType) {
-            input.scriptType = addressType;
-          }
+          // No need to inject scriptType, as all inputs are already the same as settings
           return input;
         });
         setInputs(inputs);

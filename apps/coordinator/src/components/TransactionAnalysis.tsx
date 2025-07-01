@@ -1,74 +1,97 @@
 import React from "react";
 import { Box, Typography, Grid, Tooltip } from "@mui/material";
 import { Shield, CleaningServices } from "@mui/icons-material";
-import { useTransactionAnalysis } from "../hooks/useTransactionAnalysis";
-import DustChip from "./DustChip";
+import { analyzeTransaction } from "../hooks/useTransactionAnalysis";
+import DustChip from "./ScriptExplorer/DustChip";
 import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
-
-interface UTXO {
-  txid: string;
-  index: number;
-  amountSats: number;
-  scriptType: string;
-  confirmed: boolean;
-}
-
-interface Output {
-  address: string;
-  amountSats: number;
-  scriptType: string;
-}
+import { useSelector } from "react-redux";
+import type { UTXO, TransactionOutput } from "./transaction";
 
 interface TransactionAnalysisProps {
   inputs: UTXO[];
-  outputs: Output[];
+  outputs: TransactionOutput[];
   feeRate: number;
 }
 
 /**
- * Shows script type fingerprinting for transaction outputs.
+ * Shows wallet fingerprinting for transaction outputs.
  */
-const ScriptTypeAnalysis: React.FC<{ outputs: Output[] }> = ({ outputs }) => {
-  const { fingerprinting, summary } = useTransactionAnalysis({
-    outputs,
+const WalletFingerprintAnalysis: React.FC<{ outputs: TransactionOutput[]; addressType: string; requiredSigners: number; totalSigners: number }> = ({ outputs, addressType, requiredSigners, totalSigners }) => {
+  // Ensure scriptType is always a string
+  const fixedOutputs = outputs.map((o) => ({
+    ...o,
+    scriptType: o.scriptType ?? "",
+  }));
+  const { walletFingerprinting, summary } = analyzeTransaction({
+    outputs: fixedOutputs,
     inputs: [],
     feeRate: 0,
+    addressType,
+    requiredSigners,
+    totalSigners,
   });
 
-  if (fingerprinting.hasFingerprinting) {
+  //  tooltips for each case
+  let tooltip = '';
+  if (walletFingerprinting.hasWalletFingerprinting) {
+    if (fixedOutputs.length === 1) {
+      tooltip = "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
+    } else {
+      tooltip = "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.";
+    }
     return (
-      <Tooltip
-        title={`This transaction uses mixed script types: ${fingerprinting.scriptTypes.join(", ")}`}
-      >
+      <Tooltip title={tooltip}>
         <span>
           <OutputFingerprintChip
-            outputs={outputs.map((o) => ({ ...o, amount: o.amountSats }))}
+            outputs={fixedOutputs.map((o) => ({
+              ...o,
+              amount: o.amountSats,
+            }))}
+            warning
+            label={fixedOutputs.length === 1 ? addressType : "Output Fingerprinting"}
           />
         </span>
       </Tooltip>
     );
   }
 
-  if (summary.outputCount > 0 && fingerprinting.primaryScriptType) {
-    return <ScriptTypeChip scriptType={fingerprinting.primaryScriptType} />;
+  if (summary.outputCount > 0 && walletFingerprinting.matchingOutputCount === fixedOutputs.length) {
+    tooltip = "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
+    return (
+      <Tooltip title={tooltip}>
+        <span>
+          <ScriptTypeChip scriptType={addressType} color="success" icon={undefined} variant="filled" />
+        </span>
+      </Tooltip>
+    );
   }
 
+  if (walletFingerprinting.matchingOutputCount === 0) {
+    tooltip = "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
+  } else {
+    tooltip = "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
+  }
   return (
-    <Typography variant="body2" color="textSecondary">
-      N/A
-    </Typography>
+    <Tooltip title={tooltip}>
+      <span>
+        <ScriptTypeChip scriptType="N/A" color="default" icon={undefined} variant="outlined" />
+      </span>
+    </Tooltip>
   );
 };
 
 /**
  * Shows dust analysis for transaction inputs.
  */
-const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({
+const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number; addressType: string; requiredSigners: number; totalSigners: number }> = ({
   inputs,
   feeRate,
+  addressType,
+  requiredSigners,
+  totalSigners,
 }) => {
-  const { dust } = useTransactionAnalysis({ inputs, outputs: [], feeRate });
+  const { dust } = analyzeTransaction({ inputs, outputs: [], feeRate, addressType, requiredSigners, totalSigners });
 
   if (!dust.hasDustInputs) {
     return (
@@ -84,9 +107,7 @@ const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({
         <DustChip
           key={`${input.txid}-${input.index}`}
           amountSats={input.amountSats}
-          isDust={dust.inputs.some(
-            (d) => d.txid === input.txid && d.index === input.index,
-          )}
+          feeRate={feeRate}
         />
       ))}
     </Box>
@@ -95,31 +116,38 @@ const DustAnalysis: React.FC<{ inputs: UTXO[]; feeRate: number }> = ({
 
 /**
  * Main component: TransactionAnalysis
- * Shows script type fingerprinting and dust analysis for the current transaction.
+ * Shows wallet fingerprinting and dust analysis for the current transaction.
  */
 const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
   inputs,
   outputs,
   feeRate,
 }) => {
+  // Get required config from Redux
+  const { addressType, requiredSigners, totalSigners } = useSelector((state: any) => ({
+    addressType: state.settings?.addressType,
+    requiredSigners: state.settings?.requiredSigners,
+    totalSigners: state.settings?.totalSigners,
+  }));
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
         Transaction Analysis
       </Typography>
 
-      {/* Output script type fingerprinting */}
+      {/* Wallet fingerprinting analysis */}
       <Grid container spacing={2} alignItems="center">
         <Grid item>
-          <Tooltip title="Analyzes the script types of the transaction outputs for potential privacy leaks (output fingerprinting).">
+          <Tooltip title="Analyzes the outputs for wallet fingerprinting privacy leaks (change detection).">
             <Shield fontSize="small" />
           </Tooltip>
         </Grid>
         <Grid item>
-          <Typography variant="subtitle1">Output Script Types</Typography>
+          <Typography variant="subtitle1">Wallet Fingerprinting</Typography>
         </Grid>
         <Grid item>
-          <ScriptTypeAnalysis outputs={outputs} />
+          <WalletFingerprintAnalysis outputs={outputs} addressType={addressType} requiredSigners={requiredSigners} totalSigners={totalSigners} />
         </Grid>
       </Grid>
 
@@ -134,7 +162,7 @@ const TransactionAnalysis: React.FC<TransactionAnalysisProps> = ({
           <Typography variant="subtitle1">Input Dust</Typography>
         </Grid>
         <Grid item>
-          <DustAnalysis inputs={inputs} feeRate={feeRate} />
+          <DustAnalysis inputs={inputs} feeRate={feeRate} addressType={addressType} requiredSigners={requiredSigners} totalSigners={totalSigners} />
         </Grid>
       </Grid>
     </Box>

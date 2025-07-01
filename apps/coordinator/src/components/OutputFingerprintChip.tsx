@@ -1,6 +1,8 @@
 import React from "react";
 import { Chip, Tooltip } from "@mui/material";
 import { Fingerprint, Security } from "@mui/icons-material";
+import { useSelector } from "react-redux";
+import { walletFingerprintAnalysis } from "../utils/dustUtils";
 
 interface OutputFingerprintChipProps {
   outputs: Array<{
@@ -8,60 +10,40 @@ interface OutputFingerprintChipProps {
     amount: number;
     address?: string;
   }>;
+  warning?: boolean;
+  label?: string;
+  sx?: object;
 }
 
 const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
   outputs,
+  warning = false,
+  label,
+  sx = {},
 }) => {
-  // Check if outputs have mixed script types
-  const scriptTypes = outputs.map((output) => output.scriptType);
-  const uniqueScriptTypes = [...new Set(scriptTypes)];
-  const hasOutputFingerprinting = uniqueScriptTypes.length > 1;
-
-  // Determine primary script type
-  const primaryScriptType = scriptTypes.length > 0 ? scriptTypes[0] : "Unknown";
-
+  // Pull wallet script type from settings
+  const walletScriptType = useSelector((state: any) => state.settings?.addressType || "Unknown");
+  // Use walletFingerprintAnalysis for privacy logic
+  const analysis = walletFingerprintAnalysis(outputs, walletScriptType);
+  const hasOutputFingerprinting = analysis.hasWalletFingerprinting;
+  const uniqueScriptTypes = analysis.scriptTypes;
+  const primaryScriptType = walletScriptType;
   const tooltipText = hasOutputFingerprinting
     ? `Output fingerprinting detected! Mixed script types: ${uniqueScriptTypes.join(", ")}. This may compromise privacy.`
     : `All outputs use ${primaryScriptType}. No output fingerprinting detected.`;
 
-  if (hasOutputFingerprinting) {
-    return (
-      <Tooltip title={tooltipText} arrow>
-        <Chip
-          icon={<Fingerprint />}
-          label="Output Fingerprinting"
-          color="warning"
-          variant="filled"
-          size="small"
-          sx={{
-            fontSize: "0.75rem",
-            height: "24px",
-            "& .MuiChip-icon": {
-              width: "16px",
-              height: "16px",
-            },
-          }}
-        />
-      </Tooltip>
-    );
-  }
-
   return (
-    <Tooltip title={tooltipText} arrow>
+    <Tooltip title={tooltipText}>
       <Chip
-        icon={<Security />}
-        label={primaryScriptType}
-        color="primary"
-        variant="outlined"
+        icon={hasOutputFingerprinting ? <Fingerprint /> : <Security />}
+        label={label || (hasOutputFingerprinting ? "Output Fingerprinting" : primaryScriptType || "Output")}
+        color={hasOutputFingerprinting ? "warning" : "info"}
+        variant={hasOutputFingerprinting ? "filled" : "outlined"}
         size="small"
         sx={{
-          fontSize: "0.75rem",
-          height: "24px",
-          "& .MuiChip-icon": {
-            width: "16px",
-            height: "16px",
-          },
+          fontSize: "0.8rem",
+          height: "26px",
+          ...sx,
         }}
       />
     </Tooltip>

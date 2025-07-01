@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import BigNumber from "bignumber.js";
 import {
   Box,
   Card,
@@ -34,55 +35,49 @@ import {
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
 } from "../../actions/transactionActions";
+import { naiveCoinSelection } from "../../utils";
 import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import { useTransactionAnalysis } from "../../hooks/useTransactionAnalysis";
+import { analyzeTransaction } from "../../hooks/useTransactionAnalysis";
 
-function WalletSpend(props) {
-  const [importPSBTDisabled, setImportPSBTDisabled] = useState(false);
-  const [importPSBTError, setImportPSBTError] = useState("");
+class WalletSpend extends React.Component {
+  outputsAmount = new BigNumber(0);
 
-  const {
-    autoSpend,
-    changeAddress,
-    changeNode,
-    updateNode,
-    addNode,
-    spendingStep,
-    fee,
-    feeRate,
-    inputs,
-    inputsTotalSats,
-    outputs,
-    selectedUTXOs,
-    transactionOutputs,
-    setSpendStep,
-    autoSelectCoins,
-    finalizeOutputs,
-    resetNodesSpend,
-    deleteChangeOutput,
-    updateAutoSpend,
-    importPSBT,
-  } = props;
+  coinSelection = naiveCoinSelection;
 
-  useEffect(() => {
-    // componentDidUpdate for finalizedOutputs
-    if (props.finalizedOutputs) {
-      setSpendStep(SPEND_STEP_PREVIEW);
+  feeAmount = new BigNumber(0);
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      importPSBTDisabled: false,
+      importPSBTError: "",
+    };
+  }
+
+  componentDidUpdate = (prevProps) => {
+    const { finalizedOutputs } = this.props;
+    if (finalizedOutputs && !prevProps.finalizedOutputs) {
+      this.showPreview();
     }
-  }, [props.finalizedOutputs]);
+  };
 
-  const previewDisabled = useCallback(() => {
+  previewDisabled = () => {
+    const {
+      finalizedOutputs,
+      outputs,
+      feeRateError,
+      feeError,
+      inputs,
+      balanceError,
+      autoSpend,
+    } = this.props;
+
     if (inputs.length === 0 && !autoSpend) return true;
-    if (
-      props.finalizedOutputs ||
-      props.feeRateError ||
-      props.feeError ||
-      props.balanceError
-    ) {
+    if (finalizedOutputs || feeRateError || feeError || balanceError) {
       return true;
     }
     for (let i = 0; i < outputs.length; i += 1) {
@@ -97,184 +92,218 @@ function WalletSpend(props) {
       }
     }
     return false;
-  }, [
-    inputs,
-    outputs,
-    autoSpend,
-    props.finalizedOutputs,
-    props.feeRateError,
-    props.feeError,
-    props.balanceError,
-  ]);
+  };
 
-  const showSignTransaction = useCallback(() => {
+  showSignTransaction = () => {
+    const { setSpendStep } = this.props;
     setSpendStep(SPEND_STEP_SIGN);
-  }, [setSpendStep]);
+  };
 
-  const handleShowPreview = useCallback(() => {
+  handleShowPreview = () => {
+    const { autoSelectCoins, autoSpend, finalizeOutputs } = this.props;
     if (autoSpend) autoSelectCoins();
     else finalizeOutputs(true);
-  }, [autoSpend, autoSelectCoins, finalizeOutputs]);
+  };
 
-  const showCreate = useCallback(() => {
+  showPreview = () => {
+    const { setSpendStep } = this.props;
+    setSpendStep(SPEND_STEP_PREVIEW);
+  };
+
+  showCreate = () => {
+    const {
+      finalizeOutputs,
+      setSpendStep,
+      resetNodesSpend,
+      deleteChangeOutput,
+    } = this.props;
     setSpendStep(SPEND_STEP_CREATE);
     finalizeOutputs(false);
     resetNodesSpend();
     deleteChangeOutput();
-  }, [setSpendStep, finalizeOutputs, resetNodesSpend, deleteChangeOutput]);
-
-  const handleSpendMode = useCallback(
-    (event) => {
-      updateAutoSpend(!event.target.checked);
-      resetNodesSpend();
-      deleteChangeOutput();
-    },
-    [updateAutoSpend, resetNodesSpend, deleteChangeOutput],
-  );
-
-  const setPSBTToggleAndError = (disabled, errorMessage) => {
-    setImportPSBTDisabled(disabled);
-    setImportPSBTError(errorMessage);
   };
 
-  const handleImportPSBT = ({ target }) => {
-    setPSBTToggleAndError(true, "");
+  handleSpendMode = (event) => {
+    const { updateAutoSpend, resetNodesSpend, deleteChangeOutput } = this.props;
+    updateAutoSpend(!event.target.checked);
+    resetNodesSpend();
+    deleteChangeOutput();
+  };
+
+  setPSBTToggleAndError = (importPSBTDisabled, errorMessage) => {
+    this.setState({
+      importPSBTDisabled,
+      importPSBTError: errorMessage,
+    });
+  };
+
+  handleImportPSBT = ({ target }) => {
+    const { importPSBT } = this.props;
+
+    this.setPSBTToggleAndError(true, "");
+
     try {
       if (target.files.length === 0) {
-        setPSBTToggleAndError(false, "No PSBT provided.");
+        this.setPSBTToggleAndError(false, "No PSBT provided.");
         return;
       }
       if (target.files.length > 1) {
-        setPSBTToggleAndError(false, "Multiple PSBTs provided.");
+        this.setPSBTToggleAndError(false, "Multiple PSBTs provided.");
         return;
       }
+
       const fileReader = new FileReader();
       fileReader.onload = (event) => {
         try {
           const psbtText = event.target.result;
           importPSBT(psbtText);
-          setPSBTToggleAndError(false, "");
+          this.setPSBTToggleAndError(false, "");
         } catch (e) {
-          setPSBTToggleAndError(false, e.message);
+          this.setPSBTToggleAndError(false, e.message);
         }
       };
       fileReader.readAsText(target.files[0]);
     } catch (e) {
-      setPSBTToggleAndError(false, e.message);
+      this.setPSBTToggleAndError(false, e.message);
     }
   };
 
-  const transactionAnalysis = useTransactionAnalysis({
-    inputs: selectedUTXOs || [],
-    outputs: transactionOutputs || [],
-    feeRate: feeRate || 1,
-  });
+  render() {
+    const {
+      autoSpend,
+      changeAddress,
+      changeNode,
+      updateNode,
+      addNode,
+      spendingStep,
+      fee,
+      feeRate,
+      inputs,
+      inputsTotalSats,
+      outputs,
+      selectedUTXOs,
+      transactionOutputs,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    } = this.props;
+    const { importPSBTDisabled, importPSBTError } = this.state;
 
-  return (
-    <Card>
-      <CardContent>
-        {/* Alerts for dust and fingerprinting */}
-        {transactionAnalysis.dust.hasDustInputs && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <AlertTitle>Dust Inputs Detected</AlertTitle>
-            {transactionAnalysis.dust.inputCount} of your selected inputs may be
-            considered dust at {feeRate} sat/vB. This could result in higher
-            fees or uneconomical spending.
-          </Alert>
-        )}
-        {transactionAnalysis.fingerprinting.hasFingerprinting && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <AlertTitle>Output Fingerprinting Detected</AlertTitle>
-            Your transaction outputs use mixed script types (
-            {transactionAnalysis.fingerprinting.scriptTypes.join(", ")}), which
-            may compromise privacy.
-          </Alert>
-        )}
-        <Grid container>
-          {spendingStep === SPEND_STEP_SIGN && (
-            <Grid item md={12}>
-              <Box>
-                <WalletSign />
-              </Box>
-            </Grid>
+    const transactionAnalysis = analyzeTransaction({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+
+    return (
+      <Card>
+        <CardContent>
+          {/* Alerts for dust and fingerprinting */}
+          {transactionAnalysis.dust.hasDustInputs && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Dust Inputs Detected</AlertTitle>
+              {transactionAnalysis.dust.inputCount} of your selected inputs may be
+              considered dust at {feeRate} sat/vB. This could result in higher
+              fees or uneconomical spending.
+            </Alert>
           )}
-          {spendingStep === SPEND_STEP_CREATE && (
-            <Grid item md={12}>
-              <Grid container direction="row-reverse">
-                <Box display="flex-end">
-                  <Box p={1}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={!autoSpend}
-                          onChange={handleSpendMode}
-                        />
-                      }
-                      label="Manual"
-                    />
-                  </Box>
+          {transactionAnalysis.walletFingerprinting && transactionAnalysis.walletFingerprinting.hasWalletFingerprinting && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
+              This transaction leaks privacy: exactly one output matches the wallet's script type, making it easy to identify change and link future transactions.
+              <br />
+              Output types: {transactionAnalysis.walletFingerprinting.scriptTypes.join(", ")}
+            </Alert>
+          )}
+          <Grid container>
+            {spendingStep === SPEND_STEP_SIGN && (
+              <Grid item md={12}>
+                <Box>
+                  <WalletSign />
                 </Box>
               </Grid>
-              <Box component="div" display={autoSpend ? "none" : "block"}>
-                <NodeSet addNode={addNode} updateNode={updateNode} />
-              </Box>
-              <OutputsForm />
-              <Box mt={2}>
-                <Button
-                  onClick={handleShowPreview}
-                  variant="contained"
-                  color="primary"
-                  disabled={previewDisabled()}
-                >
-                  Preview Transaction
-                </Button>
-              </Box>
-              <Box mt={2}>
-                <label htmlFor="import-psbt">
-                  <input
-                    style={{ display: "none" }}
-                    id="import-psbt"
-                    name="import-psbt"
-                    accept="application/base64"
-                    onChange={handleImportPSBT}
-                    type="file"
-                  />
-
+            )}
+            {spendingStep === SPEND_STEP_CREATE && (
+              <Grid item md={12}>
+                <Grid container direction="row-reverse">
+                  <Box display="flex-end">
+                    <Box p={1}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={!autoSpend}
+                            onChange={this.handleSpendMode}
+                          />
+                        }
+                        label="Manual"
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
+                <Box component="div" display={autoSpend ? "none" : "block"}>
+                  <NodeSet addNode={addNode} updateNode={updateNode} />
+                </Box>
+                <OutputsForm />
+                <Box mt={2}>
                   <Button
-                    color="primary"
+                    onClick={this.handleShowPreview}
                     variant="contained"
-                    component="span"
-                    disabled={importPSBTDisabled}
-                    style={{ marginTop: "20px" }}
+                    color="primary"
+                    disabled={this.previewDisabled()}
                   >
-                    Import PSBT
+                    Preview Transaction
                   </Button>
-                  <FormHelperText error>{importPSBTError}</FormHelperText>
-                </label>
-              </Box>
-            </Grid>
-          )}
-          {spendingStep === SPEND_STEP_PREVIEW && (
-            <Grid item md={12}>
-              <Box mt={3}>
-                <TransactionPreview
-                  changeAddress={changeAddress}
-                  changeNode={changeNode}
-                  editTransaction={showCreate}
-                  fee={fee}
-                  feeRate={feeRate}
-                  inputs={inputs}
-                  inputsTotalSats={inputsTotalSats}
-                  outputs={outputs}
-                  handleSignTransaction={showSignTransaction}
-                />
-              </Box>
-            </Grid>
-          )}
-        </Grid>
-      </CardContent>
-    </Card>
-  );
+                </Box>
+                <Box mt={2}>
+                  <label htmlFor="import-psbt">
+                    <input
+                      style={{ display: "none" }}
+                      id="import-psbt"
+                      name="import-psbt"
+                      accept="application/base64"
+                      onChange={this.handleImportPSBT}
+                      type="file"
+                    />
+
+                    <Button
+                      color="primary"
+                      variant="contained"
+                      component="span"
+                      disabled={importPSBTDisabled}
+                      style={{ marginTop: "20px" }}
+                    >
+                      Import PSBT
+                    </Button>
+                    <FormHelperText error>{importPSBTError}</FormHelperText>
+                  </label>
+                </Box>
+              </Grid>
+            )}
+            {spendingStep === SPEND_STEP_PREVIEW && (
+              <Grid item md={12}>
+                <Box mt={3}>
+                  <TransactionPreview
+                    changeAddress={changeAddress}
+                    changeNode={changeNode}
+                    editTransaction={this.showCreate}
+                    fee={fee}
+                    feeRate={feeRate}
+                    inputs={inputs}
+                    inputsTotalSats={inputsTotalSats}
+                    outputs={outputs}
+                    handleSignTransaction={() => this.showSignTransaction()}
+                  />
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
+    );
+  }
 }
 
 WalletSpend.propTypes = {
@@ -315,6 +344,9 @@ WalletSpend.propTypes = {
   importPSBT: PropTypes.func.isRequired,
   selectedUTXOs: PropTypes.arrayOf(PropTypes.shape({})),
   transactionOutputs: PropTypes.arrayOf(PropTypes.shape({})),
+  addressType: PropTypes.string,
+  requiredSigners: PropTypes.number,
+  totalSigners: PropTypes.number,
 };
 
 WalletSpend.defaultProps = {
@@ -328,6 +360,9 @@ WalletSpend.defaultProps = {
   spendingStep: 0,
   selectedUTXOs: [],
   transactionOutputs: [],
+  addressType: "",
+  requiredSigners: 0,
+  totalSigners: 0,
 };
 
 function mapStateToProps(state) {
@@ -339,6 +374,9 @@ function mapStateToProps(state) {
     autoSpend: state.spend.transaction.autoSpend,
     selectedUTXOs: state.spend.transaction.selectedUTXOs,
     transactionOutputs: state.spend.transaction.transactionOutputs,
+    addressType: state.settings?.addressType,
+    requiredSigners: state.settings?.requiredSigners,
+    totalSigners: state.settings?.totalSigners,
   };
 }
 

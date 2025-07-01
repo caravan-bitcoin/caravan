@@ -79,7 +79,7 @@
     "test": "__GIT_SHA__=`git rev-parse --short HEAD` jest",
     "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` jest --watch",
     "test:ci": "CI=true jest --coverage",
-    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
+    "dev": "vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },
   "husky": {
@@ -103,6 +103,7 @@
     "@caravan/psbt": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
+    "@caravan/health": "*",
     "@emotion/react": "^11.10.6",
     "@emotion/styled": "^11.10.6",
     "@mui/icons-material": "^5.11.11",

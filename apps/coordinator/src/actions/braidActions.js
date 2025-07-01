@@ -48,11 +48,6 @@ export const fetchSliceData = async (slices) => {
 
         const { utxos, ...restOfAddressData } = addressData;
 
-        const utxosWithScriptType = utxos.map((utxo) => ({
-          ...utxo,
-          scriptType: addressType,
-        }));
-
         const updater = slice.change
           ? updateChangeSliceAction
           : updateDepositSliceAction;
@@ -60,7 +55,7 @@ export const fetchSliceData = async (slices) => {
           bip32Path: slice.bip32Path,
           addressKnown: true,
           ...restOfAddressData,
-          utxos: utxosWithScriptType,
+          utxos,
           addressStatus,
         };
         dispatch(updater(updatedSlice));
