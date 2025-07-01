@@ -44,7 +44,7 @@ export const transactionAnalyzerFixtures = {
         feeRate: "2.61",
         recommendedStrategy: FeeBumpStrategy.NONE,
         estimatedRBFFee: 453, // 327  + 1*125.25
-        estimatedCPFPFee: 70,
+        estimatedCPFPFee: 43,
         inputSequences: [4294967293],
         outputValues: [37114, 0],
       },
@@ -87,7 +87,7 @@ export const transactionAnalyzerFixtures = {
         feeRate: "3.43",
         recommendedStrategy: FeeBumpStrategy.CPFP,
         estimatedRBFFee: 623, // 482 + 1*140.5 = 622.5(minimum RBF for bumping , 1 sats/vbyte incremental fee)
-        estimatedCPFPFee: 2294,
+        estimatedCPFPFee: 2210,
         inputSequences: [4294967295],
         outputValues: [16741, 525461],
       },
