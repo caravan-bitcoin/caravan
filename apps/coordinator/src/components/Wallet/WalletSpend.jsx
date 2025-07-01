@@ -174,7 +174,7 @@ class WalletSpend extends React.Component {
       }
       const file = target.files[0];
       const fileReader = new FileReader();
-      fileReader.onload = (event) => {
+      fileReader.onload = async (event) => {
         try {
           const arrayBuffer = event.target.result;
 
@@ -182,7 +182,7 @@ class WalletSpend extends React.Component {
             // For binary PSBT, try Uint8Array first, fallback to base64 if needed
             try {
               const uint8Array = new Uint8Array(arrayBuffer);
-              importPSBT(uint8Array);
+              await importPSBT(uint8Array);
             } catch (bufferError) {
               // If direct binary fails, convert to base64
               console.warn(
@@ -195,7 +195,7 @@ class WalletSpend extends React.Component {
                 binaryString += String.fromCharCode(uint8Array[i]);
               }
               const base64String = btoa(binaryString);
-              importPSBT(base64String);
+              await importPSBT(base64String);
             }
           } else {
             // Handle text PSBT
@@ -206,10 +206,8 @@ class WalletSpend extends React.Component {
               this.setPSBTToggleAndError(false, "Invalid or empty PSBT file.");
               return;
             }
-
-            importPSBT(textContent);
+            await importPSBT(textContent);
           }
-
           this.setPSBTToggleAndError(false, "");
         } catch (e) {
           this.setPSBTToggleAndError(false, e.message);
