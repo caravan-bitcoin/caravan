@@ -38,7 +38,8 @@ export interface WasteCalculationParams {
 
 /**
  * @description From https://bitcoin.stackexchange.com/questions/113622/what-does-waste-metric-mean-in-the-context-of-coin-selection
- * Se also https://github.com/bitcoin/bitcoin/pull/22009 which implements the waste metric in Bitcoin Core.
+ * See also https://github.com/bitcoin/bitcoin/pull/22009 which implements the waste metric in Bitcoin Core.
+ * and https://github.com/bitcoin/bitcoin/blob/ae024137bda9fe189f4e7ccf26dbaffd44cbbeb6/src/wallet/coinselection.cpp#L827-L853
  *
  * The waste metric provides a heuristic per which a wallet's automated coin selection can achieve feerate sensitive coin selection.
  *
@@ -59,35 +60,38 @@ export const calculateWasteMetric = ({
   spendAmount,
 }: WasteCalculationParams) => {
   const { scriptType, requiredSigners, totalSigners } = config;
+  let waste = 0;
 
   // how much it costs to spend a coin of this script type
   const inputCost =
     calculateInputWeight(scriptType, requiredSigners, totalSigners) *
     effectiveFeeRate;
 
-  // total value of the coins selected
-  const selectedEffectiveValue = coinAmounts.reduce(
-    (acc, value) => acc + value,
-    0,
-  );
-
-  // the cost of creating change at current fee rate and spending a change output at
-  // long term fee rate
-  const changeCost = hasChange
-    ? getOutputSize(scriptType) * effectiveFeeRate +
-      inputCost * estimatedLongTermFeeRate
-    : 0;
-
-  const excess = selectedEffectiveValue - spendAmount;
-
   const inputSetWeight =
     calculateInputWeight(scriptType, requiredSigners, totalSigners) *
     coinAmounts.length;
 
-  // waste = weight * (feerate-longtermfeerate)+change+excess
-  return (
-    inputSetWeight * (effectiveFeeRate - estimatedLongTermFeeRate) +
-    changeCost +
-    excess
-  );
+  waste += inputSetWeight * (effectiveFeeRate - estimatedLongTermFeeRate);
+
+  // change cost and excess are mutually exclusive
+  if (hasChange) {
+    // the cost of creating change at current fee rate and spending a change output at
+    // long term fee rate
+    const changeCost =
+      getOutputSize(scriptType) * effectiveFeeRate +
+      inputCost * estimatedLongTermFeeRate;
+    waste += changeCost;
+  } else {
+    // When we are not making change (GetChange(…) == 0), consider the excess we are throwing away to fees
+    // total value of the coins selected
+    const selectedEffectiveValue = coinAmounts.reduce(
+      (acc, value) => acc + value,
+      0,
+    );
+    const excess = selectedEffectiveValue - spendAmount;
+    waste += excess;
+  }
+
+  // waste = weight * (feerate-longtermfeerate) + change + excess
+  return waste;
 };

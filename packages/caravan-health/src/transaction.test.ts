@@ -104,4 +104,35 @@ describe("calculateWasteMetric", () => {
       calculateWasteMetric(txWithoutChangeParams),
     );
   });
+
+  it("is more wasteful to spend a tx with change than without", () => {
+    // Why is this is the case?
+    // Because change has to be spent at a later date and so creates waste.
+    const tx1 = {
+      ...params,
+      effectiveFeeRate: lowFeeRate,
+      estimatedLongTermFeeRate: lowFeeRate,
+      hasChange: true,
+    };
+
+    const tx2 = {
+      ...tx1,
+      hasChange: false,
+    };
+
+    expect(calculateWasteMetric(tx1)).toBeGreaterThan(
+      calculateWasteMetric(tx2),
+    );
+  });
+
+  it("should should create negative waste when long term fee is greater than current and we have no change", () => {
+    const tx = {
+      ...params,
+      effectiveFeeRate: lowFeeRate,
+      estimatedLongTermFeeRate: highFeeRate,
+      hasChange: false,
+    };
+
+    expect(calculateWasteMetric(tx)).toBeLessThan(0);
+  });
 });
