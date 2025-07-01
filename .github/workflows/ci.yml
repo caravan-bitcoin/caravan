@@ -41,15 +41,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
       # changeset status cant be used until https://github.com/changesets/changesets/issues/1055 is fixed
       - name: Check if caravan-coordinator needs testing
         id: check
