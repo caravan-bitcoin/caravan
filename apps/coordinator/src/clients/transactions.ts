@@ -1,5 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { TransactionDetails } from "@caravan/clients";
 import { getPendingTransactionIds, getWalletAddresses } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
@@ -13,7 +14,10 @@ const transactionKeys = {
 };
 
 // Service function for fetching transaction details
-const fetchTransactionDetails = async (txid: string, client: any) => {
+const fetchTransactionDetails = async (
+  txid: string,
+  client: any,
+): Promise<TransactionDetails> => {
   if (!client) {
     throw new Error("No blockchain client available");
   }
