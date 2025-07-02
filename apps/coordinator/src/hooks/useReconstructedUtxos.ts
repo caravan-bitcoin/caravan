@@ -11,6 +11,7 @@ import {
   extractNeededTransactionIds,
 } from "utils/utxoReconstruction";
 import { selectPsbtInputs, selectIsRbfPsbt } from "selectors/transaction";
+import { useGetClient } from "./client";
 
 /**
  * Custom hook to reconstruct UTXOs referenced by pending transactions.
@@ -41,9 +42,10 @@ export const useReconstructedUtxos = (
     () => extractNeededTransactionIds(pendingTransactions, neededInputIds),
     [pendingTransactions, neededInputIds],
   );
+  const client = useGetClient();
 
   // Fetch all needed transactions with hex
-  const transactionQueries = useTransactionsWithHex(neededTxids);
+  const transactionQueries = useTransactionsWithHex(neededTxids, client);
 
   // Reconstruct UTXOs from fetched data
   const reconstructedUtxos = useMemo(() => {

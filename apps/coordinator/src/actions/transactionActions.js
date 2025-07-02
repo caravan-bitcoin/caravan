@@ -451,7 +451,7 @@ export function setFeeFromState(outputsTotalSats) {
 }
 
 export function importPSBT(psbtText, inputs, isRBFedPSBT) {
-  return async (dispatch, getState) => {
+  return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
 

@@ -145,12 +145,6 @@ class WalletSpend extends React.Component {
       if (!psbtText || resolvedInputs.length === 0) return;
 
       importPSBT(psbtText, resolvedInputs, isRbfPsbt);
-
-      console.log(`PSBT Import Success:
-        - Type: ${isRbfPsbt ? "RBF PSBT" : "Normal PSBT"}
-        - Inputs resolved: ${resolvedInputs.length}
-        - PSBT imported successfully
-      `);
     } catch (error) {
       console.error("PSBT import failed:", error);
       // The PSBTImportComponent will handle error display

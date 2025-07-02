@@ -2,7 +2,7 @@
  * New component that replaces the old PSBT import functionality
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch } from "react-redux";
 import {
   Box,
@@ -31,26 +31,6 @@ interface PSBTImportComponentProps {
   network: string;
   disabled?: boolean;
 }
-
-// Component to handle Redux pending transactions sync
-const ReduxPendingTransactionsSync: React.FC = () => {
-  const dispatch = useDispatch();
-  const { transactions, error } = usePendingTransactions();
-
-  useEffect(() => {
-    if (transactions) {
-      dispatch(updatePendingTransactions(transactions));
-    }
-  }, [transactions, dispatch]);
-  // Optionally log sync status
-  useEffect(() => {
-    if (error) {
-      console.error("Error syncing pending transactions:", error);
-    }
-  }, [error]);
-
-  return null; // This component doesn't render anything
-};
 
 // Component to handle PSBT inputs and import
 interface PSBTInputResolutionHandlerProps {
@@ -135,10 +115,25 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   network,
   disabled = false,
 }) => {
+  const dispatch = useDispatch();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [psbtText, setPsbtText] = useState<string>("");
   const [parsedPsbt, setParsedPsbt] = useState<any>(null);
+
+  const { transactions } = usePendingTransactions();
+  const prevRef = useRef<string>("");
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    // stringify to get a cheap “has it changed?” check else infinte renders ...
+    const next = JSON.stringify(transactions);
+    if (next !== prevRef.current) {
+      prevRef.current = next;
+      dispatch(updatePendingTransactions(transactions));
+    }
+  }, [dispatch, transactions]);
 
   // State for input resolution status
   const [inputStatus, setInputStatus] = useState({
@@ -284,9 +279,6 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
 
   return (
     <Box mt={2}>
-      {/* Redux sync component */}
-      <ReduxPendingTransactionsSync />
-
       {/* Input resolution handler */}
       {parsedPsbt && (
         <PSBTInputResolutionHandler
