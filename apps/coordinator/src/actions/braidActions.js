@@ -45,16 +45,13 @@ export const fetchSliceData = async (slices) => {
         if (!addressData || !addressData.utxos || !addressData.utxos.length)
           return;
 
-        const { utxos, ...restOfAddressData } = addressData;
-
         const updater = slice.change
           ? updateChangeSliceAction
           : updateDepositSliceAction;
         const updatedSlice = {
           bip32Path: slice.bip32Path,
           addressKnown: true,
-          ...restOfAddressData,
-          utxos,
+          ...addressData,
           addressStatus,
         };
         dispatch(updater(updatedSlice));

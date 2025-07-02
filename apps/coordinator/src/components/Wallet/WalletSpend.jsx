@@ -41,7 +41,7 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import { analyzeTransaction } from "../../hooks/useTransactionAnalysis";
+import { analyzeTransaction } from "../analysis";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -119,6 +119,13 @@ class WalletSpend extends React.Component {
     } = this.props;
     setSpendStep(SPEND_STEP_CREATE);
     finalizeOutputs(false);
+    // for auto spend view, user doesn't have direct knowledge of
+    // input nodes and change. So when going back to edit a transaction
+    // we want to clear these from the state, since these are added automatically
+    // when going from output form to transaction preview
+    // for manual spend view, we don't store which utxo is selected right now
+    // So when going back to edit a transaction we want to clear everything
+    // from the state so that there are no surprises
     resetNodesSpend();
     deleteChangeOutput();
   };

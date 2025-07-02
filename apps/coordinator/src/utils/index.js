@@ -93,7 +93,7 @@ export function isSpendAll(options) {
  * inputs and the second index is a bool representing whether a change address is needed
  */
 export function naiveCoinSelection(options) {
-  const { slices, outputs, feesPerByteInSatoshis, m, n, addressType } = options;
+  const { slices, outputs } = options;
   const { count: numInputs, balance: walletBalance } = slices.reduce(
     ({ count, balance }, slice) => {
       return {
@@ -123,80 +123,59 @@ export function naiveCoinSelection(options) {
     numInputs,
   });
 
-  if (spendAll) {
-    // Add all UTXOs from all slices
-    slices.forEach((slice) => {
-      slice.utxos.forEach((utxo) => {
-        selectedUtxos.push({
-          ...utxo,
-          scriptType: addressType,
-          multisig: slice.multisig,
-          bip32Path: slice.bip32Path,
-          change: slice.change,
-        });
+  if (spendAll) changeRequired = false;
+
+  // loop through each slice
+  for (let i = 0; i < slices.length; i += 1) {
+    const slice = slices[i];
+    const { utxos } = slice;
+    // add each utxo from the slice to the inputs array
+    for (let j = 0; j < utxos.length; j += 1) {
+      selectedUtxos.push({
+        ...utxos[j],
+        multisig: slice.multisig,
+        bip32Path: slice.bip32Path,
+        change: slice.change,
       });
-    });
-    changeRequired = false;
-    return [selectedUtxos, changeRequired];
-  } else {
-    // go through slices and add utxos until we've met the required output total
-    for (let i = 0; i < slices.length; i += 1) {
-      const slice = slices[i];
-      for (let j = 0; j < slice.utxos.length; j += 1) {
-        const utxo = slice.utxos[j];
-        // add scriptType to utxo before adding to selectedUtxos
-        const utxoWithScriptType = {
-          ...utxo,
-          scriptType: addressType,
-          multisig: slice.multisig,
-          bip32Path: slice.bip32Path,
-          change: slice.change,
-        };
-        selectedUtxos.push(utxoWithScriptType);
-        inputTotal = inputTotal.plus(utxo.amountSats);
-        // First, estimate fee assuming NO change output
-        const estimatedFeeNoChange = new BigNumber(
-          estimateMultisigTransactionFee({
-            numInputs: selectedUtxos.length,
-            numOutputs: outputs.length,
-            m,
-            n,
-            addressType,
-            feesPerByteInSatoshis,
-          }),
-        );
-        const requiredTotalNoChange = outputTotal.plus(estimatedFeeNoChange);
+    }
+    // add slice's balance to the inputs total
+    inputTotal = inputTotal.plus(slice.balanceSats);
 
-        if (inputTotal.isEqualTo(requiredTotalNoChange)) {
-          changeRequired = false;
-          return [selectedUtxos, changeRequired];
-        }
+    // we can skip the following checks if it is a spend all tx
+    if (!spendAll) {
+      // calculate fees with a change address and without
+      // to evaluate if we need to keep going or not
+      const feesWithoutChange = estimateMultisigTransactionFee({
+        ...options,
+        numInputs: selectedUtxos.length,
+        numOutputs: outputs.length,
+      });
+      const feesWithChange = estimateMultisigTransactionFee({
+        ...options,
+        numInputs: selectedUtxos.length,
+        numOutputs: outputs.length + 1,
+      });
 
-        // Otherwise, estimate fee assuming a change output
-        const estimatedFeeWithChange = new BigNumber(
-          estimateMultisigTransactionFee({
-            numInputs: selectedUtxos.length,
-            numOutputs: outputs.length + 1,
-            m,
-            n,
-            addressType,
-            feesPerByteInSatoshis,
-          }),
-        );
-        const requiredTotalWithChange = outputTotal.plus(
-          estimatedFeeWithChange,
-        );
-
-        if (inputTotal.isGreaterThan(requiredTotalWithChange)) {
-          const changeAmount = inputTotal
-            .minus(outputTotal)
-            .minus(estimatedFeeWithChange);
-          changeRequired = changeAmount.isGreaterThan(DUST_IN_SATOSHIS);
-          return [selectedUtxos, changeRequired];
-        }
+      const inputOutputDiff = inputTotal.minus(outputTotal);
+      if (
+        inputOutputDiff
+          .minus(feesWithoutChange)
+          .isLessThanOrEqualTo(DUST_IN_SATOSHIS) &&
+        inputOutputDiff.minus(feesWithoutChange).isGreaterThanOrEqualTo(0)
+      ) {
+        // if value of inputs covers outputs and fees w/o change output and
+        // has only dust left over, then no change is required and we're done
+        changeRequired = false;
+        break;
+      } else if (inputOutputDiff.isGreaterThan(feesWithChange)) {
+        // value of current inputs covers outputs and fees w/ change output
+        // so our tx is funded but needs change.
+        changeRequired = true;
+        break;
       }
+      // if inputs don't cover outputs plus change output and fees,
+      // then the loop will continue to add more inputs
     }
   }
-
   return [selectedUtxos, changeRequired];
 }

@@ -1,8 +1,9 @@
 import React from "react";
-import { Chip, Tooltip } from "@mui/material";
+import { Chip } from "@mui/material";
 import { Fingerprint, Security } from "@mui/icons-material";
 import { useSelector } from "react-redux";
-import { walletFingerprintAnalysis } from "../utils/dustUtils";
+import { walletFingerprintAnalysis } from "../utils/privacyUtils";
+import { getAddressType } from "../selectors/wallet";
 
 interface OutputFingerprintChipProps {
   outputs: Array<{
@@ -19,39 +20,33 @@ const OutputFingerprintChip: React.FC<OutputFingerprintChipProps> = ({
   label,
   sx = {},
 }) => {
-  // Pull wallet script type from settings
-  const walletScriptType = useSelector(
-    (state: any) => state.settings?.addressType || "Unknown",
-  );
+  const walletScriptType = useSelector(getAddressType);
   // Use walletFingerprintAnalysis for privacy logic
-  const analysis = walletFingerprintAnalysis(outputs, walletScriptType);
+  const analysis = walletFingerprintAnalysis(
+    outputs,
+    walletScriptType as string,
+  );
   const hasOutputFingerprinting = analysis.hasWalletFingerprinting;
-  const uniqueScriptTypes = analysis.scriptTypes;
   const primaryScriptType = walletScriptType;
-  const tooltipText = hasOutputFingerprinting
-    ? `Output fingerprinting detected! Mixed script types: ${uniqueScriptTypes.join(", ")}. This may compromise privacy.`
-    : `All outputs use ${primaryScriptType}. No output fingerprinting detected.`;
 
   return (
-    <Tooltip title={tooltipText}>
-      <Chip
-        icon={hasOutputFingerprinting ? <Fingerprint /> : <Security />}
-        label={
-          label ||
-          (hasOutputFingerprinting
-            ? "Output Fingerprinting"
-            : primaryScriptType || "Output")
-        }
-        color={hasOutputFingerprinting ? "warning" : "info"}
-        variant={hasOutputFingerprinting ? "filled" : "outlined"}
-        size="small"
-        sx={{
-          fontSize: "0.8rem",
-          height: "26px",
-          ...sx,
-        }}
-      />
-    </Tooltip>
+    <Chip
+      icon={hasOutputFingerprinting ? <Fingerprint /> : <Security />}
+      label={
+        label ||
+        (hasOutputFingerprinting
+          ? "Output Fingerprinting"
+          : primaryScriptType || "Output")
+      }
+      color={hasOutputFingerprinting ? "warning" : "info"}
+      variant={hasOutputFingerprinting ? "filled" : "outlined"}
+      size="small"
+      sx={{
+        fontSize: "0.8rem",
+        height: "26px",
+        ...sx,
+      }}
+    />
   );
 };
 

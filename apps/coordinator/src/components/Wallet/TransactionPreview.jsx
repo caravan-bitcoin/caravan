@@ -6,33 +6,23 @@ import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
-  Table,
-  TableHead,
-  TableBody,
-  TableFooter,
-  TableRow,
-  TableCell,
   Grid,
   Alert,
   AlertTitle,
   Chip,
   Typography,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
-  WarningAmber as WarningAmberIcon,
 } from "@mui/icons-material";
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
-import TransactionAnalysis from "../TransactionAnalysis";
-import ScriptTypeChip from "../ScriptTypeChip";
-import { analyzeTransaction } from "../../hooks/useTransactionAnalysis";
+import FingerprintingAnalysis from "../FingerprintingAnalysis";
 
 /**
  * Custom hook to get current signing state
@@ -185,92 +175,6 @@ class TransactionPreview extends React.Component {
     });
   }
 
-  buildOutputRows = () => {
-    const {
-      changeAddress,
-      outputs,
-      inputs,
-      feeRate,
-      addressType,
-      requiredSigners,
-      totalSigners,
-    } = this.props;
-
-    const { walletFingerprinting } = analyzeTransaction({
-      inputs: inputs || [],
-      outputs: outputs || [],
-      feeRate: feeRate || 1,
-      addressType,
-      requiredSigners,
-      totalSigners,
-    });
-
-    return outputs.map((output, idx) => {
-      const isPoisoned =
-        walletFingerprinting.hasWalletFingerprinting &&
-        walletFingerprinting.poisonedOutputIndex === idx;
-
-      return (
-        <TableRow
-          key={output.address}
-          style={isPoisoned ? { background: "#fff3e0" } : {}}
-        >
-          <TableCell>
-            <code>{output.address}</code>
-            {output.address === changeAddress && <small>&nbsp;(change)</small>}
-            {isPoisoned && (
-              <Tooltip title="This output matches your wallet's address type and is likely to be identified as change by an outside observer.">
-                <WarningAmberIcon
-                  color="warning"
-                  fontSize="small"
-                  style={{ marginLeft: 4, verticalAlign: "middle" }}
-                />
-              </Tooltip>
-            )}
-          </TableCell>
-          <TableCell>
-            <code>{BigNumber(output.amount).toFixed(8)}</code>
-          </TableCell>
-          <TableCell>
-            <ScriptTypeChip scriptType={output.scriptType} />
-          </TableCell>
-        </TableRow>
-      );
-    });
-  };
-
-  buildOutputsTable = () => {
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-            <TableCell>Script Type</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.buildOutputRows()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell>TOTAL:</TableCell>
-            <TableCell>{this.calculateOutputsTotal()}</TableCell>
-            <TableCell />
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
-
-  calculateOutputsTotal = () => {
-    const { outputs } = this.props;
-    return satoshisToBitcoins(
-      outputs.reduce(
-        (sum, output) => sum.plus(BigNumber(output.amountSats || 0)),
-        BigNumber(0),
-      ),
-    );
-  };
-
   downloadPSBT = (psbtData) => {
     downloadFile(psbtData, "transaction.psbt");
   };
@@ -284,16 +188,11 @@ class TransactionPreview extends React.Component {
       handleSignTransaction,
       unsignedPSBT,
       inputs,
-      outputs,
     } = this.props;
 
     return (
       <Box>
-        <TransactionAnalysis
-          inputs={inputs || []}
-          outputs={outputs || []}
-          feeRate={feeRate || 1}
-        />
+        <FingerprintingAnalysis />
 
         <h2>Transaction Preview</h2>
 
@@ -309,9 +208,6 @@ class TransactionPreview extends React.Component {
           showSelection={false}
           finalizedOutputs
         />
-
-        <h3>Outputs</h3>
-        {this.buildOutputsTable()}
 
         <Grid container>
           <Grid item xs={4}>

@@ -21,7 +21,6 @@ import BigNumber from "bignumber.js";
 import { externalLink } from "utils/ExternalLink";
 import Copyable from "../Copyable";
 import DustChip from "./DustChip";
-import { getFeeRate } from "../../selectors/transactionSelectors";
 
 // Actions
 import { setInputs as setInputsAction } from "../../actions/transactionActions";
@@ -187,12 +186,8 @@ class UTXOSet extends React.Component {
     const { network, showSelection, finalizedOutputs, feeRate } = this.props;
     const { localInputs } = this.state;
 
-    // Get fee rate - with improved fallback logic
-    const currentFeeRate =
-      feeRate ||
-      (typeof window !== "undefined" && window.__REDUX_STORE__
-        ? getFeeRate(window.__REDUX_STORE__.getState())
-        : 1);
+    // Use feeRate from props (Redux)
+    const currentFeeRate = feeRate;
 
     return localInputs.map((input, inputIndex) => {
       const confirmedStyle = `${styles.utxoTxid}${
@@ -313,7 +308,7 @@ UTXOSet.propTypes = {
   existingTransactionInputs: PropTypes.arrayOf(PropTypes.shape({})),
   setSpendCheckbox: PropTypes.func,
   autoSpend: PropTypes.bool.isRequired,
-  feeRate: PropTypes.string,
+  feeRate: PropTypes.number.isRequired,
 };
 
 UTXOSet.defaultProps = {
@@ -333,6 +328,10 @@ function mapStateToProps(state) {
     autoSpend: state.spend.transaction.autoSpend,
     finalizedOutputs: state.spend.transaction.finalizedOutputs,
     existingTransactionInputs: state.spend.transaction.inputs,
+    feeRate:
+      typeof state.spend.feeRate === "number"
+        ? state.spend.feeRate
+        : Number(state.spend.feeRate) || 1,
   };
 }
 

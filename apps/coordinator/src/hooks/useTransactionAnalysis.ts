@@ -1,100 +1,35 @@
-import { estimateMultisigTransactionFee } from "@caravan/bitcoin";
-import { isDustUTXO, walletFingerprintAnalysis } from "../utils/dustUtils";
+import { useSelector } from "react-redux";
+import { useMemo } from "react";
+import { analyzeTransaction } from "../components/analysis";
 
-interface UTXO {
-  txid: string;
-  index: number;
-  amountSats: number;
-  scriptType: string;
-  confirmed: boolean;
-}
-
-interface Output {
-  address: string;
-  amountSats: number;
-  scriptType: string;
-}
-
-interface TransactionAnalysisProps {
-  inputs: UTXO[];
-  outputs: Output[];
-  feeRate: number;
-  addressType: string;
-  requiredSigners: number;
-  totalSigners: number;
-}
-
-/**
- * Utility function to analyze transaction inputs and outputs for various issues
- * like dust UTXOs, wallet fingerprinting (privacy), and fee calculations.
- */
-export function analyzeTransaction({
-  inputs,
-  outputs,
-  feeRate,
-  addressType,
-  requiredSigners,
-  totalSigners,
-}: TransactionAnalysisProps) {
-  // Find inputs that are too small to spend economically
-  const problematicInputs = inputs.filter((input) =>
-    isDustUTXO(input.amountSats, input.scriptType, feeRate),
+export function useTransactionAnalysis() {
+  const inputs = useSelector(
+    (state: any) => state.spend?.transaction?.inputs || [],
+  );
+  const outputs = useSelector(
+    (state: any) => state.spend?.transaction?.outputs || [],
+  );
+  const feeRate = useSelector(
+    (state: any) => state.spend?.transaction?.feeRate || 1,
+  );
+  const addressType = useSelector((state: any) => state.settings?.addressType);
+  const requiredSigners = useSelector(
+    (state: any) => state.settings?.requiredSigners,
+  );
+  const totalSigners = useSelector(
+    (state: any) => state.settings?.totalSigners,
   );
 
-  // Check outputs for dust as well
-  const dustyOutputs = outputs.filter((output) =>
-    isDustUTXO(output.amountSats, output.scriptType, feeRate),
+  return useMemo(
+    () =>
+      analyzeTransaction({
+        inputs,
+        outputs,
+        feeRate,
+        addressType,
+        requiredSigners,
+        totalSigners,
+      }),
+    [inputs, outputs, feeRate, addressType, requiredSigners, totalSigners],
   );
-
-  // Wallet fingerprinting privacy analysis
-  const walletFingerprinting = walletFingerprintAnalysis(
-    outputs.map((output) => ({ ...output, amount: output.amountSats })),
-    addressType,
-  );
-
-  // Use @caravan/bitcoin for fee and size estimation
-  const inputTotal = inputs.reduce(
-    (total, input) => total + input.amountSats,
-    0,
-  );
-  const outputTotal = outputs.reduce(
-    (total, output) => total + output.amountSats,
-    0,
-  );
-  const calculatedFee = inputTotal - outputTotal;
-
-  const estimatedFee = estimateMultisigTransactionFee({
-    addressType,
-    numInputs: inputs.length,
-    numOutputs: outputs.length,
-    m: requiredSigners,
-    n: totalSigners,
-    feesPerByteInSatoshis: feeRate,
-  });
-
-  return {
-    // Dust-related analysis
-    dust: {
-      inputs: problematicInputs,
-      outputs: dustyOutputs,
-      inputCount: problematicInputs.length,
-      outputCount: dustyOutputs.length,
-      hasDustInputs: problematicInputs.length > 0,
-      hasDustOutputs: dustyOutputs.length > 0,
-    },
-
-    // Wallet fingerprinting privacy analysis
-    walletFingerprinting,
-
-    // Transaction overview
-    summary: {
-      inputCount: inputs.length,
-      outputCount: outputs.length,
-      totalInputValue: inputTotal,
-      totalOutputValue: outputTotal,
-      totalFee: calculatedFee,
-      estimatedFee,
-      requestedFeeRate: feeRate,
-    },
-  };
 }
