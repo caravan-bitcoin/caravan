@@ -3,11 +3,11 @@ import {
   estimateMultisigTransactionFee,
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
-import { getSpendableSlices, getConfirmedBalance } from "selectors/wallet";
+import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
-} from "selectors/transaction";
+} from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -15,8 +15,8 @@ import {
   setSignatureImporterComplete,
 } from "./signatureImporterActions";
 
-import { DUST_IN_BTC } from "utils/constants";
-import { loadPsbt } from "utils/psbtUtils";
+import { DUST_IN_BTC } from "../utils/constants";
+import { loadPsbt } from "../utils/psbtUtils";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
