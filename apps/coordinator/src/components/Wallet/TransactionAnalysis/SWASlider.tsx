@@ -21,13 +21,13 @@ export const SWASlider = () => {
   const walletConfig = useSelector(getWalletConfig);
 
   const getFeeLevelInfo = (feeRate: number) => {
-    if (feeRate <= 100) {
+    if (feeRate <= 10) {
       return { label: "Very Low Fees", className: "fee-level-very-low" };
-    } else if (feeRate <= 200) {
+    } else if (feeRate <= 50) {
       return { label: "Low Fees", className: "fee-level-low" };
-    } else if (feeRate <= 300) {
+    } else if (feeRate <= 100) {
       return { label: "Medium Fees", className: "fee-level-medium" };
-    } else if (feeRate <= 400) {
+    } else if (feeRate <= 200) {
       return { label: "High Fees", className: "fee-level-high" };
     } else {
       return { label: "Very High Fees", className: "fee-level-very-high" };
