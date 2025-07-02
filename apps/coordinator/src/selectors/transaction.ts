@@ -10,11 +10,11 @@ import {
   SignatureInfo,
   SignatureSet,
   SignerIdentity,
-} from "utils/psbtUtils";
+} from "../utils/psbtUtils";
 import {
   createInputIdentifier,
   convertTxidToLittleEndian,
-} from "utils/transactionCalculations";
+} from "../utils/transactionCalculations";
 
 /**
  * Maps extracted signature sets to Caravan's signature importer format.
