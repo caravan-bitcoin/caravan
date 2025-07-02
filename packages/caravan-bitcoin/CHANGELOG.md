@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- [#318](https://github.com/caravan-bitcoin/caravan/pull/318) [`8d22ab5`](https://github.com/caravan-bitcoin/caravan/commit/8d22ab5178b1b731858b2fd08683e7d3a1b0aa44) Thanks [@bucko13](https://github.com/bucko13)! - fixes miscalculations and edge cases around tx and input size calcuations. also exposes a new utility for providing weight of a input for a given script type.
+
 ## 0.3.4
 
 ### Patch Changes

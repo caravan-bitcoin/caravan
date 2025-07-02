@@ -36,64 +36,35 @@ jobs:
   check-coordinator:
     runs-on: ubuntu-latest
     outputs:
-      will-update: ${{ steps.check.outputs.will-update }}
+      will-test: ${{ steps.check.outputs.will-test }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # workaround for https://github.com/changesets/changesets/issues/1055
-      - name: Checkout default branch
-        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.event.repository.default_branch }} && git checkout --progress --force ${{ github.event.repository.default_branch }}
-
-      - name: Checkout current branch
-        run: git -c protocol.version=2 fetch --no-tags --prune --depth 10000 --no-recurse-submodules origin +${{ github.sha }}:${{ github.ref }} && git checkout --progress --force ${{ github.sha }}
-      
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Check if caravan-coordinator will be updated
+      # changeset status cant be used until https://github.com/changesets/changesets/issues/1055 is fixed
+      - name: Check if caravan-coordinator needs testing
         id: check
         run: |
-          # Run changeset status to get pending releases
-          npx changeset status --output=changeset-status.json
-          
-          # Check if caravan-coordinator is in the releases array
-          if [ -f changeset-status.json ]; then
-            if jq -e '.releases[] | select(.name == "caravan-coordinator")' changeset-status.json > /dev/null 2>&1; then
-              echo "will-update=true" >> $GITHUB_OUTPUT
-              echo "✅ caravan-coordinator will be updated"
-            else
-              echo "will-update=false" >> $GITHUB_OUTPUT
-              echo "❌ caravan-coordinator will not be updated"
-            fi
+          # Check if caravan-coordinator is in the changesets
+          if grep -h '^"caravan-coordinator":' .changeset/*.md; then
+            echo "will-test=true" >> $GITHUB_OUTPUT
+            echo "✅ caravan-coordinator will be tested"
           else
-            echo "will-update=false" >> $GITHUB_OUTPUT
-            echo "❌ No changeset status file found"
+            echo "will-test=false" >> $GITHUB_OUTPUT
+            echo "❌ caravan-coordinator will not be tested"
           fi
     
   docker:
     name: Test Docker image build
     needs: check-coordinator
     runs-on: ubuntu-latest
-    if: needs.check-coordinator.outputs.will-update == 'true'
+    if: needs.check-coordinator.outputs.will-test == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
       
       - name: Test Docker image build
         uses: docker/build-push-action@v5
