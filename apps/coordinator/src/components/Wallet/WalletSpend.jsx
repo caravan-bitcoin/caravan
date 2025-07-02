@@ -41,7 +41,7 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import PSBTImportComponent from "./PSBTImportComponent";
+import { PSBTImportComponent } from "./PSBTImportComponent";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -142,7 +142,6 @@ class WalletSpend extends React.Component {
     const { importPSBT } = this.props;
 
     try {
-      // This is the exact pattern you requested!
       if (!psbtText || resolvedInputs.length === 0) return;
 
       importPSBT(psbtText, resolvedInputs, isRbfPsbt);
