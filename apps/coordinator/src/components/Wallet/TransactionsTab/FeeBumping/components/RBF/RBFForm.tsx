@@ -21,12 +21,7 @@ import { InfoOutlined } from "@mui/icons-material";
 import { FeePriority } from "../../types";
 import { formatFee } from "../../utils";
 import {
-  useFeeBumpRecommendation,
-  useSelectedFeeRate,
-  useSelectedFeePriority,
-  useRbfType,
-  useCancelAddress,
-  useChangeAddress,
+  useFeeBumpState,
   useMinimumFeeRate,
   useEstimatedNewFee,
   useFeeDifference,
@@ -96,12 +91,14 @@ export const RBFForm: React.FC<RBFFormProps> = ({
   const dispatch = useFeeBumpDispatch();
 
   // Get all state from Context - no more props!
-  const recommendation = useFeeBumpRecommendation();
-  const selectedFeeRate = useSelectedFeeRate();
-  const selectedPriority = useSelectedFeePriority();
-  const rbfType = useRbfType();
-  const cancelAddress = useCancelAddress();
-  const changeAddress = useChangeAddress();
+  const {
+    recommendation,
+    selectedFeeRate,
+    selectedPriority,
+    rbfType,
+    cancelAddress,
+    changeAddress,
+  } = useFeeBumpState();
   const minimumFeeRate = useMinimumFeeRate();
   const estimatedNewFee = useEstimatedNewFee();
   const feeDifference = useFeeDifference();

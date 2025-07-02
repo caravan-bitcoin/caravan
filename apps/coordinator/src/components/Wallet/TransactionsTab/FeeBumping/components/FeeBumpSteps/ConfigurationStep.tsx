@@ -2,7 +2,7 @@ import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "../RBF/RBFForm";
-import { useSelectedFeeBumpStrategy } from "../../context";
+import { useFeeBumpState } from "../../context";
 import { Transaction } from "../../../types";
 
 interface ConfigurationStepProps {
@@ -27,7 +27,7 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onSubmit,
   isCreating,
 }) => {
-  const selectedStrategy = useSelectedFeeBumpStrategy();
+  const { selectedStrategy } = useFeeBumpState();
 
   // Calculate original fee rate helper function
   const calculateOriginalFeeRate = (): number => {

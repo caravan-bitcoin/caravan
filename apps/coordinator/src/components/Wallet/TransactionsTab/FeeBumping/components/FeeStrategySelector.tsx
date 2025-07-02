@@ -19,8 +19,7 @@ import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { formatFee } from "../utils";
 import {
-  useFeeBumpRecommendation,
-  useSelectedFeeBumpStrategy,
+  useFeeBumpState,
   useFeeBumpDispatch,
   setFeeBumpStrategy,
 } from "../context";
@@ -34,8 +33,7 @@ import {
  */
 export const FeeStrategySelector: React.FC = () => {
   const dispatch = useFeeBumpDispatch();
-  const recommendation = useFeeBumpRecommendation();
-  const selectedStrategy = useSelectedFeeBumpStrategy();
+  const { recommendation, selectedStrategy } = useFeeBumpState();
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setFeeBumpStrategy(event.target.value as FeeBumpStrategy));
   };

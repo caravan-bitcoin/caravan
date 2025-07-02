@@ -10,11 +10,7 @@ import {
 import { TransactionComparison } from "../TransactionComparison";
 import { FeeBumpStatus } from "../../types";
 import { Transaction } from "../../../types";
-import {
-  useFeeBumpStatus,
-  useFeeBumpError,
-  useFeeBumpResult,
-} from "../../context";
+import { useFeeBumpState } from "../../context";
 
 interface ReviewStepProps {
   transaction: Transaction;
@@ -35,10 +31,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   onDownloadPSBT,
   downloadClicked,
 }) => {
-  const status = useFeeBumpStatus();
-  const error = useFeeBumpError();
-  const result = useFeeBumpResult();
-
+  const { status, error, result } = useFeeBumpState();
   return (
     <Box>
       {/* Show loading indicator while transaction is being created */}

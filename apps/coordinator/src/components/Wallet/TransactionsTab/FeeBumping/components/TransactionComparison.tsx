@@ -21,7 +21,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { FeeBumpResult } from "../types";
 import { formatFee } from "../utils";
-import { useFeeBumpTransaction, useFeeBumpResult } from "../context";
+import { useFeeBumpState } from "../context";
 
 interface TransactionComparisonProps {
   originalTx?: any; // Made optional since we can get from Redux
@@ -44,9 +44,8 @@ export const TransactionComparison: React.FC<TransactionComparisonProps> = ({
   result: propResult,
 }) => {
   // Get state from Context if not provided as props (for backward compatibility)
-  const reduxOriginalTx = useFeeBumpTransaction();
-  const reduxResult = useFeeBumpResult();
-
+  const { transaction: reduxOriginalTx, result: reduxResult } =
+    useFeeBumpState();
   // Use props if provided, otherwise fall back to Redux state
   const originalTx = propOriginalTx || reduxOriginalTx;
   const result = propResult || reduxResult;

@@ -24,11 +24,7 @@ import { useRBF } from "../hooks/useRBF";
 import { FeeBumpStatus, FeePriority } from "../types";
 import { downloadFile } from "../../../../../utils";
 import {
-  useFeeBumpStatus,
-  useFeeBumpRecommendation,
-  useSelectedFeeBumpStrategy,
-  useFeeBumpResult,
-  usePsbtVersion,
+  useFeeBumpState,
   useFeeBumpDispatch,
   setPsbtVersion,
 } from "../context";
@@ -79,12 +75,13 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   const [showPSBTVersionDialog, setShowPSBTVersionDialog] = useState(false);
 
   // Get state from Redux instead of props
-  const status = useFeeBumpStatus();
-  const recommendation = useFeeBumpRecommendation();
-  const selectedStrategy = useSelectedFeeBumpStrategy();
-  const result = useFeeBumpResult();
-  const selectedPsbtVersion = usePsbtVersion();
-
+  const {
+    status,
+    recommendation,
+    selectedStrategy,
+    result,
+    psbtVersion: selectedPsbtVersion,
+  } = useFeeBumpState();
   // Get hooks - no state management in hooks now ...
   const { setTransactionForBumping, reset } = useFeeBumping();
   const { createFeeBumpedTransaction, isCreating: isCreatingRBF } = useRBF();

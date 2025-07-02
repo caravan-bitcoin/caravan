@@ -8,11 +8,7 @@ import {
 } from "@mui/material";
 import { FeeStrategySelector } from "../FeeStrategySelector";
 import { FeeBumpStatus } from "../../types";
-import {
-  useFeeBumpStatus,
-  useFeeBumpRecommendation,
-  useFeeBumpError,
-} from "../../context";
+import { useFeeBumpState } from "../../context";
 
 /**
  * Step 1: Strategy Selection
@@ -22,9 +18,7 @@ import {
  * FeeStrategySelector once analysis is complete.
  */
 export const StrategySelectionStep: React.FC = () => {
-  const recommendation = useFeeBumpRecommendation();
-  const status = useFeeBumpStatus();
-  const error = useFeeBumpError();
+  const { recommendation, status, error } = useFeeBumpState();
   // If we have a recommendation, show the strategy selector
   if (recommendation) {
     return <FeeStrategySelector />;
