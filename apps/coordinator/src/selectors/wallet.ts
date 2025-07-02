@@ -510,3 +510,13 @@ export const getAllSlices = createSelector(
     ...Object.values(changeNodes),
   ],
 );
+
+export const selectWalletConfig = createSelector(
+  (state: WalletState) => state.settings,
+  (settings) => ({
+    network: settings.network,
+    addressType: settings.addressType,
+    requiredSigners: settings.requiredSigners,
+    totalSigners: settings.totalSigners,
+  }),
+);

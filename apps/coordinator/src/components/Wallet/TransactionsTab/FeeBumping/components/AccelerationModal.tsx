@@ -16,18 +16,17 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  AlertTitle,
+  Alert,
+  Collapse,
 } from "@mui/material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
-import { useFeeBumping } from "../hooks/useFeeBumping";
-import { useRBF } from "../hooks/useRBF";
+
 import { FeeBumpStatus, FeePriority } from "../types";
 import { downloadFile } from "../../../../../utils";
-import {
-  useFeeBumpState,
-  useFeeBumpDispatch,
-  setPsbtVersion,
-} from "../context";
+import { useFeeBumpState, useFeeBumpContext } from "../context";
 import { Transaction } from "../../types";
 import {
   StrategySelectionStep,
@@ -65,7 +64,22 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   transaction,
   txHex,
 }) => {
-  const feeBumpDispatch = useFeeBumpDispatch();
+  // Get state from Redux instead of props
+  const {
+    status,
+    recommendation,
+    selectedStrategy,
+    error,
+    result,
+    psbtVersion: selectedPsbtVersion,
+  } = useFeeBumpState();
+  const {
+    setTransactionForBumping,
+    reset,
+    createFeeBumpedTransaction,
+    setPsbtVersion,
+    isCreatingRBF,
+  } = useFeeBumpContext();
 
   // Track the current step in the wizard
   const [activeStep, setActiveStep] = useState(0);
@@ -73,18 +87,8 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   // Track whether the PSBT has been downloaded
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showPSBTVersionDialog, setShowPSBTVersionDialog] = useState(false);
-
-  // Get state from Redux instead of props
-  const {
-    status,
-    recommendation,
-    selectedStrategy,
-    result,
-    psbtVersion: selectedPsbtVersion,
-  } = useFeeBumpState();
-  // Get hooks - no state management in hooks now ...
-  const { setTransactionForBumping, reset } = useFeeBumping();
-  const { createFeeBumpedTransaction, isCreating: isCreatingRBF } = useRBF();
+  //  Error display state
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   // Handle step navigation ( Memoizing step changes to prevent re-renders)
   const handleNext = useCallback(() => {
@@ -101,9 +105,15 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     cancelAddress?: string;
     changeAddress?: string;
   }) => {
-    // Create the fee-bumped transaction with the specified options
-    await createFeeBumpedTransaction(options);
-    handleNext(); // Move to the next step when done
+    try {
+      // Create the fee-bumped transaction with the specified options
+      await createFeeBumpedTransaction(options);
+      handleNext(); // Move to the next step when done
+    } catch (err) {
+      // Error is already handled by the context and stored in state.error
+      console.error("Error creating fee-bumped transaction:", err);
+      // Error will be displayed in the UI automatically
+    }
   };
 
   // Handle PSBT download
@@ -208,13 +218,14 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
 
   const buttonStates = useMemo(() => {
     const isCreating = isCreatingRBF || status === FeeBumpStatus.CREATING;
-
+    const hasError = status === FeeBumpStatus.ERROR;
     return {
       backDisabled: activeStep === 0 || isCreating,
       nextDisabled:
         !recommendation ||
         status !== FeeBumpStatus.READY ||
-        selectedStrategy === FeeBumpStrategy.NONE,
+        selectedStrategy === FeeBumpStrategy.NONE ||
+        hasError,
       showNext: activeStep === 0,
       showClose: activeStep === stepConfigs.length - 1,
     };
@@ -237,6 +248,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         if (isMounted) {
           setActiveStep(0);
           setDownloadClicked(false);
+          setShowErrorDetails(false);
         }
       }
     }
@@ -281,6 +293,54 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       <Divider />
 
       <DialogContent>
+        {error && (
+          <Alert
+            severity="error"
+            sx={{ mb: 3 }}
+            action={
+              <IconButton
+                aria-label="toggle error details"
+                size="small"
+                onClick={() => setShowErrorDetails(!showErrorDetails)}
+              >
+                {showErrorDetails ? <ExpandLess /> : <ExpandMore />}
+              </IconButton>
+            }
+          >
+            <AlertTitle>Error Processing Transaction</AlertTitle>
+            {error}
+
+            <Collapse in={showErrorDetails}>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  If this error persists, please:
+                </Typography>
+                <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <Typography variant="body2" color="text.secondary">
+                      Check your internet connection and try again
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2" color="text.secondary">
+                      Ensure the transaction is still unconfirmed
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2" color="text.secondary">
+                      Verify you have sufficient UTXOs for fee bumping
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2" color="text.secondary">
+                      Contact support if the issue continues
+                    </Typography>
+                  </li>
+                </ul>
+              </Box>
+            </Collapse>
+          </Alert>
+        )}
         {/* Stepper to show current progress in the wizard */}
         <Stepper activeStep={activeStep} sx={{ pt: 2, pb: 4 }}>
           {stepConfigs.map(({ label }) => (
@@ -307,7 +367,19 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
         </Button>
 
         <Box sx={{ flex: "1 1 auto" }} />
-
+        {error && activeStep > 0 && (
+          <Button
+            color="secondary"
+            variant="outlined"
+            onClick={() => {
+              // Reset to previous step to retry
+              setActiveStep(Math.max(0, activeStep - 1));
+            }}
+            sx={{ mr: 1 }}
+          >
+            Retry
+          </Button>
+        )}
         {/* Next button (only on first step) */}
         {activeStep === 0 && (
           <Button
@@ -338,9 +410,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
           <FormControl component="fieldset" sx={{ mt: 1 }}>
             <RadioGroup
               value={selectedPsbtVersion}
-              onChange={(e) =>
-                feeBumpDispatch(setPsbtVersion(e.target.value as "v2" | "v0"))
-              }
+              onChange={(e) => setPsbtVersion(e.target.value as "v2" | "v0")}
             >
               <FormControlLabel
                 value="v2"

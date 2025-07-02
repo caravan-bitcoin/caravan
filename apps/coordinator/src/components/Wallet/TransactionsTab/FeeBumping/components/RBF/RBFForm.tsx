@@ -22,16 +22,13 @@ import { FeePriority } from "../../types";
 import { formatFee } from "../../utils";
 import {
   useFeeBumpState,
-  useMinimumFeeRate,
-  useEstimatedNewFee,
-  useFeeDifference,
-  useIsRbfFormValid,
+  useFeeBumpContext,
   useFeeBumpDispatch,
   setRbfType,
+  setFeeBumpPriority,
+  setFeeBumpRate,
   setCancelAddress,
   setChangeAddress,
-  setFeeBumpRate,
-  setFeeBumpPriority,
 } from "../../context";
 
 export type RbfType = "accelerate" | "cancel";
@@ -99,10 +96,12 @@ export const RBFForm: React.FC<RBFFormProps> = ({
     cancelAddress,
     changeAddress,
   } = useFeeBumpState();
-  const minimumFeeRate = useMinimumFeeRate();
-  const estimatedNewFee = useEstimatedNewFee();
-  const feeDifference = useFeeDifference();
-  const isFormValid = useIsRbfFormValid();
+  const {
+    minimumFeeRate,
+    estimatedNewFee,
+    feeDifference,
+    isRbfFormValid: isFormValid,
+  } = useFeeBumpContext();
 
   // Local state for fee level selection (UI state only)
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
