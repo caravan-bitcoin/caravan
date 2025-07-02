@@ -18,11 +18,7 @@ import {
 } from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "utils/constants";
-import {
-  loadPsbt,
-  matchPsbtInputsToUtxos,
-  reconstructUtxosFromPendingTransactions,
-} from "utils/psbtUtils";
+import { loadPsbt, matchPsbtInputsToUtxos } from "utils/psbtUtils";
 import { createInputIdentifier } from "utils/transactionCalculations";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";

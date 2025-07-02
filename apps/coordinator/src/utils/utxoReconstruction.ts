@@ -1,7 +1,7 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
 import { createInputIdentifier } from "./transactionCalculations";
-import { Slice } from "./psbtUtils";
+import { Slice } from "selectors/wallet";
 
 /**
  * # PURPOSE OF THIS FILE
@@ -63,30 +63,25 @@ export function extractNeededTransactionIds(
   neededInputIds: Set<string>,
 ): string[] {
   // Set used to track unique txids of interest
-  const txidsSet = new Set<string>();
+  const txidSet = new Set<string>(
+    pendingTransactions.flatMap((tx) => {
+      if (!Array.isArray(tx.vin)) return [];
 
-  for (const pendingTx of pendingTransactions) {
-    // Defensive: Skip transactions without a valid 'vin' field
-    if (!Array.isArray(pendingTx.vin)) continue;
+      return (
+        tx.vin
+          // we only keep entries with both txid & vout
+          .filter((input) => !!input.txid && input.vout !== undefined)
+          // we only keep those tx's whose "txid:vout" is in the needed set
+          .filter((input) =>
+            neededInputIds.has(createInputIdentifier(input.txid!, input.vout!)),
+          )
+          .map((input) => input.txid!)
+      );
+    }),
+  );
 
-    for (const input of pendingTx.vin) {
-      // Ensure input is well-formed
-      if (input.txid && input.vout !== undefined) {
-        // Create a unique input identifier: "txid:vout"
-        const inputId = createInputIdentifier(input.txid, input.vout);
-
-        // If this input is one we're interested in, add its txid to the result set
-        if (neededInputIds.has(inputId)) {
-          txidsSet.add(input.txid);
-        }
-      }
-    }
-  }
-
-  // Convert the Set to an array before returning
-  return Array.from(txidsSet);
+  return Array.from(txidSet);
 }
-
 /**
  * Utility function that reconstructs a single UTXO from transaction data.
  *
@@ -207,7 +202,7 @@ export function reconstructUtxosFromPendingTransactions(
       // Only include valid reconstructions
       if (utxo) {
         (utxo as any)._pendingTxid = pendingTx.txid;
-        reconstructedUtxos.push(utxo);
+        reconstructedUtxos.push(utxo as unknown as ReconstructedUtxos);
       }
     }
   }

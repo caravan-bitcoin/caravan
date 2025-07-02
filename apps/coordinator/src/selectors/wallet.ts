@@ -1,3 +1,4 @@
+import { TransactionDetails } from "@caravan/clients";
 import { createSelector } from "reselect";
 
 // Type definitions for the Redux state
@@ -8,7 +9,7 @@ interface UTXO {
   txid?: string;
 }
 
-interface Slice {
+export interface Slice {
   utxos: UTXO[];
   addressUsed: boolean;
   addressKnown: boolean;
@@ -20,6 +21,7 @@ interface Slice {
   multisig: {
     address: string;
   };
+  bip32Path?: string;
   lastUsed?: string;
   lastUsedTime?: number;
 }
@@ -37,7 +39,7 @@ interface LedgerPolicyHmac {
   policyHmac: string;
 }
 
-interface WalletState {
+export interface WalletState {
   wallet: {
     deposits: {
       nodes: Record<string, Slice>;
@@ -49,6 +51,7 @@ interface WalletState {
       walletName: string;
       walletUuid: string;
       ledgerPolicyHmacs: LedgerPolicyHmac[];
+      pendingTransactions: TransactionDetails[];
     };
   };
   settings: {
@@ -215,7 +218,7 @@ export const getConfirmedBalance = createSelector(
     totalBalance - pendingBalance,
 );
 
-interface SliceWithLastUsed extends Slice {
+export interface SliceWithLastUsed extends Slice {
   lastUsed?: string;
   lastUsedTime?: number;
 }

@@ -1,4 +1,5 @@
 import { networkData, Network } from "@caravan/bitcoin";
+import { SliceWithLastUsed } from "selectors/wallet";
 import {
   getPsbtVersionNumber,
   PsbtV2,
@@ -172,7 +173,7 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
  */
 export function matchPsbtInputsToUtxos(
   inputIdentifiers: Set<string>,
-  spendableSlices: Slice[],
+  spendableSlices: SliceWithLastUsed[],
   reconstructedUtxos: ReconstructedUtxos[] = [],
 ) {
   const matchedInputs: Input[] = [];
@@ -188,7 +189,7 @@ export function matchPsbtInputsToUtxos(
   //
   //
   spendableSlices.forEach((slice) => {
-    Object.entries(slice.utxos || {}).forEach(([, utxo]) => {
+    Object.entries(slice || {}).forEach(([, utxo]) => {
       const utxoIdentifier = createInputIdentifier(utxo.txid, utxo.index);
       if (inputIdentifiers.has(utxoIdentifier)) {
         const input: Input = {

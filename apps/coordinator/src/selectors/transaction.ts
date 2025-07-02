@@ -2,7 +2,7 @@ import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
 import { multisigPublicKeys } from "@caravan/bitcoin";
-import { getSpendableSlices, getAllSlices } from "./wallet";
+import { getSpendableSlices, getAllSlices, WalletState } from "./wallet";
 import {
   UTXO,
   Input,
@@ -126,30 +126,46 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
 // ====================
 
 /**
- * Processes inputs from PSBT and matches them with wallet UTXOs.
+ * Get pending transactions from Redux state
  */
-export const selectInputsFromPSBT = createSelector(
-  // Need the state param as createSelector expects two args
-  [getSpendableSlices, (state: any, psbt: Psbt) => psbt],
-  (slices: any, psbt: Psbt) => {
-    const inputIdentifiers = new Set(
+export const getPendingTransactions = (state: WalletState) =>
+  state.wallet.common.pendingTransactions || [];
+
+/**
+ * Extract input identifiers from PSBT
+ */
+export const selectPsbtInputIdentifiers = createSelector(
+  [(state: any, psbt: Psbt) => psbt],
+  (psbt: Psbt) => {
+    return new Set(
       psbt.txInputs.map((input) =>
-        /*
-         * All input TXIDs are expected to be in **big-endian**
-         * format (human-readable format). Which we get from block explorers, wallets, APIs
-         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
-         * internal data structures and processing so here we convert the txid to little-endian format
-         */
         createInputIdentifier(
+          /*
+           * All input TXIDs are expected to be in **big-endian**
+           * format (human-readable format). Which we get from block explorers, wallets, APIs
+           * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
+           * internal data structures and processing so here we convert the txid to little-endian format
+           */
           convertTxidToLittleEndian(input.hash),
           input.index,
         ),
       ),
     );
+  },
+);
 
-    const inputs: Input[] = [];
+/**
+ * Selector for "available inputs" from the unspent store
+ * This is the first strategy - normal PSBT case where we get all the inputs we have in our wallet
+ */
+export const selectAvailableInputs = createSelector(
+  // Need the state param as createSelector expects two args
+  [getSpendableSlices, selectPsbtInputIdentifiers],
+  (slices: any[], inputIdentifiers: Set<string>) => {
+    const availableInputs: Input[] = [];
+
     slices.forEach((slice: Slice & { utxos: UTXO }) => {
-      Object.entries(slice.utxos).forEach(([, utxo]) => {
+      Object.entries(slice.utxos || {}).forEach(([, utxo]) => {
         const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
         if (inputIdentifiers.has(inputIdentifier)) {
           const input = {
@@ -158,20 +174,82 @@ export const selectInputsFromPSBT = createSelector(
             bip32Path: slice.bip32Path,
             change: slice.change,
           };
-          inputs.push(input);
+          availableInputs.push(input);
         }
       });
     });
 
-    return inputs;
+    return availableInputs;
   },
 );
+
+/**
+ * Selector to find inputs from pending transactions
+ * This provides the inputs needed for useReconstructedUtxos hook to reconstruct UTXO
+ */
+export const selectInputsFromPendingTransactions = createSelector(
+  [
+    getPendingTransactions,
+    getAllSlices,
+    selectPsbtInputIdentifiers,
+    selectAvailableInputs,
+  ],
+  (pendingTransactions, allSlices, inputIdentifiers, availableInputs) => {
+    // Calculate which input IDs are missing from available inputs
+    const foundInputIds = new Set(
+      availableInputs.map((input) =>
+        createInputIdentifier(input.txid, input.index),
+      ),
+    );
+
+    const neededInputIds = new Set(
+      Array.from(inputIdentifiers).filter((id) => !foundInputIds.has(id)),
+    );
+    return {
+      pendingTransactions,
+      allSlices,
+      neededInputIds,
+      hasNeededInputs: neededInputIds.size > 0,
+    };
+  },
+);
+
+/**
+ * Selector that combines available inputs with pending inputs for reconstruction
+ * This gives us everything needed for importing both a normal PSBT and RBFed PSBT
+ */
+export const selectPsbtInputs = createSelector(
+  [
+    selectAvailableInputs,
+    selectInputsFromPendingTransactions,
+    selectPsbtInputIdentifiers,
+    getSpendableSlices,
+  ],
+  (availableInputs, pendingInputs, inputIdentifiers, spendableSlices) => {
+    return {
+      availableInputs,
+      pendingInputs,
+      inputIdentifiers,
+      spendableSlices,
+      isRbfPsbt: availableInputs.length < Array.from(inputIdentifiers).length,
+    };
+  },
+);
+
+export const selectIsRbfPsbt = createSelector(
+  [selectAvailableInputs, selectPsbtInputIdentifiers],
+  (availableInputs: Input[], inputIdentifiers: Set<string>) => {
+    return availableInputs.length < inputIdentifiers.size;
+  },
+);
+
+// Signature related selectors
 
 /**
  * Selector to extract signatures from PSBT
  */
 export const selectSignaturesFromPSBT = createSelector(
-  [selectInputsFromPSBT, (state: any, psbt: Psbt) => psbt],
+  [selectAvailableInputs, (state: WalletState, psbt: Psbt) => psbt],
   (inputs, psbt) => extractSignaturesFromPSBT(psbt, inputs),
 );
 
@@ -181,35 +259,6 @@ export const selectSignaturesFromPSBT = createSelector(
 export const selectSignaturesForImporters = createSelector(
   [selectSignaturesFromPSBT],
   (signatureSets) => mapSignaturesToImporters(signatureSets),
-);
-
-/**
- * Selector for RBFed PSBTs
- */
-export const selectPsbtInputContext = createSelector(
-  [
-    getSpendableSlices,
-    getAllSlices,
-    (state) => state.client.blockchainClient,
-    (state, psbt) => psbt,
-  ],
-  (spendableSlices, allSlices, blockchainClient, psbt) => {
-    // Return context object that actions can use
-    return {
-      spendableSlices,
-      allSlices,
-      blockchainClient,
-      psbt,
-      inputIdentifiers: new Set(
-        psbt.txInputs.map((input: any) =>
-          createInputIdentifier(
-            convertTxidToLittleEndian(input.hash),
-            input.index,
-          ),
-        ),
-      ),
-    };
-  },
 );
 
 // ====================
