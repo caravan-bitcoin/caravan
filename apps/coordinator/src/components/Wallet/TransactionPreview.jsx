@@ -1,10 +1,11 @@
-// src/components/TransactionPreview/TransactionPreview.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import BigNumber from "bignumber.js";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
+  Button,
+  Box,
   Table,
   TableHead,
   TableBody,
@@ -12,59 +13,233 @@ import {
   TableRow,
   TableCell,
   Grid,
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Chip,
   Alert,
   AlertTitle,
+  Chip,
+  Typography,
+  Paper,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
 } from "@mui/icons-material";
-import UnsignedTransaction from "../UnsignedTransaction";
-import { TransactionAnalysis } from "./TransactionAnalysis";
 import { downloadFile } from "../../utils";
+import UnsignedTransaction from "../UnsignedTransaction";
+import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import { TransactionAnalysis } from "./TransactionAnalysis";
 
-class TransactionPreview extends React.Component {
-  // Group UTXOs by address
-  mapAddresses() {
-    const { inputs } = this.props;
-    return inputs.reduce((mapped, input) => {
-      const addr = input.multisig.address;
-      if (!mapped[addr]) {
-        mapped[addr] = { amount: new BigNumber(0), utxos: [] };
-      }
-      mapped[addr].utxos.push(input);
-      mapped[addr].amount = mapped[addr].amount.plus(
-        new BigNumber(input.amountSats || 0),
-      );
-      return mapped;
-    }, {});
+/**
+ * Custom hook to get current signing state
+ * @returns {Object} { signedCount, requiredSigners, isFullySigned, hasPartialSignatures, needsSignatures }
+ */
+export const useSigningState = () => {
+  // Get signature data from Redux store
+  const signatureImporters = useSelector(
+    (state) => state.spend.signatureImporters,
+  );
+  const requiredSigners = useSelector(
+    (state) => state.settings.requiredSigners,
+  );
+
+  /**
+   * Calculate current signature status
+   * Only recalculates when signatureImporters or requiredSigners change
+   */
+  const signingState = useMemo(() => {
+    if (!signatureImporters) {
+      return {
+        signedCount: 0,
+        requiredSigners: requiredSigners || 0,
+        isFullySigned: false,
+        hasPartialSignatures: false,
+        needsSignatures: requiredSigners || 0,
+      };
+    }
+
+    // Count signature importers that have finalized signatures
+    const signedCount = Object.values(signatureImporters).filter(
+      (importer) =>
+        importer.finalized &&
+        importer.signature &&
+        importer.signature.length > 0,
+    ).length;
+
+    const effectiveRequiredSigners = requiredSigners || 0;
+    const isFullySigned = signedCount >= effectiveRequiredSigners;
+    const hasPartialSignatures =
+      signedCount > 0 && signedCount < effectiveRequiredSigners;
+    const needsSignatures = Math.max(0, effectiveRequiredSigners - signedCount);
+
+    return {
+      signedCount,
+      requiredSigners: effectiveRequiredSigners,
+      isFullySigned,
+      hasPartialSignatures,
+      needsSignatures,
+    };
+  }, [signatureImporters, requiredSigners]);
+
+  return signingState;
+};
+
+const SignatureStatus = () => {
+  const {
+    signedCount,
+    requiredSigners,
+    isFullySigned,
+    hasPartialSignatures,
+    needsSignatures,
+  } = useSigningState();
+
+  // We don't render anything if no signatures are present
+  if (signedCount === 0) {
+    return null;
   }
 
-  renderAddresses() {
+  return (
+    <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+      <Box display="flex" alignItems="center" mb={1}>
+        {isFullySigned ? (
+          <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+        ) : (
+          <WarningIcon color="warning" sx={{ mr: 1 }} />
+        )}
+        <Typography variant="h6" component="div">
+          Signature Status
+        </Typography>
+      </Box>
+
+      {/* Status chips */}
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <Chip
+          label={`${signedCount} of ${requiredSigners} signatures`}
+          color={
+            isFullySigned
+              ? "success"
+              : hasPartialSignatures
+                ? "warning"
+                : "default"
+          }
+          variant={isFullySigned ? "filled" : "outlined"}
+        />
+        {isFullySigned && (
+          <Chip label="Fully signed" color="success" size="small" />
+        )}
+        {hasPartialSignatures && (
+          <Chip label="Partially signed" color="warning" size="small" />
+        )}
+      </Box>
+
+      {/* Status-specific alerts */}
+      {hasPartialSignatures && (
+        <Alert severity="info" sx={{ mb: 1 }}>
+          <AlertTitle>Partial signatures detected</AlertTitle>
+          This transaction has {signedCount} out of {requiredSigners} required
+          signatures. You need {needsSignatures} more signature
+          {needsSignatures > 1 ? "s" : ""} to broadcast.
+        </Alert>
+      )}
+
+      {isFullySigned && (
+        <Alert severity="success" sx={{ mb: 1 }}>
+          <AlertTitle>Transaction ready</AlertTitle>
+          This transaction has all {requiredSigners} required signatures and is
+          ready to broadcast.
+        </Alert>
+      )}
+
+      {/* Warning about editing clearing signatures */}
+      {signedCount > 0 && (
+        <Alert severity="warning" icon={<EditIcon />}>
+          <AlertTitle>Important: Editing will clear signatures</AlertTitle>
+          If you edit this transaction (inputs, outputs, or fee), all existing
+          signatures will be cleared and you&apos;ll need to collect signatures
+          again from all signers.
+        </Alert>
+      )}
+    </Paper>
+  );
+};
+
+class TransactionPreview extends React.Component {
+  componentDidMount() {
+    const {
+      outputs,
+      changeAddress,
+      changeOutputIndex,
+      changeNode,
+      setChangeOutputMultisig,
+    } = this.props;
+    outputs.forEach((output) => {
+      if (output.address === changeAddress) {
+        setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
+      }
+    });
+  }
+
+  renderAddresses = () => {
     const addressWithUtxos = this.mapAddresses();
-    return Object.entries(addressWithUtxos).map(
-      ([address, { utxos, amount }]) => (
+    return Object.keys(addressWithUtxos).map((address) => {
+      return (
         <TableRow key={address}>
           <TableCell>
             <code>{address}</code>
           </TableCell>
-          <TableCell>{utxos.length}</TableCell>
+          <TableCell>{addressWithUtxos[address].utxos.length}</TableCell>
           <TableCell>
-            <code>{amount.toFixed(8)}</code>
+            <code>{addressWithUtxos[address].amount.toFixed(8)}</code>
           </TableCell>
         </TableRow>
-      ),
-    );
-  }
+      );
+    });
+  };
 
-  renderInputs() {
+  renderOutputAddresses = () => {
+    const { changeAddress, outputs } = this.props;
+
+    return outputs.map((output) => {
+      return (
+        <TableRow key={output.address}>
+          <TableCell>
+            <code>{output.address}</code>
+            {output.address === changeAddress ? (
+              <small>&nbsp;(change)</small>
+            ) : (
+              ""
+            )}
+          </TableCell>
+          <TableCell>
+            <code>{BigNumber(output.amount).toFixed(8)}</code>
+          </TableCell>
+        </TableRow>
+      );
+    });
+  };
+
+  renderOutputs = () => {
+    return (
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Address</TableCell>
+            <TableCell>Amount (BTC)</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>{this.renderOutputAddresses()}</TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell>TOTAL:</TableCell>
+            <TableCell>{this.outputsTotal()}</TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+    );
+  };
+
+  renderInputs = () => {
     const { inputsTotalSats } = this.props;
+
     return (
       <Table>
         <TableHead>
@@ -83,179 +258,95 @@ class TransactionPreview extends React.Component {
         </TableFooter>
       </Table>
     );
-  }
+  };
 
-  renderOutputAddresses() {
-    const { outputs, changeAddress } = this.props;
-    return outputs.map((output) => (
-      <TableRow key={output.address}>
-        <TableCell>
-          <code>{output.address}</code>
-          {output.address === changeAddress && <small>&nbsp;(change)</small>}
-        </TableCell>
-        <TableCell>
-          <code>{new BigNumber(output.amountSats || 0).toFixed(8)}</code>
-        </TableCell>
-      </TableRow>
-    ));
-  }
+  mapAddresses = () => {
+    const { inputs } = this.props;
+    return inputs.reduce((mapped, input) => {
+      const mappedAddresses = mapped;
+      const { confirmed, txid, index, amount } = input;
 
-  renderOutputs() {
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.renderOutputAddresses()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell>TOTAL:</TableCell>
-            <TableCell>{this.outputsTotal()}</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  }
+      mappedAddresses[input.multisig.address] = mapped[
+        input.multisig.address
+      ] || {
+        amount: BigNumber(0),
+        utxos: [],
+      };
+      mappedAddresses[input.multisig.address].utxos.push({
+        confirmed,
+        txid,
+        index,
+        amount,
+      });
+      mappedAddresses[input.multisig.address].amount = mapped[
+        input.multisig.address
+      ].amount.plus(BigNumber(input.amount));
+      return mappedAddresses;
+    }, {});
+  };
 
-  outputsTotal() {
+  outputsTotal = () => {
     const { outputs } = this.props;
     return satoshisToBitcoins(
       outputs.reduce(
-        (sum, o) => sum.plus(new BigNumber(o.amountSats || 0)),
-        new BigNumber(0),
+        (total, output) => total.plus(BigNumber(output.amountSats || 0)),
+        BigNumber(0),
       ),
     );
-  }
+  };
 
-  handleDownloadPSBT(psbtBase64) {
+  handleDownloadPSBT = (psbtBase64) => {
     downloadFile(psbtBase64, "transaction.psbt");
-  }
+  };
 
-  render() {
+  render = () => {
     const {
-      fee,
       feeRate,
+      fee,
       inputsTotalSats,
       editTransaction,
       handleSignTransaction,
       unsignedPSBT,
-
-      // signature status props
-      signatureImporters,
-      requiredSigners,
     } = this.props;
 
-    // ——— derive signature state ———
-    const sigs = signatureImporters || {};
-    const signedCount = Object.values(sigs).filter(
-      (imp) => imp.finalized && imp.signature && imp.signature.length > 0,
-    ).length;
-    const required = requiredSigners || 0;
-    const isFullySigned = signedCount >= required;
-    const hasPartial = signedCount > 0 && signedCount < required;
-    const needs = Math.max(0, required - signedCount);
-
     return (
-      <Box p={2}>
-        <Typography variant="h4" gutterBottom>
-          Transaction Preview
-        </Typography>
+      <Box>
+        <h2>Transaction Preview</h2>
 
-        {/* ——— Signature Status Panel ——— */}
-        {signedCount > 0 && (
-          <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-            <Box display="flex" alignItems="center" mb={1}>
-              {isFullySigned ? (
-                <CheckCircleIcon color="success" sx={{ mr: 1 }} />
-              ) : (
-                <WarningIcon color="warning" sx={{ mr: 1 }} />
-              )}
-              <Typography variant="h6">Signature Status</Typography>
-            </Box>
-
-            <Box display="flex" alignItems="center" gap={1} mb={2}>
-              <Chip
-                label={`${signedCount} of ${required} signatures`}
-                color={
-                  isFullySigned ? "success" : hasPartial ? "warning" : "default"
-                }
-                variant={isFullySigned ? "filled" : "outlined"}
-              />
-              {isFullySigned && (
-                <Chip label="Fully signed" color="success" size="small" />
-              )}
-              {hasPartial && (
-                <Chip label="Partially signed" color="warning" size="small" />
-              )}
-            </Box>
-
-            {hasPartial && (
-              <Alert severity="info" sx={{ mb: 1 }}>
-                <AlertTitle>Partial signatures detected</AlertTitle>
-                This transaction has {signedCount} of {required} signatures. You
-                need {needs} more.
-              </Alert>
-            )}
-
-            {isFullySigned && (
-              <Alert severity="success" sx={{ mb: 1 }}>
-                <AlertTitle>Transaction ready</AlertTitle>
-                All {required} required signatures are in place.
-              </Alert>
-            )}
-
-            {signedCount > 0 && (
-              <Alert severity="warning" icon={<EditIcon />}>
-                <AlertTitle>Editing will clear signatures</AlertTitle>
-                If you edit inputs, outputs, or fee, existing signatures will be
-                reset.
-              </Alert>
-            )}
-          </Paper>
-        )}
-
-        {/* ——— Raw PSBT & Inputs/Outputs ——— */}
+        {/* Signature Status Section */}
+        <SignatureStatus />
         <UnsignedTransaction />
-
-        <Typography variant="h6" gutterBottom mt={3}>
-          Inputs
-        </Typography>
+        <h3>Inputs</h3>
         {this.renderInputs()}
-
-        <Typography variant="h6" gutterBottom mt={3}>
-          Outputs
-        </Typography>
+        <h3>Outputs</h3>
         {this.renderOutputs()}
-
-        {/* ——— Summary ——— */}
-        <Grid container spacing={2} mt={2}>
+        <Grid container>
           <Grid item xs={4}>
-            <Typography variant="subtitle1">Fee</Typography>
-            <Typography>{new BigNumber(fee).toFixed(8)}BTC</Typography>
+            <h3>Fee</h3>
+            <div>{BigNumber(fee).toFixed(8)} BTC </div>
           </Grid>
           <Grid item xs={4}>
-            <Typography variant="subtitle1">Fee Rate</Typography>
-            <Typography>{feeRate}sats/vB</Typography>
+            <h3>Fee Rate</h3>
+            <div>{feeRate} sats/byte</div>
           </Grid>
           <Grid item xs={4}>
-            <Typography variant="subtitle1">Total</Typography>
-            <Typography>{satoshisToBitcoins(inputsTotalSats)}BTC</Typography>
+            <h3>Total</h3>
+            <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
         </Grid>
-
-        {/* ——— Transaction Analysis ——— */}
-        <Box mt={4}>
-          <TransactionAnalysis defaultExpanded />
+        <Box mt={2}>
+          <TransactionAnalysis />
         </Box>
-
-        {/* ——— Actions ——— */}
-        <Box mt={4}>
+        <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>
-              <Button variant="contained" onClick={editTransaction}>
+              <Button
+                variant="contained"
+                onClick={(e) => {
+                  e.preventDefault();
+                  editTransaction();
+                }}
+              >
                 Edit Transaction
               </Button>
             </Grid>
@@ -283,48 +374,42 @@ class TransactionPreview extends React.Component {
         </Box>
       </Box>
     );
-  }
+  };
 }
 
 TransactionPreview.propTypes = {
-  inputs: PropTypes.arrayOf(
-    PropTypes.shape({
-      multisig: PropTypes.shape({ address: PropTypes.string.isRequired })
-        .isRequired,
-      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    }),
-  ).isRequired,
-  inputsTotalSats: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    .isRequired,
-  outputs: PropTypes.arrayOf(
-    PropTypes.shape({
-      address: PropTypes.string.isRequired,
-      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    }),
-  ).isRequired,
   changeAddress: PropTypes.string.isRequired,
+  changeNode: PropTypes.shape({
+    multisig: PropTypes.shape({}),
+  }).isRequired,
+  changeOutputIndex: PropTypes.number.isRequired,
+  editTransaction: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeRate: PropTypes.string.isRequired,
-  unsignedPSBT: PropTypes.string,
-  editTransaction: PropTypes.func.isRequired,
+  inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  inputsTotalSats: PropTypes.shape({}).isRequired,
+  outputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   handleSignTransaction: PropTypes.func.isRequired,
-
-  // signature status
-  signatureImporters: PropTypes.object,
+  setChangeOutputMultisig: PropTypes.func.isRequired,
+  unsignedPSBT: PropTypes.string.isRequired,
+  signatureImporters: PropTypes.shape({}),
   requiredSigners: PropTypes.number,
 };
 
-const mapStateToProps = (state) => ({
-  inputs: state.spend.transaction.inputs,
-  inputsTotalSats: Number(state.spend.transaction.inputsTotalSats),
-  outputs: state.spend.transaction.outputs,
-  changeAddress: state.spend.transaction.changeAddress,
-  fee: state.spend.transaction.fee,
-  feeRate: state.spend.transaction.feeRate,
-  unsignedPSBT: state.spend.transaction.unsignedPSBT,
+function mapStateToProps(state) {
+  return {
+    changeOutputIndex: state.spend.transaction.changeOutputIndex,
+    network: state.settings.network,
+    inputs: state.spend.transaction.inputs,
+    outputs: state.spend.transaction.outputs,
+    unsignedPSBT: state.spend.transaction.unsignedPSBT,
+    signatureImporters: state.spend.signatureImporters,
+    requiredSigners: state.settings.requiredSigners,
+  };
+}
 
-  signatureImporters: state.spend.signatureImporters,
-  requiredSigners: state.settings.requiredSigners,
-});
+const mapDispatchToProps = {
+  setChangeOutputMultisig: setChangeOutputMultisigAction,
+};
 
-export default connect(mapStateToProps)(TransactionPreview);
+export default connect(mapStateToProps, mapDispatchToProps)(TransactionPreview);
