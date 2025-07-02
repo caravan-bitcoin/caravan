@@ -1,88 +1,45 @@
-/* Transaction Analysis Container */
-.transaction-analysis-container {
-  max-width: 800px;
-  margin: 0;
-
-}
-
-.transaction-analysis-header {
-  padding: 16px;
-}
-
-.transaction-analysis-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.transaction-analysis-subtitle {
-  color: rgba(0, 0, 0, 0.6);
-  font-size: 14px;
-}
-
-.transaction-analysis-content {
-  padding: 16px;
-}
-
-/* SWA Slider Styles */
+/* Container */
 .swa-slider-container {
   width: 100%;
 }
 
+/* Header */
 .waste-analysis-title {
   font-weight: 600;
-  margin-bottom: 8px;
-  color: #0f4275;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
 }
 
 .waste-analysis-description {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   color: rgba(0, 0, 0, 0.6);
+  font-size: 0.95rem;
   line-height: 1.5;
 }
 
+/* Box */
 .potential-fee-waste-container {
-  margin-bottom: 24px;
+  background-color: #ffffff;
   padding: 16px;
-  background-color: #f5f5f5;
   border-radius: 8px;
+  width: 100%;
+  max-width: 600px; /* make it half-width */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+/* Title */
 .potential-fee-waste-title {
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 16px;
-  color: #333;
+  margin-bottom: 12px;
 }
 
-.waste-amount-container {
-  display: flex;
-  align-items: start;
-  margin-bottom: 16px;
-}
-
-.waste-amount-text {
-  font-weight: 700;
-  color: #060606;
-  margin-right: 8px;
-}
-
-.info-icon-button {
-  padding: 4px;
-  color: rgba(0, 0, 0, 0.54);
-}
-
-.info-icon-button:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.info-icon {
-  font-size: 16px;
-}
-
-/* Slider Styles */
+/* Slider */
 .slider-container {
   position: relative;
-  margin-bottom: 16px;
   padding: 0 8px;
+  margin-bottom: 16px;
+  height: 30px;
 }
 
 .gradient-track {
@@ -106,12 +63,16 @@
   background-color: transparent !important;
 }
 
+.custom-slider .MuiSlider-rail {
+  background-color: transparent !important;
+}
+
 .custom-slider .MuiSlider-thumb {
-  background-color: #fff;
+  background-color: #e7e7e7;
   border: 2px solid #1976d2;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   width: 20px;
   height: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .custom-slider .MuiSlider-thumb:hover,
@@ -119,11 +80,42 @@
   box-shadow: 0 0 0 8px rgba(25, 118, 210, 0.16);
 }
 
-.custom-slider .MuiSlider-rail {
-  background-color: transparent;
+/* Waste Amount Below */
+.waste-amount-container {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+  margin-top: -8px;
 }
 
-/* Fee Estimate Text */
+.waste-amount-text {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.waste-amount-units {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #555;
+}
+
+/* Tooltip Icon */
+.info-icon-button {
+  padding: 4px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.info-icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.info-icon {
+  font-size: 16px;
+}
+
+/* Fee Estimate */
 .fee-estimate-text {
   display: flex;
   align-items: center;
@@ -131,7 +123,7 @@
   font-weight: 500;
 }
 
-/* Fee Level Indicators */
+/* Fee Label */
 .fee-level-indicator {
   font-weight: 600;
   padding: 4px 8px;
@@ -142,6 +134,7 @@
   letter-spacing: 0.5px;
 }
 
+/* Levels */
 .fee-level-very-low {
   background-color: #e8f5e8;
   color: #2e7d32;
@@ -170,104 +163,4 @@
   background-color: #ffebee;
   color: #d32f2f;
   border: 1px solid #f44336;
-}
-
-/* SWA Description */
-.swa-description {
-  color: rgba(0, 0, 0, 0.6);
-  line-height: 1.5;
-  font-style: italic;
-  border-left: 3px solid #1976d2;
-  padding-left: 12px;
-  margin-top: 16px;
-}
-
-/* Accordion Overrides */
-.transaction-analysis-accordion {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.transaction-analysis-accordion::before {
-  display: none;
-}
-
-.transaction-analysis-accordion-summary {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.transaction-analysis-accordion-summary:hover {
-  background-color: #f0f0f0;
-}
-
-.transaction-analysis-accordion-details {
-  padding: 24px 16px;
-}
-
-/* Responsive Design */
-@media (max-width: 600px) {
-  .transaction-analysis-container {
-    max-width: 100%;
-    margin: 0;
-  }
-  
-  .waste-amount-text {
-    font-size: 1.5rem;
-  }
-  
-  .potential-fee-waste-container {
-    padding: 12px;
-  }
-  
-  .slider-container {
-    padding: 0 4px;
-  }
-  
-  .gradient-track {
-    left: 4px;
-    right: 4px;
-  }
-}
-
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .transaction-analysis-subtitle {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  
-  .waste-analysis-description {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  
-  .potential-fee-waste-container {
-    background-color: #2a2a2a;
-    color: #ffffff;
-  }
-  
-  .potential-fee-waste-title {
-    color: #ffffff;
-  }
-  
-  .info-icon-button {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  
-  .info-icon-button:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-  
-  .swa-description {
-    color: rgba(255, 255, 255, 0.7);
-  }
-  
-  .transaction-analysis-accordion-summary {
-    background-color: #1e1e1e;
-    border-bottom: 1px solid #333;
-  }
-  
-  .transaction-analysis-accordion-summary:hover {
-    background-color: #2a2a2a;
-  }
 }

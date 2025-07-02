@@ -108,6 +108,7 @@ export const SWASlider = () => {
 
   return (
     <Box className="swa-slider-container">
+      {/* Header */}
       <Typography variant="h6" className="waste-analysis-title">
         Waste Analysis
       </Typography>
@@ -116,22 +117,13 @@ export const SWASlider = () => {
         cheaper
       </Typography>
 
+      {/* Fee Waste Box */}
       <Box className="potential-fee-waste-container">
-        <Typography variant="h6" className="potential-fee-waste-title">
+        <Typography variant="subtitle1" className="potential-fee-waste-title">
           Potential Fee Waste
         </Typography>
 
-        <Box className="waste-amount-container">
-          <Typography variant="h4" className="waste-amount-text">
-            {formatNumber(wasteAmount)} sats
-          </Typography>
-          <Tooltip title="Waste metric = weight×(feerate−longtermfeerate)+change+excess">
-            <IconButton size="small" className="info-icon-button">
-              <InfoIcon className="info-icon" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
+        {/* Slider */}
         <Box className="slider-container">
           <Box className="gradient-track" />
           <Slider
@@ -145,6 +137,22 @@ export const SWASlider = () => {
           />
         </Box>
 
+        {/* Waste Amount */}
+        <Box className="waste-amount-container">
+          <Typography variant="h4" className="waste-amount-text">
+            {formatNumber(wasteAmount)}
+          </Typography>
+          <Typography variant="body2" className="waste-amount-units">
+            sats
+          </Typography>
+          <Tooltip title="Waste metric = weight×(feerate−longtermfeerate)+change+excess">
+            <IconButton size="small" className="info-icon-button">
+              <InfoIcon className="info-icon" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* Fee Estimate Info */}
         <Typography
           id="long-term-fee-estimate-slider"
           variant="body2"
@@ -159,6 +167,7 @@ export const SWASlider = () => {
           </Tooltip>
         </Typography>
 
+        {/* Label */}
         <Typography
           variant="body2"
           className={`fee-level-indicator ${feeLevelInfo.className}`}
