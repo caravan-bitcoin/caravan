@@ -9,7 +9,6 @@ import {
   Grid,
   Switch,
   FormControlLabel,
-  FormHelperText,
   Button,
   Tooltip,
 } from "@mui/material";
@@ -42,6 +41,7 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
+import PSBTImportComponent from "./PSBTImportComponent";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -138,89 +138,23 @@ class WalletSpend extends React.Component {
     resetNodesSpend();
     deleteChangeOutput();
   };
-
-  setPSBTToggleAndError = (importPSBTDisabled, errorMessage) => {
-    this.setState({
-      importPSBTDisabled,
-      importPSBTError: errorMessage,
-    });
-  };
-  // Helper function to detect if content is binary PSBT
-  isBinaryPSBT = (arrayBuffer) => {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    // Check for binary PSBT magic bytes (0x70736274ff)
-    return (
-      uint8Array.length >= 5 &&
-      uint8Array[0] === 0x70 &&
-      uint8Array[1] === 0x73 &&
-      uint8Array[2] === 0x62 &&
-      uint8Array[3] === 0x74 &&
-      uint8Array[4] === 0xff
-    );
-  };
-  handleImportPSBT = ({ target }) => {
+  handlePSBTImport = (psbtText, resolvedInputs, isRbfPsbt) => {
     const { importPSBT } = this.props;
 
-    this.setPSBTToggleAndError(true, "");
-
     try {
-      if (target.files.length === 0) {
-        this.setPSBTToggleAndError(false, "No PSBT provided.");
-        return;
-      }
-      if (target.files.length > 1) {
-        this.setPSBTToggleAndError(false, "Multiple PSBTs provided.");
-        return;
-      }
-      const file = target.files[0];
-      const fileReader = new FileReader();
-      fileReader.onload = async (event) => {
-        try {
-          const arrayBuffer = event.target.result;
+      // This is the exact pattern you requested!
+      if (!psbtText || resolvedInputs.length === 0) return;
 
-          if (this.isBinaryPSBT(arrayBuffer)) {
-            // For binary PSBT, try Uint8Array first, fallback to base64 if needed
-            try {
-              const uint8Array = new Uint8Array(arrayBuffer);
-              await importPSBT(uint8Array);
-            } catch (bufferError) {
-              // If direct binary fails, convert to base64
-              console.warn(
-                "Direct binary import failed, trying base64:",
-                bufferError.message,
-              );
-              const uint8Array = new Uint8Array(arrayBuffer);
-              let binaryString = "";
-              for (let i = 0; i < uint8Array.length; i++) {
-                binaryString += String.fromCharCode(uint8Array[i]);
-              }
-              const base64String = btoa(binaryString);
-              await importPSBT(base64String);
-            }
-          } else {
-            // Handle text PSBT
-            const textDecoder = new TextDecoder("utf-8");
-            const textContent = textDecoder.decode(arrayBuffer).trim();
+      importPSBT(psbtText, resolvedInputs, isRbfPsbt);
 
-            if (!textContent) {
-              this.setPSBTToggleAndError(false, "Invalid or empty PSBT file.");
-              return;
-            }
-            await importPSBT(textContent);
-          }
-          this.setPSBTToggleAndError(false, "");
-        } catch (e) {
-          this.setPSBTToggleAndError(false, e.message);
-        }
-      };
-
-      fileReader.onerror = () => {
-        this.setPSBTToggleAndError(false, "Error reading file.");
-      };
-
-      fileReader.readAsArrayBuffer(file);
-    } catch (e) {
-      this.setPSBTToggleAndError(false, e.message);
+      console.log(`PSBT Import Success:
+        - Type: ${isRbfPsbt ? "RBF PSBT" : "Normal PSBT"}
+        - Inputs resolved: ${resolvedInputs.length}
+        - PSBT imported successfully
+      `);
+    } catch (error) {
+      console.error("PSBT import failed:", error);
+      // The PSBTImportComponent will handle error display
     }
   };
 
@@ -237,8 +171,8 @@ class WalletSpend extends React.Component {
       inputs,
       inputsTotalSats,
       outputs,
+      network,
     } = this.props;
-    const { importPSBTDisabled, importPSBTError } = this.state;
 
     return (
       <Card>
@@ -305,29 +239,11 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <Box mt={2}>
-                  <label htmlFor="import-psbt">
-                    <input
-                      style={{ display: "none" }}
-                      id="import-psbt"
-                      name="import-psbt"
-                      accept=".psbt,*/*"
-                      onChange={this.handleImportPSBT}
-                      type="file"
-                    />
-
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      component="span"
-                      disabled={importPSBTDisabled}
-                      style={{ marginTop: "20px" }}
-                    >
-                      Import PSBT
-                    </Button>
-                    <FormHelperText error>{importPSBTError}</FormHelperText>
-                  </label>
-                </Box>
+                <PSBTImportComponent
+                  onImport={this.handlePSBTImport}
+                  network={network}
+                  disabled={false}
+                />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
@@ -392,6 +308,7 @@ WalletSpend.propTypes = {
   updateAutoSpend: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   importPSBT: PropTypes.func.isRequired,
+  network: PropTypes.string.isRequired,
 };
 
 WalletSpend.defaultProps = {
@@ -414,6 +331,7 @@ function mapStateToProps(state) {
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
     enableRBF: state.spend.transaction.enableRBF,
+    network: state.settings.network,
   };
 }
 

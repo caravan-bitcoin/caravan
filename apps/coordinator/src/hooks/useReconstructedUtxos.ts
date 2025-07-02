@@ -124,5 +124,6 @@ export const usePsbtInputs = (psbt: Psbt | null) => {
     isRbfPsbt,
     availableInputCount: inputs?.availableInputs?.length || 0,
     reconstructedInputCount: reconstructedUtxos.length,
+    totalRequiredInputCount: psbt?.txInputs.length || 0,
   };
 };
