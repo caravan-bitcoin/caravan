@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { BlockchainClient, TransactionDetails } from "@caravan/clients";
+import { TransactionDetails } from "@caravan/clients";
 import { getPendingTransactionIds, getWalletAddresses } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
@@ -26,10 +26,9 @@ const fetchTransactionDetails = async (
 };
 
 // Hook for fetching transactions with hex data
-export const useTransactionsWithHex = (
-  txids: string[],
-  blockchainClient: BlockchainClient,
-) => {
+export const useTransactionsWithHex = (txids: string[]) => {
+  const blockchainClient = useGetClient();
+
   return useQueries({
     queries: txids.map((txid) => ({
       queryKey: transactionKeys.withHex(txid),
