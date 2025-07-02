@@ -9,8 +9,9 @@ import { useTransactionsWithHex } from "clients/transactions";
 import {
   reconstructUtxosFromPendingTransactions,
   extractNeededTransactionIds,
+  ReconstructedUtxos,
 } from "utils/utxoReconstruction";
-import { selectPsbtInputs, selectIsRbfPsbt } from "selectors/transaction";
+import { selectPsbtInputs } from "selectors/transaction";
 import { useGetClient } from "./client";
 
 /**
@@ -48,8 +49,10 @@ export const useReconstructedUtxos = (
   const transactionQueries = useTransactionsWithHex(neededTxids, client);
 
   // Reconstruct UTXOs from fetched data
-  const reconstructedUtxos = useMemo(() => {
-    if (transactionQueries.some((q) => q.isLoading)) return [];
+  const { reconstructedUtxos, isRbf } = useMemo(() => {
+    if (transactionQueries.some((q) => q.isLoading)) {
+      return { reconstructedUtxos: [] as ReconstructedUtxos[], isRbf: false };
+    }
 
     const txLookup = new Map(
       transactionQueries
@@ -67,6 +70,7 @@ export const useReconstructedUtxos = (
 
   return {
     utxos: reconstructedUtxos,
+    isRbf,
     isLoading: transactionQueries.some((q) => q.isLoading),
     error: transactionQueries.find((q) => q.error)?.error,
   };
@@ -82,12 +86,9 @@ export const usePsbtInputs = (psbt: Psbt | null) => {
     psbt ? selectPsbtInputs(state, psbt) : null,
   );
 
-  const isRbfPsbt = useSelector((state) =>
-    psbt ? selectIsRbfPsbt(state, psbt) : false,
-  );
-
   const {
     utxos: reconstructedUtxos,
+    isRbf: isRbfPsbt,
     isLoading: isReconstructing,
     error: reconstructionError,
   } = useReconstructedUtxos(
@@ -124,8 +125,6 @@ export const usePsbtInputs = (psbt: Psbt | null) => {
     isLoading: isReconstructing,
     error: reconstructionError,
     isRbfPsbt,
-    availableInputCount: inputs?.availableInputs?.length || 0,
-    reconstructedInputCount: reconstructedUtxos.length,
     totalRequiredInputCount: psbt?.txInputs.length || 0,
   };
 };

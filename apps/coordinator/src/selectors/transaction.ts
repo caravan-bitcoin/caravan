@@ -163,7 +163,6 @@ export const selectAvailableInputs = createSelector(
   [getSpendableSlices, selectPsbtInputIdentifiers],
   (slices: any[], inputIdentifiers: Set<string>) => {
     const availableInputs: Input[] = [];
-
     slices.forEach((slice: Slice & { utxos: UTXO }) => {
       Object.entries(slice.utxos || {}).forEach(([, utxo]) => {
         const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
@@ -209,7 +208,6 @@ export const selectInputsFromPendingTransactions = createSelector(
       pendingTransactions,
       allSlices,
       neededInputIds,
-      hasNeededInputs: neededInputIds.size > 0,
     };
   },
 );
@@ -231,15 +229,7 @@ export const selectPsbtInputs = createSelector(
       pendingInputs,
       inputIdentifiers,
       spendableSlices,
-      isRbfPsbt: availableInputs.length < Array.from(inputIdentifiers).length,
     };
-  },
-);
-
-export const selectIsRbfPsbt = createSelector(
-  [selectAvailableInputs, selectPsbtInputIdentifiers],
-  (availableInputs: Input[], inputIdentifiers: Set<string>) => {
-    return availableInputs.length < inputIdentifiers.size;
   },
 );
 

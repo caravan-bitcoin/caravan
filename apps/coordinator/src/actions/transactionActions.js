@@ -472,10 +472,8 @@ export function importPSBT(psbtText, inputs, isRBFedPSBT) {
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
-    // Set inputs without modifying wallet state
     dispatch(setInputs(inputs));
 
-    // ==== PROCESS INPUTS ====
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
     // Calculate and set fee

@@ -105,7 +105,7 @@ function reconstructSingleUtxo(
   // This is the output that was consumed by a pending transaction we're trying to replace (fee-bump).
   const originalOutput = originalTransaction.vout?.[input.vout];
   if (!originalOutput) {
-    console.warn(`Output ${input.vout} not found in transaction ${input.txid}`);
+    console.log(`Output ${input.vout} not found in transaction ${input.txid}`);
     return null;
   }
 
@@ -114,7 +114,7 @@ function reconstructSingleUtxo(
   const address =
     originalOutput.scriptPubkeyAddress || originalOutput.scriptPubkey;
   if (!address) {
-    console.warn(`No address found for ${input.txid}:${input.vout}`);
+    console.log(`No address found for ${input.txid}:${input.vout}`);
     return null;
   }
   //  Check if that address is owned by any of our wallet slices.
@@ -175,9 +175,9 @@ export function reconstructUtxosFromPendingTransactions(
   >,
   allSlices: Slice[],
   neededInputIds: Set<string>,
-): ReconstructedUtxos[] {
+): { reconstructedUtxos: ReconstructedUtxos[]; isRbf: boolean } {
   const reconstructedUtxos: ReconstructedUtxos[] = [];
-
+  let isRbf = false;
   // Loop through each unconfirmed transaction
   for (const pendingTx of pendingTransactions) {
     if (!Array.isArray(pendingTx.vin)) continue;
@@ -188,7 +188,8 @@ export function reconstructUtxosFromPendingTransactions(
       const inputId = createInputIdentifier(input.txid, input.vout);
       // Only proceed if this input is one we're looking to reconstruct
       if (!neededInputIds.has(inputId)) continue;
-
+      // Mark that at least one of our needed inputs was consumed by a pending tx
+      isRbf = true;
       const originalTxData = originalTxLookup.get(input.txid);
       if (!originalTxData) continue;
 
@@ -207,5 +208,5 @@ export function reconstructUtxosFromPendingTransactions(
     }
   }
 
-  return reconstructedUtxos;
+  return { reconstructedUtxos, isRbf };
 }

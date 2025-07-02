@@ -140,14 +140,11 @@ class WalletSpend extends React.Component {
   };
   handlePSBTImport = (psbtText, resolvedInputs, isRbfPsbt) => {
     const { importPSBT } = this.props;
-
     try {
-      if (!psbtText || resolvedInputs.length === 0) return;
-
       importPSBT(psbtText, resolvedInputs, isRbfPsbt);
     } catch (error) {
-      console.error("PSBT import failed:", error);
       // The PSBTImportComponent will handle error display
+      throw new Error(error);
     }
   };
 

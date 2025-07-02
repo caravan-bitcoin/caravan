@@ -4,20 +4,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch } from "react-redux";
-import {
-  Box,
-  Button,
-  Typography,
-  LinearProgress,
-  Alert,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-} from "@mui/material";
+import { Box, Button, Typography, LinearProgress, Alert } from "@mui/material";
 import {
   Upload as UploadIcon,
-  CheckCircle as CheckIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { Network } from "@caravan/bitcoin";
@@ -32,83 +21,6 @@ interface PSBTImportComponentProps {
   disabled?: boolean;
 }
 
-// Component to handle PSBT inputs and import
-interface PSBTInputResolutionHandlerProps {
-  psbt: any | null;
-  psbtText: string;
-  onImport: (psbtText: string, inputs: any[], isRbfPsbt: boolean) => void;
-  onError: (error: string) => void;
-  onStatusUpdate: (status: {
-    isRbfPsbt: boolean;
-    isLoading: boolean;
-    availableInputCount: number;
-    reconstructedInputCount: number;
-    totalRequiredInputCount: number;
-  }) => void;
-}
-
-const PSBTInputResolutionHandler: React.FC<PSBTInputResolutionHandlerProps> = ({
-  psbt,
-  psbtText,
-  onImport,
-  onError,
-  onStatusUpdate,
-}) => {
-  const {
-    inputs,
-    isLoading,
-    error,
-    isRbfPsbt,
-    availableInputCount,
-    reconstructedInputCount,
-    totalRequiredInputCount,
-  } = usePsbtInputs(psbt);
-
-  // Update parent with status
-  useEffect(() => {
-    onStatusUpdate({
-      isRbfPsbt,
-      isLoading,
-      availableInputCount,
-      reconstructedInputCount,
-      totalRequiredInputCount,
-    });
-  }, [
-    isRbfPsbt,
-    isLoading,
-    availableInputCount,
-    reconstructedInputCount,
-    totalRequiredInputCount,
-    onStatusUpdate,
-  ]);
-
-  useEffect(() => {
-    if (error) {
-      onError(error.toString());
-    }
-  }, [error, onError]);
-
-  // Auto-import when inputs are resolved
-  useEffect(() => {
-    if (
-      !isLoading &&
-      inputs.length === totalRequiredInputCount &&
-      inputs.length > 0
-    ) {
-      onImport(psbtText, inputs, isRbfPsbt);
-    }
-  }, [
-    isLoading,
-    inputs,
-    totalRequiredInputCount,
-    isRbfPsbt,
-    onImport,
-    psbtText,
-  ]);
-
-  return null; // This component doesn't render anything
-};
-
 // Main PSBT Import Component
 export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   onImport,
@@ -121,8 +33,27 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   const [psbtText, setPsbtText] = useState<string>("");
   const [parsedPsbt, setParsedPsbt] = useState<any>(null);
 
+  const {
+    inputs,
+    isLoading: inputsLoading,
+    error: inputsError,
+    isRbfPsbt,
+    totalRequiredInputCount,
+  } = usePsbtInputs(parsedPsbt);
+
   const { transactions } = usePendingTransactions();
   const prevRef = useRef<string>("");
+
+  // Allow import if:
+  // - inputs resolved and counts match for RBF PSBTs
+  // - or non-RBF PSBT (so we can catch missing-input errors)
+  const canImport =
+    !inputsLoading &&
+    parsedPsbt &&
+    psbtText &&
+    (isRbfPsbt
+      ? inputs.length === totalRequiredInputCount && totalRequiredInputCount > 0
+      : true);
 
   useEffect(() => {
     if (isLoading) return;
@@ -135,14 +66,28 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     }
   }, [dispatch, transactions]);
 
-  // State for input resolution status
-  const [inputStatus, setInputStatus] = useState({
-    isRbfPsbt: false,
-    isLoading: false,
-    availableInputCount: 0,
-    reconstructedInputCount: 0,
-    totalRequiredInputCount: 0,
-  });
+  useEffect(() => {
+    if (inputsError) {
+      setError(inputsError.toString());
+      setIsProcessing(false);
+      return;
+    }
+
+    // Auto-import when inputs are resolved
+    if (canImport) {
+      try {
+        onImport(psbtText, inputs, isRbfPsbt);
+        // Clear state after successful import
+        setPsbtText("");
+        setParsedPsbt(null);
+        setError("");
+        setIsProcessing(false);
+      } catch (importError) {
+        setError(`Import failed: ${importError}`);
+        setIsProcessing(false);
+      }
+    }
+  }, [canImport]);
 
   // Helper function to detect if content is binary PSBT
   const isBinaryPSBT = useCallback((arrayBuffer: ArrayBuffer): boolean => {
@@ -158,20 +103,6 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     );
   }, []);
 
-  // Clear state
-  const clearState = useCallback(() => {
-    setError("");
-    setPsbtText("");
-    setParsedPsbt(null);
-    setInputStatus({
-      isRbfPsbt: false,
-      isLoading: false,
-      availableInputCount: 0,
-      reconstructedInputCount: 0,
-      totalRequiredInputCount: 0,
-    });
-  }, []);
-
   // Handle file selection
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,14 +110,18 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
 
       setIsProcessing(true);
       setError("");
+      setPsbtText("");
+      setParsedPsbt(null);
 
       try {
         if (!files || files.length === 0) {
           setError("No PSBT provided.");
+          setIsProcessing(false);
           return;
         }
         if (files.length > 1) {
           setError("Multiple PSBTs provided. Please select only one file.");
+          setIsProcessing(false);
           return;
         }
 
@@ -209,6 +144,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
                 processedPsbtText = btoa(binaryString);
               } catch (conversionError) {
                 setError(`Failed to convert binary PSBT: ${conversionError}`);
+                setIsProcessing(false);
                 return;
               }
             } else {
@@ -218,6 +154,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
 
               if (!processedPsbtText) {
                 setError("Invalid or empty PSBT file.");
+                setIsProcessing(false);
                 return;
               }
             }
@@ -227,13 +164,13 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
               const parsed = loadPsbt(processedPsbtText, network as Network);
               setPsbtText(processedPsbtText);
               setParsedPsbt(parsed);
-              setError("");
+              // Keep processing state true until inputs are resolved
             } catch (parseError) {
               setError(`Failed to parse PSBT: ${parseError}`);
+              setIsProcessing(false);
             }
           } catch (processingError) {
             setError(`Error processing file: ${processingError}`);
-          } finally {
             setIsProcessing(false);
           }
         };
@@ -249,47 +186,25 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
         setIsProcessing(false);
       }
 
+      // Clear the input value to allow re-importing
       event.target.value = "";
     },
     [network, isBinaryPSBT],
   );
 
-  // Handle successful import
-  const handleImportSuccess = useCallback(
-    (resolvedPsbtText: string, inputs: any[], isRbfPsbt: boolean) => {
-      try {
-        onImport(resolvedPsbtText, inputs, isRbfPsbt);
-        clearState();
-      } catch (importError) {
-        setError(`Import failed: ${importError}`);
-      }
-    },
-    [onImport, clearState],
-  );
-
-  const handleResolutionError = useCallback((errorMessage: string) => {
-    setError(errorMessage);
+  // Clear error state
+  const clearError = useCallback(() => {
+    setError("");
+    setPsbtText("");
+    setParsedPsbt(null);
+    setIsProcessing(false);
   }, []);
 
   // Determine current status
-  const isLoading = isProcessing || inputStatus.isLoading;
-  const hasError = !!error;
-  const isReadyToImport = parsedPsbt && !isLoading && !hasError;
-  const isAwaitingResolution = parsedPsbt && inputStatus.isLoading;
+  const isLoading = isProcessing || inputsLoading;
 
   return (
     <Box mt={2}>
-      {/* Input resolution handler */}
-      {parsedPsbt && (
-        <PSBTInputResolutionHandler
-          psbt={parsedPsbt}
-          psbtText={psbtText}
-          onImport={handleImportSuccess}
-          onError={handleResolutionError}
-          onStatusUpdate={setInputStatus}
-        />
-      )}
-
       {/* File input */}
       <label htmlFor="import-psbt">
         <input
@@ -314,91 +229,29 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
         </Button>
       </label>
 
+      {/* Loading indicator */}
       {isLoading && (
         <Box mt={2}>
           <LinearProgress />
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            {isProcessing && "Reading and parsing PSBT file..."}
-            {isAwaitingResolution &&
-              inputStatus.isRbfPsbt &&
-              "Reconstructing UTXOs from pending transactions..."}
-            {isAwaitingResolution &&
-              !inputStatus.isRbfPsbt &&
-              "Resolving inputs..."}
+            {isProcessing && !parsedPsbt && "Reading and parsing PSBT file..."}
+            {inputsLoading && parsedPsbt && "Resolving transaction inputs..."}
           </Typography>
         </Box>
       )}
 
-      {/* Status card for PSBT analysis */}
-      {parsedPsbt && !hasError && (
-        <Card sx={{ mt: 2 }} variant="outlined">
-          <CardContent>
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ mb: 2 }}
-            >
-              <CheckIcon color="success" fontSize="small" />
-              <Typography variant="subtitle2">
-                PSBT Parsed Successfully
-              </Typography>
-            </Stack>
-
-            <Stack spacing={1}>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                <Chip
-                  label={inputStatus.isRbfPsbt ? "RBF PSBT" : "Normal PSBT"}
-                  color={inputStatus.isRbfPsbt ? "warning" : "success"}
-                  size="small"
-                />
-                <Chip
-                  label={`${inputStatus.totalRequiredInputCount} inputs required`}
-                  variant="outlined"
-                  size="small"
-                />
-              </Stack>
-
-              {inputStatus.isRbfPsbt && (
-                <Box>
-                  <Typography variant="body2" color="textSecondary">
-                    • Available inputs: {inputStatus.availableInputCount}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    • Reconstructed inputs:{" "}
-                    {inputStatus.reconstructedInputCount}
-                  </Typography>
-                  {inputStatus.isLoading && (
-                    <Typography variant="body2" color="primary">
-                      • Reconstructing missing UTXOs...
-                    </Typography>
-                  )}
-                </Box>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Error display */}
-      {hasError && (
+      {error && (
         <Alert
           severity="error"
           sx={{ mt: 2 }}
           action={
-            <Button color="inherit" size="small" onClick={clearState}>
+            <Button color="inherit" size="small" onClick={clearError}>
               Clear
             </Button>
           }
         >
           {error}
-        </Alert>
-      )}
-
-      {/* Success indicator */}
-      {isReadyToImport && !inputStatus.isLoading && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          PSBT ready to import. Input resolution complete.
         </Alert>
       )}
     </Box>
