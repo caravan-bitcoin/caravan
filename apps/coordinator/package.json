@@ -102,6 +102,7 @@
     "@caravan/eslint-config": "*",
     "@caravan/health": "*",
     "@caravan/psbt": "*",
+    "@caravan/fees": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
     "@emotion/react": "^11.10.6",

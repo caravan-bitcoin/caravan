@@ -1,5 +1,5 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 // TODO: All types should come from the `clients` package or a centralized type definition
 // This discussion references the changes we need in future refactors :
 // https://github.com/caravan-bitcoin/caravan/pull/225#discussion_r2048700059
@@ -194,3 +194,34 @@ export const calculateTransactionValue = (
   // CASE 3: Not enough data to calculate
   return 0;
 };
+
+/**
+ * Creates a unique identifier for a UTXO input by combining transaction ID and output index.
+ *
+ * This is used throughout the PSBT import process to match UTXOs across different data sources.
+ * The format ensures we can easily compare inputs from PSBTs with UTXOs in our wallet state.
+ *
+ * @param txid - Transaction ID in big-endian (human-readable) format
+ * @param index - Output index (vout) within the transaction
+ * @returns Unique string identifier in format "txid:index"
+ *
+ * @example
+ * ```ts
+ * const id = createInputIdentifier("abc123...", 0); // "abc123...:0"
+ * ```
+ */
+export const createInputIdentifier = (txid: string, index: number): string =>
+  `${txid}:${index}`;
+
+/**
+ * Converts a tx input hash buffer to a big-endian transaction ID string.
+ *
+ * PSBTs store transaction hashes in little-endian format (Bitcoin's internal format),
+ * but we need big-endian format (human-readable) to match with our wallet state and
+ * blockchain API responses. This function handles the conversion.
+ *
+ * @param hash - Buffer containing the transaction hash in little-endian format
+ * @returns Transaction ID string in big-endian (human-readable) format
+ */
+export const convertTxidToLittleEndian = (hash: Buffer): string =>
+  reverseBuffer(hash).toString("hex");

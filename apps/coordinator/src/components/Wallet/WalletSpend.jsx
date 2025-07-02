@@ -9,9 +9,10 @@ import {
   Grid,
   Switch,
   FormControlLabel,
-  FormHelperText,
   Button,
+  Tooltip,
 } from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
@@ -29,6 +30,7 @@ import {
   SPEND_STEP_CREATE,
   SPEND_STEP_PREVIEW,
   SPEND_STEP_SIGN,
+  setRBF,
   setSpendStep as setSpendStepAction,
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
@@ -39,6 +41,7 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
+import { PSBTImportComponent } from "./PSBTImportComponent";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -135,91 +138,13 @@ class WalletSpend extends React.Component {
     resetNodesSpend();
     deleteChangeOutput();
   };
-
-  setPSBTToggleAndError = (importPSBTDisabled, errorMessage) => {
-    this.setState({
-      importPSBTDisabled,
-      importPSBTError: errorMessage,
-    });
-  };
-  // Helper function to detect if content is binary PSBT
-  isBinaryPSBT = (arrayBuffer) => {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    // Check for binary PSBT magic bytes (0x70736274ff)
-    return (
-      uint8Array.length >= 5 &&
-      uint8Array[0] === 0x70 &&
-      uint8Array[1] === 0x73 &&
-      uint8Array[2] === 0x62 &&
-      uint8Array[3] === 0x74 &&
-      uint8Array[4] === 0xff
-    );
-  };
-  handleImportPSBT = ({ target }) => {
+  handlePSBTImport = (psbtText, resolvedInputs, isRbfPsbt) => {
     const { importPSBT } = this.props;
-
-    this.setPSBTToggleAndError(true, "");
-
     try {
-      if (target.files.length === 0) {
-        this.setPSBTToggleAndError(false, "No PSBT provided.");
-        return;
-      }
-      if (target.files.length > 1) {
-        this.setPSBTToggleAndError(false, "Multiple PSBTs provided.");
-        return;
-      }
-      const file = target.files[0];
-      const fileReader = new FileReader();
-      fileReader.onload = (event) => {
-        try {
-          const arrayBuffer = event.target.result;
-
-          if (this.isBinaryPSBT(arrayBuffer)) {
-            // For binary PSBT, try Uint8Array first, fallback to base64 if needed
-            try {
-              const uint8Array = new Uint8Array(arrayBuffer);
-              importPSBT(uint8Array);
-            } catch (bufferError) {
-              // If direct binary fails, convert to base64
-              console.warn(
-                "Direct binary import failed, trying base64:",
-                bufferError.message,
-              );
-              const uint8Array = new Uint8Array(arrayBuffer);
-              let binaryString = "";
-              for (let i = 0; i < uint8Array.length; i++) {
-                binaryString += String.fromCharCode(uint8Array[i]);
-              }
-              const base64String = btoa(binaryString);
-              importPSBT(base64String);
-            }
-          } else {
-            // Handle text PSBT
-            const textDecoder = new TextDecoder("utf-8");
-            const textContent = textDecoder.decode(arrayBuffer).trim();
-
-            if (!textContent) {
-              this.setPSBTToggleAndError(false, "Invalid or empty PSBT file.");
-              return;
-            }
-
-            importPSBT(textContent);
-          }
-
-          this.setPSBTToggleAndError(false, "");
-        } catch (e) {
-          this.setPSBTToggleAndError(false, e.message);
-        }
-      };
-
-      fileReader.onerror = () => {
-        this.setPSBTToggleAndError(false, "Error reading file.");
-      };
-
-      fileReader.readAsArrayBuffer(file);
-    } catch (e) {
-      this.setPSBTToggleAndError(false, e.message);
+      importPSBT(psbtText, resolvedInputs, isRbfPsbt);
+    } catch (error) {
+      // The PSBTImportComponent will handle error display
+      throw new Error(error);
     }
   };
 
@@ -236,8 +161,8 @@ class WalletSpend extends React.Component {
       inputs,
       inputsTotalSats,
       outputs,
+      network,
     } = this.props;
-    const { importPSBTDisabled, importPSBTError } = this.state;
 
     return (
       <Card>
@@ -254,7 +179,7 @@ class WalletSpend extends React.Component {
               <Grid item md={12}>
                 <Grid container direction="row-reverse">
                   <Box display="flex-end">
-                    <Box p={1}>
+                    <Box mt={2} display="flex" alignItems="center">
                       <FormControlLabel
                         control={
                           <Switch
@@ -263,6 +188,29 @@ class WalletSpend extends React.Component {
                           />
                         }
                         label="Manual"
+                      />
+                      {/* Add RBF Toggle */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={this.props.enableRBF}
+                            onChange={(e) =>
+                              this.props.setRBF(e.target.checked)
+                            }
+                            color="primary"
+                          />
+                        }
+                        label={
+                          <Box display="flex" alignItems="center">
+                            Replace-by-Fee (RBF)
+                            <Tooltip title="When enabled, this transaction can be replaced with a higher fee transaction later if needed">
+                              <InfoIcon
+                                fontSize="small"
+                                style={{ marginLeft: 8 }}
+                              />
+                            </Tooltip>
+                          </Box>
+                        }
                       />
                     </Box>
                   </Box>
@@ -281,29 +229,11 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <Box mt={2}>
-                  <label htmlFor="import-psbt">
-                    <input
-                      style={{ display: "none" }}
-                      id="import-psbt"
-                      name="import-psbt"
-                      accept=".psbt,*/*"
-                      onChange={this.handleImportPSBT}
-                      type="file"
-                    />
-
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      component="span"
-                      disabled={importPSBTDisabled}
-                      style={{ marginTop: "20px" }}
-                    >
-                      Import PSBT
-                    </Button>
-                    <FormHelperText error>{importPSBTError}</FormHelperText>
-                  </label>
-                </Box>
+                <PSBTImportComponent
+                  onImport={this.handlePSBTImport}
+                  network={network}
+                  disabled={false}
+                />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
@@ -344,6 +274,8 @@ WalletSpend.propTypes = {
   changeAddress: PropTypes.string.isRequired,
   deleteChangeOutput: PropTypes.func.isRequired,
   depositNodes: PropTypes.shape({}),
+  enableRBF: PropTypes.bool,
+  setRBF: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeError: PropTypes.string,
   feeRate: PropTypes.string.isRequired,
@@ -366,12 +298,14 @@ WalletSpend.propTypes = {
   updateAutoSpend: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   importPSBT: PropTypes.func.isRequired,
+  network: PropTypes.string.isRequired,
 };
 
 WalletSpend.defaultProps = {
   autoSpend: false,
   balanceError: null,
   changeNodes: {},
+  enableRBF: true,
   depositNodes: {},
   finalizedOutputs: false,
   feeError: null,
@@ -386,6 +320,8 @@ function mapStateToProps(state) {
     changeNode: state.wallet.change.nextNode,
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
+    enableRBF: state.spend.transaction.enableRBF,
+    network: state.settings.network,
   };
 }
 
@@ -400,6 +336,7 @@ const mapDispatchToProps = {
   resetNodesSpend: resetNodesSpendAction,
   setFeeRate: setFeeRateAction,
   addOutput,
+  setRBF,
   finalizeOutputs: finalizeOutputsAction,
   setChangeAddress: setChangeAddressAction,
   setSpendStep: setSpendStepAction,

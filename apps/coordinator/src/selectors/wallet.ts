@@ -1,3 +1,4 @@
+import { TransactionDetails } from "@caravan/clients";
 import { createSelector } from "reselect";
 
 // Type definitions for the Redux state
@@ -8,7 +9,7 @@ interface UTXO {
   txid?: string;
 }
 
-interface Slice {
+export interface Slice {
   utxos: UTXO[];
   addressUsed: boolean;
   addressKnown: boolean;
@@ -20,6 +21,7 @@ interface Slice {
   multisig: {
     address: string;
   };
+  bip32Path?: string;
   lastUsed?: string;
   lastUsedTime?: number;
 }
@@ -37,7 +39,7 @@ interface LedgerPolicyHmac {
   policyHmac: string;
 }
 
-interface WalletState {
+export interface WalletState {
   wallet: {
     deposits: {
       nodes: Record<string, Slice>;
@@ -49,6 +51,7 @@ interface WalletState {
       walletName: string;
       walletUuid: string;
       ledgerPolicyHmacs: LedgerPolicyHmac[];
+      pendingTransactions: TransactionDetails[];
     };
   };
   settings: {
@@ -215,7 +218,7 @@ export const getConfirmedBalance = createSelector(
     totalBalance - pendingBalance,
 );
 
-interface SliceWithLastUsed extends Slice {
+export interface SliceWithLastUsed extends Slice {
   lastUsed?: string;
   lastUsedTime?: number;
 }
@@ -477,4 +480,43 @@ export const getTransactionExplorerUrl = createSelector(
       return explorerUrl;
     };
   },
+);
+
+/**
+ * Selector to get all wallet slices (both deposits and change addresses).
+ *
+ * ## Why This Selector Exists
+ *
+ * The existing `getSpendableSlices` selector only returns slices with currently
+ * spendable UTXOs. However, for RBF PSBT imports, we need to match addresses
+ * even when their UTXOs have been spent in pending transactions.
+ *
+ * This selector provides access to ALL wallet slices regardless of their UTXO
+ * status, which is essential for:
+ *
+ * 1. **Address Verification**: Ensuring reconstructed UTXOs belong to our wallet
+ * 2. **Metadata Retrieval**: Getting multisig configs and BIP32 paths for signing
+ * 3. **RBF Support**: Matching spent UTXOs to their original wallet addresses
+ *
+ * @description Returns a all slices of the wallet
+ */
+export const getAllSlices = createSelector(
+  [
+    (state: WalletState) => state.wallet.deposits.nodes,
+    (state: WalletState) => state.wallet.change.nodes,
+  ],
+  (depositNodes, changeNodes) => [
+    ...Object.values(depositNodes),
+    ...Object.values(changeNodes),
+  ],
+);
+
+export const selectWalletConfig = createSelector(
+  (state: WalletState) => state.settings,
+  (settings) => ({
+    network: settings.network,
+    addressType: settings.addressType,
+    requiredSigners: settings.requiredSigners,
+    totalSigners: settings.totalSigners,
+  }),
 );

@@ -26,6 +26,8 @@ export interface TransactionTableProps {
   sortDirection: "asc" | "desc";
   network?: string;
   onClickTransaction?: (txid: string) => void;
+  onAccelerateTransaction?: (tx: TransactionT) => void;
+  renderActions?: (tx: TransactionT) => React.ReactNode;
 }
 
 // How our Transaction Table's should look like
@@ -38,6 +40,8 @@ export interface TransactionT {
   };
   size: number;
   fee: number;
+  vin: any[]; // Input vector
+  vout: any[]; // Output vector
   isSpent?: boolean;
   vsize?: number;
   isReceived?: boolean;

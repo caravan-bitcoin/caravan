@@ -28,6 +28,8 @@ export const SPEND_SLICES = "SPEND_SLICES";
 export const INITIAL_LOAD_COMPLETE = "INITIAL_LOAD_COMPLETE";
 export const RESET_NODES_FETCH_ERRORS = "RESET_NODES_FETCH_ERRORS";
 export const UPDATE_POLICY_REGISTRATIONS = "UPDATE_POLICY_REGISTRATION";
+export const UPDATE_PENDING_TRANSACTIONS = "UPDATE_PENDING_TRANSACTIONS";
+export const RESET_PENDING_TRANSACTIONS = "RESET_PENDING_TRANSACTIONS";
 
 export const WALLET_MODES = {
   VIEW: 0,
@@ -345,3 +347,12 @@ export function resetNodesFetchErrors() {
     type: RESET_NODES_FETCH_ERRORS,
   };
 }
+
+export const updatePendingTransactions = (transactions) => ({
+  type: UPDATE_PENDING_TRANSACTIONS,
+  value: transactions,
+});
+
+export const resetPendingTransactions = () => ({
+  type: RESET_PENDING_TRANSACTIONS,
+});

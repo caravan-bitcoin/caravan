@@ -6,6 +6,8 @@ import {
   UPDATE_WALLET_MODE,
   INITIAL_LOAD_COMPLETE,
   UPDATE_POLICY_REGISTRATIONS,
+  UPDATE_PENDING_TRANSACTIONS,
+  RESET_PENDING_TRANSACTIONS,
 } from "../actions/walletActions";
 import updateState from "./utils";
 
@@ -15,6 +17,7 @@ const initialState = {
   walletUuid: "",
   nodesLoaded: false,
   ledgerPolicyHmacs: [],
+  pendingTransactions: [],
 };
 
 function resetWalletViews(state) {
@@ -39,6 +42,10 @@ export default (state = initialState, action) => {
       });
     case INITIAL_LOAD_COMPLETE:
       return updateState(state, { nodesLoaded: true });
+    case UPDATE_PENDING_TRANSACTIONS:
+      return updateState(state, { pendingTransactions: action.value });
+    case RESET_PENDING_TRANSACTIONS:
+      return updateState(state, { pendingTransactions: [] });
     default:
       return state;
   }

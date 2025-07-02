@@ -5,7 +5,6 @@ import {
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
-  selectInputsFromPSBT,
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
 } from "../selectors/transaction";
@@ -25,6 +24,7 @@ export const SET_REQUIRED_SIGNERS = "SET_REQUIRED_SIGNERS";
 export const SET_TOTAL_SIGNERS = "SET_TOTAL_SIGNERS";
 
 export const SET_INPUTS = "SET_INPUTS";
+export const SET_ENABLE_RBF = "SET_ENABLE_RBF";
 
 export const ADD_OUTPUT = "ADD_OUTPUT";
 export const SET_OUTPUT_ADDRESS = "SET_OUTPUT_ADDRESS";
@@ -450,7 +450,7 @@ export function setFeeFromState(outputsTotalSats) {
   };
 }
 
-export function importPSBT(psbtText) {
+export function importPSBT(psbtText, inputs, isRBFedPSBT) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
@@ -472,27 +472,23 @@ export function importPSBT(psbtText) {
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
-    const inputs = selectInputsFromPSBT(getState(), psbt);
-
-    if (inputs.length === 0) {
-      throw new Error("PSBT does not contain any UTXOs from this wallet.");
-    }
-    if (inputs.length !== psbt.txInputs.length) {
-      throw new Error(
-        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
-      );
-    }
-
     dispatch(setInputs(inputs));
 
-    // ==== PROCESS INPUTS ====
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
     // Calculate and set fee
     dispatch(setFeeFromState(outputsTotalSats));
 
     // ==== Extract and import signatures (If they are present)====
-    dispatch(setSignaturesFromPsbt(psbt));
+    // For RBF PSBTs, we skip signature extraction because:
+    // 1. The UTXOs used for signature verification aren't in wallet state
+    // 2. The signature extraction functions expect UTXOs to be in spendable slices
+    // 3. RBF PSBTs are typically unsigned anyway (they're new replacement transactions)
+    // 4. Attempting signature extraction would throw errors ...
+    //
+    if (!isRBFedPSBT) {
+      dispatch(setSignaturesFromPsbt(psbt));
+    }
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));
@@ -538,5 +534,12 @@ export function importLegacyPSBT(psbtText) {
       throw new Error("Could not parse PSBT.");
     }
     return psbt;
+  };
+}
+
+export function setRBF(enabled) {
+  return {
+    type: SET_ENABLE_RBF,
+    value: enabled,
   };
 }
