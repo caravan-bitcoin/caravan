@@ -1,18 +1,11 @@
 import { Network } from "@caravan/bitcoin";
+import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
 import { UR } from "@ngraveio/bc-ur";
+import { mockDeep, MockProxy } from 'vitest-mock-extended';
 
 import { BCURDecoder2 } from "../decoder";
 
-
-// Mock implementation for decoder instance
-const mockDecoderInstance = {
-  receivePart: vi.fn(),
-  isComplete: vi.fn().mockReturnValue(false),
-  resultUR: vi.fn(),
-  getProgress: vi.fn().mockReturnValue(0)
-};
-
-// Mock the bc-ur-registry module
+// Mock the bc-ur-registry module for the utils functions
 vi.mock("@keystonehq/bc-ur-registry", () => {
   // Valid compressed public key for testing
   const testKey = Buffer.from('0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798', 'hex');
@@ -61,7 +54,7 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   Reflect.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
 
   return {
-    URRegistryDecoder: vi.fn().mockImplementation(() => mockDecoderInstance),
+    URRegistryDecoder: vi.fn(), // This won't be used since we're injecting our own
     CryptoAccount: {
       fromCBOR: vi.fn().mockReturnValue(mockAccount)
     },
@@ -69,34 +62,50 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   };
 });
 
+vi.mock("@caravan/bitcoin", () => {
+  return {
+    Network: {
+      TESTNET: "testnet",
+      MAINNET: "mainnet",
+    },
+    ExtendedPublicKey: vi.fn().mockImplementation(({ network }) => ({
+      toBase58: () =>
+        (network === "testnet" ? "tpubMockedKey" : "xpubMockedKey"),
+    })),
+  };
+});
+
 describe("BCURDecoder2", () => {
+  let mockDecoder: MockProxy<URRegistryDecoder>;
   let decoder: BCURDecoder2;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockDecoderInstance.isComplete.mockReturnValue(false);
-    mockDecoderInstance.getProgress.mockReturnValue(0);
-    decoder = new BCURDecoder2();
+    mockDecoder = mockDeep<URRegistryDecoder>();
+    decoder = new BCURDecoder2(mockDecoder);
+    
+    // Setup default mock behaviors
+    mockDecoder.isComplete.mockReturnValue(false);
+    mockDecoder.getProgress.mockReturnValue(0);
   });
 
   describe("receivePart", () => {
     it("should process valid UR text", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       decoder.receivePart(urText);
-      expect(mockDecoderInstance.receivePart).toHaveBeenCalledWith(urText);
+      expect(mockDecoder.receivePart).toHaveBeenCalledWith(urText);
       expect(decoder.getError()).toBeNull();
     });
 
     it("should set error for invalid UR text", () => {
       const invalidText = "NOT-A-UR-CODE";
       decoder.receivePart(invalidText);
-      expect(mockDecoderInstance.receivePart).not.toHaveBeenCalled();
+      expect(mockDecoder.receivePart).not.toHaveBeenCalled();
       expect(decoder.getError()).toBe("Invalid QR format: Must start with UR:");
     });
 
     it("should handle decoder errors", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
-      mockDecoderInstance.receivePart.mockImplementation(() => {
+      mockDecoder.receivePart.mockImplementation(() => {
         throw new Error("Decoder error");
       });
 
@@ -106,9 +115,9 @@ describe("BCURDecoder2", () => {
 
     it("should update progress when not complete", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
-      mockDecoderInstance.isComplete.mockReturnValue(false);
-      mockDecoderInstance.getProgress.mockReturnValue(0.5);
-      mockDecoderInstance.receivePart.mockImplementation(() => null);
+      mockDecoder.isComplete.mockReturnValue(false);
+      mockDecoder.getProgress.mockReturnValue(0.5);
+      mockDecoder.receivePart.mockImplementation(() => true);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Processing QR parts: 50%");
@@ -116,9 +125,9 @@ describe("BCURDecoder2", () => {
 
     it("should update progress when complete", () => {
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
-      mockDecoderInstance.isComplete.mockReturnValue(true);
-      mockDecoderInstance.getProgress.mockReturnValue(1);
-      mockDecoderInstance.receivePart.mockImplementation(() => null);
+      mockDecoder.isComplete.mockReturnValue(true);
+      mockDecoder.getProgress.mockReturnValue(1);
+      mockDecoder.receivePart.mockImplementation(() => true);
       
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Complete");
@@ -127,18 +136,18 @@ describe("BCURDecoder2", () => {
 
   describe("getDecodedData", () => {
     it("should return null if decoder is not complete", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(false);
+      mockDecoder.isComplete.mockReturnValue(false);
       const result = decoder.getDecodedData(Network.TESTNET);
       expect(result).toBeNull();
     });
 
     it("should process crypto-account data", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(true);
+      mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "crypto-account",
         cbor: Buffer.from([1, 2, 3, 4])
       } as unknown as UR;
-      mockDecoderInstance.resultUR.mockReturnValue(mockUR);
+      mockDecoder.resultUR.mockReturnValue(mockUR);
 
       const result = decoder.getDecodedData(Network.TESTNET);
       expect(result).toMatchObject({
@@ -150,12 +159,12 @@ describe("BCURDecoder2", () => {
     });
 
     it("should process crypto-hdkey data", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(true);
+      mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "crypto-hdkey",
         cbor: Buffer.from([1, 2, 3, 4])
       } as unknown as UR;
-      mockDecoderInstance.resultUR.mockReturnValue(mockUR);
+      mockDecoder.resultUR.mockReturnValue(mockUR);
 
       const result = decoder.getDecodedData(Network.TESTNET);
       expect(result).toMatchObject({
@@ -167,20 +176,20 @@ describe("BCURDecoder2", () => {
     });
 
     it("should handle unsupported UR types", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(true);
+      mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "unsupported-type",
         cbor: Buffer.from([1, 2, 3, 4])
       } as unknown as UR;
-      mockDecoderInstance.resultUR.mockReturnValue(mockUR);
+      mockDecoder.resultUR.mockReturnValue(mockUR);
 
       decoder.getDecodedData(Network.TESTNET);
       expect(decoder.getError()).toBe("Unsupported UR type: unsupported-type");
     });
 
     it("should handle decoder errors", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(true);
-      mockDecoderInstance.resultUR.mockImplementation(() => {
+      mockDecoder.isComplete.mockReturnValue(true);
+      mockDecoder.resultUR.mockImplementation(() => {
         throw new Error("Decoder error");
       });
 
@@ -204,7 +213,7 @@ describe("BCURDecoder2", () => {
 
   describe("isComplete", () => {
     it("should return true when decoder is complete", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(true);
+      mockDecoder.isComplete.mockReturnValue(true);
       expect(decoder.isComplete()).toBe(true);
     });
 
@@ -214,7 +223,7 @@ describe("BCURDecoder2", () => {
     });
 
     it("should return false when not complete and no error", () => {
-      mockDecoderInstance.isComplete.mockReturnValue(false);
+      mockDecoder.isComplete.mockReturnValue(false);
       expect(decoder.isComplete()).toBe(false);
     });
   });
