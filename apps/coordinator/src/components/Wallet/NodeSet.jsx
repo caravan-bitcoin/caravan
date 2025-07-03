@@ -134,7 +134,7 @@ class NodeSet extends React.Component {
         }
         const amin = Math.min(...a.utxos.map((utxo) => utxo.time));
         const bmin = Math.min(...b.utxos.map((utxo) => utxo.time));
-        if (Number.isNaN(amin) && Number.Number.isNaN(bmin)) return 0;
+        if (Number.isNaN(amin) && Number.isNaN(bmin)) return 0;
         if (Number.isNaN(amin)) return direction;
         if (Number.isNaN(bmin)) return -direction;
         return amin > bmin ? direction : -direction;
@@ -153,7 +153,7 @@ class NodeSet extends React.Component {
 
   renderNodes = () => {
     const { page, nodesPerPage, select } = this.state;
-    const { addNode, updateNode, feeRate } = this.props;
+    const { addNode, updateNode } = this.props;
     const startingIndex = page * nodesPerPage;
     const nodesRows = [];
     const nodeSet = this.getNodeSet();
@@ -168,7 +168,6 @@ class NodeSet extends React.Component {
           bip32Path={bip32Path}
           addNode={addNode}
           updateNode={updateNode}
-          feeRate={feeRate}
           change={change}
           select={select}
         />
@@ -278,7 +277,6 @@ NodeSet.propTypes = {
   addNode: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   walletMode: PropTypes.number.isRequired,
-  feeRate: PropTypes.string,
 };
 
 function mapStateToProps(state) {
