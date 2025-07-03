@@ -5,6 +5,7 @@ const config: JestConfigWithTsJest = {
   transform: {
     "\\.[jt]sx?$": "babel-jest",
   },
+  testPathIgnorePatterns: ['/e2e/'],
   transformIgnorePatterns: ["^.+\\.module\\.(css|sass|scss)$"],
   moduleNameMapper: {
     "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
