@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { useSelector, useDispatch } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 
 // Components
@@ -10,43 +10,33 @@ import AddressExpander from "./AddressExpander";
 // Actions
 import {
   setInputs as setInputsAction,
+  setFeeRate as setFeeRateAction,
   updateAutoSpendAction as updateAutoSpendActionImport,
 } from "../../actions/transactionActions";
 import { WALLET_MODES } from "../../actions/walletActions";
 
-const Node = ({ addNode, bip32Path, updateNode }) => {
+const Node = ({
+  addNode,
+  addressKnown,
+  balanceSats,
+  bip32Path,
+  braidNode,
+  change,
+  fetchedUTXOs,
+  inputs,
+  multisig,
+  present,
+  setInputs,
+  spend,
+  updateAutoSpend,
+  updateNode,
+  utxos,
+  walletMode,
+}) => {
   const [indeterminate, setIndeterminate] = useState(false);
   const [checked, setChecked] = useState(false);
 
-  // Determine if this is a change address
-  const change = (bip32Path || "").split("/")[1] === "1";
-
-  // Use useSelector to get all required data from Redux store
-  const walletMode = useSelector((state) => state.wallet.common.walletMode);
-  const transactionData = useSelector((state) => state.spend.transaction);
-  const braid = useSelector(
-    (state) => state.wallet[change ? "change" : "deposits"],
-  );
-  const nodeData = useSelector(
-    (state) =>
-      state.wallet[change ? "change" : "deposits"].nodes[bip32Path] || {},
-  );
-
-  // Extract all the props we need from Redux state
-  const {
-    addressKnown = false,
-    balanceSats = { isEqualTo: () => false },
-    fetchedUTXOs = false,
-    multisig = {},
-    present = false,
-    spend = false,
-    utxos = [],
-  } = nodeData;
-
-  const { inputs = [], feeRate } = transactionData;
-  const braidNode = braid.nodes[bip32Path];
-
-  const dispatch = useDispatch();
+  const feeRate = useSelector((state) => state.spend.transaction.feeRate);
 
   useEffect(() => {
     generate();
@@ -129,10 +119,9 @@ const Node = ({ addNode, bip32Path, updateNode }) => {
         return newUtxos.length === 0;
       });
     }
-    dispatch(setInputsAction(newInputs));
+    setInputs(newInputs);
     updateNode(change, { spend: e.target.checked, bip32Path });
-    dispatch(updateAutoSpendActionImport(false));
-    // Fee rate is now managed in Redux store - no need to set it here
+    updateAutoSpend(false);
   };
 
   const spending = walletMode === WALLET_MODES.SPEND;
@@ -166,10 +155,54 @@ const Node = ({ addNode, bip32Path, updateNode }) => {
 
 Node.propTypes = {
   addNode: PropTypes.func.isRequired,
+  addressKnown: PropTypes.bool.isRequired,
+  balanceSats: PropTypes.shape({
+    isEqualTo: PropTypes.func,
+  }).isRequired,
   bip32Path: PropTypes.string.isRequired,
+  braidNode: PropTypes.shape({}).isRequired,
+  change: PropTypes.bool.isRequired,
+  fetchedUTXOs: PropTypes.bool.isRequired,
+  inputs: PropTypes.arrayOf(
+    PropTypes.shape({
+      index: PropTypes.number,
+      txid: PropTypes.string,
+    }),
+  ).isRequired,
+  multisig: PropTypes.shape({}),
+  present: PropTypes.bool,
+  setFeeRate: PropTypes.func.isRequired,
+  setInputs: PropTypes.func.isRequired,
+  spend: PropTypes.bool.isRequired,
+  updateAutoSpend: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
+  utxos: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  walletMode: PropTypes.number.isRequired,
 };
 
-Node.defaultProps = {};
+Node.defaultProps = {
+  multisig: {},
+  present: false,
+};
 
-export default Node;
+function mapStateToProps(state, ownProps) {
+  const change = (ownProps.bip32Path || "").split("/")[1] === "1"; // // m, 0, 1
+  const braid = state.wallet[change ? "change" : "deposits"];
+  return {
+    ...state.settings,
+    ...{ change },
+    ...braid.nodes[ownProps.bip32Path],
+    ...state.spend.transaction,
+    walletMode: state.wallet.common.walletMode,
+    braidNode: braid.nodes[ownProps.bip32Path],
+    // feeRate is now accessed via useSelector, not props
+  };
+}
+
+const mapDispatchToProps = {
+  setInputs: setInputsAction,
+  setFeeRate: setFeeRateAction,
+  updateAutoSpend: updateAutoSpendActionImport,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Node);
