@@ -25,3 +25,9 @@ export interface rpcConfig {
     path: string;
     xpub: string;
   }
+
+  export interface ClientSetupOptions {
+    url?: string,
+    username?: string,
+    password?: string
+  }

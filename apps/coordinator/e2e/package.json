@@ -9,7 +9,7 @@
     "test:install": "npx playwright install"
   },
   "keywords": [],
-  "author": "",
+  "author": "Abhishek Raj",
   "license": "ISC",
   "description": "",
   "devDependencies": {
