@@ -11,29 +11,48 @@ export const SWASlider = () => {
   const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(101);
   const [wasteAmount, setWasteAmount] = useState<number>(0);
 
-  const fee = useSelector((state: any) => state.spend.transaction.fee);
-  const feeRate = useSelector((state: any) => state.spend.transaction.feeRate);
-  const outputs = useSelector((state: any) => state.spend.transaction.outputs);
-  const inputs = useSelector((state: any) => state.spend.transaction.inputs);
+  const { fee, feeRate, outputs, inputs } = useSelector(
+    (state: any) => state.spend.transaction,
+  );
+
   const changeAddress = useSelector(
     (state: any) => state.spend.transaction.changeAddress,
   );
   const walletConfig = useSelector(getWalletConfig);
 
+  enum FeeLevel {
+    VeryLow = "Very Low Fees",
+    Low = "Low Fees",
+    Medium = "Medium Fees",
+    High = "High Fees",
+    VeryHigh = "Very High Fees",
+  }
+
+  const FEE_LEVELS = [
+    { max: 10, label: FeeLevel.VeryLow, className: "fee-level-very-low" },
+    { max: 50, label: FeeLevel.Low, className: "fee-level-low" },
+    { max: 100, label: FeeLevel.Medium, className: "fee-level-medium" },
+    { max: 200, label: FeeLevel.High, className: "fee-level-high" },
+    {
+      max: Infinity,
+      label: FeeLevel.VeryHigh,
+      className: "fee-level-very-high",
+    },
+  ];
+
   const getFeeLevelInfo = (feeRate: number) => {
-    if (feeRate <= 10) {
-      return { label: "Very Low Fees", className: "fee-level-very-low" };
-    } else if (feeRate <= 50) {
-      return { label: "Low Fees", className: "fee-level-low" };
-    } else if (feeRate <= 100) {
-      return { label: "Medium Fees", className: "fee-level-medium" };
-    } else if (feeRate <= 200) {
-      return { label: "High Fees", className: "fee-level-high" };
-    } else {
-      return { label: "Very High Fees", className: "fee-level-very-high" };
-    }
+    return FEE_LEVELS.find(({ max }) => feeRate <= max)!;
   };
 
+  /**
+   * formatNumber
+   * ------------
+   * Takes a numeric input, rounds it to the nearest integer,
+   * and returns a string with commas inserted as thousands separators.
+   *
+   * @param num – the number to format
+   * @returns a formatted string like "1,234,567"
+   */
   const formatNumber = (num: number) =>
     num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
