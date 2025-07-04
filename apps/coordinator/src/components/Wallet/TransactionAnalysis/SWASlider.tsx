@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { getWalletConfig, WalletState } from "../../../selectors/wallet";
 import { calculateWasteMetric } from "@caravan/health";
+import BigNumber from "bignumber.js";
 import "../styles.css";
 
 interface TransactionState {
@@ -26,7 +27,7 @@ interface RootState {
 
 export const SWASlider = () => {
   const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(101);
-  const [wasteAmount, setWasteAmount] = useState<number>(0);
+  const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
 
   const { fee, feeRate, outputs, inputs } = useSelector(
     (state: RootState) => state.spend.transaction,
@@ -64,14 +65,16 @@ export const SWASlider = () => {
   /**
    * formatNumber
    * ------------
-   * Takes a numeric input, rounds it to the nearest integer,
+   * Takes a BigNumber input, rounds it to the nearest integer,
    * and returns a string with commas inserted as thousands separators.
+   * BigNumber is preferred over Number because JavaScript's Number type can
+   * introduce precision errors with floating point arithmetic.
    *
-   * @param num – the number to format
+   * @param num – the BigNumber to format
    * @returns a formatted string like "1,234,567"
    */
-  const formatNumber = (num: number) =>
-    num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formatNumber = (num: BigNumber) =>
+    num.integerValue(BigNumber.ROUND_HALF_UP).toFormat();
 
   const handleSliderChange = (event: Event, value: number | number[]) => {
     const newValue = Array.isArray(value) ? value[0] : value;
@@ -83,26 +86,27 @@ export const SWASlider = () => {
     if (!fee || !feeRate || !walletConfig || !outputs || !inputs) return;
 
     try {
-      const feeRateSatPerVb = Number(feeRate);
+      const feeRateSatPerVb = new BigNumber(feeRate);
 
-      // Calculate ratio
-      let nonChangeOutputsTotalSats = 0;
+      let nonChangeOutputsTotalSats = new BigNumber(0);
       outputs.forEach((output: any) => {
         const amountSats = output.amountSats
-          ? Number(output.amountSats)
-          : Number(bitcoinsToSatoshis(output.amount));
+          ? new BigNumber(output.amountSats)
+          : new BigNumber(bitcoinsToSatoshis(output.amount));
 
         if (output.address !== changeAddress) {
-          nonChangeOutputsTotalSats += amountSats;
+          nonChangeOutputsTotalSats =
+            nonChangeOutputsTotalSats.plus(amountSats);
         }
       });
 
       // Prepare parameters for waste calculation
-      const coinAmounts = inputs.map((input: any) =>
-        input.amountSats
-          ? Number(input.amountSats)
-          : Number(bitcoinsToSatoshis(input.amount)),
-      );
+      const coinAmounts = inputs.map((input: any) => {
+        const amountSats = input.amountSats
+          ? new BigNumber(input.amountSats)
+          : new BigNumber(bitcoinsToSatoshis(input.amount));
+        return amountSats.toNumber();
+      });
 
       const hasChange = outputs.some(
         (output: any) => output.address === changeAddress,
@@ -116,16 +120,16 @@ export const SWASlider = () => {
           requiredSigners: walletConfig.quorum.requiredSigners,
           totalSigners: walletConfig.quorum.totalSigners,
         },
-        effectiveFeeRate: feeRateSatPerVb,
+        effectiveFeeRate: feeRateSatPerVb.toNumber(),
         estimatedLongTermFeeRate: longTermFeeEstimate,
         hasChange,
-        spendAmount: nonChangeOutputsTotalSats,
+        spendAmount: nonChangeOutputsTotalSats.toNumber(),
       });
 
-      setWasteAmount(newWasteAmount);
+      setWasteAmount(new BigNumber(newWasteAmount));
     } catch (err) {
       console.error("Error calculating waste metrics:", err);
-      setWasteAmount(0);
+      setWasteAmount(new BigNumber(0));
     }
   }, [
     fee,
