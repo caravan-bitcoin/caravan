@@ -3,20 +3,37 @@ import { Box, Typography, Slider, Tooltip, IconButton } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import { useSelector } from "react-redux";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { getWalletConfig } from "../../../selectors/wallet";
+import { getWalletConfig, WalletState } from "../../../selectors/wallet";
 import { calculateWasteMetric } from "@caravan/health";
 import "../styles.css";
+
+interface TransactionState {
+  fee: number;
+  feeRate: number;
+  outputs: any[];
+  inputs: any[];
+  changeAddress: string;
+}
+
+interface SpendState {
+  transaction: TransactionState;
+}
+
+interface RootState {
+  wallet: WalletState;
+  spend: SpendState;
+}
 
 export const SWASlider = () => {
   const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(101);
   const [wasteAmount, setWasteAmount] = useState<number>(0);
 
   const { fee, feeRate, outputs, inputs } = useSelector(
-    (state: any) => state.spend.transaction,
+    (state: RootState) => state.spend.transaction,
   );
 
   const changeAddress = useSelector(
-    (state: any) => state.spend.transaction.changeAddress,
+    (state: RootState) => state.spend.transaction.changeAddress,
   );
   const walletConfig = useSelector(getWalletConfig);
 
