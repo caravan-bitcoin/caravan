@@ -27,6 +27,7 @@ import {
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import { TransactionAnalysis } from "./TransactionAnalysis";
 
 /**
  * Custom hook to get current signing state
@@ -333,6 +334,9 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
         </Grid>
+        <Box mt={2}>
+          <TransactionAnalysis />
+        </Box>
         <Box mt={2}>
           <Grid container spacing={2}>
             <Grid item>

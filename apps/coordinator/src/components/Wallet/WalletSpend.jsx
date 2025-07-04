@@ -52,8 +52,12 @@ class WalletSpend extends React.Component {
     this.state = {
       importPSBTDisabled: false,
       importPSBTError: "",
+      feeEstimate: "",
     };
   }
+  handleFeeEstimate = (feeEstimate) => {
+    this.setState({ feeEstimate });
+  };
 
   componentDidUpdate = (prevProps) => {
     const { finalizedOutputs } = this.props;
@@ -268,9 +272,13 @@ class WalletSpend extends React.Component {
                   </Box>
                 </Grid>
                 <Box component="div" display={autoSpend ? "none" : "block"}>
-                  <NodeSet addNode={addNode} updateNode={updateNode} />
+                  <NodeSet
+                    addNode={addNode}
+                    updateNode={updateNode}
+                    feeRate={feeRate}
+                  />
                 </Box>
-                <OutputsForm />
+                <OutputsForm onFeeEstimate={this.handleFeeEstimate} />
                 <Box mt={2}>
                   <Button
                     onClick={this.handleShowPreview}
