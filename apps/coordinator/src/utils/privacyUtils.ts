@@ -3,6 +3,9 @@
  * - Wallet fingerprinting/privacy analysis (identifying privacy risks)
  */
 
+import { getSpendTypeScore } from "@caravan/health";
+export { getSpendTypeScore };
+
 /**
  * Analyze a transaction for wallet fingerprinting risks
  *

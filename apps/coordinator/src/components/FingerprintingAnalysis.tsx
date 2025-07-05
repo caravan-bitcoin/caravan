@@ -17,15 +17,22 @@ import DustChip from "./ScriptExplorer/DustChip";
 import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
 import { useSelector } from "react-redux";
-import type { UTXO, TransactionOutput } from "./transaction";
+import type { UTXO } from "@caravan/fees";
 import { BigNumber } from "bignumber.js";
+
+// Local type for transaction outputs (UI only)
+type TransactionOutput = {
+  address: string;
+  amountSats: number;
+  scriptType: string;
+};
 
 /**
  * Main component: TransactionAnalysis
  * Shows wallet fingerprinting and dust analysis for the current transaction.
  */
 const FingerprintingAnalysis: React.FC = () => {
-  const { dust, walletFingerprinting, summary } = useTransactionAnalysis();
+  const { dust, privacy, summary } = useTransactionAnalysis();
   // Get config from Redux for script type, signers, etc.
   const addressType = useSelector((state: any) => state.settings?.addressType);
   const inputs = useSelector(
@@ -44,7 +51,7 @@ const FingerprintingAnalysis: React.FC = () => {
     scriptType: o.scriptType ?? "",
   }));
   let fingerprintTooltip = "";
-  if (walletFingerprinting.hasWalletFingerprinting) {
+  if (privacy.hasWalletFingerprinting) {
     if (fixedOutputs.length === 1) {
       fingerprintTooltip =
         "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
@@ -54,11 +61,11 @@ const FingerprintingAnalysis: React.FC = () => {
     }
   } else if (
     summary.outputCount > 0 &&
-    walletFingerprinting.matchingOutputCount === fixedOutputs.length
+    privacy.matchingOutputCount === fixedOutputs.length
   ) {
     fingerprintTooltip =
       "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
-  } else if (walletFingerprinting.matchingOutputCount === 0) {
+  } else if (privacy.matchingOutputCount === 0) {
     fingerprintTooltip =
       "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
   } else {
@@ -70,8 +77,7 @@ const FingerprintingAnalysis: React.FC = () => {
   const buildOutputRows = () => {
     return outputs.map((output: TransactionOutput, idx: number) => {
       const isPoisoned =
-        walletFingerprinting.hasWalletFingerprinting &&
-        walletFingerprinting.poisonedOutputIndex === idx;
+        privacy.hasWalletFingerprinting && privacy.poisonedOutputIndex === idx;
       return (
         <TableRow
           key={output.address}
@@ -177,7 +183,7 @@ const FingerprintingAnalysis: React.FC = () => {
             }}
           >
             <span style={{ display: "inline-flex" }}>
-              {walletFingerprinting.hasWalletFingerprinting ? (
+              {privacy.hasWalletFingerprinting ? (
                 <OutputFingerprintChip
                   outputs={fixedOutputs.map((o: TransactionOutput) => ({
                     ...o,
@@ -191,8 +197,7 @@ const FingerprintingAnalysis: React.FC = () => {
                   }
                 />
               ) : summary.outputCount > 0 &&
-                walletFingerprinting.matchingOutputCount ===
-                  fixedOutputs.length ? (
+                privacy.matchingOutputCount === fixedOutputs.length ? (
                 <ScriptTypeChip
                   scriptType={addressType}
                   color="success"
@@ -245,8 +250,8 @@ const FingerprintingAnalysis: React.FC = () => {
             <Box>
               {inputs.map((input: UTXO) => (
                 <DustChip
-                  key={`${input.txid}-${input.index}`}
-                  amountSats={input.amountSats}
+                  key={`${input.txid}-${input.vout}`}
+                  amountSats={Number(input.value)}
                   feeRate={feeRate}
                 />
               ))}

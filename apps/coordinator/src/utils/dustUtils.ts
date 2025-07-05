@@ -1,23 +1,32 @@
+import { WasteMetrics } from "@caravan/health";
+import type { MultisigAddressType } from "@caravan/bitcoin";
+
+const waste = new WasteMetrics();
+
 /**
  * Calculate the minimum amount needed so an output isn't considered dust
  *
  * @param scriptType - Type of Bitcoin script (like P2PKH, P2SH, etc.)
  * @param feeRate - How much you pay per byte in fees
+ * @param requiredSignerCount - Number of required signers for multisig
+ * @param totalSignerCount - Total number of signers for multisig
+ * @param riskMultiplier - Optional risk multiplier (default 2)
  * @return The minimum amount in satoshis to avoid being dust
  */
-const DUST_FEE_MULTIPLIER = 3;
-
 export function calculateDustThreshold(
-  scriptType: string,
+  scriptType: MultisigAddressType,
   feeRate: number,
+  requiredSignerCount: number,
+  totalSignerCount: number,
+  riskMultiplier: number = 2,
 ): number {
-  // For now, we assume all inputs are about 148 bytes (typical for P2PKH)
-  // TODO: We could make this more precise by using actual sizes for each script type
-  const inputScriptSize = 148;
-  // Calculate how much it would cost to spend this output later
-  // We multiply by 3 to be conservative - better safe than sorry
-  const costToSpend = (inputScriptSize * feeRate * DUST_FEE_MULTIPLIER) / 1000;
-  return Math.ceil(costToSpend);
+  const { lowerLimit } = waste.calculateDustLimits(
+    feeRate,
+    scriptType,
+    { requiredSignerCount, totalSignerCount },
+    riskMultiplier,
+  );
+  return lowerLimit;
 }
 
 /**
@@ -26,13 +35,25 @@ export function calculateDustThreshold(
  * @param amountSats - How many satoshis this output contains
  * @param scriptType - What type of Bitcoin script this is
  * @param feeRate - Current fee rate (sats per byte)
+ * @param requiredSignerCount - Number of required signers for multisig
+ * @param totalSignerCount - Total number of signers for multisig
+ * @param riskMultiplier - Optional risk multiplier (default 2)
  * @return true if this output is dust (too expensive to spend)
  */
 export function isDustUTXO(
   amountSats: number,
-  scriptType: string,
+  scriptType: MultisigAddressType,
   feeRate: number,
+  requiredSignerCount: number,
+  totalSignerCount: number,
+  riskMultiplier: number = 2,
 ): boolean {
-  const minAmount = calculateDustThreshold(scriptType, feeRate);
+  const minAmount = calculateDustThreshold(
+    scriptType,
+    feeRate,
+    requiredSignerCount,
+    totalSignerCount,
+    riskMultiplier,
+  );
   return amountSats <= minAmount;
 }

@@ -41,7 +41,7 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import { analyzeTransaction } from "../analysis";
+import { analyzeTransaction } from "../../utils/transactionAnalysisUtils";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -266,9 +266,8 @@ class WalletSpend extends React.Component {
               higher fees or uneconomical spending.
             </Alert>
           )}
-          {transactionAnalysis.walletFingerprinting &&
-            transactionAnalysis.walletFingerprinting
-              .hasWalletFingerprinting && (
+          {transactionAnalysis.privacy &&
+            transactionAnalysis.privacy.hasWalletFingerprinting && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
                 This transaction leaks privacy: exactly one output matches the
@@ -276,9 +275,7 @@ class WalletSpend extends React.Component {
                 link future transactions.
                 <br />
                 Output types:{" "}
-                {transactionAnalysis.walletFingerprinting.scriptTypes.join(
-                  ", ",
-                )}
+                {transactionAnalysis.privacy.scriptTypes.join(", ")}
               </Alert>
             )}
           <Grid container>

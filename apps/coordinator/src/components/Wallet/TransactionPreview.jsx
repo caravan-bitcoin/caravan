@@ -175,9 +175,9 @@ class TransactionPreview extends React.Component {
     });
   }
 
-  downloadPSBT = (psbtData) => {
+  handleDownloadPSBT(psbtData) {
     downloadFile(psbtData, "transaction.psbt");
-  };
+  }
 
   render() {
     const {
@@ -212,7 +212,7 @@ class TransactionPreview extends React.Component {
         <Grid container>
           <Grid item xs={4}>
             <h3>Fee</h3>
-            <div>{BigNumber(fee).toFixed(8)} BTC</div>
+            <div>{BigNumber(fee).toFixed(8)} BTC </div>
           </Grid>
           <Grid item xs={4}>
             <h3>Fee Rate</h3>
@@ -251,7 +251,7 @@ class TransactionPreview extends React.Component {
                 <Button
                   variant="contained"
                   color="secondary"
-                  onClick={() => this.downloadPSBT(unsignedPSBT)}
+                  onClick={() => this.handleDownloadPSBT(unsignedPSBT)}
                 >
                   Download Unsigned PSBT
                 </Button>
@@ -284,17 +284,19 @@ TransactionPreview.propTypes = {
   totalSigners: PropTypes.number,
 };
 
-const mapStateToProps = (state) => ({
-  changeOutputIndex: state.spend.transaction.changeOutputIndex,
-  network: state.settings.network,
-  inputs: state.spend.transaction.inputs,
-  outputs: state.spend.transaction.outputs,
-  unsignedPSBT: state.spend.transaction.unsignedPSBT,
-  signatureImporters: state.spend.signatureImporters,
-  requiredSigners: state.settings.requiredSigners,
-  addressType: state.settings.addressType,
-  totalSigners: state.settings.totalSigners,
-});
+function mapStateToProps(state) {
+  return {
+    changeOutputIndex: state.spend.transaction.changeOutputIndex,
+    network: state.settings.network,
+    inputs: state.spend.transaction.inputs,
+    outputs: state.spend.transaction.outputs,
+    unsignedPSBT: state.spend.transaction.unsignedPSBT,
+    signatureImporters: state.spend.signatureImporters,
+    requiredSigners: state.settings.requiredSigners,
+    addressType: state.settings.addressType,
+    totalSigners: state.settings.totalSigners,
+  };
+}
 
 const mapDispatchToProps = {
   setChangeOutputMultisig: setChangeOutputMultisigAction,
