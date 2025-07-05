@@ -50,7 +50,7 @@
       "jspdf": "2.5.1"
     }
   },
-  "packageManager": "npm@10.8.2",
+  "packageManager": "npm@10.5.0",
   "workspaces": [
     "apps/*",
     "packages/*"
