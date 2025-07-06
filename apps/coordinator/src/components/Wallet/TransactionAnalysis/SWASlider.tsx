@@ -81,6 +81,10 @@ export const SWASlider = () => {
     setLongTermFeeEstimate(newValue);
   };
 
+  const valuetext = (value: number) => {
+    return `${value} sats/vB`;
+  };
+
   // Calculate all waste metrics
   useEffect(() => {
     if (!fee || !feeRate || !walletConfig || !outputs || !inputs) return;
@@ -174,6 +178,9 @@ export const SWASlider = () => {
             onChange={handleSliderChange}
             aria-labelledby="long-term-fee-estimate-slider"
             className="custom-slider"
+            valueLabelDisplay="auto"
+            getAriaValueText={valuetext}
+            valueLabelFormat={valuetext}
           />
         </Box>
 
@@ -185,7 +192,7 @@ export const SWASlider = () => {
           <Typography variant="body2" className="waste-amount-units">
             sats
           </Typography>
-          <Tooltip title="Waste metric = weight×(feerate−longtermfeerate)+change+excess">
+          <Tooltip title="Shows how much you might waste in fees by spending now instead of waiting for lower fees">
             <IconButton size="small" className="info-icon-button">
               <InfoIcon className="info-icon" />
             </IconButton>
@@ -200,7 +207,7 @@ export const SWASlider = () => {
         >
           Long Term Fee Estimate (L): {longTermFeeEstimate.toLocaleString()}{" "}
           sats/vB
-          <Tooltip title="Long-term fee rate estimate for redeeming UTXOs">
+          <Tooltip title="Expected fee rate in the future when network activity is lower">
             <IconButton size="small" className="info-icon-button">
               <InfoIcon className="info-icon" />
             </IconButton>
