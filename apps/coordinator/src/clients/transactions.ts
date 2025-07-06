@@ -8,8 +8,8 @@ import { useGetClient } from "hooks/client";
 // Query key factory for pending transactions
 const transactionKeys = {
   all: ["transactions"] as const,
+  tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
-  pendingTx: (txid: string) => [...transactionKeys.pending(), txid] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
 };
@@ -25,6 +25,15 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
+export const useFetchTransactionDetails = (txid: string) => {
+  const blockchainClient = useGetClient();
+  return useQuery({
+    queryKey: transactionKeys.tx(txid),
+    queryFn: () => fetchTransactionDetails(txid, blockchainClient),
+    enabled: !!blockchainClient && !!txid,
+  });
+};
+
 // Hook for fetching all pending transactions
 const useFetchPendingTransactions = () => {
   const pendingTransactionIds = useSelector(getPendingTransactionIds);
@@ -32,14 +41,14 @@ const useFetchPendingTransactions = () => {
 
   return useQueries({
     queries: pendingTransactionIds.map((txid) => ({
-      queryKey: transactionKeys.pendingTx(txid),
+      queryKey: transactionKeys.tx(txid),
       queryFn: () => fetchTransactionDetails(txid, blockchainClient),
       enabled: !!blockchainClient && !!txid,
     })),
   });
 };
 
-export const useFetchTransactionWithHex = (txid: string) => {
+export const useTransactionWithHex = (txid: string) => {
   const blockchainClient = useGetClient();
   return useQuery({
     queryKey: transactionKeys.txWithHex(txid),
