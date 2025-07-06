@@ -1,5 +1,6 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { BlockchainClient, TransactionDetails } from "@caravan/clients";
 import { getPendingTransactionIds, getWalletAddresses } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
@@ -8,12 +9,16 @@ import { useGetClient } from "hooks/client";
 const transactionKeys = {
   all: ["transactions"] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
-  pendingTransaction: (txid: string) =>
-    [...transactionKeys.pending(), txid] as const,
+  pendingTx: (txid: string) => [...transactionKeys.pending(), txid] as const,
+  txWithHex: (txid: string) =>
+    [...transactionKeys.all, txid, "withHex"] as const,
 };
 
 // Service function for fetching transaction details
-const fetchTransactionDetails = async (txid: string, client: any) => {
+const fetchTransactionDetails = async (
+  txid: string,
+  client: BlockchainClient,
+): Promise<TransactionDetails> => {
   if (!client) {
     throw new Error("No blockchain client available");
   }
@@ -27,10 +32,25 @@ const useFetchPendingTransactions = () => {
 
   return useQueries({
     queries: pendingTransactionIds.map((txid) => ({
-      queryKey: transactionKeys.pendingTransaction(txid),
+      queryKey: transactionKeys.pendingTx(txid),
       queryFn: () => fetchTransactionDetails(txid, blockchainClient),
       enabled: !!blockchainClient && !!txid,
     })),
+  });
+};
+
+export const useFetchTransactionWithHex = (txid: string) => {
+  const blockchainClient = useGetClient();
+  return useQuery({
+    queryKey: transactionKeys.txWithHex(txid),
+    queryFn: async () => {
+      const [transaction, transactionHex] = await Promise.all([
+        blockchainClient.getTransaction(txid),
+        blockchainClient.getTransactionHex(txid),
+      ]);
+      return { txid, transaction, transactionHex };
+    },
+    enabled: !!blockchainClient && !!txid,
   });
 };
 
