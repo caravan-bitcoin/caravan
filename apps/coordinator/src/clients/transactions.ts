@@ -1,9 +1,14 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { BlockchainClient, TransactionDetails } from "@caravan/clients";
-import { getPendingTransactionIds, getWalletAddresses } from "selectors/wallet";
+import {
+  getPendingTransactionIds,
+  getWalletAddresses,
+  Slice,
+} from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
+import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
 // Query key factory for pending transactions
 const transactionKeys = {
@@ -12,6 +17,8 @@ const transactionKeys = {
   pending: () => [...transactionKeys.all, "pending"] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
+  // all the coins for a given transaction
+  coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
 };
 
 // Service function for fetching transaction details
@@ -96,4 +103,80 @@ export const usePendingTransactions = () => {
       transactionQueries.forEach((query) => query.refetch());
     },
   };
+};
+
+export interface Coin {
+  prevTxId: string;
+  vout: number;
+  address: string;
+  value: string;
+  prevTxHex: string;
+  slice?: Slice;
+}
+
+// Service function for fetching transaction coins (spendable outputs from prev txs)
+const fetchTransactionCoins = async (
+  transaction: TransactionDetails,
+  client: BlockchainClient,
+) => {
+  const coins = new Map<string, Coin>();
+  for (const input of transaction.vin) {
+    const { txid, vout } = input;
+
+    // Skip if we don't have valid identifiers
+    if (!txid || vout === undefined) continue;
+    const coinId = `${txid}:${vout}`;
+
+    const [prevTxHex, prevTx] = await Promise.all([
+      client.getTransactionHex(txid),
+      client.getTransaction(txid),
+    ]);
+
+    if (!prevTx || !prevTxHex) {
+      throw new Error(
+        `Failed to fetch prev tx info for input ${coinId}. Are you sure the transaction was sent from this wallet?`,
+      );
+    }
+
+    const coinAddress = prevTx.vout[vout].scriptPubkeyAddress;
+    const coinValue = bitcoinsToSatoshis(prevTx.vout[vout].value.toString());
+
+    if (!coinAddress) {
+      throw new Error(`Failed to fetch coin address for input ${coinId}.`);
+    }
+
+    coins.set(coinAddress, {
+      prevTxId: txid,
+      vout,
+      address: coinAddress,
+      value: coinValue,
+      prevTxHex,
+    });
+  }
+  return coins;
+};
+
+/**
+ * @description Fetches all the coins for a given transaction.
+ * @param txid - The transaction ID to fetch coins from
+ * @returns The coins from the transaction
+ */
+export const useTransactionCoins = (txid: string) => {
+  const client = useGetClient();
+  const { data: transaction } = useFetchTransactionDetails(txid);
+
+  return useQuery({
+    queryKey: transactionKeys.coins(txid),
+    queryFn: async () => {
+      if (!transaction) {
+        throw new Error("Transaction not found");
+      }
+      const coins = await fetchTransactionCoins(transaction, client);
+      return {
+        transaction,
+        coins,
+      };
+    },
+    enabled: !!transaction && !!client,
+  });
 };
