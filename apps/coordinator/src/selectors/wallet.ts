@@ -26,7 +26,7 @@ export interface Slice {
       output: Buffer;
       pubkeys: Buffer[];
     };
-    bip32Derivations: {
+    bip32Derivation: {
       pubkey: Buffer;
       masterFingerprint: Buffer;
       path: string;
