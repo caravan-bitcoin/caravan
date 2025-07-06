@@ -18,13 +18,26 @@ import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
 import { useSelector } from "react-redux";
 import type { UTXO } from "@caravan/fees";
-import { BigNumber } from "bignumber.js";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
+import type { WalletState } from "../selectors/wallet";
 
 // Local type for transaction outputs (UI only)
 type TransactionOutput = {
   address: string;
   amountSats: number;
   scriptType: string;
+};
+
+const tooltipSx = {
+  "& .MuiTooltip-tooltip": {
+    fontSize: "1rem",
+    padding: "12px 16px",
+    maxWidth: 300,
+    backgroundColor: "#222",
+    color: "#fff",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+  },
 };
 
 /**
@@ -34,16 +47,14 @@ type TransactionOutput = {
 const FingerprintingAnalysis: React.FC = () => {
   const { dust, privacy, summary } = useTransactionAnalysis();
   // Get config from Redux for script type, signers, etc.
-  const addressType = useSelector((state: any) => state.settings?.addressType);
-  const inputs = useSelector(
-    (state: any) => state.spend?.transaction?.inputs || [],
+  const addressType = useSelector(
+    (state: WalletState) => state.settings?.addressType,
   );
-  const outputs = useSelector(
-    (state: any) => state.spend?.transaction?.outputs || [],
-  );
-  const feeRate = useSelector(
-    (state: any) => state.spend?.transaction?.feeRate || 1,
-  );
+  const {
+    inputs = [],
+    outputs = [],
+    feeRate = 1,
+  } = useSelector((state: any) => state.spend?.transaction || {});
 
   // Wallet fingerprinting analysis UI
   const fixedOutputs = outputs.map((o: TransactionOutput) => ({
@@ -51,88 +62,28 @@ const FingerprintingAnalysis: React.FC = () => {
     scriptType: o.scriptType ?? "",
   }));
   let fingerprintTooltip = "";
-  if (privacy.hasWalletFingerprinting) {
-    if (fixedOutputs.length === 1) {
+  switch (true) {
+    case privacy.hasWalletFingerprinting && fixedOutputs.length === 1:
       fingerprintTooltip =
         "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
-    } else {
+      break;
+    case privacy.hasWalletFingerprinting:
       fingerprintTooltip =
         "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.";
-    }
-  } else if (
-    summary.outputCount > 0 &&
-    privacy.matchingOutputCount === fixedOutputs.length
-  ) {
-    fingerprintTooltip =
-      "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
-  } else if (privacy.matchingOutputCount === 0) {
-    fingerprintTooltip =
-      "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
-  } else {
-    fingerprintTooltip =
-      "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
+      break;
+    case summary.outputCount > 0 &&
+      privacy.matchingOutputCount === fixedOutputs.length:
+      fingerprintTooltip =
+        "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
+      break;
+    case privacy.matchingOutputCount === 0:
+      fingerprintTooltip =
+        "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
+      break;
+    default:
+      fingerprintTooltip =
+        "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
   }
-
-  // Outputs table with privacy highlighting
-  const buildOutputRows = () => {
-    return outputs.map((output: TransactionOutput, idx: number) => {
-      const isPoisoned =
-        privacy.hasWalletFingerprinting && privacy.poisonedOutputIndex === idx;
-      return (
-        <TableRow
-          key={output.address}
-          style={isPoisoned ? { background: "#fff3e0" } : {}}
-        >
-          <TableCell>
-            <code>{output.address}</code>
-            {isPoisoned && (
-              <Tooltip title="This output matches your wallet's address type and is likely to be identified as change by an outside observer.">
-                <WarningAmber
-                  color="warning"
-                  fontSize="small"
-                  style={{ marginLeft: 4, verticalAlign: "middle" }}
-                />
-              </Tooltip>
-            )}
-          </TableCell>
-          <TableCell>
-            <code>{BigNumber(output.amountSats).toFixed(8)}</code>
-          </TableCell>
-          <TableCell>
-            <ScriptTypeChip scriptType={output.scriptType || ""} />
-          </TableCell>
-        </TableRow>
-      );
-    });
-  };
-
-  const buildOutputsTable = () => {
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-            <TableCell>Script Type</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{buildOutputRows()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell>TOTAL:</TableCell>
-            <TableCell>
-              {outputs.reduce(
-                (sum: number, output: TransactionOutput) =>
-                  sum + (output.amountSats || 0),
-                0,
-              ) / 1e8}
-            </TableCell>
-            <TableCell />
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
 
   return (
     <Box>
@@ -147,17 +98,7 @@ const FingerprintingAnalysis: React.FC = () => {
             title="Analyzes the outputs for wallet fingerprinting privacy leaks (change detection)."
             placement="top"
             arrow
-            sx={{
-              "& .MuiTooltip-tooltip": {
-                fontSize: "1rem",
-                padding: "12px 16px",
-                maxWidth: 300,
-                backgroundColor: "#222",
-                color: "#fff",
-                borderRadius: "8px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-              },
-            }}
+            sx={tooltipSx}
           >
             <Shield fontSize="small" />
           </Tooltip>
@@ -170,17 +111,7 @@ const FingerprintingAnalysis: React.FC = () => {
             title={fingerprintTooltip}
             placement="bottom"
             arrow
-            sx={{
-              "& .MuiTooltip-tooltip": {
-                fontSize: "1rem",
-                padding: "12px 16px",
-                maxWidth: 300,
-                backgroundColor: "#222",
-                color: "#fff",
-                borderRadius: "8px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-              },
-            }}
+            sx={tooltipSx}
           >
             <span style={{ display: "inline-flex" }}>
               {privacy.hasWalletFingerprinting ? (
@@ -218,7 +149,9 @@ const FingerprintingAnalysis: React.FC = () => {
       </Grid>
 
       {/* Outputs Table with privacy highlighting */}
-      <Box mt={2}>{buildOutputsTable()}</Box>
+      <Box mt={2}>
+        <OutputsTable outputs={outputs} privacy={privacy} />
+      </Box>
 
       {/* Input dust analysis */}
       <Grid container spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
@@ -227,17 +160,7 @@ const FingerprintingAnalysis: React.FC = () => {
             title="Analyzes transaction inputs to see if any are considered 'dust' (value may be less than the fee to spend it)."
             placement="top"
             arrow
-            sx={{
-              "& .MuiTooltip-tooltip": {
-                fontSize: "1rem",
-                padding: "12px 16px",
-                maxWidth: 300,
-                backgroundColor: "#222",
-                color: "#fff",
-                borderRadius: "8px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-              },
-            }}
+            sx={tooltipSx}
           >
             <CleaningServices fontSize="small" />
           </Tooltip>
@@ -264,6 +187,81 @@ const FingerprintingAnalysis: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
+  );
+};
+
+// OutputRow component
+const OutputRow: React.FC<{
+  output: TransactionOutput;
+  isPoisoned: boolean;
+}> = ({ output, isPoisoned }) => (
+  <TableRow style={isPoisoned ? { background: "#fff3e0" } : {}}>
+    <TableCell>
+      <code>{output.address}</code>
+      {isPoisoned && (
+        <Tooltip
+          title="This output matches your wallet's address type and is likely to be identified as change by an outside observer."
+          sx={tooltipSx}
+        >
+          <WarningAmber
+            color="warning"
+            fontSize="small"
+            style={{ marginLeft: 4, verticalAlign: "middle" }}
+          />
+        </Tooltip>
+      )}
+    </TableCell>
+    <TableCell>
+      <code>{satoshisToBitcoins(output.amountSats)}</code>
+    </TableCell>
+    <TableCell>
+      <ScriptTypeChip scriptType={output.scriptType || ""} />
+    </TableCell>
+  </TableRow>
+);
+
+// OutputsTable component
+const OutputsTable: React.FC<{
+  outputs: TransactionOutput[];
+  privacy: any;
+}> = ({ outputs, privacy }) => {
+  return (
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Address</TableCell>
+          <TableCell>Amount (BTC)</TableCell>
+          <TableCell>Script Type</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {outputs.map((output: TransactionOutput, idx: number) => (
+          <OutputRow
+            key={output.address}
+            output={output}
+            isPoisoned={
+              privacy.hasWalletFingerprinting &&
+              privacy.poisonedOutputIndex === idx
+            }
+          />
+        ))}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell>TOTAL:</TableCell>
+          <TableCell>
+            {satoshisToBitcoins(
+              outputs.reduce(
+                (sum: number, output: TransactionOutput) =>
+                  sum + (output.amountSats || 0),
+                0,
+              ),
+            )}
+          </TableCell>
+          <TableCell />
+        </TableRow>
+      </TableFooter>
+    </Table>
   );
 };
 
