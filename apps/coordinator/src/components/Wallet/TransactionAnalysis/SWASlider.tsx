@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Box, Typography, Slider, Tooltip, IconButton } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Slider,
+  Tooltip,
+  IconButton,
+  Alert,
+  AlertTitle,
+  Button,
+} from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import { useSelector } from "react-redux";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
@@ -25,45 +34,59 @@ interface RootState {
   spend: SpendState;
 }
 
+const SpendRecommendation = ({
+  initialWasteScore,
+  wasteAmount,
+}: {
+  initialWasteScore: BigNumber;
+  wasteAmount: BigNumber;
+}) => {
+  const wasteDifference = wasteAmount.minus(initialWasteScore);
+
+  const shouldSpendNow = wasteDifference.isLessThan(0);
+  let text = "";
+  let title = "";
+
+  if (shouldSpendNow) {
+    title = "Now's a good time to spend";
+    text =
+      "Based on your long term fee rate expectations, spending now would produce less waste for your wallet. This is a good time to spend.";
+  } else {
+    title = "Consider waiting to spend";
+    text =
+      "Based on your long term fee rate expectations, waiting to spend would produce less waste for your wallet.";
+  }
+
+  if (wasteDifference.isZero()) {
+    return null;
+  }
+
+  return (
+    <Alert severity={shouldSpendNow ? "success" : "warning"}>
+      <AlertTitle>{title}</AlertTitle>
+      {text}
+    </Alert>
+  );
+};
+
 export const SWASlider = () => {
   const { fee, feeRate, outputs, inputs } = useSelector(
     (state: RootState) => state.spend.transaction,
   );
-  const numricFeeRate = Number(feeRate);
-  const [longTermFeeEstimate, setLongTermFeeEstimate] =
-    useState<number>(numricFeeRate);
+  const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(
+    Number(feeRate),
+  );
   const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
+
+  // going to use this for comparisons
+  const [initialWasteScore, setInitialWasteScore] = useState<BigNumber>(
+    new BigNumber(0),
+  );
 
   const changeAddress = useSelector(
     (state: RootState) => state.spend.transaction.changeAddress,
   );
   const walletConfig = useSelector(getWalletConfig);
-
-  enum FeeLevel {
-    VeryLow = "Very Low Fees",
-    Low = "Low Fees",
-    Medium = "Medium Fees",
-    High = "High Fees",
-    VeryHigh = "Very High Fees",
-  }
-
-  // somewhat arbitrarily based on historical levels of fee rate fluctuations as of 2025
-  // https://mempool.space/graphs/mining/block-fee-rates
-  const FEE_LEVELS = [
-    { max: 10, label: FeeLevel.VeryLow, className: "fee-level-very-low" },
-    { max: 50, label: FeeLevel.Low, className: "fee-level-low" },
-    { max: 100, label: FeeLevel.Medium, className: "fee-level-medium" },
-    { max: 200, label: FeeLevel.High, className: "fee-level-high" },
-    {
-      max: Infinity,
-      label: FeeLevel.VeryHigh,
-      className: "fee-level-very-high",
-    },
-  ];
-
-  const getFeeLevelInfo = (feeRate: number) => {
-    return FEE_LEVELS.find(({ max }) => feeRate <= max)!;
-  };
 
   /**
    * formatNumber
@@ -134,6 +157,10 @@ export const SWASlider = () => {
       });
 
       setWasteAmount(new BigNumber(newWasteAmount));
+
+      if (initialWasteScore.isZero()) {
+        setInitialWasteScore(new BigNumber(newWasteAmount));
+      }
     } catch (err) {
       console.error("Error calculating waste metrics:", err);
       setWasteAmount(new BigNumber(0));
@@ -148,11 +175,6 @@ export const SWASlider = () => {
     longTermFeeEstimate,
   ]);
 
-  const feeLevelInfo = useMemo(
-    () => getFeeLevelInfo(longTermFeeEstimate),
-    [longTermFeeEstimate],
-  );
-
   return (
     <Box className="swa-slider-container">
       {/* Header */}
@@ -160,9 +182,25 @@ export const SWASlider = () => {
         Waste Analysis
       </Typography>
       <Typography variant="body2" className="waste-analysis-description">
-        Analyzes whether spending this bitcoin now vs later when fee market
+        Analyzes whether spending this bitcoin now vs later when the fee market
         might be different is more efficient for the long term health of your
-        wallet&apos;s UTXO set.
+        wallet&apos;s UTXO set. Optimize your bitcoin spending by using Bitcoin
+        Core&apos;s waste analysis formula.
+      </Typography>
+      <Typography
+        variant="body2"
+        className="waste-analysis-description"
+        sx={{
+          mt: 2,
+        }}
+      >
+        <a
+          href="https://bitcoin.stackexchange.com/questions/113622/what-does-waste-metric-mean-in-the-context-of-coin-selection"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          What is the &quot;Waste Metric&quot;?
+        </a>
       </Typography>
 
       {/* Fee Waste Box */}
@@ -201,6 +239,15 @@ export const SWASlider = () => {
               <InfoIcon className="info-icon" />
             </IconButton>
           </Tooltip>
+          {longTermFeeEstimate !== Number(feeRate) && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setLongTermFeeEstimate(Number(feeRate))}
+            >
+              Reset
+            </Button>
+          )}
         </Box>
 
         {/* Fee Estimate Info */}
@@ -218,13 +265,10 @@ export const SWASlider = () => {
           </Tooltip>
         </Typography>
 
-        {/* Label */}
-        <Typography
-          variant="body2"
-          className={`fee-level-indicator ${feeLevelInfo.className}`}
-        >
-          {feeLevelInfo.label}
-        </Typography>
+        <SpendRecommendation
+          initialWasteScore={initialWasteScore}
+          wasteAmount={wasteAmount}
+        />
       </Box>
     </Box>
   );
