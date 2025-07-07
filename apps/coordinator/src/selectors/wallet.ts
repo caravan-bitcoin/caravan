@@ -37,7 +37,7 @@ interface LedgerPolicyHmac {
   policyHmac: string;
 }
 
-interface WalletState {
+export interface WalletState {
   wallet: {
     deposits: {
       nodes: Record<string, Slice>;
