@@ -29,9 +29,9 @@ export const SWASlider = () => {
   const { fee, feeRate, outputs, inputs } = useSelector(
     (state: RootState) => state.spend.transaction,
   );
-  const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(feeRate);
+  const [longTermFeeEstimate, setLongTermFeeEstimate] =
+    useState<number>(feeRate);
   const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
-
 
   const changeAddress = useSelector(
     (state: RootState) => state.spend.transaction.changeAddress,
@@ -159,7 +159,9 @@ export const SWASlider = () => {
         Waste Analysis
       </Typography>
       <Typography variant="body2" className="waste-analysis-description">
-        Analyzes whether spending this bitcoin now vs later when fee market might be different is more efficient for the long term health of your wallet's UTXO set.
+        Analyzes whether spending this bitcoin now vs later when fee market
+        might be different is more efficient for the long term health of your
+        wallet&apos;s UTXO set.
       </Typography>
 
       {/* Fee Waste Box */}
