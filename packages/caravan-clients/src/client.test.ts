@@ -278,10 +278,10 @@ describe("BlockchainClient", () => {
   });
 
   describe("getTransactionHex", () => {
-    let mockCallBitcoind: MockInstance;
+    let mockCallBitcoindWallet: MockInstance;
 
     beforeEach(() => {
-      mockCallBitcoind = vi.spyOn(bitcoind, "callBitcoind");
+      mockCallBitcoindWallet = vi.spyOn(wallet, "callBitcoindWallet");
     });
 
     afterEach(() => {
@@ -290,12 +290,18 @@ describe("BlockchainClient", () => {
 
     it("should get the transaction hex for a given txid (PRIVATE client)", async () => {
       // Mock the response from the API
-      const mockResponse = "transactionHex";
-      mockCallBitcoind.mockResolvedValue(mockResponse);
+      const mockResponse = { result: { hex: "transactionHex" } };
+      mockCallBitcoindWallet.mockResolvedValue(mockResponse);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "test-wallet",
+        },
       });
 
       // Call the getTransactionHex method
@@ -303,25 +309,32 @@ describe("BlockchainClient", () => {
       const transactionHex = await blockchainClient.getTransactionHex(txid);
 
       // Verify the mock axios instance was called with the correct URL
-      expect(mockCallBitcoind).toHaveBeenCalledWith(
-        blockchainClient.bitcoindParams.url,
-        blockchainClient.bitcoindParams.auth,
-        "gettransaction",
-        [txid],
-      );
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+        baseUrl: blockchainClient.bitcoindParams.url,
+        walletName: blockchainClient.bitcoindParams.walletName,
+        auth: blockchainClient.bitcoindParams.auth,
+        method: "gettransaction",
+        params: [txid, true, true],
+      });
 
       // Verify the returned transaction hex
-      expect(transactionHex).toEqual(mockResponse);
+      expect(transactionHex).toEqual("transactionHex");
     });
 
     it("should throw an error when failing to get the transaction hex (PRIVATE client)", async () => {
       // Mock the error from the API
       const mockError = new Error("Failed to fetch transaction hex");
-      mockCallBitcoind.mockRejectedValue(mockError);
+      mockCallBitcoindWallet.mockRejectedValue(mockError);
       // Create a new instance of BlockchainClient with a mock axios instance
       const blockchainClient = new BlockchainClient({
         type: ClientType.PRIVATE,
         network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "test-wallet",
+        },
       });
 
       // Call the getTransactionHex method
@@ -332,9 +345,14 @@ describe("BlockchainClient", () => {
       } catch (err) {
         error = err;
       }
-
-      // Verify the mock axios instance was called with the correct URL
-      expect(mockCallBitcoind).toHaveBeenCalled();
+      // Verify the mock wallet function was called with the correct parameters
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+        baseUrl: blockchainClient.bitcoindParams.url,
+        walletName: blockchainClient.bitcoindParams.walletName,
+        auth: blockchainClient.bitcoindParams.auth,
+        method: "gettransaction",
+        params: [txid, true, true],
+      });
 
       // Verify the error message
       expect(error).toEqual(
