@@ -207,7 +207,7 @@ export const SWASlider = () => {
         >
           Long Term Fee Estimate (L): {longTermFeeEstimate.toLocaleString()}{" "}
           sats/vB
-          <Tooltip title="Expected fee rate in the future when network activity is lower">
+          <Tooltip title="Expected fee rate in the future. Depending on how long you're able to wait to send this transaction, what do you expect the fees to be. This will help determine if it's better to wait to send this transaction.">
             <IconButton size="small" className="info-icon-button">
               <InfoIcon className="info-icon" />
             </IconButton>
