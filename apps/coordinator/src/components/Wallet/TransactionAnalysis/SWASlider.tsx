@@ -26,12 +26,12 @@ interface RootState {
 }
 
 export const SWASlider = () => {
-  const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(101);
-  const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
-
   const { fee, feeRate, outputs, inputs } = useSelector(
     (state: RootState) => state.spend.transaction,
   );
+  const [longTermFeeEstimate, setLongTermFeeEstimate] = useState<number>(feeRate);
+  const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
+
 
   const changeAddress = useSelector(
     (state: RootState) => state.spend.transaction.changeAddress,
