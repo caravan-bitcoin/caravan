@@ -192,7 +192,7 @@ export const SWASlider = () => {
           <Typography variant="body2" className="waste-amount-units">
             units of waste
           </Typography>
-          <Tooltip title="Shows how much you might waste in fees by spending now instead of waiting for lower fees">
+          <Tooltip title="Shows how much waste this transaction will create or destroy (if negative) for your wallet if spent now depending on your long term fee rate expectations">
             <IconButton size="small" className="info-icon-button">
               <InfoIcon className="info-icon" />
             </IconButton>
