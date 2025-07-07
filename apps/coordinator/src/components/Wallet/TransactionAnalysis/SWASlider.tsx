@@ -159,8 +159,7 @@ export const SWASlider = () => {
         Waste Analysis
       </Typography>
       <Typography variant="body2" className="waste-analysis-description">
-        Analyzes if spending Bitcoin now is efficient or if waiting could be
-        cheaper
+        Analyzes whether spending this bitcoin now vs later when fee market might be different is more efficient for the long term health of your wallet's UTXO set.
       </Typography>
 
       {/* Fee Waste Box */}
