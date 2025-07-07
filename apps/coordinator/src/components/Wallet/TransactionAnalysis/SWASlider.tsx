@@ -190,7 +190,7 @@ export const SWASlider = () => {
             {formatNumber(wasteAmount)}
           </Typography>
           <Typography variant="body2" className="waste-amount-units">
-            sats
+            units of waste
           </Typography>
           <Tooltip title="Shows how much you might waste in fees by spending now instead of waiting for lower fees">
             <IconButton size="small" className="info-icon-button">
