@@ -29,8 +29,9 @@ export const SWASlider = () => {
   const { fee, feeRate, outputs, inputs } = useSelector(
     (state: RootState) => state.spend.transaction,
   );
+  const numricFeeRate = Number(feeRate);
   const [longTermFeeEstimate, setLongTermFeeEstimate] =
-    useState<number>(feeRate);
+    useState<number>(numricFeeRate);
   const [wasteAmount, setWasteAmount] = useState<BigNumber>(new BigNumber(0));
 
   const changeAddress = useSelector(
