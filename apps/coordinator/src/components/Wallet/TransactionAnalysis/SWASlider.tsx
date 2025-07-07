@@ -46,6 +46,8 @@ export const SWASlider = () => {
     VeryHigh = "Very High Fees",
   }
 
+  // somewhat arbitrarily based on historical levels of fee rate fluctuations as of 2025
+  // https://mempool.space/graphs/mining/block-fee-rates
   const FEE_LEVELS = [
     { max: 10, label: FeeLevel.VeryLow, className: "fee-level-very-low" },
     { max: 50, label: FeeLevel.Low, className: "fee-level-low" },
