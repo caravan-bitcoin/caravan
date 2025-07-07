@@ -1,5 +1,5 @@
 import { BlockchainClient } from "@caravan/clients";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useGetClient } from "hooks/client";
 
 export enum FeePriority {
@@ -44,7 +44,7 @@ const feeEstimateKeys = {
     [...feeEstimateKeys.all, priority] as const,
 };
 
-const useGetFeeEstimate = async (
+const fetchFeeEstimate = async (
   priority: FeePriority,
   blockchainClient: BlockchainClient,
 ) => {
@@ -69,24 +69,30 @@ export const useFeeEstimate = (priority: FeePriority) => {
   const blockchainClient = useGetClient();
   return useQuery({
     queryKey: feeEstimateKeys.feeEstimate(priority),
-    queryFn: () => useGetFeeEstimate(priority, blockchainClient),
+    queryFn: () => fetchFeeEstimate(priority, blockchainClient),
     enabled: !!blockchainClient,
   });
 };
 
 export const useFeeEstimates = () => {
-  const highQuery = useFeeEstimate(FeePriority.HIGH);
-  const mediumQuery = useFeeEstimate(FeePriority.MEDIUM);
-  const lowQuery = useFeeEstimate(FeePriority.LOW);
+  const blockchainClient = useGetClient();
+  const priorities = [FeePriority.HIGH, FeePriority.MEDIUM, FeePriority.LOW];
 
-  const isLoading =
-    highQuery.isLoading || mediumQuery.isLoading || lowQuery.isLoading;
-  const error = highQuery.error || mediumQuery.error || lowQuery.error;
+  const results = useQueries({
+    queries: priorities.map((priority) => ({
+      queryKey: feeEstimateKeys.feeEstimate(priority),
+      queryFn: () => fetchFeeEstimate(priority, blockchainClient),
+      enabled: !!blockchainClient,
+    })),
+  });
+
+  const isLoading = results.some((result) => result.isLoading);
+  const error = results.find((result) => result.error)?.error;
 
   const feeEstimates = {
-    [FeePriority.HIGH]: highQuery.data,
-    [FeePriority.MEDIUM]: mediumQuery.data,
-    [FeePriority.LOW]: lowQuery.data,
+    [FeePriority.HIGH]: results[0]?.data,
+    [FeePriority.MEDIUM]: results[1]?.data,
+    [FeePriority.LOW]: results[2]?.data,
   };
 
   return {

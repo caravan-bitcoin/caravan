@@ -5,18 +5,20 @@ import { UTXO } from "@caravan/fees";
 import { Coin, useTransactionCoins } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 
-// need to create a function that given a coin and a slice returns a utxo that can be used
-// to create a new transcation. a utxo needs to have:
-// - txid
-// - vout
-// - value
-// - prevTxHex
-// - nonWitnessUtxo
-// - witnessUtxo (script, value if segwit)
-// - bip32Derivations (array of objects with pubkey, masterFingerprint, path)
-// - witnessScript (script if segwit)
-// - redeemScript (script if p2sh)
-// - sequence number (optional)
+/*
+ * need to create a function that given a coin and a slice returns a utxo that can be used
+ * to create a new transcation. a utxo needs to have:
+ * - txid
+ * - vout
+ * - value
+ * - prevTxHex
+ * - nonWitnessUtxo
+ * - witnessUtxo (script, value if segwit)
+ * - bip32Derivations (array of objects with pubkey, masterFingerprint, path)
+ * - witnessScript (script if segwit)
+ * - redeemScript (script if p2sh)
+ * - sequence number (optional)
+ */
 const getUtxoFromCoin = (coin: Coin): UTXO => {
   const { slice } = coin;
   if (!slice) {
