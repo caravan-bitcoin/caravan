@@ -40,6 +40,27 @@ const tooltipSx = {
   },
 };
 
+enum PrivacyStatus {
+  SingleSelfSend,
+  SelfChangeVisible,
+  PerfectPrivacy,
+  NoMatchButSafe,
+  DiverseButSafe,
+}
+
+const TOOLTIP_MESSAGES: Record<PrivacyStatus, string> = {
+  [PrivacyStatus.SingleSelfSend]:
+    "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.",
+  [PrivacyStatus.SelfChangeVisible]:
+    "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.",
+  [PrivacyStatus.PerfectPrivacy]:
+    "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.",
+  [PrivacyStatus.NoMatchButSafe]:
+    "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.",
+  [PrivacyStatus.DiverseButSafe]:
+    "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.",
+};
+
 /**
  * Main component: TransactionAnalysis
  * Shows wallet fingerprinting and dust analysis for the current transaction.
@@ -61,29 +82,27 @@ const FingerprintingAnalysis: React.FC = () => {
     ...o,
     scriptType: o.scriptType ?? "",
   }));
-  let fingerprintTooltip = "";
-  switch (true) {
-    case privacy.hasWalletFingerprinting && fixedOutputs.length === 1:
-      fingerprintTooltip =
-        "Privacy Warning: You're sending all funds back to an address of your own wallet type. This clearly reveals your wallet's balance and links your transactions together.";
-      break;
-    case privacy.hasWalletFingerprinting:
-      fingerprintTooltip =
-        "Privacy Warning: This transaction makes it easy for anyone watching the blockchain to spot your change address and link your future transactions. For better privacy, try to send funds only to addresses of the same type as your wallet, or split your payments if possible.";
-      break;
-    case summary.outputCount > 0 &&
-      privacy.matchingOutputCount === fixedOutputs.length:
-      fingerprintTooltip =
-        "Great! All outputs match your wallet's address type. Your change stays private and your wallet is harder to track.";
-      break;
-    case privacy.matchingOutputCount === 0:
-      fingerprintTooltip =
-        "No privacy risk detected. None of the outputs match your wallet's address type, so your wallet remains private in this transaction.";
-      break;
-    default:
-      fingerprintTooltip =
-        "Looking good! The outputs are diverse enough that your change address can't be easily identified. Your privacy is protected in this transaction.";
+
+  function getPrivacyStatus(): PrivacyStatus {
+    if (privacy.hasWalletFingerprinting && fixedOutputs.length === 1) {
+      return PrivacyStatus.SingleSelfSend;
+    }
+    if (privacy.hasWalletFingerprinting) {
+      return PrivacyStatus.SelfChangeVisible;
+    }
+    if (
+      summary.outputCount > 0 &&
+      privacy.matchingOutputCount === fixedOutputs.length
+    ) {
+      return PrivacyStatus.PerfectPrivacy;
+    }
+    if (privacy.matchingOutputCount === 0) {
+      return PrivacyStatus.NoMatchButSafe;
+    }
+    return PrivacyStatus.DiverseButSafe;
   }
+
+  const fingerprintTooltip = TOOLTIP_MESSAGES[getPrivacyStatus()];
 
   return (
     <Box>
