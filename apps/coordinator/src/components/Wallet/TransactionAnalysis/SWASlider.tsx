@@ -50,11 +50,11 @@ const SpendRecommendation = ({
   if (shouldSpendNow) {
     title = "Now's a good time to spend";
     text =
-      "Based on your long term fee rate expectations, spending now would produce less waste for your wallet. This is a good time to spend.";
+      "Based on your long term fee rate expectations, spending now could produce less waste for your wallet. This might be a good time to spend this transaction.";
   } else {
     title = "Consider waiting to spend";
     text =
-      "Based on your long term fee rate expectations, waiting to spend would produce less waste for your wallet.";
+      "Based on your long term fee rate expectations, waiting to spend could produce less waste for your wallet. If you can afford to wait, consider letting the fee market adjust before spending.";
   }
 
   if (wasteDifference.isZero()) {
@@ -201,6 +201,14 @@ export const SWASlider = () => {
         >
           What is the &quot;Waste Metric&quot;?
         </a>
+        <Tooltip title="Factors that impact waste include fee rate fluctuations over time, if your transaction has a change output (which would need to be spent in the future), or a large number of inputs.">
+          <InfoIcon className="info-icon" />
+        </Tooltip>
+        <br />
+        <br />
+        Factors that impact waste include fee rate fluctuations over time, if
+        your transaction has a change output (which would need to be spent in
+        the future), or a large number of inputs.
       </Typography>
 
       {/* Fee Waste Box */}
