@@ -25,7 +25,6 @@ import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
 
-
 /**
  * Custom hook to get current signing state
  * @returns {Object} { signedCount, requiredSigners, isFullySigned, hasPartialSignatures, needsSignatures }
