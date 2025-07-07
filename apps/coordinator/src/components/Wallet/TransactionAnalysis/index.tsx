@@ -12,7 +12,7 @@ import { SWASlider } from "./SWASlider";
 export const TransactionAnalysis = () => {
   return (
     <Box className="transaction-analysis-container">
-      <Accordion defaultExpanded>
+      <Accordion>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           aria-controls="transaction-analysis-content"
