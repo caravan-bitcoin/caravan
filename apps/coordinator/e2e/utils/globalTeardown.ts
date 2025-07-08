@@ -1,5 +1,6 @@
 import { FullConfig } from "@playwright/test";
 import { execSync } from "child_process";
+import path from "path";
 import bitcoinClient from "./bitcoinClient";
 
 async function globalTeardown(_config: FullConfig) {
@@ -25,7 +26,7 @@ async function globalTeardown(_config: FullConfig) {
 
     //removing docker containers after use
     execSync("docker compose stop", {
-      cwd: process.cwd(),
+      cwd: path.join(process.cwd(),"e2e"),
       stdio: "inherit",
     });
 

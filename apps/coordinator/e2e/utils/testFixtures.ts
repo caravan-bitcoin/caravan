@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import path from "path";
 import { BitcoinCoreService } from "./bitcoinServices";
 
 
@@ -43,7 +44,7 @@ export async function checkDockerAvailability(){
         
         execSync("docker compose up -d", {
             stdio: "inherit",
-            cwd: process.cwd()
+            cwd: path.join(process.cwd(), "e2e")
         });
     } catch (error) {
         console.error("Docker not available on your system:", error);
