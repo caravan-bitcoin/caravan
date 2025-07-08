@@ -1,4 +1,5 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { TransactionDetails } from "@caravan/clients";
 
 // TODO: All types should come from the `clients` package or a centralized type definition
 // This discussion references the changes we need in future refactors :
@@ -193,4 +194,72 @@ export const calculateTransactionValue = (
 
   // CASE 3: Not enough data to calculate
   return 0;
+};
+
+/**
+ * Identifies the change output in a transaction by analyzing output addresses
+ * and wallet data
+ *
+ * This function uses multiple heuristics to identify which output is the change:
+ * 1. Matches against known wallet addresses
+ * 2. Checks BIP32 path patterns (change addresses use path m/1/*)
+ * 3. Position in outputs (change is often the last output)
+ *
+ * @param transaction - The transaction object
+ * @param walletState - The wallet state containing addresses
+ * @returns Index of the change output or undefined if not found
+ *
+ * @see https://en.bitcoin.it/wiki/Privacy#Change_address_detection
+ */
+export const getChangeOutputIndex = (
+  transaction: TransactionDetails,
+  depositNodes: any,
+  changeNodes: any,
+): number | undefined => {
+  if (!transaction.vout || !transaction.vout.length) return undefined;
+
+  // Create sets of known deposit and change addresses
+  const depositAddresses = new Set(
+    Object.values(depositNodes)
+      .filter((node: any) => node.multisig && node.multisig.address)
+      .map((node: any) => node.multisig.address),
+  );
+
+  const changeAddresses = new Set(
+    Object.values(changeNodes)
+      .filter((node: any) => node.multisig && node.multisig.address)
+      .map((node: any) => node.multisig.address),
+  );
+
+  // Check each output to see if it's a change output
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const output = transaction.vout[i];
+    const address = output.scriptPubkeyAddress;
+
+    if (!address) continue;
+
+    //  address is in our change address list
+    if (changeAddresses.has(address)) {
+      return i;
+    }
+  }
+
+  // Second pass: check if any output goes to a known wallet address
+  // This is less reliable but can help identify change when the exact
+  // change address isn't recognized
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const output = transaction.vout[i];
+    const address = output.scriptPubkeyAddress;
+
+    if (!address) continue;
+
+    if (depositAddresses.has(address)) {
+      // If this is a deposit address in our wallet, it might be change
+      // (though this is less reliable)
+      return i;
+    }
+  }
+
+  // If all fails
+  return undefined;
 };

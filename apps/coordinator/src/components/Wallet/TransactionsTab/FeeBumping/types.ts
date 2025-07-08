@@ -1,5 +1,6 @@
 import { Network } from "@caravan/bitcoin";
-import { FeeBumpStrategy, Satoshis, TxAnalysis } from "@caravan/fees";
+import { TransactionDetails } from "@caravan/clients";
+import { FeeBumpStrategy, Satoshis, TxAnalysis, UTXO } from "@caravan/fees";
 import { TransactionT } from "../types";
 
 /**
@@ -194,4 +195,16 @@ export interface PSBTFields {
   witnessScript?: Buffer;
   bip32Derivations?: any[];
   sequence?: number;
+}
+
+export interface ProcessedTransaction {
+  txid: string;
+  transaction: TransactionDetails;
+  valueToWallet: number;
+  isReceived: boolean;
+}
+
+export interface UtxoExtractionResult {
+  utxos: UTXO[];
+  errors: string[];
 }
