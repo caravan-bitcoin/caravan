@@ -1,14 +1,16 @@
 import { createSelector } from "reselect";
 
 // Type definitions for the Redux state
-interface UTXO {
+export interface UTXO {
   amountSats: string;
   confirmed: boolean;
   time: number;
-  txid?: string;
+  txid: string;
+  index: number;
+  transactionHex: string;
 }
 
-interface Slice {
+export interface Slice {
   utxos: UTXO[];
   addressUsed: boolean;
   addressKnown: boolean;
@@ -19,6 +21,16 @@ interface Slice {
   };
   multisig: {
     address: string;
+    braidDetails: string;
+    redeem: {
+      output: Buffer;
+      pubkeys: Buffer[];
+    };
+    bip32Derivation: {
+      pubkey: Buffer;
+      masterFingerprint: Buffer;
+      path: string;
+    }[];
   };
   lastUsed?: string;
   lastUsedTime?: number;
@@ -37,7 +49,7 @@ interface LedgerPolicyHmac {
   policyHmac: string;
 }
 
-interface WalletState {
+export interface WalletState {
   wallet: {
     deposits: {
       nodes: Record<string, Slice>;
@@ -77,7 +89,7 @@ interface WalletState {
 // only care about inbound to deposit account, not change
 const getDepositSlices = (state: WalletState): Slice[] =>
   Object.values(state.wallet.deposits.nodes);
-const getWalletSlices = (state: WalletState): Slice[] => [
+export const getWalletSlices = (state: WalletState): Slice[] => [
   ...Object.values(state.wallet.deposits.nodes),
   ...Object.values(state.wallet.change.nodes),
 ];

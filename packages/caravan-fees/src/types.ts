@@ -107,6 +107,13 @@ export interface UTXO {
   };
 
   /**
+   * The non-witness UTXO information for non-segwit transactions.
+   * (The buffer of the full previous transaction)
+   * Required for non-segwit inputs in PSBTs.
+   */
+  nonWitnessUtxo?: Buffer;
+
+  /**
    * The redeem script for P2SH outputs.
    * For multisig P2SH addresses, this contains the actual multisig script that
    * defines the m-of-n signature requirements. Required for spending P2SH outputs.
