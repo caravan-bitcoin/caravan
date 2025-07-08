@@ -38,11 +38,11 @@
     "tsup": "^8.0.0",
     "turbo": "^2.0.3",
     "vite-plugin-node-polyfills": "^0.23.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vitest-mock-extended": "^3.1.0"
   },
   "dependencies": {
-    "@ledgerhq/hw-transport-webusb": "6.27.12",
-    "vitest-mock-extended": "^3.1.0"
+    "@ledgerhq/hw-transport-webusb": "6.27.12"
   },
   "overrides": {
     "material-table": {
