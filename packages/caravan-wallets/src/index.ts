@@ -660,6 +660,7 @@ export * from "./bitbox";
 export * from "./bcur";
 export * from "./bcur2/interactions";
 export * from "./bcur2/decoder";
+export * from "./bcur2/encoder";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
