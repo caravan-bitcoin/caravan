@@ -12,7 +12,7 @@ End-to-end tests for Caravan Coordinator using Playwright.
 ### 1. Environment Setup
 
 ```bash
-# From the coordinator directory (apps/coordinator/)
+# From the e2e directory (apps/coordinator/e2e)
 cp .env.example .env
 ```
 
@@ -89,7 +89,7 @@ docker-compose down     # Manual stop
 
 The e2e tests are part of the Turbo monorepo workflow:
 
-- Environment files: `apps/coordinator/.env.example`
+- Environment files: `apps/coordinator/e2e/.env.example`
 - Dependencies: Managed in `apps/coordinator/package.json`  
 - Configuration: Uses Turbo's task dependency system
 - Caching: Build artifacts cached, test results are not (appropriate for e2e) 

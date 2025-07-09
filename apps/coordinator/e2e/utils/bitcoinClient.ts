@@ -1,9 +1,11 @@
 import { BitcoinCoreService } from "./bitcoinServices";
 import dotenv from 'dotenv';
+import path from 'path';
 import { rpcConfig } from "./types";
 
-// Load env variables from .env file
-dotenv.config();
+// Load env variables from .env file in the e2e directory
+dotenv.config({ path: path.join(process.cwd(), 'e2e', '.env') });
+
 
 export const clientConfig: rpcConfig = {
     username: process.env.BITCOIN_RPC_USER!,

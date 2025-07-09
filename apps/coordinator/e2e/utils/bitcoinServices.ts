@@ -105,7 +105,7 @@ export class BitcoinCoreService {
     try {
       const wallets = await this.listWallets();
 
-      if (wallets.includes(walletName)) {
+      if (wallets && Array.isArray(wallets) && wallets.includes(walletName)) {
         return true;
       }
       return false;
