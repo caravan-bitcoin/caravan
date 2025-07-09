@@ -37,25 +37,20 @@ export class BCURDecoder2 {
 
   private progress: string = "Idle";
 
-  private isInjectedDecoder: boolean;
-
   /**
    * Creates a new BCUR2 decoder instance
    * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
    */
   constructor(decoder?: URRegistryDecoder) {
     this.decoder = decoder || new URRegistryDecoder();
-    this.isInjectedDecoder = Boolean(decoder);
   }
 
   /**
    * Resets the decoder state to initial values
+   * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
    */
-  reset() {
-    // Only create a new decoder if we didn't inject one
-    if (!this.isInjectedDecoder) {
-      this.decoder = new URRegistryDecoder();
-    }
+  reset(decoder: URRegistryDecoder = new URRegistryDecoder()) {
+    this.decoder = decoder;
     this.error = null;
     this.progress = "Idle";
   }
