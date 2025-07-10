@@ -1,10 +1,7 @@
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
-import {
-  dustAnalysis,
-  privacyAnalysis,
-} from "../utils/transactionAnalysisUtils";
-import type { WalletState } from "../selectors/wallet";
+import { dustAnalysis, privacyAnalysis } from "utils/transactionAnalysisUtils";
+import type { WalletState } from "selectors/wallet";
 import type { MultisigAddressType } from "@caravan/bitcoin";
 
 export function useTransactionAnalysis() {

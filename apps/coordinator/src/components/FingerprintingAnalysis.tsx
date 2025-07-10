@@ -1,13 +1,13 @@
 import React from "react";
 import { Box, Typography, Grid, Tooltip } from "@mui/material";
 import { Shield, CleaningServices } from "@mui/icons-material";
-import { useTransactionAnalysis } from "../hooks/useTransactionAnalysis";
+import { useTransactionAnalysis } from "../hooks/transaction";
 import DustChip from "./ScriptExplorer/DustChip";
 import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
 import { useSelector } from "react-redux";
 import type { UTXO } from "@caravan/fees";
-import type { WalletState } from "../selectors/wallet";
+import type { WalletState } from "selectors/wallet";
 
 // Local type for transaction outputs (UI only)
 type TransactionOutput = {
