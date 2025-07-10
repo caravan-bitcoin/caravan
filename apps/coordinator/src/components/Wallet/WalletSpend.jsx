@@ -41,7 +41,10 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
-import { analyzeTransaction } from "../../utils/transactionAnalysisUtils";
+import {
+  dustAnalysis,
+  privacyAnalysis,
+} from "../../utils/transactionAnalysisUtils";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -249,7 +252,15 @@ class WalletSpend extends React.Component {
     } = this.props;
     const { importPSBTDisabled, importPSBTError } = this.state;
 
-    const transactionAnalysis = analyzeTransaction({
+    const dust = dustAnalysis({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    const privacy = privacyAnalysis({
       inputs: selectedUTXOs || [],
       outputs: transactionOutputs || [],
       feeRate: feeRate || 1,
@@ -262,26 +273,23 @@ class WalletSpend extends React.Component {
       <Card>
         <CardContent>
           {/* Alerts for dust and fingerprinting */}
-          {transactionAnalysis.dust.hasDustInputs && (
+          {dust.hasDustInputs && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               <AlertTitle>Dust Inputs Detected</AlertTitle>
-              {transactionAnalysis.dust.inputCount} of your selected inputs may
-              be considered dust at {feeRate} sat/vB. This could result in
-              higher fees or uneconomical spending.
+              {dust.inputCount} of your selected inputs may be considered dust
+              at {feeRate} sat/vB. This could result in higher fees or
+              uneconomical spending.
             </Alert>
           )}
-          {transactionAnalysis.privacy &&
-            transactionAnalysis.privacy.hasWalletFingerprinting && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
-                This transaction leaks privacy: exactly one output matches the
-                wallet&#39;s script type, making it easy to identify change and
-                link future transactions.
-                <br />
-                Output types:{" "}
-                {transactionAnalysis.privacy.scriptTypes.join(", ")}
-              </Alert>
-            )}
+          {privacy && privacy.hasWalletFingerprinting && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
+              {privacy.reason ||
+                "This transaction leaks privacy: exactly one output matches the wallet's script type, making it easy to identify change and link future transactions."}
+              <br />
+              Output types: {privacy.scriptTypes.join(", ")}
+            </Alert>
+          )}
           <Grid container>
             {spendingStep === SPEND_STEP_SIGN && (
               <Grid item md={12}>

@@ -1,24 +1,12 @@
 import React from "react";
-import {
-  Box,
-  Typography,
-  Grid,
-  Tooltip,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableFooter,
-} from "@mui/material";
-import { Shield, CleaningServices, WarningAmber } from "@mui/icons-material";
+import { Box, Typography, Grid, Tooltip } from "@mui/material";
+import { Shield, CleaningServices } from "@mui/icons-material";
 import { useTransactionAnalysis } from "../hooks/useTransactionAnalysis";
 import DustChip from "./ScriptExplorer/DustChip";
 import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
 import { useSelector } from "react-redux";
 import type { UTXO } from "@caravan/fees";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
 import type { WalletState } from "../selectors/wallet";
 
 // Local type for transaction outputs (UI only)
@@ -66,16 +54,14 @@ const TOOLTIP_MESSAGES: Record<PrivacyStatus, string> = {
  * Shows wallet fingerprinting and dust analysis for the current transaction.
  */
 const FingerprintingAnalysis: React.FC = () => {
-  const { dust, privacy, summary } = useTransactionAnalysis();
+  const { dust, privacy } = useTransactionAnalysis();
   // Get config from Redux for script type, signers, etc.
   const addressType = useSelector(
     (state: WalletState) => state.settings?.addressType,
   );
-  const {
-    inputs = [],
-    outputs = [],
-    feeRate = 1,
-  } = useSelector((state: any) => state.spend?.transaction || {});
+  const { inputs = [], outputs = [] } = useSelector(
+    (state: any) => state.spend?.transaction || {},
+  );
 
   // Wallet fingerprinting analysis UI
   const fixedOutputs = outputs.map((o: TransactionOutput) => ({
@@ -91,7 +77,7 @@ const FingerprintingAnalysis: React.FC = () => {
       return PrivacyStatus.SelfChangeVisible;
     }
     if (
-      summary.outputCount > 0 &&
+      outputs.length > 0 &&
       privacy.matchingOutputCount === fixedOutputs.length
     ) {
       return PrivacyStatus.PerfectPrivacy;
@@ -146,7 +132,7 @@ const FingerprintingAnalysis: React.FC = () => {
                       : "Output Fingerprinting"
                   }
                 />
-              ) : summary.outputCount > 0 &&
+              ) : outputs.length > 0 &&
                 privacy.matchingOutputCount === fixedOutputs.length ? (
                 <ScriptTypeChip
                   scriptType={addressType}
@@ -166,11 +152,6 @@ const FingerprintingAnalysis: React.FC = () => {
           </Tooltip>
         </Grid>
       </Grid>
-
-      {/* Outputs Table with privacy highlighting */}
-      <Box mt={2}>
-        <OutputsTable outputs={outputs} privacy={privacy} />
-      </Box>
 
       {/* Input dust analysis */}
       <Grid container spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
@@ -194,7 +175,6 @@ const FingerprintingAnalysis: React.FC = () => {
                 <DustChip
                   key={`${input.txid}-${input.vout}`}
                   amountSats={Number(input.value)}
-                  feeRate={feeRate}
                 />
               ))}
             </Box>
@@ -206,81 +186,6 @@ const FingerprintingAnalysis: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
-  );
-};
-
-// OutputRow component
-const OutputRow: React.FC<{
-  output: TransactionOutput;
-  isPoisoned: boolean;
-}> = ({ output, isPoisoned }) => (
-  <TableRow style={isPoisoned ? { background: "#fff3e0" } : {}}>
-    <TableCell>
-      <code>{output.address}</code>
-      {isPoisoned && (
-        <Tooltip
-          title="This output matches your wallet's address type and is likely to be identified as change by an outside observer."
-          sx={tooltipSx}
-        >
-          <WarningAmber
-            color="warning"
-            fontSize="small"
-            style={{ marginLeft: 4, verticalAlign: "middle" }}
-          />
-        </Tooltip>
-      )}
-    </TableCell>
-    <TableCell>
-      <code>{satoshisToBitcoins(output.amountSats)}</code>
-    </TableCell>
-    <TableCell>
-      <ScriptTypeChip scriptType={output.scriptType || ""} />
-    </TableCell>
-  </TableRow>
-);
-
-// OutputsTable component
-const OutputsTable: React.FC<{
-  outputs: TransactionOutput[];
-  privacy: any;
-}> = ({ outputs, privacy }) => {
-  return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Address</TableCell>
-          <TableCell>Amount (BTC)</TableCell>
-          <TableCell>Script Type</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {outputs.map((output: TransactionOutput, idx: number) => (
-          <OutputRow
-            key={output.address}
-            output={output}
-            isPoisoned={
-              privacy.hasWalletFingerprinting &&
-              privacy.poisonedOutputIndex === idx
-            }
-          />
-        ))}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell>TOTAL:</TableCell>
-          <TableCell>
-            {satoshisToBitcoins(
-              outputs.reduce(
-                (sum: number, output: TransactionOutput) =>
-                  sum + (output.amountSats || 0),
-                0,
-              ),
-            )}
-          </TableCell>
-          <TableCell />
-        </TableRow>
-      </TableFooter>
-    </Table>
   );
 };
 

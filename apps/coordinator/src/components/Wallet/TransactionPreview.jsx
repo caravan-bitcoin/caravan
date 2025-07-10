@@ -12,11 +12,18 @@ import {
   Chip,
   Typography,
   Paper,
+  Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
+  WarningAmber,
 } from "@mui/icons-material";
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
@@ -24,6 +31,7 @@ import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
+import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
 
 /**
  * Custom hook to get current signing state
@@ -189,7 +197,24 @@ class TransactionPreview extends React.Component {
       handleSignTransaction,
       unsignedPSBT,
       inputs,
+      outputs,
     } = this.props;
+
+    // Get wallet script type for fingerprint analysis
+    const walletScriptType = this.props.addressType || "";
+    const outputsForAnalysis = (outputs || []).map((o) => ({
+      scriptType: o.scriptType,
+      amount: o.amount, // BTC as string/number
+      address: o.address,
+    }));
+    const fingerprint = walletFingerprintAnalysis(
+      outputsForAnalysis,
+      walletScriptType,
+    );
+    const fingerprintMsg =
+      fingerprint.reason ||
+      "This output matches your wallet's address type and is likely to be identified as change by on-chain observers.";
+    const tooltipSx = { verticalAlign: "middle" };
 
     return (
       <Box>
@@ -209,6 +234,57 @@ class TransactionPreview extends React.Component {
           showSelection={false}
           finalizedOutputs
         />
+        <h3>Outputs</h3>
+        <Box mb={2}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Address</TableCell>
+                <TableCell>Amount (BTC)</TableCell>
+                <TableCell>Script Type</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {outputs &&
+                outputs.map((output, idx) => {
+                  const isPoisoned =
+                    fingerprint.hasWalletFingerprinting &&
+                    fingerprint.poisonedOutputIndex === idx;
+                  return (
+                    <TableRow
+                      key={output.address}
+                      style={isPoisoned ? { background: "#fff3e0" } : {}}
+                    >
+                      <TableCell>
+                        <code>{output.address}</code>
+                        {isPoisoned && (
+                          <Tooltip title={fingerprintMsg} sx={tooltipSx}>
+                            <WarningAmber
+                              color="warning"
+                              fontSize="small"
+                              style={{ marginLeft: 4, verticalAlign: "middle" }}
+                            />
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <code>{output.amount}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={output.scriptType || ""}
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                          sx={{ fontSize: "0.8rem", height: "26px" }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </Box>
 
         <Grid container>
           <Grid item xs={4}>
@@ -286,6 +362,7 @@ TransactionPreview.propTypes = {
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,
+  walletScriptType: PropTypes.string,
 };
 
 function mapStateToProps(state) {

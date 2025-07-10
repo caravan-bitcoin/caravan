@@ -1,6 +1,9 @@
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
-import { analyzeTransaction } from "../utils/transactionAnalysisUtils";
+import {
+  dustAnalysis,
+  privacyAnalysis,
+} from "../utils/transactionAnalysisUtils";
 import type { WalletState } from "../selectors/wallet";
 import type { MultisigAddressType } from "@caravan/bitcoin";
 
@@ -17,16 +20,23 @@ export function useTransactionAnalysis() {
     (state: WalletState) => state.settings?.addressType,
   ) as MultisigAddressType;
 
-  return useMemo(
-    () =>
-      analyzeTransaction({
-        inputs,
-        outputs,
-        feeRate,
-        addressType,
-        requiredSigners,
-        totalSigners,
-      }),
-    [inputs, outputs, feeRate, requiredSigners, totalSigners, addressType],
-  );
+  return useMemo(() => {
+    const dust = dustAnalysis({
+      inputs,
+      outputs,
+      feeRate,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    const privacy = privacyAnalysis({
+      inputs,
+      outputs,
+      feeRate,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    return { dust, privacy };
+  }, [inputs, outputs, feeRate, requiredSigners, totalSigners, addressType]);
 }
