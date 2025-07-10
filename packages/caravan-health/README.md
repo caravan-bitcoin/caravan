@@ -27,8 +27,17 @@ The `WasteMetrics` class focuses on transaction fee efficiency and UTXO manageme
 - **Relative Fees Score (RFS):** Compares transaction fees to others in the same block.
 - **Fees To Amount Ratio (FAR):** Evaluates the proportion of fees to transaction amounts.
 - **calculateDustLimits:** Calculates the dust limits for UTXOs based on the current fee rate. A utxo is dust if it costs more to send based on the size of the input.
-- **Spend Waste Amount (SWA):** Determines the cost of keeping or spending UTXOs in particular transaction at a given point of time.
 - **Weighted Waste Score (WWS):** Combines various metrics for an overall efficiency score.
+
+## Transaction Analysis
+
+The [transaction.ts](./src/transaction.ts) file has various utilities (or will have ;D) for analyzing an isolated transaction.
+
+- **calculateWasteMetric:** Calculates the waste metric for a given coin selection and current and expected fee rates. This is based on bitcoin core's algorithm used for coin selection and the research done by Murch.
+
+TODO:
+
+- **Fingerprinting Analysis:** Analyze how easily a transaction exposes your wallet to fingerprinting by blockchain observers.
 
 # Dependencies
 

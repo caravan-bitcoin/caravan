@@ -46,7 +46,15 @@ export default defineConfig({
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
     // },
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
 
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
     // {
     //   name: 'webkit',
     //   use: { ...devices['Desktop Safari'] },
@@ -75,13 +83,6 @@ export default defineConfig({
 
 
   globalSetup: "./utils/globalSetup.ts",
-  globalTeardown: "utils/globalTeardown.ts",
+  globalTeardown: "./utils/globalTeardown.ts",
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-     command: 'cd .. && npm run dev',
-     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
 });

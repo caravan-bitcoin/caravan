@@ -3,6 +3,7 @@ import {
   getRedeemScriptSize,
   getWitnessSize,
   calculateBase,
+  getWitnessWeight,
 } from "./p2wsh";
 
 describe("p2wsh", () => {
@@ -14,7 +15,7 @@ describe("p2wsh", () => {
           numOutputs: 2,
           m: 2,
           n: 3,
-        })
+        }),
       ).toBe(202); // actual value from bitcoin core for P2PKH out
     });
     const vsize = estimateMultisigP2WSHTransactionVSize({
@@ -45,7 +46,13 @@ describe("p2wsh", () => {
     it("should return the correct estimated size of a 2-of-3 multisig scriptSig", () => {
       const witnessSize = getWitnessSize(2, 3);
       // assumes largest possible signature size of 73
-      expect(witnessSize).toBe(256);
+      expect(witnessSize).toBe(254);
+    });
+
+    it("should return the correct estimated weight of a 2-of-3 multisig scriptSig", () => {
+      const witnessWeight = getWitnessWeight(2, 3);
+      // assumes largest possible signature size of 73
+      expect(witnessWeight).toBe(63.5);
     });
   });
 });

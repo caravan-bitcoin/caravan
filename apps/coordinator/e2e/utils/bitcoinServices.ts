@@ -8,10 +8,10 @@ export class BitcoinCoreService {
 
   constructor(clientConfig: rpcConfig) {
     this.clientConfig = {
-      username: clientConfig.username || "abhishek",
-      password: clientConfig.password || "abhishek",
-      port: clientConfig.port || 18443,
-      host: clientConfig.host || "http://localhost:18443",
+      username: clientConfig.username,
+      password: clientConfig.password,
+      port: clientConfig.port,
+      host: clientConfig.host,
     };
 
     this.client = new BitcoinCore(this.clientConfig);
@@ -34,15 +34,14 @@ export class BitcoinCoreService {
     }
   }
 
-  async testRpcConnection() {
+  async waitForBitcoinCore() {
     const maxRetries = 10;
     const delay = 2000;
 
     for (let i = 1; i <= maxRetries; i++) {
       try {
         const res = await this.client.command("getblockchaininfo");
-
-        console.log("Connected to Bitcoin Core successfully");
+        
         return res;
       } catch (error) {
         console.log(`Attempt: ${i}/${maxRetries} & error: ${error} `);
@@ -106,7 +105,7 @@ export class BitcoinCoreService {
     try {
       const wallets = await this.listWallets();
 
-      if (wallets.includes(walletName)) {
+      if (wallets && Array.isArray(wallets) && wallets.includes(walletName)) {
         return true;
       }
       return false;
