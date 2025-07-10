@@ -16,11 +16,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
-  AlertTitle,
-  Alert,
-  Collapse,
 } from "@mui/material";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
@@ -40,6 +36,7 @@ import {
   ConfigurationStep,
   ReviewStep,
 } from "./FeeBumpSteps";
+import { ErrorDialog } from "./ErrorDialog";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -83,7 +80,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     dispatch,
     isCreatingRBF,
   } = useFeeBumpContext();
-  console.log("renderewd");
+
   // Track the current step in the wizard
   const [activeStep, setActiveStep] = useState(0);
 
@@ -101,25 +98,6 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   const handleBack = useCallback(() => {
     setActiveStep((prevStep) => prevStep - 1);
   }, []);
-
-  // Handle form submission
-  // const handleSubmitRBF = async (options: {
-  //   isCancel: boolean;
-  //   cancelAddress?: string;
-  //   changeAddress?: string;
-  // }) => {
-  //   try {
-  //     console.log("options", options);
-  //     // Create the fee-bumped transaction with the specified options
-  //     await createFeeBumpedTransaction(options);
-  //     console.log("done");
-  //     handleNext(); // Move to the next step when done
-  //   } catch (err) {
-  //     // Error is already handled by the context and stored in state.error
-  //     console.error("Error creating fee-bumped transaction:", err);
-  //     // Error will be displayed in the UI automatically
-  //   }
-  // };
 
   // Handle PSBT download
   const handleDownloadPSBT = useCallback(() => {
@@ -184,7 +162,6 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
   const CurrentStepComponent = stepConfigs[activeStep]?.component;
   const currentStepProps = stepConfigs[activeStep]?.props || {};
 
-  // Title logic - moved outside the return statement , so no nested conditionals now :)
   const modalTitle = useMemo(() => {
     if (!transaction) return "Fee Bump Transaction";
 
@@ -291,52 +268,11 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
 
       <DialogContent>
         {error && (
-          <Alert
-            severity="error"
-            sx={{ mb: 3 }}
-            action={
-              <IconButton
-                aria-label="toggle error details"
-                size="small"
-                onClick={() => setShowErrorDetails(!showErrorDetails)}
-              >
-                {showErrorDetails ? <ExpandLess /> : <ExpandMore />}
-              </IconButton>
-            }
-          >
-            <AlertTitle>Error Processing Transaction</AlertTitle>
-            {error}
-
-            <Collapse in={showErrorDetails}>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  If this error persists, please:
-                </Typography>
-                <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
-                  <li>
-                    <Typography variant="body2" color="text.secondary">
-                      Check your internet connection and try again
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2" color="text.secondary">
-                      Ensure the transaction is still unconfirmed
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2" color="text.secondary">
-                      Verify you have sufficient UTXOs for fee bumping
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2" color="text.secondary">
-                      Contact support if the issue continues
-                    </Typography>
-                  </li>
-                </ul>
-              </Box>
-            </Collapse>
-          </Alert>
+          <ErrorDialog
+            error={error}
+            showErrorDetails={showErrorDetails}
+            setShowErrorDetails={setShowErrorDetails}
+          />
         )}
         {/* Stepper to show current progress in the wizard */}
         <Stepper activeStep={activeStep} sx={{ pt: 2, pb: 4 }}>

@@ -50,7 +50,7 @@ export const FeeStrategySelector: React.FC = () => {
             "Creates a new transaction that replaces the original with a higher fee",
           icon: <CompareArrowsIcon fontSize="large" />,
           learnMoreUrl: "https://bitcoinops.org/en/topics/replace-by-fee/",
-          disabled: !recommendation.canRBF,
+          // disabled: !recommendation.canRBF,
           disabledReason:
             "This transaction does not signal RBF and cannot be replaced",
           minimumFee: recommendation.estimatedRBFFee,
