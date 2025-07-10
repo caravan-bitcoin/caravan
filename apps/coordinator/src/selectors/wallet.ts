@@ -107,7 +107,7 @@ const getWalletName = (state: WalletState): string =>
   state.wallet.common.walletName;
 const getWalletUuid = (state: WalletState): string =>
   state.wallet.common.walletUuid;
-const getExtendedPublicKeyImporters = (
+export const getExtendedPublicKeyImporters = (
   state: WalletState,
 ): Record<string, ExtendedPublicKeyImporter> =>
   state.quorum.extendedPublicKeyImporters;
@@ -489,4 +489,14 @@ export const getTransactionExplorerUrl = createSelector(
       return explorerUrl;
     };
   },
+);
+
+export const selectWalletConfig = createSelector(
+  (state: WalletState) => state.settings,
+  (settings) => ({
+    network: settings.network,
+    addressType: settings.addressType,
+    requiredSigners: settings.requiredSigners,
+    totalSigners: settings.totalSigners,
+  }),
 );
