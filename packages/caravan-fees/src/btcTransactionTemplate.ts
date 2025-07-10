@@ -1,4 +1,8 @@
-import { Network, ExtendedPublicKey } from "@caravan/bitcoin";
+import {
+  Network,
+  ExtendedPublicKey,
+  MultisigAddressType,
+} from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
 import { BigNumber } from "bignumber.js";
 
@@ -11,12 +15,7 @@ import {
   ABSURDLY_HIGH_ABS_FEE,
   ABSURDLY_HIGH_FEE_RATE,
 } from "./constants";
-import {
-  Satoshis,
-  TransactionTemplateOptions,
-  ScriptType,
-  GlobalXpub,
-} from "./types";
+import { Satoshis, TransactionTemplateOptions, GlobalXpub } from "./types";
 import {
   createOutputScript,
   estimateTransactionVsize,
@@ -37,7 +36,7 @@ export class BtcTransactionTemplate {
   private readonly _targetFeeRate: BigNumber;
   private readonly _dustThreshold: BigNumber;
   private readonly _network: Network;
-  private readonly _scriptType: ScriptType;
+  private readonly _scriptType: MultisigAddressType;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
   private readonly _globalXpubs: GlobalXpub[];
