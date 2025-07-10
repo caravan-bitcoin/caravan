@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useMemo,
   useState,
+  useEffect,
 } from "react";
 import { useSelector } from "react-redux";
 
@@ -18,9 +19,13 @@ import {
   CancelRbfOptions,
 } from "@caravan/fees";
 
-import { useFeeEstimates } from "clients/fees";
+import { FeePriority, useFeeEstimates } from "clients/fees";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
-import { getWalletConfig } from "../../../../../selectors/wallet";
+import {
+  selectWalletConfig,
+  getExtendedPublicKeyImporters,
+  WalletState,
+} from "../../../../../selectors/wallet";
 import { Network } from "@caravan/bitcoin";
 
 import {
@@ -42,43 +47,42 @@ import {
   setChangeAddress,
   setPsbtVersion,
   resetFeeBumpState,
-  FeeBumpActionTypes,
 } from "./feeBumpActions";
 
-import {
-  FeeBumpStatus,
-  FeeBumpRecommendation,
-  FeePriority,
-  FeeBumpResult,
-} from "../types";
-import {
-  analyzeTransaction,
-  extractUtxosForFeeBumping,
-  extractGlobalXpubsFromWallet,
-  selectTargetFeeRate,
-} from "../utils";
+import { FeeBumpStatus, FeeBumpRecommendation, FeeBumpResult } from "../types";
+import { analyzeTransaction, extractUtxosForFeeBumping } from "../utils";
 import { getChangeOutputIndex } from "utils/transactionCalculations";
+
+// =============================================================================
+// CONTEXT TYPE DEFINITION
+// =============================================================================
 
 interface FeeBumpContextType {
   state: FeeBumpingState;
-  dispatch: React.Dispatch<FeeBumpActionTypes>;
-  // Core fee bumping operations
-  analyzeTx: (
-    tx: any,
-    initialTxHex?: string,
-    priority?: FeePriority,
-  ) => Promise<void>;
+
+  // User-driven input updates (components can call these directly)
   setTransactionForBumping: (
     tx: any,
     priority?: FeePriority,
     initialTxHex?: string,
-  ) => Promise<void>;
+  ) => void;
   updateFeeRate: (feeRate: number) => void;
   updateFeePriority: (priority: FeePriority) => Promise<void>;
   updateStrategy: (strategy: FeeBumpStrategy) => void;
   reset: () => void;
 
-  // RBF operations
+  // RBF form actions (baed on user inputs)
+  setRbfType: (type: "accelerate" | "cancel") => void;
+  setCancelAddress: (address: string) => void;
+  setChangeAddress: (address: string) => void;
+  setPsbtVersion: (version: "v2" | "v0") => void;
+
+  // Core fee bumping operations (handled internally by context)
+  analyzeTx: (
+    tx: any,
+    initialTxHex?: string,
+    priority?: FeePriority,
+  ) => Promise<void>;
   createAcceleratedRBF: (options?: {
     changeAddress?: string;
     feeRate?: number;
@@ -94,59 +98,24 @@ interface FeeBumpContextType {
     changeAddress?: string;
   }) => Promise<FeeBumpResult>;
 
-  // RBF form actions
-  setRbfType: (type: "accelerate" | "cancel") => void;
-  setCancelAddress: (address: string) => void;
-  setChangeAddress: (address: string) => void;
-  setPsbtVersion: (version: "v2" | "v0") => void;
-
-  // Computed values
+  // Computed values (read-only)
   isFeeBumpReady: boolean;
   originalFeeRate: number;
   minimumFeeRate: number;
   estimatedNewFee: number;
   feeDifference: number;
   isRbfFormValid: boolean;
-
-  // Loading states
   isCreatingRBF: boolean;
 }
 
-const FeeBumpContext = createContext<FeeBumpContextType | undefined>(undefined);
+// =============================================================================
+// COMPUTED VALUES HOOK
+// =============================================================================
 
-interface FeeBumpProviderProps {
-  children: ReactNode;
-}
-
-export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
-  const [state, dispatch] = useReducer(feeBumpingReducer, initialState);
-  const { data: feeEstimates } = useFeeEstimates();
-  const currentTxid = state.transaction?.txid || ""; // as intially no tx is selec
-  const { utxos: pendingUtxos } = usePendingUtxos(currentTxid);
-  const walletUtxos = useWalletUtxos();
-
-  // Local loading state for RBF operations
-  const [isCreatingRBF, setIsCreatingRBF] = useState(false);
-
-  // Get wallet configuration and nodes from Redux
-  const walletConfig = useSelector(getWalletConfig);
-  const { network, addressType, requiredSigners, totalSigners } = walletConfig;
-  const depositNodes = useSelector((state: any) => state.wallet.deposits.nodes);
-  const changeNodes = useSelector((state: any) => state.wallet.change.nodes);
-  const defaultChangeAddress = useSelector(
-    (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
-  );
-
-  // Combine UTXOs for fee bumping
-  const availableUtxos = useMemo(() => {
-    if (!pendingUtxos?.length || !walletUtxos?.length) return [];
-    return extractUtxosForFeeBumping(pendingUtxos, walletUtxos);
-  }, [pendingUtxos, walletUtxos]);
-
-  // =============================================================================
-  // COMPUTED VALUES
-  // =============================================================================
-
+function useFeeBumpComputedValues(
+  state: FeeBumpingState,
+  isCreatingRBF: boolean,
+) {
   const originalFeeRate = useMemo(() => {
     if (!state.transaction) return 0;
     const txSize = state.transaction.vsize || state.transaction.size;
@@ -188,13 +157,42 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     state.cancelAddress,
   ]);
 
-  // =============================================================================
-  // HELPER FUNCTIONS
-  // =============================================================================
+  return {
+    originalFeeRate,
+    minimumFeeRate,
+    estimatedNewFee,
+    feeDifference,
+    isFeeBumpReady,
+    isRbfFormValid,
+    isCreatingRBF,
+  };
+}
 
-  const getGlobalXpubs = useCallback(() => {
-    return extractGlobalXpubsFromWallet(depositNodes, changeNodes);
-  }, [depositNodes, changeNodes]);
+// =============================================================================
+// WALLET HELPERS HOOK
+// =============================================================================
+
+function useWalletHelpers() {
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const depositNodes = useSelector(
+    (state: WalletState) => state.wallet.deposits.nodes,
+  );
+  const changeNodes = useSelector(
+    (state: WalletState) => state.wallet.change.nodes,
+  );
+  const defaultChangeAddress = useSelector(
+    (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
+  );
+
+  // same for the whole wallet
+  const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters);
+
+  const globalXpubs = Object.values(getGlobalXpubs).map((item: any) => ({
+    masterFingerprint: item.rootXfp,
+    path: item.bip32Path,
+    xpub: item.extendedPublicKey,
+  }));
 
   const getScriptType = useCallback(() => {
     switch (addressType) {
@@ -209,6 +207,184 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     }
   }, [addressType]);
 
+  return {
+    network,
+    addressType,
+    requiredSigners,
+    totalSigners,
+    depositNodes,
+    changeNodes,
+    defaultChangeAddress,
+    globalXpubs,
+    getScriptType,
+  };
+}
+
+// =============================================================================
+// USER INPUT HANDLERS HOOK
+// =============================================================================
+
+function useUserInputHandlers(
+  state: FeeBumpingState,
+  dispatch: React.Dispatch<any>,
+) {
+  const setTransactionForBumping = useCallback(
+    (
+      tx: any,
+      priority: FeePriority = FeePriority.MEDIUM,
+      initialTxHex: string = "",
+    ) => {
+      dispatch(setFeeBumpTransaction(tx, initialTxHex));
+      dispatch(setFeeBumpPriority(priority));
+    },
+    [dispatch],
+  );
+
+  const updateFeeRate = useCallback(
+    (feeRate: number) => {
+      dispatch(setFeeBumpRate(feeRate));
+    },
+    [dispatch],
+  );
+
+  const updateFeePriority = useCallback(
+    async (priority: FeePriority) => {
+      if (!state.transaction || !state.txHex) {
+        console.warn("Cannot update fee priority: No transaction selected");
+        return;
+      }
+      dispatch(setFeeBumpPriority(priority));
+    },
+    [state.transaction, state.txHex, dispatch],
+  );
+
+  const updateStrategy = useCallback(
+    (strategy: FeeBumpStrategy) => {
+      if (strategy === FeeBumpStrategy.NONE) {
+        console.warn("Cannot select NONE as a strategy");
+        return;
+      }
+      dispatch(setFeeBumpStrategy(strategy));
+    },
+    [dispatch],
+  );
+
+  const reset = useCallback(() => {
+    dispatch(resetFeeBumpState());
+  }, [dispatch]);
+
+  // RBF form input handlers
+  const handleSetRbfType = useCallback(
+    (type: "accelerate" | "cancel") => {
+      dispatch(setRbfType(type));
+    },
+    [dispatch],
+  );
+
+  const handleSetCancelAddress = useCallback(
+    (address: string) => {
+      dispatch(setCancelAddress(address));
+    },
+    [dispatch],
+  );
+
+  const handleSetChangeAddress = useCallback(
+    (address: string) => {
+      dispatch(setChangeAddress(address));
+    },
+    [dispatch],
+  );
+
+  const handleSetPsbtVersion = useCallback(
+    (version: "v2" | "v0") => {
+      dispatch(setPsbtVersion(version));
+    },
+    [dispatch],
+  );
+
+  return {
+    setTransactionForBumping,
+    updateFeeRate,
+    updateFeePriority,
+    updateStrategy,
+    reset,
+    setRbfType: handleSetRbfType,
+    setCancelAddress: handleSetCancelAddress,
+    setChangeAddress: handleSetChangeAddress,
+    setPsbtVersion: handleSetPsbtVersion,
+  };
+}
+
+// =============================================================================
+// MAIN CONTEXT PROVIDER
+// =============================================================================
+
+const FeeBumpContext = createContext<FeeBumpContextType | undefined>(undefined);
+
+interface FeeBumpProviderProps {
+  children: ReactNode;
+}
+
+export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
+  // Core state management - never shared with child components
+  const [state, dispatch] = useReducer(feeBumpingReducer, initialState);
+  const [isCreatingRBF, setIsCreatingRBF] = useState(false); // Local loading state for RBF operations
+
+  // External dependencies
+  const { data: feeEstimates } = useFeeEstimates();
+  const currentTxid = state.transaction?.txid || ""; // as intially no tx is selected
+  const { utxos: pendingUtxos } = usePendingUtxos(currentTxid);
+  const walletUtxos = useWalletUtxos();
+
+  // Custom hooks for modularality
+  const {
+    network,
+    addressType,
+    defaultChangeAddress,
+    requiredSigners,
+    totalSigners,
+    depositNodes,
+    changeNodes,
+    getScriptType,
+    globalXpubs,
+  } = useWalletHelpers();
+
+  const userInputHandlers = useUserInputHandlers(state, dispatch);
+
+  // Computed values
+  const computedValues = useFeeBumpComputedValues(state, isCreatingRBF);
+
+  // Combine UTXOs for fee bumping
+  const availableUtxos = useMemo(() => {
+    if (!pendingUtxos?.length || !walletUtxos?.length) return [];
+    return extractUtxosForFeeBumping(pendingUtxos, walletUtxos);
+  }, [pendingUtxos, walletUtxos]);
+
+  // so basically as soon as we have the available utxos and the selected priority, we Auto-analyze transaction
+  useEffect(() => {
+    if (
+      state.transaction &&
+      availableUtxos.length > 0 &&
+      !(state.status === FeeBumpStatus.READY)
+    ) {
+      console.log(
+        "analyze tx ",
+        availableUtxos,
+        state.transaction,
+        network,
+        addressType,
+        requiredSigners,
+        totalSigners,
+      );
+      analyzeTx(
+        state.transaction,
+        state.txHex,
+        state.selectedPriority,
+        availableUtxos,
+      );
+    }
+  }, [state.transaction?.txid, availableUtxos]);
+
   // =============================================================================
   // CORE FEE BUMPING OPERATIONS
   // =============================================================================
@@ -218,6 +394,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       tx: any,
       initialTxHex: string = "",
       priority: FeePriority = FeePriority.MEDIUM,
+      utxosForBumping: any[] = [],
     ) => {
       if (!tx) return;
 
@@ -225,29 +402,23 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
         dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
         dispatch(setFeeBumpError(null));
 
-        const { HIGH, MEDIUM, LOW } = feeEstimates;
-        const targetFeeRate = selectTargetFeeRate(state.selectedPriority, {
-          high: HIGH!,
-          medium: MEDIUM!,
-          low: LOW!,
-        });
+        const targetFeeRate =
+          feeEstimates[priority] ?? feeEstimates[FeePriority.MEDIUM];
 
-        if (!availableUtxos.length) {
+        if (!utxosForBumping.length) {
           throw new Error("No UTXOs available for fee bumping");
         }
 
-        // Analyze transaction for fee bumping options
         const analysis = analyzeTransaction(
           initialTxHex,
           tx.fee,
           network as Network,
-          availableUtxos,
-          targetFeeRate,
+          utxosForBumping, // Use passed UTXOs
+          targetFeeRate!,
           { requiredSigners, totalSigners, addressType },
           priority,
         );
 
-        // Create user-friendly recommendation
         const feeBumpRecommendation: FeeBumpRecommendation = {
           ...analysis,
           currentFeeRate: analysis.feeRate,
@@ -261,8 +432,13 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
             analysis.userSelectedFeeRate,
             Number(analysis.estimatedCPFPFee) / analysis.vsize,
           ),
+          networkFeeEstimates: {
+            highPriority: feeEstimates[FeePriority.HIGH]!,
+            mediumPriority: feeEstimates[FeePriority.MEDIUM]!,
+            lowPriority: feeEstimates[FeePriority.LOW]!,
+          },
         };
-
+        console.log("analysisdone", feeBumpRecommendation);
         dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
         dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
       } catch (error) {
@@ -276,56 +452,8 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
         );
       }
     },
-    [
-      depositNodes,
-      changeNodes,
-      network,
-      requiredSigners,
-      totalSigners,
-      addressType,
-      availableUtxos,
-    ],
+    [network, requiredSigners, totalSigners, addressType, feeEstimates],
   );
-
-  const setTransactionForBumping = useCallback(
-    async (
-      tx: any,
-      priority: FeePriority = FeePriority.MEDIUM,
-      initialTxHex: string = "",
-    ) => {
-      dispatch(setFeeBumpTransaction(tx, initialTxHex));
-      dispatch(setFeeBumpPriority(priority));
-      await analyzeTx(tx, initialTxHex, priority);
-    },
-    [analyzeTx],
-  );
-
-  const updateFeeRate = useCallback((feeRate: number) => {
-    dispatch(setFeeBumpRate(feeRate));
-  }, []);
-
-  const updateFeePriority = useCallback(
-    async (priority: FeePriority) => {
-      if (!state.transaction || !state.txHex) {
-        console.warn("Cannot update fee priority: No transaction selected");
-        return;
-      }
-      dispatch(setFeeBumpPriority(priority));
-    },
-    [state.transaction, state.txHex],
-  );
-
-  const updateStrategy = useCallback((strategy: FeeBumpStrategy) => {
-    if (strategy === FeeBumpStrategy.NONE) {
-      console.warn("Cannot select NONE as a strategy");
-      return;
-    }
-    dispatch(setFeeBumpStrategy(strategy));
-  }, []);
-
-  const reset = useCallback(() => {
-    dispatch(resetFeeBumpState());
-  }, []);
 
   // =============================================================================
   // RBF OPERATIONS
@@ -398,8 +526,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           );
         }
 
-        // **Get global xpubs for PSBT**
-        const globalXpubs = getGlobalXpubs();
         const scriptType = getScriptType();
 
         const rbfOptions: AcceleratedRbfOptions = {
@@ -418,7 +544,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
           globalXpubs, // **ADD GLOBAL XPUBS**
         };
-
+        console.log("accelOp", rbfOptions);
         const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
 
         // Calculate estimated new fee
@@ -436,7 +562,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           priority: state.selectedPriority,
           createdAt: new Date().toISOString(),
         };
-
+        console.log("result", result);
         dispatch(setFeeBumpResult(result));
         dispatch(setFeeBumpStatus(FeeBumpStatus.SUCCESS));
 
@@ -459,13 +585,12 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       state.changeAddress,
       depositNodes,
       changeNodes,
-      getGlobalXpubs,
+      globalXpubs,
       getScriptType,
       network,
       requiredSigners,
       totalSigners,
       defaultChangeAddress,
-      availableUtxos,
     ],
   );
   /**
@@ -504,7 +629,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           throw new Error("No UTXOs available for RBF");
         }
 
-        const globalXpubs = getGlobalXpubs();
         const scriptType = getScriptType();
 
         const cancelRbfOptions: CancelRbfOptions = {
@@ -568,7 +692,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       availableUtxos,
       depositNodes,
       changeNodes,
-      getGlobalXpubs,
+      globalXpubs,
       getScriptType,
       network,
       requiredSigners,
@@ -603,62 +727,24 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   );
 
   // =============================================================================
-  // RBF FORM ACTIONS
-  // =============================================================================
-
-  const handleSetRbfType = useCallback((type: "accelerate" | "cancel") => {
-    dispatch(setRbfType(type));
-  }, []);
-
-  const handleSetCancelAddress = useCallback((address: string) => {
-    dispatch(setCancelAddress(address));
-  }, []);
-
-  const handleSetChangeAddress = useCallback((address: string) => {
-    dispatch(setChangeAddress(address));
-  }, []);
-
-  const handleSetPsbtVersion = useCallback((version: "v2" | "v0") => {
-    dispatch(setPsbtVersion(version));
-  }, []);
-
-  // =============================================================================
   // CONTEXT VALUE
   // =============================================================================
 
   const contextValue: FeeBumpContextType = {
-    // State
+    // Core state (read-only for components)
     state,
-    //dispatch
-    dispatch,
-    // Core fee bumping operations
-    analyzeTx,
-    setTransactionForBumping,
-    updateFeeRate,
-    updateFeePriority,
-    updateStrategy,
-    reset,
 
-    // RBF operations
+    // User input handlers (components can call these)
+    ...userInputHandlers,
+
+    // Core operations (handled internally by context)
+    analyzeTx,
     createAcceleratedRBF,
     createCancelRBF,
     createFeeBumpedTransaction,
-    // RBF form actions
-    setRbfType: handleSetRbfType,
-    setCancelAddress: handleSetCancelAddress,
-    setChangeAddress: handleSetChangeAddress,
-    setPsbtVersion: handleSetPsbtVersion,
 
-    // Computed values
-    isFeeBumpReady,
-    originalFeeRate,
-    minimumFeeRate,
-    estimatedNewFee,
-    feeDifference,
-    isRbfFormValid,
-
-    // Loading states
-    isCreatingRBF,
+    // Computed values (read-only)
+    ...computedValues,
   };
 
   return (
@@ -667,6 +753,10 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     </FeeBumpContext.Provider>
   );
 }
+
+// =============================================================================
+// CONTEXT HOOK
+// =============================================================================
 
 export function useFeeBumpContext() {
   const context = useContext(FeeBumpContext);
