@@ -1,9 +1,4 @@
-import { Network, MultisigAddressType } from "@caravan/bitcoin";
-import { UTXO as FeeUTXO, TransactionAnalyzer } from "@caravan/fees";
-import { TransactionDetails } from "@caravan/clients";
-
-import { FeeBumpRecommendation } from "./types";
-import { FeePriority } from "clients/fees";
+import { UTXO as FeeUTXO } from "@caravan/fees";
 
 // =============================================================================
 // HELPER UTILITY FUNCTIONS FOR FORMATTING AND VALIDATION
