@@ -1,4 +1,4 @@
-import { Network } from "@caravan/bitcoin";
+import { Network, MultisigAddressType } from "@caravan/bitcoin";
 import { UTXO as FeeUTXO, TransactionAnalyzer } from "@caravan/fees";
 import { TransactionDetails } from "@caravan/clients";
 
@@ -182,7 +182,7 @@ export const analyzeTransaction = (
     availableUtxos,
     requiredSigners: walletConfig.requiredSigners,
     totalSigners: walletConfig.totalSigners,
-    addressType: walletConfig.addressType,
+    addressType: walletConfig.addressType as MultisigAddressType,
   });
 
   // Get comprehensive analysis

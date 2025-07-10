@@ -25,7 +25,7 @@ import {
   getWalletAddresses,
   getChangeAddresses,
 } from "../../../../../selectors/wallet";
-import { Network } from "@caravan/bitcoin";
+import { MultisigAddressType, Network } from "@caravan/bitcoin";
 
 import {
   feeBumpingReducer,
@@ -275,7 +275,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           availableInputs: availableUtxos,
           requiredSigners,
           totalSigners,
-          scriptType: addressType,
+          scriptType: addressType as MultisigAddressType,
           dustThreshold: "546", // Default dust threshold
           ...changeOptions,
           strict: false, // Less strict validation for better user experience
@@ -374,7 +374,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
 
           requiredSigners,
           totalSigners,
-          scriptType: addressType,
+          scriptType: addressType as MultisigAddressType,
           dustThreshold: "546", // Default dust threshold
           cancelAddress,
           strict: false,
