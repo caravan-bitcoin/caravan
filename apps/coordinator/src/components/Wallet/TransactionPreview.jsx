@@ -6,28 +6,32 @@ import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
-  Table,
-  TableHead,
-  TableBody,
-  TableFooter,
-  TableRow,
-  TableCell,
   Grid,
   Alert,
   AlertTitle,
   Chip,
   Typography,
   Paper,
+  Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
+  WarningAmber,
 } from "@mui/icons-material";
+import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
+import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
 
 /**
  * Custom hook to get current signing state
@@ -164,6 +168,7 @@ const SignatureStatus = () => {
 
 class TransactionPreview extends React.Component {
   componentDidMount() {
+    // Set up change output multisig details when component loads
     const {
       outputs,
       changeAddress,
@@ -171,6 +176,7 @@ class TransactionPreview extends React.Component {
       changeNode,
       setChangeOutputMultisig,
     } = this.props;
+
     outputs.forEach((output) => {
       if (output.address === changeAddress) {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
@@ -178,128 +184,11 @@ class TransactionPreview extends React.Component {
     });
   }
 
-  renderAddresses = () => {
-    const addressWithUtxos = this.mapAddresses();
-    return Object.keys(addressWithUtxos).map((address) => {
-      return (
-        <TableRow key={address}>
-          <TableCell>
-            <code>{address}</code>
-          </TableCell>
-          <TableCell>{addressWithUtxos[address].utxos.length}</TableCell>
-          <TableCell>
-            <code>{addressWithUtxos[address].amount.toFixed(8)}</code>
-          </TableCell>
-        </TableRow>
-      );
-    });
-  };
+  handleDownloadPSBT(psbtData) {
+    downloadFile(psbtData, "transaction.psbt");
+  }
 
-  renderOutputAddresses = () => {
-    const { changeAddress, outputs } = this.props;
-
-    return outputs.map((output) => {
-      return (
-        <TableRow key={output.address}>
-          <TableCell>
-            <code>{output.address}</code>
-            {output.address === changeAddress ? (
-              <small>&nbsp;(change)</small>
-            ) : (
-              ""
-            )}
-          </TableCell>
-          <TableCell>
-            <code>{BigNumber(output.amount).toFixed(8)}</code>
-          </TableCell>
-        </TableRow>
-      );
-    });
-  };
-
-  renderOutputs = () => {
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.renderOutputAddresses()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell>TOTAL:</TableCell>
-            <TableCell>{this.outputsTotal()}</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
-
-  renderInputs = () => {
-    const { inputsTotalSats } = this.props;
-
-    return (
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Address</TableCell>
-            <TableCell>UTXO count</TableCell>
-            <TableCell>Amount (BTC)</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>{this.renderAddresses()}</TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={2}>TOTAL:</TableCell>
-            <TableCell>{satoshisToBitcoins(inputsTotalSats)}</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
-    );
-  };
-
-  mapAddresses = () => {
-    const { inputs } = this.props;
-    return inputs.reduce((mapped, input) => {
-      const mappedAddresses = mapped;
-      const { confirmed, txid, index, amount } = input;
-
-      mappedAddresses[input.multisig.address] = mapped[
-        input.multisig.address
-      ] || {
-        amount: BigNumber(0),
-        utxos: [],
-      };
-      mappedAddresses[input.multisig.address].utxos.push({
-        confirmed,
-        txid,
-        index,
-        amount,
-      });
-      mappedAddresses[input.multisig.address].amount = mapped[
-        input.multisig.address
-      ].amount.plus(BigNumber(input.amount));
-      return mappedAddresses;
-    }, {});
-  };
-
-  outputsTotal = () => {
-    const { outputs } = this.props;
-    return satoshisToBitcoins(
-      outputs.reduce(
-        (total, output) => total.plus(BigNumber(output.amountSats || 0)),
-        BigNumber(0),
-      ),
-    );
-  };
-
-  handleDownloadPSBT = (psbtBase64) => {
-    downloadFile(psbtBase64, "transaction.psbt");
-  };
-
-  render = () => {
+  render() {
     const {
       feeRate,
       fee,
@@ -307,19 +196,96 @@ class TransactionPreview extends React.Component {
       editTransaction,
       handleSignTransaction,
       unsignedPSBT,
+      inputs,
+      outputs,
     } = this.props;
+
+    // Get wallet script type for fingerprint analysis
+    const walletScriptType = this.props.addressType || "";
+    const outputsForAnalysis = (outputs || []).map((o) => ({
+      scriptType: o.scriptType,
+      amount: o.amount, // BTC as string/number
+      address: o.address,
+    }));
+    const fingerprint = walletFingerprintAnalysis(
+      outputsForAnalysis,
+      walletScriptType,
+    );
+    const fingerprintMsg =
+      fingerprint.reason ||
+      "This output matches your wallet's address type and is likely to be identified as change by on-chain observers.";
+    const tooltipSx = { verticalAlign: "middle" };
 
     return (
       <Box>
+        <FingerprintingAnalysis />
+
         <h2>Transaction Preview</h2>
 
         {/* Signature Status Section */}
         <SignatureStatus />
+
         <UnsignedTransaction />
+
         <h3>Inputs</h3>
-        {this.renderInputs()}
+        <UTXOSet
+          inputs={inputs || []}
+          inputsTotalSats={inputsTotalSats}
+          showSelection={false}
+          finalizedOutputs
+        />
         <h3>Outputs</h3>
-        {this.renderOutputs()}
+        <Box mb={2}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Address</TableCell>
+                <TableCell>Amount (BTC)</TableCell>
+                <TableCell>Script Type</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {outputs &&
+                outputs.map((output, idx) => {
+                  const isPoisoned =
+                    fingerprint.hasWalletFingerprinting &&
+                    fingerprint.poisonedOutputIndex === idx;
+                  return (
+                    <TableRow
+                      key={output.address}
+                      style={isPoisoned ? { background: "#fff3e0" } : {}}
+                    >
+                      <TableCell>
+                        <code>{output.address}</code>
+                        {isPoisoned && (
+                          <Tooltip title={fingerprintMsg} sx={tooltipSx}>
+                            <WarningAmber
+                              color="warning"
+                              fontSize="small"
+                              style={{ marginLeft: 4, verticalAlign: "middle" }}
+                            />
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <code>{output.amount}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={output.scriptType || ""}
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                          sx={{ fontSize: "0.8rem", height: "26px" }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </Box>
+
         <Grid container>
           <Grid item xs={4}>
             <h3>Fee</h3>
@@ -334,6 +300,7 @@ class TransactionPreview extends React.Component {
             <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
           </Grid>
         </Grid>
+
         <Box mt={2}>
           <TransactionAnalysis />
         </Box>
@@ -374,7 +341,7 @@ class TransactionPreview extends React.Component {
         </Box>
       </Box>
     );
-  };
+  }
 }
 
 TransactionPreview.propTypes = {
@@ -392,8 +359,10 @@ TransactionPreview.propTypes = {
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
-  signatureImporters: PropTypes.shape({}),
+  addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
+  totalSigners: PropTypes.number,
+  walletScriptType: PropTypes.string,
 };
 
 function mapStateToProps(state) {
@@ -405,6 +374,8 @@ function mapStateToProps(state) {
     unsignedPSBT: state.spend.transaction.unsignedPSBT,
     signatureImporters: state.spend.signatureImporters,
     requiredSigners: state.settings.requiredSigners,
+    addressType: state.settings.addressType,
+    totalSigners: state.settings.totalSigners,
   };
 }
 
