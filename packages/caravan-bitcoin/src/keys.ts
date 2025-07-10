@@ -223,7 +223,7 @@ export class ExtendedPublicKey extends Struct {
    * @returns {ExtendedPublicKey} new ExtendedPublicKey instance
    */
   static fromBase58(data: string): ExtendedPublicKey {
-    return ExtendedPublicKey.decode(bs58check.decode(data));
+    return ExtendedPublicKey.decode(Buffer.from(bs58check.decode(data)));
   }
 
   /**
