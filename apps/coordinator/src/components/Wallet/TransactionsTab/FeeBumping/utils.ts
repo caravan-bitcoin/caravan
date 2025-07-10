@@ -2,7 +2,8 @@ import { Network } from "@caravan/bitcoin";
 import { UTXO as FeeUTXO, TransactionAnalyzer } from "@caravan/fees";
 import { TransactionDetails } from "@caravan/clients";
 
-import { FeePriority, FeeBumpRecommendation } from "./types";
+import { FeeBumpRecommendation } from "./types";
+import { FeePriority } from "clients/fees";
 
 // =============================================================================
 // HELPER UTILITY FUNCTIONS FOR FORMATTING AND VALIDATION

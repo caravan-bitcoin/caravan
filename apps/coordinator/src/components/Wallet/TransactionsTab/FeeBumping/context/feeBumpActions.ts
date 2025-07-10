@@ -1,10 +1,6 @@
 import { FeeBumpStrategy } from "@caravan/fees";
-import {
-  FeeBumpStatus,
-  FeePriority,
-  FeeBumpRecommendation,
-  FeeBumpResult,
-} from "../types";
+import { FeeBumpStatus, FeeBumpRecommendation, FeeBumpResult } from "../types";
+import { FeePriority } from "clients/fees";
 
 export const SET_FEE_BUMP_TRANSACTION = "SET_FEE_BUMP_TRANSACTION";
 export const SET_FEE_BUMP_STATUS = "SET_FEE_BUMP_STATUS";

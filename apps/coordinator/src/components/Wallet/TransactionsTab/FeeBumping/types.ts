@@ -1,5 +1,6 @@
 import { Network } from "@caravan/bitcoin";
 import { FeeBumpStrategy, Satoshis, TxAnalysis, UTXO } from "@caravan/fees";
+import { FeePriority } from "clients/fees";
 import { TransactionT } from "../types";
 
 /**
