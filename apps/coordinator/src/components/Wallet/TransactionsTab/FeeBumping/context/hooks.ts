@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 
 import { TransactionAnalyzer } from "@caravan/fees";
@@ -81,7 +81,12 @@ export const useGetAvailableUtxos = () => {
   } = useFeeBumpContext();
   const { utxos: pendingUtxos } = usePendingUtxos(transaction?.txid || "");
   const walletUtxos = useWalletUtxos();
-  return extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []);
+
+  // Memoize the combined UTXOs so it only recalculates when dependencies change
+  return useMemo(
+    () => extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []),
+    [pendingUtxos, walletUtxos, transaction?.txid],
+  );
 };
 
 export const useGetGlobalXpubs = () => {
