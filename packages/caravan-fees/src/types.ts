@@ -1,4 +1,4 @@
-import { Network, MULTISIG_ADDRESS_TYPES } from "@caravan/bitcoin";
+import { Network, MultisigAddressType } from "@caravan/bitcoin";
 
 import {
   BtcTxInputTemplate,
@@ -219,7 +219,7 @@ export interface AnalyzerOptions {
    * This is used to determine the input size for different address types
    * when estimating transaction size.
    */
-  addressType: ScriptType;
+  addressType: MultisigAddressType;
 
   /**
    * The hexadecimal representation of the raw transaction.
@@ -350,7 +350,7 @@ export interface TransactionTemplateOptions {
    * The type of script used for the transaction (e.g., "p2pkh", "p2sh", "p2wpkh", "p2wsh").
    * This affects how the transaction is constructed and signed.
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * Optional array of input templates to use in the transaction.
@@ -411,7 +411,7 @@ export interface CancelRbfOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * The number of required signers for the multisig setup.
@@ -550,7 +550,7 @@ export interface CPFPOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * The target fee rate in satoshis per virtual byte. This is used to calculate
@@ -587,39 +587,6 @@ export interface CPFPOptions {
    */
   globalXpubs?: GlobalXpub[];
 }
-
-/**
- * Comprehensive object containing all supported Bitcoin script types.
- * This includes multisig address types from Caravan and additional types.
- *
- * @readonly
- * @enum {string}
- */
-export const SCRIPT_TYPES = {
-  /** Pay to Public Key Hash */
-  P2PKH: "P2PKH",
-  /** Pay to Witness Public Key Hash (Native SegWit) */
-  P2WPKH: "P2WPKH",
-  /** Pay to Script Hash wrapping a Pay to Witness Public Key Hash (Nested SegWit) */
-  P2SH_P2WPKH: "P2SH_P2WPKH",
-  /** Unknown or unsupported script type */
-  UNKNOWN: "UNKNOWN",
-  /** Pay to Script Hash */
-  P2SH: MULTISIG_ADDRESS_TYPES.P2SH,
-  /** Pay to Script Hash wrapping a Pay to Witness Script Hash */
-  P2SH_P2WSH: MULTISIG_ADDRESS_TYPES.P2SH_P2WSH,
-  /** Pay to Witness Script Hash (Native SegWit for scripts) */
-  P2WSH: MULTISIG_ADDRESS_TYPES.P2WSH,
-} as const;
-
-/**
- * Union type representing all possible Bitcoin script types.
- * This type can be used for type checking and autocompletion in functions
- * that deal with different Bitcoin address formats.
- *
- * @type {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
- */
-export type ScriptType = (typeof SCRIPT_TYPES)[keyof typeof SCRIPT_TYPES];
 
 /**
  * Represents the comprehensive analysis of a Bitcoin transaction.

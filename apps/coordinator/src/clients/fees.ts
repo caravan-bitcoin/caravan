@@ -3,9 +3,9 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import { useGetClient } from "hooks/client";
 
 export enum FeePriority {
-  HIGH = "HIGH",
-  MEDIUM = "MEDIUM",
-  LOW = "LOW",
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
 }
 
 /**
