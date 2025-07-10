@@ -7,13 +7,17 @@ import {
   blockExplorerAPIURL,
   Network,
 } from "@caravan/bitcoin";
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import { BigNumber } from "bignumber.js";
 
 import {
   BlockExplorerUTXOResponse,
   BlockExplorerAddressResponse,
   FormattedUTXO,
+  AddressTransaction,
+  RawTransactionData,
+  TransactionQueryParams,
+  IBitcoinClient,
 } from "./types";
 
 // FIXME: hack
@@ -146,3 +150,68 @@ export async function blockExplorerBroadcastTransaction(
 /**
  * @module block_explorer
  */
+
+
+
+export class PublicClient implements IBitcoinClient {
+  private axios: AxiosInstance;
+
+  constructor(baseUrl: string) {
+    this.axios = axios.create({ baseURL: baseUrl });
+  }
+
+  async getAddressTransactions(
+    address: string,
+    params: TransactionQueryParams = {}
+  ): Promise<AddressTransaction[]> {
+    const { limit = 10, lastSeenTxid } = params;
+    const queryParams: Record<string, any> = { limit };
+    if (lastSeenTxid) queryParams.after_txid = lastSeenTxid;
+
+    try {
+      const response = await this.axios.get<RawTransactionData[]>(
+        `/address/${address}/txs`,
+        { params: queryParams }
+      );
+
+      return response.data.map(tx => this.mapTransaction(tx, address));
+    } catch (error) {
+      console.error(`Failed to fetch transactions for ${address}:`, error);
+      return []; // Return empty array on error
+    }
+  }
+
+  private mapTransaction(tx: RawTransactionData, address: string): AddressTransaction {
+    const netAmount = this.calculateNetAmount(tx, address);
+    return {
+      address,
+      txid: tx.txid,
+      fee: tx.fee * 100000000, // Convert BTC to sats
+      status: tx.status?.confirmed ? 'confirmed' : 'pending',
+      blockTime: tx.status?.block_time,
+      amount: netAmount,
+      // details: tx
+    };
+  }
+
+  private calculateNetAmount(tx: RawTransactionData, address: string): number {
+    let received = 0;
+    let sent = 0;
+
+    // Calculate outputs to this address
+    tx.vout.forEach(output => {
+      if (output.scriptpubkey_address === address) {
+        received += output.value;
+      }
+    });
+
+    // Calculate inputs from this address
+    tx.vin.forEach(input => {
+      if (input.prevout?.scriptpubkey_address === address) {
+        sent += input.prevout.value;
+      }
+    });
+
+    return (received - sent) * 100000000; // Convert to sats
+  }
+}

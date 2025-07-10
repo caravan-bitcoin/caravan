@@ -16,6 +16,10 @@ import {
   BitcoindParams,
   UnspentOutput,
   BaseBitcoindArgs,
+  AddressTransaction,
+  TransactionQueryParams,
+  ListTransactionsItem,
+  IBitcoinClient,
 } from "./types";
 
 /**
@@ -331,5 +335,119 @@ export async function bitcoindRawTxData({
     throw new Error(
       `Failed to get raw transaction data :  ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+}
+
+export class BitcoinCoreClient implements IBitcoinClient {
+  private url: string;
+  private auth: AxiosBasicCredentials;
+  private walletName?: string;
+
+  constructor(params: BitcoindParams) {
+    this.url = params.url;
+    this.auth = params.auth;
+    this.walletName = params.walletName;
+  }
+
+  async getAddressTransactions(
+    address: string,
+    params: TransactionQueryParams = {}
+  ): Promise<AddressTransaction[]> {
+    const { limit = 10, skip = 0 } = params;
+    const count = limit + skip; // Core doesn't support pagination natively
+
+    try {
+      const response = await callBitcoind<ListTransactionsItem[]>(
+        this.getRpcUrl(),
+        this.auth,
+        "listtransactions",
+        ["*", count, 0, true]
+      );
+
+      // Filter by address and apply pagination
+      return response.result
+        .filter(tx => tx.address === address)
+        .slice(skip, skip + limit)
+        .map(tx => this.mapTransaction(tx));
+    } catch (error) {
+      console.error('Bitcoin Core listtransactions failed:', error);
+      throw new Error('Failed to fetch transactions from Bitcoin Core');
+    }
+  }
+
+  private mapTransaction(tx: ListTransactionsItem): AddressTransaction {
+    return {
+      address: tx.address,
+      txid: tx.txid,
+      fee: Math.abs(tx.fee || 0) * 100000000, // Convert BTC to sats
+      status: tx.confirmations > 0 ? 'confirmed' : 'pending',
+      blockTime: tx.blocktime || tx.time,
+      amount: tx.amount * 100000000 // Convert to sats
+    };
+  }
+
+  /**
+   * Gets the proper RPC URL including wallet path if needed
+   */
+  private getRpcUrl(): string {
+    if (this.walletName) {
+      return `${this.url}/wallet/${this.walletName}`;
+    }
+    return this.url;
+  }
+}
+
+/**
+ * Transaction History Service
+ * 
+ * This service handles fetching and processing transactions across multiple addresses
+ */
+export class TransactionHistoryService {
+  constructor(private client: IBitcoinClient) {}
+
+  /**
+   * Fetches transactions for multiple addresses with deduplication
+   */
+  async getWalletTransactions(
+    addresses: string[],
+    params: TransactionQueryParams = {}
+  ): Promise<AddressTransaction[]> {
+    const allTxs: AddressTransaction[] = [];
+    
+    for (const address of addresses) {
+      try {
+        const txs = await this.client.getAddressTransactions(address, params);
+        allTxs.push(...txs);
+      } catch (error) {
+        console.error(`Skipping ${address} due to error:`, error);
+      }
+      await this.delay(300); // Rate limiting
+    }
+    
+    return this.deduplicateTransactions(allTxs);
+  }
+
+  /**
+   * Deduplicates transactions by txid
+   */
+  private deduplicateTransactions(txs: AddressTransaction[]): AddressTransaction[] {
+    const unique = new Map<string, AddressTransaction>();
+    
+    // Process in reverse chronological order
+    txs.sort((a, b) => 
+      (b.blockTime || 0) - (a.blockTime || 0)
+    );
+    
+    txs.forEach(tx => {
+      if (!unique.has(tx.txid)) {
+        unique.set(tx.txid, tx);
+      }
+    });
+    
+    return Array.from(unique.values());
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

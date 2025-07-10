@@ -419,3 +419,41 @@ export interface WalletTransactionResponse {
     height: number;
   };
 }
+export interface AddressTransaction {
+  address: string;
+  txid: string;
+  fee: number; // in sats
+  status: 'confirmed' | 'pending';
+  blockTime?: number; // only for confirmed
+  amount: number; // net effect on address in sats
+}
+
+export interface NormalizedTransaction {
+  txid: string;
+  fee: number;
+  status: 'confirmed' | 'pending';
+  blockTime?: number;
+  involvedAddresses: string[];
+  inputs: {
+    address: string;
+    value: number;
+  }[];
+  outputs: {
+    address: string;
+    value: number;
+  }[];
+}
+
+// Enhanced client interface
+export interface IBitcoinClient {
+  getAddressTransactions(
+    address: string,
+    params?: TransactionQueryParams
+  ): Promise<AddressTransaction[]>;
+}
+
+export interface TransactionQueryParams {
+  limit?: number;
+  lastSeenTxid?: string;
+  skip?: number;
+}
