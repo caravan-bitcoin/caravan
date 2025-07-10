@@ -43,13 +43,6 @@ export class TestStateManager {
     const state = this.getState();
     return state.test_wallet_names
   }
-
-  // getWalletNames(): string[]{
-  //   const state = this.getState();
-  //   if(!state.test_wallet_names){
-  //     throw new Error("")
-  //   }
-  // }
 }
 
 export const testStateManager = new TestStateManager();
