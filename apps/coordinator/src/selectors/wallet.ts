@@ -94,7 +94,7 @@ export const getWalletSlices = (state: WalletState): Slice[] => [
   ...Object.values(state.wallet.change.nodes),
 ];
 
-const getAddressType = (state: WalletState): string =>
+export const getAddressType = (state: WalletState): string =>
   state.settings.addressType;
 const getNetwork = (state: WalletState): string => state.settings.network;
 const getTotalSigners = (state: WalletState): number =>
