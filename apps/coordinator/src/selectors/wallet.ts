@@ -107,7 +107,7 @@ const getWalletName = (state: WalletState): string =>
   state.wallet.common.walletName;
 const getWalletUuid = (state: WalletState): string =>
   state.wallet.common.walletUuid;
-const getExtendedPublicKeyImporters = (
+export const getExtendedPublicKeyImporters = (
   state: WalletState,
 ): Record<string, ExtendedPublicKeyImporter> =>
   state.quorum.extendedPublicKeyImporters;
@@ -445,6 +445,22 @@ export const getWalletAddresses = createSelector(
 );
 
 /**
+ * Selector that returns change addresses as an array for efficient lookups
+ * This is more specific than getWalletAddresses since we only need change addresses
+ * for change output detection
+ */
+export const getChangeAddresses = createSelector(
+  (state: WalletState) => state.wallet.change.nodes,
+  (changeNodes): string[] => {
+    const addresses = Object.values(changeNodes)
+      .filter((node) => node.multisig && node.multisig.address)
+      .map((node) => node.multisig.address);
+
+    return addresses;
+  },
+);
+
+/**
  * @description Returns an array of transaction IDs from unconfirmed UTXOs (pending transactions only)
  */
 export const getPendingTransactionIds = createSelector(
@@ -489,4 +505,14 @@ export const getTransactionExplorerUrl = createSelector(
       return explorerUrl;
     };
   },
+);
+
+export const selectWalletConfig = createSelector(
+  (state: WalletState) => state.settings,
+  (settings) => ({
+    network: settings.network,
+    addressType: settings.addressType,
+    requiredSigners: settings.requiredSigners,
+    totalSigners: settings.totalSigners,
+  }),
 );
