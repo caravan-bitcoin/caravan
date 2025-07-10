@@ -1,14 +1,16 @@
 import { createSelector } from "reselect";
 
 // Type definitions for the Redux state
-interface UTXO {
+export interface UTXO {
   amountSats: string;
   confirmed: boolean;
   time: number;
-  txid?: string;
+  txid: string;
+  index: number;
+  transactionHex: string;
 }
 
-interface Slice {
+export interface Slice {
   utxos: UTXO[];
   addressUsed: boolean;
   addressKnown: boolean;
@@ -19,6 +21,16 @@ interface Slice {
   };
   multisig: {
     address: string;
+    braidDetails: string;
+    redeem: {
+      output: Buffer;
+      pubkeys: Buffer[];
+    };
+    bip32Derivation: {
+      pubkey: Buffer;
+      masterFingerprint: Buffer;
+      path: string;
+    }[];
   };
   lastUsed?: string;
   lastUsedTime?: number;
@@ -37,7 +49,7 @@ interface LedgerPolicyHmac {
   policyHmac: string;
 }
 
-interface WalletState {
+export interface WalletState {
   wallet: {
     deposits: {
       nodes: Record<string, Slice>;
@@ -77,12 +89,12 @@ interface WalletState {
 // only care about inbound to deposit account, not change
 const getDepositSlices = (state: WalletState): Slice[] =>
   Object.values(state.wallet.deposits.nodes);
-const getWalletSlices = (state: WalletState): Slice[] => [
+export const getWalletSlices = (state: WalletState): Slice[] => [
   ...Object.values(state.wallet.deposits.nodes),
   ...Object.values(state.wallet.change.nodes),
 ];
 
-const getAddressType = (state: WalletState): string =>
+export const getAddressType = (state: WalletState): string =>
   state.settings.addressType;
 const getNetwork = (state: WalletState): string => state.settings.network;
 const getTotalSigners = (state: WalletState): number =>
@@ -95,7 +107,7 @@ const getWalletName = (state: WalletState): string =>
   state.wallet.common.walletName;
 const getWalletUuid = (state: WalletState): string =>
   state.wallet.common.walletUuid;
-const getExtendedPublicKeyImporters = (
+export const getExtendedPublicKeyImporters = (
   state: WalletState,
 ): Record<string, ExtendedPublicKeyImporter> =>
   state.quorum.extendedPublicKeyImporters;
@@ -433,6 +445,22 @@ export const getWalletAddresses = createSelector(
 );
 
 /**
+ * Selector that returns change addresses as an array for efficient lookups
+ * This is more specific than getWalletAddresses since we only need change addresses
+ * for change output detection
+ */
+export const getChangeAddresses = createSelector(
+  (state: WalletState) => state.wallet.change.nodes,
+  (changeNodes): string[] => {
+    const addresses = Object.values(changeNodes)
+      .filter((node) => node.multisig && node.multisig.address)
+      .map((node) => node.multisig.address);
+
+    return addresses;
+  },
+);
+
+/**
  * @description Returns an array of transaction IDs from unconfirmed UTXOs (pending transactions only)
  */
 export const getPendingTransactionIds = createSelector(
@@ -477,4 +505,14 @@ export const getTransactionExplorerUrl = createSelector(
       return explorerUrl;
     };
   },
+);
+
+export const selectWalletConfig = createSelector(
+  (state: WalletState) => state.settings,
+  (settings) => ({
+    network: settings.network,
+    addressType: settings.addressType,
+    requiredSigners: settings.requiredSigners,
+    totalSigners: settings.totalSigners,
+  }),
 );

@@ -1,5 +1,4 @@
-// packages/caravan-fees/src/tests/rbf.exact.test.ts
-
+import { MultisigAddressType } from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
 
 import {
@@ -24,7 +23,7 @@ describe("Exact RBF Reconstruction Tests", () => {
           availableInputs: fixture.availableUtxos,
           network: fixture.network,
           dustThreshold: fixture.dustThreshold,
-          scriptType: fixture.scriptType,
+          scriptType: fixture.scriptType as MultisigAddressType,
           requiredSigners: fixture.requiredSigners,
           totalSigners: fixture.totalSigners,
           targetFeeRate: fixture.targetFeeRate,
@@ -163,7 +162,7 @@ describe("Exact RBF Reconstruction Tests", () => {
           availableInputs: fixture.availableUtxos,
           network: fixture.network,
           dustThreshold: fixture.dustThreshold,
-          scriptType: fixture.scriptType,
+          scriptType: fixture.scriptType as MultisigAddressType,
           requiredSigners: fixture.requiredSigners,
           totalSigners: fixture.totalSigners,
           targetFeeRate: fixture.targetFeeRate,

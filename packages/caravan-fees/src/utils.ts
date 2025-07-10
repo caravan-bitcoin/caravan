@@ -4,6 +4,10 @@ import {
   estimateMultisigP2WSHTransactionVSize,
   Network,
   validateAddress,
+  MultisigAddressType,
+  P2SH,
+  P2WSH,
+  P2SH_P2WSH,
 } from "@caravan/bitcoin";
 import { PsbtV2 } from "@caravan/psbt";
 import { BigNumber } from "bignumber.js";
@@ -14,8 +18,6 @@ import {
   Transaction,
   Network as BitcoinJSNetwork,
 } from "bitcoinjs-lib-v6";
-
-import { ScriptType, SCRIPT_TYPES } from "./types";
 
 /**
  * Creates an output script for a given Bitcoin address.
@@ -184,34 +186,34 @@ export function getOutputAddress(script: Buffer, network: Network): string {
  * @throws Will throw an error if the address type is unsupported
  */
 export function estimateTransactionVsize({
-  addressType = SCRIPT_TYPES.P2SH,
+  addressType = P2SH,
   numInputs = 1,
   numOutputs = 1,
   m = 1,
   n = 2,
 }: {
-  addressType?: ScriptType;
+  addressType?: MultisigAddressType;
   numInputs?: number;
   numOutputs?: number;
   m?: number;
   n?: number;
 } = {}): number {
   switch (addressType) {
-    case SCRIPT_TYPES.P2SH:
+    case P2SH:
       return estimateMultisigP2SHTransactionVSize({
         numInputs,
         numOutputs,
         m,
         n,
       });
-    case SCRIPT_TYPES.P2SH_P2WSH:
+    case P2SH_P2WSH:
       return estimateMultisigP2SH_P2WSHTransactionVSize({
         numInputs,
         numOutputs,
         m,
         n,
       });
-    case SCRIPT_TYPES.P2WSH:
+    case P2WSH:
       return estimateMultisigP2WSHTransactionVSize({
         numInputs,
         numOutputs,
