@@ -47,7 +47,7 @@ export interface FeeRatePercentile {
   avgFee_100: number;
 }
 
-interface RawTxInput {
+export interface RawTxInput {
   txid: string;
   vout: number;
   sequence: number;
@@ -62,7 +62,7 @@ interface RawTxInput {
   };
 }
 
-interface RawTxOutput {
+export interface RawTxOutput {
   value: number;
   scriptpubkey: string;
   scriptpubkey_asm?: string;
