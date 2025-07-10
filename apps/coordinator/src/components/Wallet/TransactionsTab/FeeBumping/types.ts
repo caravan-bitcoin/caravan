@@ -1,5 +1,4 @@
 import { Network } from "@caravan/bitcoin";
-import { TransactionDetails } from "@caravan/clients";
 import { FeeBumpStrategy, Satoshis, TxAnalysis, UTXO } from "@caravan/fees";
 import { TransactionT } from "../types";
 
@@ -153,55 +152,6 @@ export interface FeeBumpRecommendation extends TxAnalysis {
   };
   userSelectedFeeRate: number;
   userSelectedPriority: FeePriority;
-}
-
-/**
- * Wallet slice interface for type safety based on how we have slices stored in redux state
- */
-export interface WalletSlice {
-  multisig?: {
-    address?: string;
-    braidDetails?: string;
-    bip32Derivation?: Array<{
-      masterFingerprint: string;
-      path: string;
-      pubkey: string;
-    }>;
-    redeem?: {
-      output?: Buffer;
-      redeem?: {
-        output?: Buffer;
-      };
-    };
-    output?: Buffer;
-    hash?: string;
-    name?: string;
-    network?: string;
-  };
-  bip32Path?: string;
-  change?: boolean;
-}
-
-/**
- * Interface for PSBT fields needed for different address types
- */
-export interface PSBTFields {
-  nonWitnessUtxo?: Buffer;
-  witnessUtxo?: {
-    script: Buffer;
-    value: number;
-  };
-  redeemScript?: Buffer;
-  witnessScript?: Buffer;
-  bip32Derivations?: any[];
-  sequence?: number;
-}
-
-export interface ProcessedTransaction {
-  txid: string;
-  transaction: TransactionDetails;
-  valueToWallet: number;
-  isReceived: boolean;
 }
 
 export interface UtxoExtractionResult {
