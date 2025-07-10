@@ -374,15 +374,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       availableUtxos.length > 0 &&
       !(state.status === FeeBumpStatus.READY)
     ) {
-      console.log(
-        "analyze tx ",
-        availableUtxos,
-        state.transaction,
-        network,
-        addressType,
-        requiredSigners,
-        totalSigners,
-      );
       analyzeTx(
         state.transaction,
         state.txHex,
@@ -445,7 +436,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
             lowPriority: feeEstimates[FeePriority.LOW]!,
           },
         };
-        console.log("analysisdone", feeBumpRecommendation);
+
         dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
         dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
       } catch (error) {
@@ -551,7 +542,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
           globalXpubs, // **ADD GLOBAL XPUBS**
         };
-        console.log("accelOp", rbfOptions);
+
         const psbtBase64 = createAcceleratedRbfTransaction(rbfOptions);
 
         // Calculate estimated new fee
@@ -569,7 +560,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           priority: state.selectedPriority,
           createdAt: new Date().toISOString(),
         };
-        console.log("result", result);
         dispatch(setFeeBumpResult(result));
         dispatch(setFeeBumpStatus(FeeBumpStatus.SUCCESS));
 
