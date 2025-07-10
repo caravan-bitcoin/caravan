@@ -17,12 +17,14 @@ import {
   setFeeBumpStatus,
   setFeeBumpError,
   setFeeBumpRecommendation,
+  FeeBumpActionTypes,
 } from "./feeBumpActions";
 
 import { FeeBumpStatus, FeeBumpRecommendation } from "../types";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { TransactionDetails } from "@caravan/clients";
-import { useFeeBumpContext } from "./FeeBumpContext";
+import { FeeBumpingState } from "./feeBumpReducer";
+
 // =============================================================================
 // HOOKS
 // =============================================================================
@@ -75,10 +77,7 @@ export const useChangeOutputIndex = (
   return undefined;
 };
 
-export const useGetAvailableUtxos = () => {
-  const {
-    state: { transaction },
-  } = useFeeBumpContext();
+export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const { utxos: pendingUtxos } = usePendingUtxos(transaction?.txid || "");
   const walletUtxos = useWalletUtxos();
 
@@ -98,8 +97,10 @@ export const useGetGlobalXpubs = () => {
   }));
 };
 
-export const useAnalyzeTransaction = () => {
-  const { state, dispatch } = useFeeBumpContext();
+export const useAnalyzeTransaction = (
+  state: FeeBumpingState,
+  dispatch: React.Dispatch<FeeBumpActionTypes>,
+) => {
   const availableUtxos = useGetAvailableUtxos();
   const { data: feeEstimates } = useFeeEstimates();
   const { network, addressType, requiredSigners, totalSigners } =
@@ -109,7 +110,8 @@ export const useAnalyzeTransaction = () => {
     if (
       !state.transaction ||
       !availableUtxos.length ||
-      state.status === FeeBumpStatus.READY
+      state.status === FeeBumpStatus.READY ||
+      state.status === FeeBumpStatus.SUCCESS
     ) {
       return;
     }
