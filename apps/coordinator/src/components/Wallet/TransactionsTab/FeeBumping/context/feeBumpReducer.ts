@@ -1,11 +1,7 @@
 import { FeeBumpStrategy } from "@caravan/fees";
 import { TransactionDetails } from "@caravan/clients";
-import {
-  FeeBumpStatus,
-  FeePriority,
-  FeeBumpRecommendation,
-  FeeBumpResult,
-} from "../types";
+import { FeeBumpStatus, FeeBumpRecommendation, FeeBumpResult } from "../types";
+import { FeePriority } from "clients/fees";
 import {
   FeeBumpActionTypes,
   SET_FEE_BUMP_TRANSACTION,

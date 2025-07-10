@@ -93,15 +93,6 @@ export interface FeeBumpResult {
 }
 
 /**
- * Fee priority options for transaction fee selection
- */
-export enum FeePriority {
-  HIGH = "high",
-  MEDIUM = "medium",
-  LOW = "low",
-}
-
-/**
  * Context for the RBF operation
  */
 export interface RBFContext {
@@ -158,3 +149,42 @@ export interface UtxoExtractionResult {
   utxos: UTXO[];
   errors: string[];
 }
+
+// Component related
+
+export type RbfType = "accelerate" | "cancel";
+
+export const RBF_TYPES = {
+  ACCELERATE: "accelerate",
+  CANCEL: "cancel",
+} as const;
+
+export type RbfTypeValues = (typeof RBF_TYPES)[keyof typeof RBF_TYPES];
+
+export const FEE_LEVELS = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+  CUSTOM: "custom",
+};
+
+export type FeeLevelType = (typeof FEE_LEVELS)[keyof typeof FEE_LEVELS];
+
+export const PRIORITY_TO_FEE_LEVEL = {
+  [FeePriority.LOW]: FEE_LEVELS.LOW,
+  [FeePriority.MEDIUM]: FEE_LEVELS.MEDIUM,
+  [FeePriority.HIGH]: FEE_LEVELS.HIGH,
+};
+
+export const FEE_LEVEL_TO_PRIORITY_MAP = {
+  [FEE_LEVELS.LOW]: FeePriority.LOW,
+  [FEE_LEVELS.MEDIUM]: FeePriority.MEDIUM,
+  [FEE_LEVELS.HIGH]: FeePriority.HIGH,
+} as const;
+
+export const FEE_LEVEL_COLORS = {
+  [FEE_LEVELS.LOW]: "#4caf50", // Green
+  [FEE_LEVELS.MEDIUM]: "#ff9800", // Orange
+  [FEE_LEVELS.HIGH]: "#f44336", // Red
+  [FEE_LEVELS.CUSTOM]: "#2196f3", // Blue
+};

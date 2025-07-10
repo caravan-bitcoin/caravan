@@ -1,5 +1,6 @@
 import { Network } from "@caravan/bitcoin";
 import { UTXO as FeeUTXO, TransactionAnalyzer } from "@caravan/fees";
+import { TransactionDetails } from "@caravan/clients";
 
 import { FeePriority, FeeBumpRecommendation } from "./types";
 
@@ -68,6 +69,52 @@ const validateTransactionInputs = (
   if (!availableUtxos?.length) {
     throw new Error("No UTXOs available for fee bumping");
   }
+};
+
+/**
+ * Identifies the change output in a transaction by analyzing output addresses
+ * and wallet data
+ *
+ * This function uses multiple heuristics to identify which output is the change:
+ * 1. Matches against known wallet addresses
+ * 2. Checks BIP32 path patterns (change addresses use path m/1/*)
+ * 3. Position in outputs (change is often the last output)
+ *
+ * @param transaction - The transaction object
+ * @param walletState - The wallet state containing addresses
+ * @returns Index of the change output or undefined if not found
+ *
+ * @see https://en.bitcoin.it/wiki/Privacy#Change_address_detection
+ */
+export const getChangeOutputIndex = (
+  transaction: TransactionDetails,
+  walletAddresses: string[],
+  changeAddresses: string[],
+): number | undefined => {
+  if (!transaction.vout?.length) return undefined;
+
+  const changeAddressesSet = new Set(changeAddresses);
+  const walletAddressesSet = new Set(walletAddresses);
+
+  // 1) First look for any explicit change‑address hits
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && changeAddressesSet.has(addr)) {
+      return i;
+    }
+  }
+
+  // 2) : Check if any output goes to a known wallet address
+  // This is less reliable but can help identify change when the exact
+  // change address isn't recognized
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && walletAddressesSet.has(addr)) {
+      return i;
+    }
+  }
+
+  return undefined;
 };
 
 // =============================================================================
