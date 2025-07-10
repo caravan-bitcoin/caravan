@@ -11,7 +11,6 @@ import React, {
 import { useSelector } from "react-redux";
 
 import {
-  FeeBumpStrategy,
   SCRIPT_TYPES,
   createAcceleratedRbfTransaction,
   createCancelRbfTransaction,
@@ -24,7 +23,6 @@ import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
 import {
   selectWalletConfig,
   getExtendedPublicKeyImporters,
-  WalletState,
   getWalletAddresses,
   getChangeAddresses,
 } from "../../../../../selectors/wallet";
@@ -36,24 +34,19 @@ import {
   FeeBumpingState,
 } from "./feeBumpReducer";
 import {
-  setFeeBumpTransaction,
+  FeeBumpActionTypes,
   setFeeBumpStatus,
   setFeeBumpError,
   setFeeBumpRecommendation,
-  setFeeBumpStrategy,
-  setFeeBumpRate,
-  setFeeBumpPriority,
   setFeeBumpResult,
-  setRbfType,
-  setCancelAddress,
-  setChangeAddress,
-  setPsbtVersion,
-  resetFeeBumpState,
 } from "./feeBumpActions";
 
 import { FeeBumpStatus, FeeBumpRecommendation, FeeBumpResult } from "../types";
-import { analyzeTransaction, extractUtxosForFeeBumping } from "../utils";
-import { getChangeOutputIndex } from "utils/transactionCalculations";
+import {
+  analyzeTransaction,
+  extractUtxosForFeeBumping,
+  getChangeOutputIndex,
+} from "../utils";
 
 // =============================================================================
 // CONTEXT TYPE DEFINITION
@@ -61,23 +54,7 @@ import { getChangeOutputIndex } from "utils/transactionCalculations";
 
 interface FeeBumpContextType {
   state: FeeBumpingState;
-
-  // User-driven input updates (components can call these directly)
-  setTransactionForBumping: (
-    tx: any,
-    priority?: FeePriority,
-    initialTxHex?: string,
-  ) => void;
-  updateFeeRate: (feeRate: number) => void;
-  updateFeePriority: (priority: FeePriority) => Promise<void>;
-  updateStrategy: (strategy: FeeBumpStrategy) => void;
-  reset: () => void;
-
-  // RBF form actions (baed on user inputs)
-  setRbfType: (type: "accelerate" | "cancel") => void;
-  setCancelAddress: (address: string) => void;
-  setChangeAddress: (address: string) => void;
-  setPsbtVersion: (version: "v2" | "v0") => void;
+  dispatch: React.Dispatch<FeeBumpActionTypes>;
 
   // Core fee bumping operations (handled internally by context)
   analyzeTx: (
@@ -94,230 +71,8 @@ interface FeeBumpContextType {
     feeRate?: number;
   }) => Promise<FeeBumpResult>;
 
-  createFeeBumpedTransaction: (customOptions: {
-    isCancel?: boolean;
-    cancelAddress?: string;
-    changeAddress?: string;
-  }) => Promise<FeeBumpResult>;
-
-  // Computed values (read-only)
-  isFeeBumpReady: boolean;
-  originalFeeRate: number;
-  minimumFeeRate: number;
-  estimatedNewFee: number;
-  feeDifference: number;
-  isRbfFormValid: boolean;
+  // Loading states
   isCreatingRBF: boolean;
-}
-
-// =============================================================================
-// COMPUTED VALUES HOOK
-// =============================================================================
-
-function useFeeBumpComputedValues(
-  state: FeeBumpingState,
-  isCreatingRBF: boolean,
-) {
-  const originalFeeRate = useMemo(() => {
-    if (!state.transaction) return 0;
-    const txSize = state.transaction.vsize || state.transaction.size;
-    return txSize ? state.transaction.fee / txSize : 0;
-  }, [state.transaction]);
-
-  const minimumFeeRate = useMemo(
-    () => Math.max(originalFeeRate + 1, 1),
-    [originalFeeRate],
-  );
-
-  const estimatedNewFee = useMemo(() => {
-    if (!state.transaction || !state.selectedFeeRate) return 0;
-    const txVsize = state.transaction.vsize || state.transaction.size || 250;
-    return Math.ceil(txVsize * state.selectedFeeRate);
-  }, [state.transaction, state.selectedFeeRate]);
-
-  const feeDifference = useMemo(() => {
-    if (!state.transaction) return 0;
-    return estimatedNewFee - state.transaction.fee;
-  }, [state.transaction, estimatedNewFee]);
-
-  const isFeeBumpReady = useMemo(
-    () =>
-      state.recommendation !== null &&
-      state.selectedStrategy !== FeeBumpStrategy.NONE &&
-      state.selectedFeeRate > 0,
-    [state.recommendation, state.selectedStrategy, state.selectedFeeRate],
-  );
-
-  const isRbfFormValid = useMemo(() => {
-    if (state.selectedFeeRate < minimumFeeRate) return false;
-    if (state.rbfType === "cancel" && !state.cancelAddress.trim()) return false;
-    return true;
-  }, [
-    state.selectedFeeRate,
-    minimumFeeRate,
-    state.rbfType,
-    state.cancelAddress,
-  ]);
-
-  return {
-    originalFeeRate,
-    minimumFeeRate,
-    estimatedNewFee,
-    feeDifference,
-    isFeeBumpReady,
-    isRbfFormValid,
-    isCreatingRBF,
-  };
-}
-
-// =============================================================================
-// WALLET HELPERS HOOK
-// =============================================================================
-
-function useWalletHelpers() {
-  const { network, addressType, requiredSigners, totalSigners } =
-    useSelector(selectWalletConfig);
-  const depositNodes = useSelector(
-    (state: WalletState) => state.wallet.deposits.nodes,
-  );
-  const changeNodes = useSelector(
-    (state: WalletState) => state.wallet.change.nodes,
-  );
-  const defaultChangeAddress = useSelector(
-    (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
-  );
-  const walletAddresses = useSelector(getWalletAddresses);
-  const changeAddresses = useSelector(getChangeAddresses);
-  // same for the whole wallet
-  const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters);
-
-  const globalXpubs = Object.values(getGlobalXpubs).map((item: any) => ({
-    masterFingerprint: item.rootXfp,
-    path: item.bip32Path,
-    xpub: item.extendedPublicKey,
-  }));
-
-  const getScriptType = useCallback(() => {
-    switch (addressType) {
-      case "P2SH-P2WSH":
-        return SCRIPT_TYPES.P2SH_P2WSH;
-      case "P2WSH":
-        return SCRIPT_TYPES.P2WSH;
-      case "P2SH":
-        return SCRIPT_TYPES.P2SH;
-      default:
-        throw new Error(`Unsupported address type: ${addressType}`);
-    }
-  }, [addressType]);
-
-  return {
-    network,
-    addressType,
-    requiredSigners,
-    totalSigners,
-    depositNodes,
-    changeNodes,
-    defaultChangeAddress,
-    globalXpubs,
-    getScriptType,
-    walletAddresses,
-    changeAddresses,
-  };
-}
-
-// =============================================================================
-// USER INPUT HANDLERS HOOK
-// =============================================================================
-
-function useUserInputHandlers(
-  state: FeeBumpingState,
-  dispatch: React.Dispatch<any>,
-) {
-  const setTransactionForBumping = useCallback(
-    (
-      tx: any,
-      priority: FeePriority = FeePriority.MEDIUM,
-      initialTxHex: string = "",
-    ) => {
-      dispatch(setFeeBumpTransaction(tx, initialTxHex));
-      dispatch(setFeeBumpPriority(priority));
-    },
-    [dispatch],
-  );
-
-  const updateFeeRate = useCallback(
-    (feeRate: number) => {
-      dispatch(setFeeBumpRate(feeRate));
-    },
-    [dispatch],
-  );
-
-  const updateFeePriority = useCallback(
-    async (priority: FeePriority) => {
-      if (!state.transaction || !state.txHex) {
-        console.warn("Cannot update fee priority: No transaction selected");
-        return;
-      }
-      dispatch(setFeeBumpPriority(priority));
-    },
-    [state.transaction, state.txHex, dispatch],
-  );
-
-  const updateStrategy = useCallback(
-    (strategy: FeeBumpStrategy) => {
-      if (strategy === FeeBumpStrategy.NONE) {
-        console.warn("Cannot select NONE as a strategy");
-        return;
-      }
-      dispatch(setFeeBumpStrategy(strategy));
-    },
-    [dispatch],
-  );
-
-  const reset = useCallback(() => {
-    dispatch(resetFeeBumpState());
-  }, [dispatch]);
-
-  // RBF form input handlers
-  const handleSetRbfType = useCallback(
-    (type: "accelerate" | "cancel") => {
-      dispatch(setRbfType(type));
-    },
-    [dispatch],
-  );
-
-  const handleSetCancelAddress = useCallback(
-    (address: string) => {
-      dispatch(setCancelAddress(address));
-    },
-    [dispatch],
-  );
-
-  const handleSetChangeAddress = useCallback(
-    (address: string) => {
-      dispatch(setChangeAddress(address));
-    },
-    [dispatch],
-  );
-
-  const handleSetPsbtVersion = useCallback(
-    (version: "v2" | "v0") => {
-      dispatch(setPsbtVersion(version));
-    },
-    [dispatch],
-  );
-
-  return {
-    setTransactionForBumping,
-    updateFeeRate,
-    updateFeePriority,
-    updateStrategy,
-    reset,
-    setRbfType: handleSetRbfType,
-    setCancelAddress: handleSetCancelAddress,
-    setChangeAddress: handleSetChangeAddress,
-    setPsbtVersion: handleSetPsbtVersion,
-  };
 }
 
 // =============================================================================
@@ -341,25 +96,21 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   const { utxos: pendingUtxos } = usePendingUtxos(currentTxid);
   const walletUtxos = useWalletUtxos();
 
-  // Custom hooks for modularality
-  const {
-    network,
-    addressType,
-    defaultChangeAddress,
-    requiredSigners,
-    totalSigners,
-    depositNodes,
-    changeNodes,
-    getScriptType,
-    globalXpubs,
-    walletAddresses,
-    changeAddresses,
-  } = useWalletHelpers();
+  // Getting all needed wallet state
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const defaultChangeAddress = useSelector(
+    (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
+  );
+  const walletAddresses = useSelector(getWalletAddresses);
+  const changeAddresses = useSelector(getChangeAddresses);
+  const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters); // same for the whole wallet
 
-  const userInputHandlers = useUserInputHandlers(state, dispatch);
-
-  // Computed values
-  const computedValues = useFeeBumpComputedValues(state, isCreatingRBF);
+  const globalXpubs = Object.values(getGlobalXpubs).map((item: any) => ({
+    masterFingerprint: item.rootXfp,
+    path: item.bip32Path,
+    xpub: item.extendedPublicKey,
+  }));
 
   // Combine UTXOs for fee bumping
   const availableUtxos = useMemo(() => {
@@ -382,6 +133,22 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       );
     }
   }, [state.transaction?.txid, availableUtxos]);
+
+  // =============================================================================
+  // HELPER FUNCTIONS
+  // =============================================================================
+  const getScriptType = useCallback(() => {
+    switch (addressType) {
+      case "P2SH-P2WSH":
+        return SCRIPT_TYPES.P2SH_P2WSH;
+      case "P2WSH":
+        return SCRIPT_TYPES.P2WSH;
+      case "P2SH":
+        return SCRIPT_TYPES.P2SH;
+      default:
+        throw new Error(`Unsupported address type: ${addressType}`);
+    }
+  }, [addressType]);
 
   // =============================================================================
   // CORE FEE BUMPING OPERATIONS
@@ -580,8 +347,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       state.txHex,
       state.selectedFeeRate,
       state.changeAddress,
-      depositNodes,
-      changeNodes,
       globalXpubs,
       getScriptType,
       network,
@@ -687,40 +452,12 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       state.selectedFeeRate,
       state.cancelAddress,
       availableUtxos,
-      depositNodes,
-      changeNodes,
       globalXpubs,
       getScriptType,
       network,
       requiredSigners,
       totalSigners,
     ],
-  );
-
-  /**
-   * Creates a fee-bumped transaction based on RBF type
-   */
-  const createFeeBumpedTransaction = useCallback(
-    async (
-      customOptions: {
-        isCancel?: boolean;
-        cancelAddress?: string;
-        changeAddress?: string;
-      } = {},
-    ): Promise<FeeBumpResult> => {
-      const isCancel = customOptions.isCancel ?? state.rbfType === "cancel";
-
-      if (isCancel) {
-        return await createCancelRBF({
-          cancelAddress: customOptions.cancelAddress,
-        });
-      } else {
-        return await createAcceleratedRBF({
-          changeAddress: customOptions.changeAddress,
-        });
-      }
-    },
-    [state.rbfType, createCancelRBF, createAcceleratedRBF],
   );
 
   // =============================================================================
@@ -730,18 +467,15 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   const contextValue: FeeBumpContextType = {
     // Core state (read-only for components)
     state,
-
-    // User input handlers (components can call these)
-    ...userInputHandlers,
+    dispatch,
 
     // Core operations (handled internally by context)
     analyzeTx,
     createAcceleratedRBF,
     createCancelRBF,
-    createFeeBumpedTransaction,
 
-    // Computed values (read-only)
-    ...computedValues,
+    // Loading states
+    isCreatingRBF,
   };
 
   return (
