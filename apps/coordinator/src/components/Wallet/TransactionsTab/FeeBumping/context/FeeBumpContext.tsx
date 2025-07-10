@@ -84,7 +84,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
   );
 
-  const changeOutputIndex = useChangeOutputIndex(state.transaction);
+  const changeOutputIndex = useChangeOutputIndex(state.transaction!);
   const globalXpubs = useGetGlobalXpubs();
 
   // Use the analysis hook to handle transaction analysis and update state accordingly

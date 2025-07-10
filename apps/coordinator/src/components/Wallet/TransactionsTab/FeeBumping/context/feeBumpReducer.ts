@@ -21,7 +21,7 @@ import {
 
 export interface FeeBumpingState {
   // Transaction data
-  transaction: TransactionDetails | undefined;
+  transaction: TransactionDetails | null;
   txHex: string;
   // Process state
   status: FeeBumpStatus;
