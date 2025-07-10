@@ -4,9 +4,7 @@ import React, {
   useReducer,
   ReactNode,
   useCallback,
-  useMemo,
   useState,
-  useEffect,
 } from "react";
 import { useSelector } from "react-redux";
 
@@ -17,14 +15,7 @@ import {
   CancelRbfOptions,
 } from "@caravan/fees";
 
-import { FeePriority, useFeeEstimates } from "clients/fees";
-import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
-import {
-  selectWalletConfig,
-  getExtendedPublicKeyImporters,
-  getWalletAddresses,
-  getChangeAddresses,
-} from "../../../../../selectors/wallet";
+import { selectWalletConfig } from "selectors/wallet";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
 
 import {
@@ -36,16 +27,16 @@ import {
   FeeBumpActionTypes,
   setFeeBumpStatus,
   setFeeBumpError,
-  setFeeBumpRecommendation,
   setFeeBumpResult,
 } from "./feeBumpActions";
 
-import { FeeBumpStatus, FeeBumpRecommendation, FeeBumpResult } from "../types";
+import { FeeBumpStatus, FeeBumpResult } from "../types";
 import {
-  analyzeTransaction,
-  extractUtxosForFeeBumping,
-  getChangeOutputIndex,
-} from "../utils";
+  useAnalyzeTransaction,
+  useChangeOutputIndex,
+  useGetAvailableUtxos,
+  useGetGlobalXpubs,
+} from "./hooks";
 
 // =============================================================================
 // CONTEXT TYPE DEFINITION
@@ -83,12 +74,8 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   // Core state management - never shared with child components
   const [state, dispatch] = useReducer(feeBumpingReducer, initialState);
   const [isCreatingRBF, setIsCreatingRBF] = useState(false); // Local loading state for RBF operations
-
   // External dependencies
-  const { data: feeEstimates } = useFeeEstimates();
-  const currentTxid = state.transaction?.txid || ""; // as intially no tx is selected
-  const { utxos: pendingUtxos } = usePendingUtxos(currentTxid);
-  const walletUtxos = useWalletUtxos();
+  const availableUtxos = useGetAvailableUtxos();
 
   // Getting all needed wallet state
   const { network, addressType, requiredSigners, totalSigners } =
@@ -96,103 +83,13 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   const defaultChangeAddress = useSelector(
     (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
   );
-  const walletAddresses = useSelector(getWalletAddresses);
-  const changeAddresses = useSelector(getChangeAddresses);
-  const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters); // same for the whole wallet
 
-  const globalXpubs = Object.values(getGlobalXpubs).map((item: any) => ({
-    masterFingerprint: item.rootXfp,
-    path: item.bip32Path,
-    xpub: item.extendedPublicKey,
-  }));
+  const changeOutputIndex = useChangeOutputIndex(state.transaction);
+  const globalXpubs = useGetGlobalXpubs();
 
-  // Combine UTXOs for fee bumping
-  const availableUtxos = useMemo(() => {
-    if (!pendingUtxos?.length || !walletUtxos?.length) return [];
-    return extractUtxosForFeeBumping(pendingUtxos, walletUtxos);
-  }, [pendingUtxos, walletUtxos]);
-
-  // so basically as soon as we have the available utxos and the selected priority, we Auto-analyze transaction
-  useEffect(() => {
-    if (
-      state.transaction &&
-      availableUtxos.length > 0 &&
-      state.status !== FeeBumpStatus.READY
-    ) {
-      const runAnalysis = () => {
-        try {
-          dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
-          dispatch(setFeeBumpError(null));
-
-          const targetFeeRate =
-            feeEstimates[state.selectedPriority] ??
-            feeEstimates[FeePriority.MEDIUM];
-
-          if (!targetFeeRate || !state.transaction) {
-            throw new Error(
-              "Target fee rate or Transaction could not be determined.",
-            );
-          }
-
-          const analysis = analyzeTransaction(
-            state.txHex,
-            state.transaction.fee,
-            network as Network,
-            availableUtxos,
-            targetFeeRate,
-            { requiredSigners, totalSigners, addressType },
-            state.selectedPriority,
-          );
-
-          const feeBumpRecommendation: FeeBumpRecommendation = {
-            ...analysis,
-            currentFeeRate: analysis.feeRate,
-            canRBF: analysis.canRBF,
-            canCPFP: analysis.canCPFP,
-            suggestedRBFFeeRate: Math.max(
-              analysis.userSelectedFeeRate,
-              Number(analysis.estimatedRBFFee) / analysis.vsize,
-            ),
-            suggestedCPFPFeeRate: Math.max(
-              analysis.userSelectedFeeRate,
-              Number(analysis.estimatedCPFPFee) / analysis.vsize,
-            ),
-            networkFeeEstimates: {
-              highPriority: feeEstimates[FeePriority.HIGH]!,
-              mediumPriority: feeEstimates[FeePriority.MEDIUM]!,
-              lowPriority: feeEstimates[FeePriority.LOW]!,
-            },
-          };
-
-          dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
-          dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
-        } catch (error) {
-          console.error("Error analyzing transaction:", error);
-          dispatch(
-            setFeeBumpError(
-              error instanceof Error
-                ? error.message
-                : "Unknown error analyzing transaction",
-            ),
-          );
-        }
-      };
-
-      runAnalysis();
-    }
-  }, [
-    state.transaction?.txid, // trigger re-run on transaction change
-    availableUtxos.length, // trigger re-run on utxo availability
-    state.status,
-    state.txHex,
-    state.transaction?.fee,
-    state.selectedPriority,
-    feeEstimates,
-    requiredSigners,
-    totalSigners,
-    addressType,
-    network,
-  ]);
+  // Use the analysis hook to handle transaction analysis and update state accordingly
+  // this will refresh if underlying data changes (such as transaction, fee estimates, etc.)
+  useAnalyzeTransaction();
 
   // =============================================================================
   // CORE FEE BUMPING OPERATIONS
@@ -228,12 +125,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
             "No UTXOs available for RBF.Transaction inputs may not be in your wallet.",
           );
         }
-
-        const changeOutputIndex = getChangeOutputIndex(
-          state.transaction,
-          walletAddresses,
-          changeAddresses,
-        );
 
         // We need either a change index or a change address
         if (changeOutputIndex === undefined && !state.changeAddress) {
