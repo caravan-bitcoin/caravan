@@ -1,4 +1,6 @@
-import { BitcoinCoreService, rpcConfig } from "./bitcoinServices";
+import { BitcoinCoreService } from "./bitcoinServices";
+import { rpcConfig } from "./types";
+
 
 export const clientConfig:rpcConfig = {
     username: "abhishek",
