@@ -445,6 +445,22 @@ export const getWalletAddresses = createSelector(
 );
 
 /**
+ * Selector that returns change addresses as an array for efficient lookups
+ * This is more specific than getWalletAddresses since we only need change addresses
+ * for change output detection
+ */
+export const getChangeAddresses = createSelector(
+  (state: WalletState) => state.wallet.change.nodes,
+  (changeNodes): string[] => {
+    const addresses = Object.values(changeNodes)
+      .filter((node) => node.multisig && node.multisig.address)
+      .map((node) => node.multisig.address);
+
+    return addresses;
+  },
+);
+
+/**
  * @description Returns an array of transaction IDs from unconfirmed UTXOs (pending transactions only)
  */
 export const getPendingTransactionIds = createSelector(

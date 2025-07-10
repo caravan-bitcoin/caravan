@@ -25,6 +25,8 @@ import {
   selectWalletConfig,
   getExtendedPublicKeyImporters,
   WalletState,
+  getWalletAddresses,
+  getChangeAddresses,
 } from "../../../../../selectors/wallet";
 import { Network } from "@caravan/bitcoin";
 
@@ -184,7 +186,8 @@ function useWalletHelpers() {
   const defaultChangeAddress = useSelector(
     (state: any) => state.wallet?.change?.nextNode?.multisig?.address,
   );
-
+  const walletAddresses = useSelector(getWalletAddresses);
+  const changeAddresses = useSelector(getChangeAddresses);
   // same for the whole wallet
   const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters);
 
@@ -217,6 +220,8 @@ function useWalletHelpers() {
     defaultChangeAddress,
     globalXpubs,
     getScriptType,
+    walletAddresses,
+    changeAddresses,
   };
 }
 
@@ -347,6 +352,8 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     changeNodes,
     getScriptType,
     globalXpubs,
+    walletAddresses,
+    changeAddresses,
   } = useWalletHelpers();
 
   const userInputHandlers = useUserInputHandlers(state, dispatch);
@@ -490,8 +497,8 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
 
         const changeOutputIndex = getChangeOutputIndex(
           state.transaction,
-          depositNodes,
-          changeNodes,
+          walletAddresses,
+          changeAddresses,
         );
 
         // We need either a change index or a change address

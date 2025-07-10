@@ -213,53 +213,31 @@ export const calculateTransactionValue = (
  */
 export const getChangeOutputIndex = (
   transaction: TransactionDetails,
-  depositNodes: any,
-  changeNodes: any,
+  walletAddresses: string[],
+  changeAddresses: string[],
 ): number | undefined => {
-  if (!transaction.vout || !transaction.vout.length) return undefined;
+  if (!transaction.vout?.length) return undefined;
 
-  // Create sets of known deposit and change addresses
-  const depositAddresses = new Set(
-    Object.values(depositNodes)
-      .filter((node: any) => node.multisig && node.multisig.address)
-      .map((node: any) => node.multisig.address),
-  );
+  const changeAddressesSet = new Set(changeAddresses);
+  const walletAddressesSet = new Set(walletAddresses);
 
-  const changeAddresses = new Set(
-    Object.values(changeNodes)
-      .filter((node: any) => node.multisig && node.multisig.address)
-      .map((node: any) => node.multisig.address),
-  );
-
-  // Check each output to see if it's a change output
+  // 1) First look for any explicit change‑address hits
   for (let i = 0; i < transaction.vout.length; i++) {
-    const output = transaction.vout[i];
-    const address = output.scriptPubkeyAddress;
-
-    if (!address) continue;
-
-    //  address is in our change address list
-    if (changeAddresses.has(address)) {
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && changeAddressesSet.has(addr)) {
       return i;
     }
   }
 
-  // Second pass: check if any output goes to a known wallet address
+  // 2) : Check if any output goes to a known wallet address
   // This is less reliable but can help identify change when the exact
   // change address isn't recognized
   for (let i = 0; i < transaction.vout.length; i++) {
-    const output = transaction.vout[i];
-    const address = output.scriptPubkeyAddress;
-
-    if (!address) continue;
-
-    if (depositAddresses.has(address)) {
-      // If this is a deposit address in our wallet, it might be change
-      // (though this is less reliable)
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && walletAddressesSet.has(addr)) {
       return i;
     }
   }
 
-  // If all fails
   return undefined;
 };
