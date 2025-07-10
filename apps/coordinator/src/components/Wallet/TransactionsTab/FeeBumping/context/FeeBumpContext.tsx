@@ -11,7 +11,6 @@ import React, {
 import { useSelector } from "react-redux";
 
 import {
-  SCRIPT_TYPES,
   createAcceleratedRbfTransaction,
   createCancelRbfTransaction,
   AcceleratedRbfOptions,
@@ -196,22 +195,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   ]);
 
   // =============================================================================
-  // HELPER FUNCTIONS
-  // =============================================================================
-  const getScriptType = useCallback(() => {
-    switch (addressType) {
-      case "P2SH-P2WSH":
-        return SCRIPT_TYPES.P2SH_P2WSH;
-      case "P2WSH":
-        return SCRIPT_TYPES.P2WSH;
-      case "P2SH":
-        return SCRIPT_TYPES.P2SH;
-      default:
-        throw new Error(`Unsupported address type: ${addressType}`);
-    }
-  }, [addressType]);
-
-  // =============================================================================
   // CORE FEE BUMPING OPERATIONS
   // =============================================================================
 
@@ -284,8 +267,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           );
         }
 
-        const scriptType = getScriptType();
-
         const rbfOptions: AcceleratedRbfOptions = {
           originalTx: state.txHex,
           network: network as Network,
@@ -294,7 +275,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           availableInputs: availableUtxos,
           requiredSigners,
           totalSigners,
-          scriptType,
+          scriptType: addressType,
           dustThreshold: "546", // Default dust threshold
           ...changeOptions,
           strict: false, // Less strict validation for better user experience
@@ -341,7 +322,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       state.selectedFeeRate,
       state.changeAddress,
       globalXpubs,
-      getScriptType,
+      addressType,
       network,
       requiredSigners,
       totalSigners,
@@ -384,8 +365,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
           throw new Error("No UTXOs available for RBF");
         }
 
-        const scriptType = getScriptType();
-
         const cancelRbfOptions: CancelRbfOptions = {
           originalTx: state.txHex,
           network: network as Network,
@@ -395,7 +374,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
 
           requiredSigners,
           totalSigners,
-          scriptType,
+          scriptType: addressType,
           dustThreshold: "546", // Default dust threshold
           cancelAddress,
           strict: false,
@@ -446,7 +425,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
       state.cancelAddress,
       availableUtxos,
       globalXpubs,
-      getScriptType,
+      addressType,
       network,
       requiredSigners,
       totalSigners,
