@@ -39,16 +39,18 @@ export class BCURDecoder2 {
 
   /**
    * Creates a new BCUR2 decoder instance
+   * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
    */
-  constructor() {
-    this.decoder = new URRegistryDecoder();
+  constructor(decoder?: URRegistryDecoder) {
+    this.decoder = decoder || new URRegistryDecoder();
   }
 
   /**
    * Resets the decoder state to initial values
+   * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
    */
-  reset() {
-    this.decoder = new URRegistryDecoder();
+  reset(decoder: URRegistryDecoder = new URRegistryDecoder()) {
+    this.decoder = decoder;
     this.error = null;
     this.progress = "Idle";
   }
