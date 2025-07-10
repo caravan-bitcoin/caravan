@@ -57,11 +57,6 @@ interface FeeBumpContextType {
   dispatch: React.Dispatch<FeeBumpActionTypes>;
 
   // Core fee bumping operations (handled internally by context)
-  analyzeTx: (
-    tx: any,
-    initialTxHex?: string,
-    priority?: FeePriority,
-  ) => Promise<void>;
   createAcceleratedRBF: (options?: {
     changeAddress?: string;
     feeRate?: number;
@@ -123,16 +118,82 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     if (
       state.transaction &&
       availableUtxos.length > 0 &&
-      !(state.status === FeeBumpStatus.READY)
+      state.status !== FeeBumpStatus.READY
     ) {
-      analyzeTx(
-        state.transaction,
-        state.txHex,
-        state.selectedPriority,
-        availableUtxos,
-      );
+      const runAnalysis = () => {
+        try {
+          dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
+          dispatch(setFeeBumpError(null));
+
+          const targetFeeRate =
+            feeEstimates[state.selectedPriority] ??
+            feeEstimates[FeePriority.MEDIUM];
+
+          if (!targetFeeRate || !state.transaction) {
+            throw new Error(
+              "Target fee rate or Transaction could not be determined.",
+            );
+          }
+
+          const analysis = analyzeTransaction(
+            state.txHex,
+            state.transaction.fee,
+            network as Network,
+            availableUtxos,
+            targetFeeRate,
+            { requiredSigners, totalSigners, addressType },
+            state.selectedPriority,
+          );
+
+          const feeBumpRecommendation: FeeBumpRecommendation = {
+            ...analysis,
+            currentFeeRate: analysis.feeRate,
+            canRBF: analysis.canRBF,
+            canCPFP: analysis.canCPFP,
+            suggestedRBFFeeRate: Math.max(
+              analysis.userSelectedFeeRate,
+              Number(analysis.estimatedRBFFee) / analysis.vsize,
+            ),
+            suggestedCPFPFeeRate: Math.max(
+              analysis.userSelectedFeeRate,
+              Number(analysis.estimatedCPFPFee) / analysis.vsize,
+            ),
+            networkFeeEstimates: {
+              highPriority: feeEstimates[FeePriority.HIGH]!,
+              mediumPriority: feeEstimates[FeePriority.MEDIUM]!,
+              lowPriority: feeEstimates[FeePriority.LOW]!,
+            },
+          };
+
+          dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
+          dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
+        } catch (error) {
+          console.error("Error analyzing transaction:", error);
+          dispatch(
+            setFeeBumpError(
+              error instanceof Error
+                ? error.message
+                : "Unknown error analyzing transaction",
+            ),
+          );
+        }
+      };
+
+      runAnalysis();
     }
-  }, [state.transaction?.txid, availableUtxos]);
+  }, [
+    state.transaction?.txid, // trigger re-run on transaction change
+    availableUtxos.length, // trigger re-run on utxo availability
+    state.status,
+    state.txHex,
+    state.transaction?.fee,
+    state.selectedPriority,
+    feeEstimates,
+    requiredSigners,
+    totalSigners,
+    addressType,
+    network,
+  ]);
 
   // =============================================================================
   // HELPER FUNCTIONS
@@ -154,75 +215,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   // CORE FEE BUMPING OPERATIONS
   // =============================================================================
 
-  const analyzeTx = useCallback(
-    async (
-      tx: any,
-      initialTxHex: string = "",
-      priority: FeePriority = FeePriority.MEDIUM,
-      utxosForBumping: any[] = [],
-    ) => {
-      if (!tx) return;
-
-      try {
-        dispatch(setFeeBumpStatus(FeeBumpStatus.ANALYZING));
-        dispatch(setFeeBumpError(null));
-
-        const targetFeeRate =
-          feeEstimates[priority] ?? feeEstimates[FeePriority.MEDIUM];
-
-        if (!utxosForBumping.length) {
-          throw new Error("No UTXOs available for fee bumping");
-        }
-
-        const analysis = analyzeTransaction(
-          initialTxHex,
-          tx.fee,
-          network as Network,
-          utxosForBumping, // Use passed UTXOs
-          targetFeeRate!,
-          { requiredSigners, totalSigners, addressType },
-          priority,
-        );
-
-        const feeBumpRecommendation: FeeBumpRecommendation = {
-          ...analysis,
-          currentFeeRate: analysis.feeRate,
-          canRBF: analysis.canRBF,
-          canCPFP: analysis.canCPFP,
-          suggestedRBFFeeRate: Math.max(
-            analysis.userSelectedFeeRate,
-            Number(analysis.estimatedRBFFee) / analysis.vsize,
-          ),
-          suggestedCPFPFeeRate: Math.max(
-            analysis.userSelectedFeeRate,
-            Number(analysis.estimatedCPFPFee) / analysis.vsize,
-          ),
-          networkFeeEstimates: {
-            highPriority: feeEstimates[FeePriority.HIGH]!,
-            mediumPriority: feeEstimates[FeePriority.MEDIUM]!,
-            lowPriority: feeEstimates[FeePriority.LOW]!,
-          },
-        };
-
-        dispatch(setFeeBumpRecommendation(feeBumpRecommendation));
-        dispatch(setFeeBumpStatus(FeeBumpStatus.READY));
-      } catch (error) {
-        console.error("Error analyzing transaction:", error);
-        dispatch(
-          setFeeBumpError(
-            error instanceof Error
-              ? error.message
-              : "Unknown error analyzing transaction",
-          ),
-        );
-      }
-    },
-    [network, requiredSigners, totalSigners, addressType, feeEstimates],
-  );
-
-  // =============================================================================
   // RBF OPERATIONS
-  // =============================================================================
 
   /**
    * Creates an accelerated RBF transaction that keeps the same outputs but with a higher fee
@@ -470,7 +463,6 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
     dispatch,
 
     // Core operations (handled internally by context)
-    analyzeTx,
     createAcceleratedRBF,
     createCancelRBF,
 
