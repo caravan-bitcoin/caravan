@@ -252,7 +252,8 @@ export class BlockchainClient extends ClientBase {
       type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
-      network !== Network.SIGNET
+      network !== Network.SIGNET &&
+      network !== Network.REGTEST
     ) {
       throw new Error("Invalid network");
     }
@@ -637,22 +638,23 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
-  public async listTransactions(
+  public async getAddressTransactionHistory(
+  address: string,
   count: number = 10,
   skip: number = 0,
-  includeWatchOnly: boolean = false
-): Promise<any> {
+  includeWatchOnly: boolean = true
+): Promise<any[]> {
   try {
-    if (this.type === ClientType.PRIVATE) {
-      // Validate parameters
-      if (count < 1 || count > 100) {
-        throw new Error("Count must be between 1 and 100");
-      }
-      
-      if (skip < 0) {
-        throw new Error("Skip must be non-negative");
-      }
+    // Validate parameters
+    if (count < 1 || count > 100) {
+      throw new Error("Count must be between 1 and 100");
+    }
+    
+    if (skip < 0) {
+      throw new Error("Skip must be non-negative");
+    }
 
+    if (this.type === ClientType.PRIVATE) {
       if (!this.bitcoindParams.walletName) {
         throw new Error(
           "Wallet name is required for private client transaction listings"
@@ -664,7 +666,7 @@ export class BlockchainClient extends ClientBase {
         walletName: this.bitcoindParams.walletName,
         auth: this.bitcoindParams.auth,
         method: "listtransactions",
-        params: ["*", count, skip, includeWatchOnly],
+        params: [address, count, skip, includeWatchOnly],
       })) as any;
 
       if (response?.result) {
@@ -674,10 +676,34 @@ export class BlockchainClient extends ClientBase {
       throw new Error("Failed to retrieve transactions list");
     }
     
-    // Public clients not supported
-    throw new Error("listTransactions is only supported for private clients");
+    // Public client implementation
+    if (this.provider !== PublicBitcoinProvider.MEMPOOL) {
+      throw new Error("Only Mempool provider is supported for public address transactions");
+    }
+
+    // Handle network-specific base URLs
+    let basePath = "";
+    switch (this.network) {
+      case Network.MAINNET:
+        basePath = "";
+        break;
+      case Network.TESTNET:
+        basePath = "/testnet";
+        break;
+      case Network.SIGNET:
+        basePath = "/signet";
+        break;
+      case Network.REGTEST:
+        basePath = "/testnet"; // Fallback for REGTEST
+        break;
+      default:
+        throw new Error("Unsupported network for public transactions");
+    }
+
+    const result = await this.Get(`${basePath}/api/address/${address}/txs?count=${count}&skip=${skip}`);
+    return result;
   } catch (error: any) {
-    throw new Error(`Failed to list transactions: ${error.message}`);
+    throw new Error(`Failed to get address transaction history: ${error.message}`);
   }
 }
 
