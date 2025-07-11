@@ -31,3 +31,4 @@ export interface rpcConfig {
     username?: string,
     password?: string
   }
+  
