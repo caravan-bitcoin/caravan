@@ -252,9 +252,8 @@ export class BlockchainClient extends ClientBase {
       type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
-      network !== Network.SIGNET &&
-      network !== Network.REGTEST
-    ) {
+      network !== Network.SIGNET 
+      ) {
       throw new Error("Invalid network");
     }
 

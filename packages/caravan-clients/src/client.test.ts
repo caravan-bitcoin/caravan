@@ -91,16 +91,34 @@ describe("ClientBase", () => {
 // TODO: Should have some e2e tests to protect against API changes
 
 describe("BlockchainClient", () => {
-it("should throw an error if the network is invalid", () => {
-  const invalidNetwork = "invalid_network" as Network;
-  
-  expect(() => {
-    new BlockchainClient({
-      type: ClientType.PUBLIC,
-      provider: PublicBitcoinProvider.MEMPOOL,
-      network: invalidNetwork,
-    });
-  }).toThrow("Invalid network");
+describe("BlockchainClient", () => {
+  it("should throw an error if the network is invalid", () => {
+    // REGTEST should be invalid for public clients
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
+        network: Network.REGTEST,
+      });
+    }).toThrow("Invalid network");
+    
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM, 
+        network: Network.REGTEST,
+      });
+    }).toThrow("Invalid network");
+    
+    // Blockstream shouldn't support Signet
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        network: Network.SIGNET,
+      });
+    }).toThrow("Invalid network: Blockstream does not support Signet");
+  });
 });
 
   it("should set the mainnet host for a public client", () => {
