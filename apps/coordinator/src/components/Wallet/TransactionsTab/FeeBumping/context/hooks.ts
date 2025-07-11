@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
 import { TransactionAnalyzer } from "@caravan/fees";
@@ -17,12 +17,14 @@ import {
   setFeeBumpStatus,
   setFeeBumpError,
   setFeeBumpRecommendation,
+  FeeBumpActionTypes,
 } from "./feeBumpActions";
 
 import { FeeBumpStatus, FeeBumpRecommendation } from "../types";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { TransactionDetails } from "@caravan/clients";
-import { useFeeBumpContext } from "./FeeBumpContext";
+import { FeeBumpingState } from "./feeBumpReducer";
+
 // =============================================================================
 // HOOKS
 // =============================================================================
@@ -75,18 +77,23 @@ export const useChangeOutputIndex = (
   return undefined;
 };
 
-export const useGetAvailableUtxos = () => {
+export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
-    state: { transaction },
-  } = useFeeBumpContext();
-  const { utxos: pendingUtxos } = usePendingUtxos(transaction?.txid || "");
+    utxos: pendingUtxos,
+    isLoading,
+    isError,
+  } = usePendingUtxos(transaction?.txid || "");
+
   const walletUtxos = useWalletUtxos();
 
   // Memoize the combined UTXOs so it only recalculates when dependencies change
-  return useMemo(
-    () => extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []),
-    [pendingUtxos, walletUtxos, transaction?.txid],
-  );
+  const availableUtxos = useMemo(() => {
+    // Return empty array if no transaction
+    if (!transaction) return [];
+    return extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []);
+  }, [pendingUtxos, walletUtxos, transaction]);
+
+  return { availableUtxos, isLoading, isError };
 };
 
 export const useGetGlobalXpubs = () => {
@@ -98,9 +105,11 @@ export const useGetGlobalXpubs = () => {
   }));
 };
 
-export const useAnalyzeTransaction = () => {
-  const { state, dispatch } = useFeeBumpContext();
-  const availableUtxos = useGetAvailableUtxos();
+export const useAnalyzeTransaction = (
+  state: FeeBumpingState,
+  dispatch: React.Dispatch<FeeBumpActionTypes>,
+) => {
+  const { availableUtxos } = useGetAvailableUtxos(state.transaction!);
   const { data: feeEstimates } = useFeeEstimates();
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
@@ -109,7 +118,8 @@ export const useAnalyzeTransaction = () => {
     if (
       !state.transaction ||
       !availableUtxos.length ||
-      state.status === FeeBumpStatus.READY
+      state.status === FeeBumpStatus.READY ||
+      state.status === FeeBumpStatus.SUCCESS
     ) {
       return;
     }
@@ -187,11 +197,8 @@ export const useAnalyzeTransaction = () => {
   }, [
     state.transaction?.txid,
     availableUtxos.length,
-    state.status,
-    state.selectedPriority,
     state.txHex,
     state.transaction?.fee,
-    state.selectedFeeRate,
     feeEstimates,
     requiredSigners,
     totalSigners,
