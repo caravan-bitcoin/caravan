@@ -22,7 +22,6 @@ FROM base AS installer
 WORKDIR /app
 
 # First install the dependencies (as they change less often)
-COPY .gitignore .gitignore
 COPY --from=builder /app/out/json/ .
 # Copy the scripts directory that contains check-node-versions.js
 COPY --from=builder /app/scripts ./scripts
