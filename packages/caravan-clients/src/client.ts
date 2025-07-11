@@ -637,6 +637,50 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+  public async listTransactions(
+  count: number = 10,
+  skip: number = 0,
+  includeWatchOnly: boolean = false
+): Promise<any> {
+  try {
+    if (this.type === ClientType.PRIVATE) {
+      // Validate parameters
+      if (count < 1 || count > 100) {
+        throw new Error("Count must be between 1 and 100");
+      }
+      
+      if (skip < 0) {
+        throw new Error("Skip must be non-negative");
+      }
+
+      if (!this.bitcoindParams.walletName) {
+        throw new Error(
+          "Wallet name is required for private client transaction listings"
+        );
+      }
+
+      const response = (await callBitcoindWallet({
+        baseUrl: this.bitcoindParams.url,
+        walletName: this.bitcoindParams.walletName,
+        auth: this.bitcoindParams.auth,
+        method: "listtransactions",
+        params: ["*", count, skip, includeWatchOnly],
+      })) as any;
+
+      if (response?.result) {
+        return response.result;
+      }
+
+      throw new Error("Failed to retrieve transactions list");
+    }
+    
+    // Public clients not supported
+    throw new Error("listTransactions is only supported for private clients");
+  } catch (error: any) {
+    throw new Error(`Failed to list transactions: ${error.message}`);
+  }
+}
+
   /**
    * Gets detailed information about a wallet transaction including fee information
    *

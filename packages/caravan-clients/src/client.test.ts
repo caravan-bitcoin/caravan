@@ -414,6 +414,252 @@ describe("BlockchainClient", () => {
     });
   });
 
+  describe("listTransactions", () => {
+  const mockTransactions = [
+    {
+      address: "bc1qaddress",
+      category: "receive",
+      amount: 0.1,
+      label: "",
+      vout: 0,
+      confirmations: 6,
+      blockhash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      blockheight: 123456,
+      blocktime: 1631234567,
+      txid: "txid1",
+      walletconflicts: [],
+      time: 1631234560,
+      timereceived: 1631234560,
+    },
+    {
+      address: "bc1qaddress",
+      category: "send",
+      amount: -0.05,
+      label: "",
+      vout: 1,
+      confirmations: 3,
+      blockhash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      blockheight: 123457,
+      blocktime: 1631234570,
+      txid: "txid2",
+      walletconflicts: [],
+      time: 1631234565,
+      timereceived: 1631234565,
+    },
+  ];
+
+  describe("PRIVATE client", () => {
+    let client: BlockchainClient;
+    let mockCallBitcoindWallet: MockInstance;
+
+    beforeEach(() => {
+      client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "test-wallet",
+        },
+      });
+      
+      mockCallBitcoindWallet = vi.spyOn(wallet, "callBitcoindWallet");
+    });
+
+    it("should return transactions with valid parameters", async () => {
+      mockCallBitcoindWallet.mockResolvedValue({ result: mockTransactions });
+
+      const result = await client.listTransactions(10, 5, true);
+      
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+        baseUrl: client.bitcoindParams.url,
+        walletName: client.bitcoindParams.walletName,
+        auth: client.bitcoindParams.auth,
+        method: "listtransactions",
+        params: ["*", 10, 5, true],
+      });
+      expect(result).toEqual(mockTransactions);
+    });
+
+    it("should use default parameters when none provided", async () => {
+      mockCallBitcoindWallet.mockResolvedValue({ result: [] });
+      
+      await client.listTransactions();
+      
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith(expect.objectContaining({
+        params: ["*", 10, 0, false]
+      }));
+    });
+
+    it("should enforce count limits (1-100)", async () => {
+      // Test lower bound
+      await expect(client.listTransactions(0)).rejects.toThrow(
+        "Count must be between 1 and 100"
+      );
+      
+      // Test upper bound
+      await expect(client.listTransactions(101)).rejects.toThrow(
+        "Count must be between 1 and 100"
+      );
+      
+      // Test valid boundaries
+      mockCallBitcoindWallet.mockResolvedValue({ result: [] });
+      await client.listTransactions(1);
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith(expect.objectContaining({
+        params: ["*", 1, 0, false]
+      }));
+      
+      await client.listTransactions(100);
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith(expect.objectContaining({
+        params: ["*", 100, 0, false]
+      }));
+    });
+
+    it("should enforce non-negative skip", async () => {
+      await expect(client.listTransactions(10, -1)).rejects.toThrow(
+        "Skip must be non-negative"
+      );
+      
+      mockCallBitcoindWallet.mockResolvedValue({ result: [] });
+      await client.listTransactions(10, 0);
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith(expect.objectContaining({
+        params: ["*", 10, 0, false]
+      }));
+    });
+
+    it("should throw error when wallet name is missing", async () => {
+      client["bitcoindParams"].walletName = "";
+      
+      await expect(client.listTransactions()).rejects.toThrow(
+        "Wallet name is required for private client transaction listings"
+      );
+    });
+
+    it("should throw error when RPC returns no result", async () => {
+      mockCallBitcoindWallet.mockResolvedValue({ error: null });
+      
+      await expect(client.listTransactions()).rejects.toThrow(
+        "Failed to retrieve transactions list"
+      );
+    });
+
+    it("should handle RPC errors", async () => {
+      const mockError = new Error("RPC timeout");
+      mockCallBitcoindWallet.mockRejectedValue(mockError);
+      
+      await expect(client.listTransactions()).rejects.toThrow(
+        `Failed to list transactions: ${mockError.message}`
+      );
+    });
+
+    it("should handle large transactions sets safely", async () => {
+      // Generate a safe number of transactions (100 max)
+      const largeTransactions = Array(100).fill(mockTransactions[0]);
+      mockCallBitcoindWallet.mockResolvedValue({ result: largeTransactions });
+      
+      const result = await client.listTransactions(100);
+      expect(result.length).toBe(100);
+    });
+  });
+
+  describe("PUBLIC client", () => {
+    it("should throw error for MEMPOOL provider", async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.MEMPOOL,
+        network: Network.MAINNET,
+      });
+
+      await expect(client.listTransactions()).rejects.toThrow(
+        "listTransactions is only supported for private clients"
+      );
+    });
+
+    it("should throw error for BLOCKSTREAM provider", async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        network: Network.MAINNET,
+      });
+
+      await expect(client.listTransactions()).rejects.toThrow(
+        "listTransactions is only supported for private clients"
+      );
+    });
+
+    it("should throw error for unsupported network (REGTEST)", async () => {
+      expect(() => {
+        new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.BLOCKSTREAM,
+          network: Network.REGTEST,
+        });
+      }).toThrow("Invalid network");
+    });
+  });
+
+  describe("Edge Cases", () => {
+    it("should handle zero transactions in private mode", async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "test-wallet",
+        },
+      });
+      
+      const mockCallBitcoindWallet = vi.spyOn(wallet, "callBitcoindWallet");
+      mockCallBitcoindWallet.mockResolvedValue({
+        result: [],
+        id: 0
+      });
+      
+      const result = await client.listTransactions();
+      expect(result).toEqual([]);
+    });
+
+    it("should prevent over-fetching with count limits", async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: "http://localhost:8332",
+          username: "user",
+          password: "pass",
+          walletName: "test-wallet",
+        },
+      });
+      
+      const mockCallBitcoindWallet = vi.spyOn(wallet, "callBitcoindWallet");
+      
+      // Test valid count
+      await client.listTransactions(10);
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith(expect.objectContaining({
+        params: ["*", 10, 0, false]
+      }));
+      
+      // Test invalid counts
+      await expect(client.listTransactions(0)).rejects.toThrow();
+      await expect(client.listTransactions(101)).rejects.toThrow();
+    });
+
+    it("should handle invalid client type", async () => {
+      const client = new BlockchainClient({
+        type: "INVALID" as ClientType,
+        network: Network.MAINNET,
+      });
+
+      await expect(client.listTransactions()).rejects.toThrow(
+        "listTransactions is only supported for private clients"
+      );
+    });
+  });
+});
+  
   describe("formatUtxo", () => {
     it("should get UTXO details for a given UTXO (MEMPOOL client)", async () => {
       // Mock the response from the API
