@@ -3,13 +3,8 @@ import { testStateManager } from "../utils/testState";
 
 import fs from "fs";
 import bitcoinClient, { clientConfig } from "../utils/bitcoinClient";
+import { recieveTableData } from "../utils/types";
 
-interface recieveTableData {
-  pathSuffix: string,
-  utxos: string,
-  balance: string,
-  address: string
-}
 
 test.describe("Wallet Regtest Configuration", () => {
   const client = bitcoinClient();

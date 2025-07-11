@@ -29,5 +29,21 @@ export interface rpcConfig {
   export interface ClientSetupOptions {
     url?: string,
     username?: string,
-    password?: string
+    password?: string,
+    watcherWallet?: string,
+  }
+
+  export interface TestState {
+    downloadWalletFile: string,
+    test_wallet_names: string[],
+    test_wallets: any[]
+    walletAddress: string
+    timestamp: number
+  }
+
+export interface recieveTableData {
+    pathSuffix: string,
+    utxos: string,
+    balance: string,
+    address: string
   }

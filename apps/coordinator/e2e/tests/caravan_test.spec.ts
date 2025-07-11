@@ -13,7 +13,7 @@ test.describe("Caravan Wallet Creation", () => {
   let client = bitcoinClient();
   
   
-  const downloadDir = path.join(__dirname,'../downloads');
+  const downloadDir = path.join(process.cwd(),'e2e/downloads');
   let downloadedWalletFile: string;
 
 

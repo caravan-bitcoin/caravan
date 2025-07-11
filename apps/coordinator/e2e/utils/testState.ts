@@ -1,31 +1,27 @@
 import fs from "fs";
 import path from "path";
-
-export interface TestState {
-  downloadWalletFile: string,
-  test_wallet_names: string[],
-  test_wallets: any[]
-  walletAddress: string
-  timestamp: number
-}
+import { TestState } from "./types";
 
 export class TestStateManager {
   private stateFile: string;
 
   constructor() {
-    this.stateFile = process.env.TEST_STATE_FILE || path.join(__dirname,"../temp/test-state.json")
+    this.stateFile = process.env.TEST_STATE_FILE || path.join(process.cwd(), "e2e/temp/test-state.json");
   }
 
-  getState():TestState {
-    if(!fs.existsSync(this.stateFile)){
+  getState(): TestState {
+    if (!fs.existsSync(this.stateFile)) {
       throw new Error("Test state file not found.")
     }
-    return JSON.parse(fs.readFileSync(this.stateFile,'utf-8'));
+    return JSON.parse(fs.readFileSync(this.stateFile, 'utf-8'))
   }
 
-  updateState(updates: Partial<TestState>):void {
-    const currentState = this.getState();
-    const newState = {...currentState,...updates};
+  updateState(updates: Partial<TestState>): void {
+    let currentState: TestState = {} as TestState;
+    if (fs.existsSync(this.stateFile)) {
+      currentState = this.getState();
+    }
+    const newState = { ...currentState, ...updates };
     fs.writeFileSync(this.stateFile, JSON.stringify(newState, null,2));
   }
 

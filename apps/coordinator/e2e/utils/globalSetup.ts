@@ -1,16 +1,11 @@
 import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
-import bitcoinClient from "./bitcoinClient";
-import createTestWallets, {checkDockerAvailability} from "./testFixtures"
-
 import path from "path";
 import fs from "fs";
-import {TestState} from "./testState"
 
-const globalWalletData ={
-    walletNames: [] as string[],
-    testWallets: [] as any[]
-}
+import bitcoinClient from "./bitcoinClient";
+import createTestWallets, {checkDockerAvailability} from "./testFixtures"
+import { TestState } from "./types";
 
 async function globalSetup(_config: FullConfig){
 
@@ -33,15 +28,7 @@ async function globalSetup(_config: FullConfig){
 
     console.log("fundAddress  🔥",fundAddress)
 
-
-    // globalWalletData.walletNames = walletNames;
-    // globalWalletData.testWallets = testWallets;
-
-    //storing in process.env to access in the test fle
-    // process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
-    // process.env.TEST_WALLETS = JSON.stringify(testWallets)
-
-    let testStateFile = path.join(__dirname,"../temp/test-state.json");
+    let testStateFile = path.join(process.cwd(), "e2e/temp/test-state.json");
     let tempDir = path.dirname(testStateFile);
 
     if(!fs.existsSync(tempDir)){
