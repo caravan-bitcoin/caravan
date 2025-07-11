@@ -1,6 +1,4 @@
-import { Network } from "@caravan/bitcoin";
-
-import { SCRIPT_TYPES } from "../types";
+import { Network, P2WSH } from "@caravan/bitcoin";
 
 /**
  *
@@ -140,7 +138,7 @@ export const exactRbfFixtures = {
       ],
       network: Network.REGTEST,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH,
       changeIndex: 1, // as here we know that we have changeAddress in that index and we'd like to just deduct extra fees from it ...
       requiredSigners: 2,
       totalSigners: 3,
@@ -258,7 +256,7 @@ export const exactRbfFixtures = {
       ],
       network: Network.REGTEST,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH,
       changeAddress:
         "bcrt1qd4eqvc7ujqtwjvw4yd88mctl4nhv8s8t0am6hp9y4rwxvmfahlms7c58ju",
       requiredSigners: 2,
@@ -393,7 +391,7 @@ export const exactRbfFixtures = {
       ],
       network: Network.REGTEST,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH,
       changeIndex: 1, // as here we know that we have changeAddress in that index and we'd like to just deduct extra fees from it ...
       requiredSigners: 2,
       totalSigners: 3,
@@ -513,7 +511,7 @@ export const exactRbfFixtures = {
       ],
       network: Network.REGTEST,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH,
       cancelAddress:
         "bcrt1qyzx24m8dt0e78yrdl2kuz0czr2xwtfl8frfxj5s672a0783a9eeq5f8l7m",
       requiredSigners: 2,

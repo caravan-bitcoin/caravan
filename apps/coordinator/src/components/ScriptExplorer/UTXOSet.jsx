@@ -14,6 +14,7 @@ import {
   TableCell,
   Typography,
   Checkbox,
+  Tooltip,
 } from "@mui/material";
 import { OpenInNew } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
@@ -43,6 +44,16 @@ class UTXOSet extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
+    // Update local inputs when props change
+    if (prevProps.inputs !== this.props.inputs) {
+      this.setState({
+        localInputs: this.props.inputs.map((input) => ({
+          ...input,
+          checked: this.props.selectAll,
+        })),
+      });
+    }
+
     // This function exists because we need to respond to the parent node having
     // its select/spend checkbox clicked (toggling select-all or select-none).
     // None of this needs to happen on the redeem script interface.
@@ -67,7 +78,7 @@ class UTXOSet extends React.Component {
       // but that's not quite enough because if a single UTXO is selected
       // then it is also marked from not spend -> spend ... so don't want
       // to toggleAll in that case. Furthermore, if you have 5 UTXOs and
-      // 2 selected and *then* click select all ... we also need to toggelAll.
+      // 2 selected and then click select all ... we also need to toggelAll.
       if (
         (prevProps.node.spend !== node.spend ||
           myInputsBeingSpent !== prevMyInputsBeingSpent) &&
@@ -174,6 +185,10 @@ class UTXOSet extends React.Component {
   renderInputs = () => {
     const { network, showSelection, finalizedOutputs, feeRate } = this.props;
     const { localInputs } = this.state;
+
+    // Use feeRate from props (Redux)
+    const currentFeeRate = feeRate;
+
     return localInputs.map((input, inputIndex) => {
       const confirmedStyle = `${styles.utxoTxid}${
         input.confirmed ? "" : ` ${styles.unconfirmed}`
@@ -205,13 +220,13 @@ class UTXOSet extends React.Component {
             <Copyable text={satoshisToBitcoins(input.amountSats)} />
           </TableCell>
           <TableCell>
-            <DustChip amountSats={input.amountSats} feeRate={feeRate} />
-          </TableCell>
-          <TableCell>
             {externalLink(
               blockExplorerTransactionURL(input.txid, network),
               <OpenInNew />,
             )}
+          </TableCell>
+          <TableCell>
+            <DustChip amountSats={input.amountSats} feeRate={currentFeeRate} />
           </TableCell>
         </TableRow>
       );
@@ -252,7 +267,11 @@ class UTXOSet extends React.Component {
               <TableCell>Index</TableCell>
               <TableCell>Amount (BTC)</TableCell>
               <TableCell>View</TableCell>
-              <TableCell>Dust Status</TableCell>
+              <TableCell>
+                <Tooltip title="Shows if UTXO is dust at current fee rate">
+                  <span>Dust Status</span>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>{this.renderInputs()}</TableBody>
@@ -289,7 +308,7 @@ UTXOSet.propTypes = {
   existingTransactionInputs: PropTypes.arrayOf(PropTypes.shape({})),
   setSpendCheckbox: PropTypes.func,
   autoSpend: PropTypes.bool.isRequired,
-  feeRate: PropTypes.string,
+  feeRate: PropTypes.number.isRequired,
 };
 
 UTXOSet.defaultProps = {
@@ -309,6 +328,10 @@ function mapStateToProps(state) {
     autoSpend: state.spend.transaction.autoSpend,
     finalizedOutputs: state.spend.transaction.finalizedOutputs,
     existingTransactionInputs: state.spend.transaction.inputs,
+    feeRate:
+      typeof state.spend.feeRate === "number"
+        ? state.spend.feeRate
+        : Number(state.spend.feeRate) || 1,
   };
 }
 
