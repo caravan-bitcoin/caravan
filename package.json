@@ -11,7 +11,7 @@
     "build:coordinator": "turbo build --filter=caravan-coordinator",
     "changeset": "changeset",
     "ci": "turbo run build lint test",
-    "clean": "turbo clean && rm -rf .turbo && rm -rf **/dist && rm -rf **/build && rm -rf **/.turbo",
+    "clean": "rm -rf .turbo && rm -rf **/dist && rm -rf **/build && rm -rf **/.turbo",
     "dev": "turbo dev --concurrency 15",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "gen": "turbo gen run",
