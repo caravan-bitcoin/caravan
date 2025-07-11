@@ -51,3 +51,4 @@ export async function checkDockerAvailability(){
         throw new Error("Docker is required for running e2e tests");
     }
 }
+

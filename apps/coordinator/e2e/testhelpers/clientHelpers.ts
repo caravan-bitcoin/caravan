@@ -22,4 +22,3 @@ export default async function setupPrivateClient(page: Page, options: ClientSetu
     await page.click('button:has-text("Test Connection")');
   
   }
-  
