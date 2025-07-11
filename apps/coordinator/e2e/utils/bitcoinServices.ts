@@ -101,7 +101,7 @@ export class BitcoinCoreService {
     }
   }
 
-  async walletexists(walletName: string): Promise<boolean> {
+  async walletExists(walletName: string): Promise<boolean> {
     try {
       const wallets = await this.listWallets();
 

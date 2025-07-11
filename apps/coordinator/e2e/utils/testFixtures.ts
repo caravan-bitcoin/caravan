@@ -16,7 +16,7 @@ export default async function createTestWallets(client: BitcoinCoreService){
 
     for (const walletName of walletNames){
         try {
-            const exist = await client?.walletexists(walletName);
+            const exist = await client?.walletExists(walletName);
         if(exist){
             // Cleaning up the existing wallets
             await client?.unloadWallet(walletName);
