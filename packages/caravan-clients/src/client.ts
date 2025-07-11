@@ -691,10 +691,7 @@ export class BlockchainClient extends ClientBase {
         break;
       case Network.SIGNET:
         basePath = "/signet";
-        break;
-      case Network.REGTEST:
-        basePath = "/testnet"; // Fallback for REGTEST
-        break;
+        break;    
       default:
         throw new Error("Unsupported network for public transactions");
     }
