@@ -1,0 +1,14 @@
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+temp
+
+# Bitcoin-Core
+bitcoin-data
+downloads
+
+
+# Environment variables
+.env
