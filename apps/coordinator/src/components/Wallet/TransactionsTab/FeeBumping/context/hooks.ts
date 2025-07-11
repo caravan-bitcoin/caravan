@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
 import { TransactionAnalyzer } from "@caravan/fees";
@@ -78,15 +78,22 @@ export const useChangeOutputIndex = (
 };
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
-  const { utxos: pendingUtxos } = usePendingUtxos(transaction?.txid || "");
+  const {
+    utxos: pendingUtxos,
+    isLoading,
+    isError,
+  } = usePendingUtxos(transaction?.txid || "");
+
   const walletUtxos = useWalletUtxos();
 
   // Memoize the combined UTXOs so it only recalculates when dependencies change
-  return useMemo(() => {
+  const availableUtxos = useMemo(() => {
     // Return empty array if no transaction
     if (!transaction) return [];
     return extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []);
   }, [pendingUtxos, walletUtxos, transaction]);
+
+  return { availableUtxos, isLoading, isError };
 };
 
 export const useGetGlobalXpubs = () => {
@@ -102,7 +109,7 @@ export const useAnalyzeTransaction = (
   state: FeeBumpingState,
   dispatch: React.Dispatch<FeeBumpActionTypes>,
 ) => {
-  const availableUtxos = useGetAvailableUtxos(state.transaction!);
+  const { availableUtxos } = useGetAvailableUtxos(state.transaction!);
   const { data: feeEstimates } = useFeeEstimates();
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);

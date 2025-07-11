@@ -75,7 +75,7 @@ export function FeeBumpProvider({ children }: FeeBumpProviderProps) {
   const [state, dispatch] = useReducer(feeBumpingReducer, initialState);
   const [isCreatingRBF, setIsCreatingRBF] = useState(false); // Local loading state for RBF operations
   // External dependencies
-  const availableUtxos = useGetAvailableUtxos(state.transaction!);
+  const { availableUtxos } = useGetAvailableUtxos(state.transaction!);
 
   // Getting all needed wallet state
   const { network, addressType, requiredSigners, totalSigners } =

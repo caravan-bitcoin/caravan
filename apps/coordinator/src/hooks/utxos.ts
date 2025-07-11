@@ -93,7 +93,7 @@ const getCoinFromSliceUtxos = (slice: Slice): Coin[] => {
  * @returns The utxos from the transaction
  */
 export const usePendingUtxos = (txid: string) => {
-  const { data, isLoading, error } = useTransactionCoins(txid);
+  const { data, isLoading, isError } = useTransactionCoins(txid);
   const walletSlices = useSelector(getWalletSlices);
 
   const utxos = useMemo(() => {
@@ -114,7 +114,7 @@ export const usePendingUtxos = (txid: string) => {
       });
   }, [data, walletSlices]);
 
-  return { utxos, isLoading, error };
+  return { utxos, isLoading, isError };
 };
 
 /**
@@ -125,5 +125,10 @@ export const usePendingUtxos = (txid: string) => {
  */
 export const useWalletUtxos = () => {
   const walletSlices = useSelector(getWalletSlices);
-  return walletSlices.flatMap(getCoinFromSliceUtxos).map(getUtxoFromCoin);
+
+  const utxos = useMemo(() => {
+    return walletSlices.flatMap(getCoinFromSliceUtxos).map(getUtxoFromCoin);
+  }, [walletSlices]);
+
+  return utxos;
 };
