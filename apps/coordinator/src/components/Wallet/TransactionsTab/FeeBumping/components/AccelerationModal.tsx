@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Button,
@@ -16,27 +16,21 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
-import { FeeBumpStatus } from "../types";
-import { FeePriority } from "clients/fees";
 import { downloadFile } from "../../../../../utils";
-import {
-  useFeeBumpContext,
-  setFeeBumpTransaction,
-  setFeeBumpPriority,
-  resetFeeBumpState,
-  setPsbtVersion,
-} from "../context";
 import { Transaction } from "../../types";
-import {
-  StrategySelectionStep,
-  ConfigurationStep,
-  ReviewStep,
-} from "./FeeBumpSteps";
+import { ConfigurationStep, StrategySelectionStep } from "./FeeBumpSteps";
 import { ErrorDialog } from "./ErrorDialog";
+
+import {
+  AccelerationModalProvider,
+  useAccelerationModal,
+} from "./AccelerationModalContext";
+import { useAnalyzeTransaction } from "./hooks";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -62,69 +56,108 @@ interface StepConfig {
   props?: Record<string, any>;
 }
 
-export const AccelerationModal: React.FC<AccelerationModalProps> = ({
+// Wrapper component that provides the context
+// Move step configs outside component to prevent recreation
+const STEP_CONFIGS = [
+  {
+    label: "Select Strategy",
+    component: StrategySelectionStep,
+  },
+  {
+    label: "Configure Transaction",
+    // component: ConfigurationStep,
+    component: () => <div>ConfigurationStep</div>,
+  },
+  // {
+  //   label: "Review and Download",
+  //   component: ReviewStep,
+  // },
+];
+
+const AccelerationModalWithContext: React.FC<AccelerationModalProps> = ({
   open,
   onClose,
   transaction,
   txHex,
 }) => {
+  return (
+    <AccelerationModalProvider
+      totalSteps={STEP_CONFIGS.length}
+      transaction={transaction}
+      txHex={txHex}
+      canProceed={true} // TODO: Add logic here to determine if user can proceed
+    >
+      <AccelerationModalContent
+        open={open}
+        onClose={onClose}
+        transaction={transaction}
+        txHex={txHex}
+        stepConfigs={STEP_CONFIGS}
+      />
+    </AccelerationModalProvider>
+  );
+};
+
+// Export the wrapper component as the main component
+export const AccelerationModal = AccelerationModalWithContext;
+
+// Main component that uses the context
+const AccelerationModalContent: React.FC<
+  AccelerationModalProps & {
+    stepConfigs: StepConfig[];
+  }
+> = ({ open, onClose, stepConfigs }) => {
   const {
     state: {
-      status,
-      recommendation,
-      selectedStrategy,
-      error,
-      result,
-      psbtVersion: selectedPsbtVersion,
+      activeStep,
+      downloadClicked,
+      showPSBTVersionDialog,
+      showErrorDetails,
+      selectedPsbtVersion,
     },
-    dispatch,
-    isCreatingRBF,
-  } = useFeeBumpContext();
+    nextStep,
+    previousStep,
+    setDownloadClicked,
+    setPSBTVersionDialog,
+    setErrorDetails,
+    setPSBTVersion,
+    resetWizard,
+    isLastStep,
+    canGoNext,
+    canGoBack,
+    transaction,
+    txHex,
+  } = useAccelerationModal();
 
-  // Track the current step in the wizard
-  const [activeStep, setActiveStep] = useState(0);
-
-  // Track whether the PSBT has been downloaded
-  const [downloadClicked, setDownloadClicked] = useState(false);
-  const [showPSBTVersionDialog, setShowPSBTVersionDialog] = useState(false);
-  //  Error display state
-  const [showErrorDetails, setShowErrorDetails] = useState(false);
-
-  // Handle step navigation ( Memoizing step changes to prevent re-renders)
-  const handleNext = useCallback(() => {
-    setActiveStep((prevStep) => prevStep + 1);
-  }, []);
-
-  const handleBack = useCallback(() => {
-    setActiveStep((prevStep) => prevStep - 1);
-  }, []);
-
-  // Handle PSBT download
-  const handleDownloadPSBT = useCallback(() => {
-    setShowPSBTVersionDialog(true);
-  }, []);
+  const { isLoading, isError } = useAnalyzeTransaction(transaction, txHex);
 
   const handleConfirmDownload = useCallback(() => {
-    if (result) {
-      const priorityStr = result.priority.toLowerCase();
-      const txTypeStr = result.isCancel ? "cancel" : "accelerated";
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .substring(0, 19);
+    // TODO: Replace with actual result from fee bump context
+    // For now, we'll create a placeholder result
+    const mockResult = {
+      priority: "medium",
+      isCancel: false,
+      psbtBase64: "placeholder",
+    };
 
-      const versionStr = selectedPsbtVersion === "v2" ? "v2" : "v0";
-      const filename = `${txTypeStr}_tx_${priorityStr}_${versionStr}_${timestamp}.psbt`;
+    const priorityStr = mockResult.priority.toLowerCase();
+    const txTypeStr = mockResult.isCancel ? "cancel" : "accelerated";
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .substring(0, 19);
 
-      downloadFile(result.psbtBase64, filename);
-      setDownloadClicked(true);
-      setShowPSBTVersionDialog(false);
-    }
-  }, [result, selectedPsbtVersion]);
+    const versionStr = selectedPsbtVersion === "v2" ? "v2" : "v0";
+    const filename = `${txTypeStr}_tx_${priorityStr}_${versionStr}_${timestamp}.psbt`;
+
+    downloadFile(mockResult.psbtBase64, filename);
+    setDownloadClicked(true);
+    setPSBTVersionDialog(false);
+  }, [selectedPsbtVersion, setDownloadClicked, setPSBTVersionDialog]);
 
   // Handle modal close with confirmation if PSBT not downloaded
   const handleClose = useCallback(() => {
-    if (status === FeeBumpStatus.SUCCESS && !downloadClicked) {
+    if (!downloadClicked) {
       // Warn the user if they try to close without downloading the PSBT
       const confirm = window.confirm(
         "You haven't downloaded the fee-bumped transaction. Are you sure you want to close?",
@@ -134,30 +167,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       }
     }
     onClose();
-  }, [status, downloadClicked, onClose]);
-
-  // Get the steps for the stepper
-  const stepConfigs: StepConfig[] = useMemo(
-    () => [
-      {
-        label: "Select Strategy",
-        component: StrategySelectionStep,
-      },
-      {
-        label: "Configure Transaction",
-        component: ConfigurationStep,
-      },
-      {
-        label: "Review and Download",
-        component: ReviewStep,
-        props: {
-          onDownloadPSBT: handleDownloadPSBT,
-          downloadClicked,
-        },
-      },
-    ],
-    [transaction, handleDownloadPSBT, downloadClicked],
-  );
+  }, [downloadClicked, onClose]);
 
   const CurrentStepComponent = stepConfigs[activeStep]?.component;
   const currentStepProps = stepConfigs[activeStep]?.props || {};
@@ -167,8 +177,12 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
 
     let title = "Fee Bump Transaction";
 
-    if (selectedStrategy === FeeBumpStrategy.RBF && activeStep > 0) {
-      if (result?.isCancel) {
+    // TODO: Replace with actual strategy and result from fee bump context
+    const mockStrategy = FeeBumpStrategy.RBF;
+    const mockResult = { isCancel: false };
+
+    if (mockStrategy === FeeBumpStrategy.RBF && activeStep > 0) {
+      if (mockResult?.isCancel) {
         title = "Cancel Transaction";
       } else {
         title = "Accelerate Transaction";
@@ -176,7 +190,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     }
 
     return title;
-  }, [transaction, selectedStrategy, activeStep, result]);
+  }, [transaction, activeStep]);
 
   const transactionIdDisplay = useMemo(() => {
     if (!transaction) return "";
@@ -186,57 +200,39 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
     )}`;
   }, [transaction]);
 
-  const buttonStates = useMemo(() => {
-    const isCreating = isCreatingRBF || status === FeeBumpStatus.CREATING;
-    const hasError = status === FeeBumpStatus.ERROR;
-    return {
-      backDisabled: activeStep === 0 || isCreating,
-      nextDisabled:
-        !recommendation ||
-        status !== FeeBumpStatus.READY ||
-        selectedStrategy === FeeBumpStrategy.NONE ||
-        hasError,
-      showNext: activeStep === 0,
-      showClose: activeStep === stepConfigs.length - 1,
-    };
-  }, [
-    activeStep,
-    isCreatingRBF,
-    status,
-    recommendation,
-    selectedStrategy,
-    stepConfigs.length,
-  ]);
-
-  // Initialize the transaction for fee bumping when the modal opens
+  // Initialize the wizard when the modal opens
   useEffect(() => {
     if (open && transaction) {
-      dispatch(setFeeBumpTransaction(transaction, txHex));
-      dispatch(setFeeBumpPriority(FeePriority.MEDIUM));
-
-      setActiveStep(0);
-      setDownloadClicked(false);
-      setShowErrorDetails(false);
-    } else if (!open) {
-      dispatch(resetFeeBumpState());
+      resetWizard();
     }
-  }, [
-    open,
-    transaction.txid,
-    txHex,
-    setFeeBumpTransaction,
-    setFeeBumpPriority,
-    resetFeeBumpState,
-  ]);
+  }, [open, transaction, resetWizard]);
 
-  useEffect(() => {
-    console.log("acce useeffect", status);
-    // Auto-advance to next step when RBF/CPFP creation succeeds
-    if (status === FeeBumpStatus.SUCCESS && activeStep === 1) {
-      console.log("acce useeffect inside", status);
-      handleNext();
+  const Content = () => {
+    if (isLoading || !CurrentStepComponent) {
+      return (
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight={200}
+        >
+          <CircularProgress />
+        </Box>
+      );
     }
-  }, [status, activeStep, handleNext]);
+    if (isError) {
+      return (
+        <ErrorDialog
+          error="Failed to load available UTXOs"
+          showErrorDetails={showErrorDetails}
+          setShowErrorDetails={setErrorDetails}
+        />
+      );
+    }
+    return (
+      <CurrentStepComponent key={`step-${activeStep}`} {...currentStepProps} />
+    );
+  };
 
   return (
     <Dialog
@@ -267,13 +263,6 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       <Divider />
 
       <DialogContent>
-        {error && (
-          <ErrorDialog
-            error={error}
-            showErrorDetails={showErrorDetails}
-            setShowErrorDetails={setShowErrorDetails}
-          />
-        )}
         {/* Stepper to show current progress in the wizard */}
         <Stepper activeStep={activeStep} sx={{ pt: 2, pb: 4 }}>
           {stepConfigs.map(({ label }) => (
@@ -283,54 +272,27 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
           ))}
         </Stepper>
 
-        {/* Content changes based on the current step */}
-        {CurrentStepComponent && (
-          <CurrentStepComponent
-            key={`step-${activeStep}-${selectedStrategy}`}
-            {...currentStepProps}
-          />
-        )}
+        <Content />
       </DialogContent>
 
       <Divider />
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         {/* Back button */}
-        <Button
-          color="inherit"
-          disabled={buttonStates.backDisabled}
-          onClick={handleBack}
-        >
+        <Button color="inherit" disabled={!canGoBack} onClick={previousStep}>
           Back
         </Button>
 
         <Box sx={{ flex: "1 1 auto" }} />
-        {error && activeStep > 0 && (
-          <Button
-            color="secondary"
-            variant="outlined"
-            onClick={() => {
-              // Reset to previous step to retry
-              setActiveStep(Math.max(0, activeStep - 1));
-            }}
-            sx={{ mr: 1 }}
-          >
-            Retry
-          </Button>
-        )}
         {/* Next button (only on first step) */}
         {activeStep === 0 && (
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={buttonStates.nextDisabled}
-          >
+          <Button variant="contained" onClick={nextStep} disabled={!canGoNext}>
             Next
           </Button>
         )}
 
         {/* Close button (only on last step) */}
-        {buttonStates.showClose && (
+        {isLastStep && (
           <Button color="primary" variant="contained" onClick={handleClose}>
             Close
           </Button>
@@ -339,7 +301,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
       {/* PSBT Version Selection Dialog */}
       <Dialog
         open={showPSBTVersionDialog}
-        onClose={() => setShowPSBTVersionDialog(false)}
+        onClose={() => setPSBTVersionDialog(false)}
         maxWidth="sm"
         fullWidth
       >
@@ -348,9 +310,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
           <FormControl component="fieldset" sx={{ mt: 1 }}>
             <RadioGroup
               value={selectedPsbtVersion}
-              onChange={(e) =>
-                dispatch(setPsbtVersion(e.target.value as "v2" | "v0"))
-              }
+              onChange={(e) => setPSBTVersion(e.target.value as "v2" | "v0")}
             >
               <FormControlLabel
                 value="v2"
@@ -382,9 +342,7 @@ export const AccelerationModal: React.FC<AccelerationModalProps> = ({
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowPSBTVersionDialog(false)}>
-            Cancel
-          </Button>
+          <Button onClick={() => setPSBTVersionDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleConfirmDownload}>
             Download PSBT
           </Button>

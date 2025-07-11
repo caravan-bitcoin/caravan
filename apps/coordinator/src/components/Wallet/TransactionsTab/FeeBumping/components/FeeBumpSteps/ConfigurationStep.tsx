@@ -3,6 +3,7 @@ import { Alert, AlertTitle, Box, CircularProgress } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "../RBF/RBFForm";
 import { useFeeBumpContext } from "../../context";
+import { useAccelerationModal } from "../AccelerationModalContext";
 
 /**
  * Step 2: Configuration
@@ -12,20 +13,9 @@ import { useFeeBumpContext } from "../../context";
  * Currently only RBF is implemented.
  */
 export const ConfigurationStep: React.FC = () => {
-  const contextData = useFeeBumpContext();
-
-  // Early return for loading state
-  if (!contextData) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   const {
     state: { selectedStrategy },
-  } = contextData;
+  } = useAccelerationModal();
 
   // Show CPFP placeholder (not implemented yet)
   if (selectedStrategy === FeeBumpStrategy.CPFP) {

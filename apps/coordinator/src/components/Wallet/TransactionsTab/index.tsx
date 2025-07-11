@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
-import { FeeBumpProvider } from "./FeeBumping/context";
 import { usePendingTransactions } from "clients/transactions";
 import {
   useSortedTransactions,
@@ -99,85 +98,83 @@ const TransactionsTab: React.FC = () => {
   };
 
   return (
-    <FeeBumpProvider>
-      <div>
-        {error && (
-          <Typography color="error" gutterBottom>
-            Error: {error}
-          </Typography>
-        )}
+    <div>
+      {error && (
+        <Typography color="error" gutterBottom>
+          Error: {error}
+        </Typography>
+      )}
 
-        <Box mt={2}>
-          {isLoading ? (
-            <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TransactionTable
-                transactions={currentPageTxs}
-                onSort={handleSort}
-                sortBy={sortBy}
-                sortDirection={sortDirection}
-                network={network}
-                onClickTransaction={handleExplorerLinkClick}
-                onAccelerateTransaction={handleAccelerateTransaction}
-              />
-              {/* Pagination controls */}
-              {sortedTransactions.length > 0 && (
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  mt={2}
-                  px={1}
+      <Box mt={2}>
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" p={3}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <TransactionTable
+              transactions={currentPageTxs}
+              onSort={handleSort}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              network={network}
+              onClickTransaction={handleExplorerLinkClick}
+              onAccelerateTransaction={handleAccelerateTransaction}
+            />
+            {/* Pagination controls */}
+            {sortedTransactions.length > 0 && (
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mt={2}
+                px={1}
+              >
+                <FormControl
+                  variant="outlined"
+                  size="small"
+                  sx={{ minWidth: 120 }}
                 >
-                  <FormControl
-                    variant="outlined"
-                    size="small"
-                    sx={{ minWidth: 120 }}
+                  <InputLabel id="rows-per-page-label">Rows</InputLabel>
+                  <Select
+                    labelId="rows-per-page-label"
+                    value={rowsPerPage.toString()}
+                    onChange={handleRowsPerPageChange}
+                    label="Rows"
                   >
-                    <InputLabel id="rows-per-page-label">Rows</InputLabel>
-                    <Select
-                      labelId="rows-per-page-label"
-                      value={rowsPerPage.toString()}
-                      onChange={handleRowsPerPageChange}
-                      label="Rows"
-                    >
-                      <MenuItem value="5">5</MenuItem>
-                      <MenuItem value="10">10</MenuItem>
-                      <MenuItem value="25">25</MenuItem>
-                      <MenuItem value="50">50</MenuItem>
-                    </Select>
-                  </FormControl>
+                    <MenuItem value="5">5</MenuItem>
+                    <MenuItem value="10">10</MenuItem>
+                    <MenuItem value="25">25</MenuItem>
+                    <MenuItem value="50">50</MenuItem>
+                  </Select>
+                </FormControl>
 
-                  <Box display="flex" alignItems="center">
-                    <Typography variant="body2" color="textSecondary" mr={2}>
-                      {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
-                    </Typography>
-                    <Pagination
-                      count={totalPages}
-                      page={page}
-                      onChange={handlePageChange}
-                      color="primary"
-                      size="small"
-                    />
-                  </Box>
+                <Box display="flex" alignItems="center">
+                  <Typography variant="body2" color="textSecondary" mr={2}>
+                    {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
+                  </Typography>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="small"
+                  />
                 </Box>
-              )}
-            </>
-          )}
-        </Box>
-        {selectedTransaction && (
-          <AccelerationModal
-            open={accelerationModalOpen}
-            onClose={handleAccelerationModalClose}
-            transaction={selectedTransaction}
-            txHex={txHex}
-          />
+              </Box>
+            )}
+          </>
         )}
-      </div>
-    </FeeBumpProvider>
+      </Box>
+      {selectedTransaction && (
+        <AccelerationModal
+          open={accelerationModalOpen}
+          onClose={handleAccelerationModalClose}
+          transaction={selectedTransaction}
+          txHex={txHex}
+        />
+      )}
+    </div>
   );
 };
 
