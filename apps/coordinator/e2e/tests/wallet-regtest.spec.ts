@@ -214,7 +214,9 @@ test.describe("Wallet Regtest Configuration", () => {
           "button[role=tab][type=button]:has-text('Pending Transactions')",
         )
         .click();
-      await page.locator('[data-testid="RefreshIcon"]').click();
+        
+      await page.locator("button[type=button]:has-text('Refresh')").click()
+
 
       await page
         .locator("button[role=tab][type=button]:has-text('Addresses')")
