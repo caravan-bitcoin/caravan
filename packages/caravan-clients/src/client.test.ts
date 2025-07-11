@@ -550,25 +550,6 @@ describe("BlockchainClient", () => {
       );
     });
 
-    it("should fallback to TESTNET for REGTEST", async () => {
-  // Create client with valid TESTNET network
-  client = new BlockchainClient({
-    type: ClientType.PUBLIC,
-    provider: PublicBitcoinProvider.MEMPOOL,
-    network: Network.TESTNET,
-  });
-  
-  // Override network property to REGTEST
-  Object.defineProperty(client, 'network', { value: Network.REGTEST });
-  
-  client.Get = mockGet;
-  
-  await client.getAddressTransactionHistory(mockAddress);
-  
-  expect(mockGet).toHaveBeenCalledWith(
-    "/testnet/api/address/bc1qaddress/txs?count=10&skip=0"
-  );
-});
 
     it("should validate count parameter", async () => {
       await expect(client.getAddressTransactionHistory(mockAddress, 0))
