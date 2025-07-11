@@ -178,6 +178,7 @@ describe("BCUR2 Utils", () => {
 
       vi.mocked(CryptoHDKey.fromCBOR).mockReturnValueOnce(mockHDKeyNoOrigin as any);
 
+      
       const result = processCryptoHDKeyCBOR(Buffer.from("test"), Network.TESTNET);
       expect(result.type).toBe("crypto-hdkey");
       expect(result.bip32Path).toBeUndefined();

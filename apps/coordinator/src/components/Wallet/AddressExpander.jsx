@@ -1,8 +1,6 @@
 import React from "react";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
-
-// Components
 import {
   Grid,
   Menu,
@@ -12,11 +10,11 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
+  Typography,
   Table,
   TableBody,
   TableRow,
   TableCell,
-  Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -347,7 +345,7 @@ class AddressExpander extends React.Component {
       } else {
         this.setState({
           interactionState: ACTIVE,
-          interactionError: "An unknow error occured",
+          interactionError: "An unknown error occurred",
           interactionMessage: "",
         });
       }
@@ -374,7 +372,6 @@ class AddressExpander extends React.Component {
     this.resetInteractionState();
   };
 
-  // TODO: DRY out with test
   confirmAddressDescription() {
     const { network, node, requiredSigners, totalSigners } = this.props;
     const { multisig } = node;
@@ -387,7 +384,6 @@ class AddressExpander extends React.Component {
           -of-
           {totalSigners} multisig address on your device:
         </p>
-
         <Table>
           <TableBody>
             <TableRow>
@@ -396,7 +392,6 @@ class AddressExpander extends React.Component {
                 <code>{multisig.address}</code>
               </TableCell>
             </TableRow>
-
             <TableRow>
               <TableCell>BIP32 Path:</TableCell>
               <TableCell>
