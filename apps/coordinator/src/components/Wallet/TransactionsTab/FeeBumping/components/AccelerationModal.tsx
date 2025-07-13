@@ -65,8 +65,8 @@ const STEP_CONFIGS = [
   },
   {
     label: "Configure Transaction",
-    // component: ConfigurationStep,
-    component: () => <div>ConfigurationStep</div>,
+    component: ConfigurationStep,
+    // component: () => <div>ConfigurationStep</div>,
   },
   // {
   //   label: "Review and Download",

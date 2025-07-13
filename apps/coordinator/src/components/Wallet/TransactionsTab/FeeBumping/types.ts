@@ -163,11 +163,11 @@ export const RBF_TYPES = {
 export type RbfTypeValues = (typeof RBF_TYPES)[keyof typeof RBF_TYPES];
 
 export const FEE_LEVELS = {
-  LOW: "low",
-  MEDIUM: "medium",
-  HIGH: "high",
+  LOW: FeePriority.LOW,
+  MEDIUM: FeePriority.MEDIUM,
+  HIGH: FeePriority.HIGH,
   CUSTOM: "custom",
-};
+} as const;
 
 export type FeeLevelType = (typeof FEE_LEVELS)[keyof typeof FEE_LEVELS];
 

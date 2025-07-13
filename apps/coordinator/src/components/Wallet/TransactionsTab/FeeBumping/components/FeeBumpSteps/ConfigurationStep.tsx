@@ -1,8 +1,7 @@
-import React, { useEffect } from "react";
-import { Alert, AlertTitle, Box, CircularProgress } from "@mui/material";
+import React from "react";
+import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "../RBF/RBFForm";
-import { useFeeBumpContext } from "../../context";
 import { useAccelerationModal } from "../AccelerationModalContext";
 
 /**

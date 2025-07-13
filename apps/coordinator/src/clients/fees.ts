@@ -89,10 +89,10 @@ export const useFeeEstimates = () => {
   const isLoading = results.some((result) => result.isLoading);
   const error = results.find((result) => result.error)?.error;
 
-  const feeEstimates = {
-    [FeePriority.HIGH]: results[0]?.data,
-    [FeePriority.MEDIUM]: results[1]?.data,
-    [FeePriority.LOW]: results[2]?.data,
+  const feeEstimates: Record<FeePriority, number> = {
+    [FeePriority.HIGH]: results[0]?.data ?? 1,
+    [FeePriority.MEDIUM]: results[1]?.data ?? 1,
+    [FeePriority.LOW]: results[2]?.data ?? 1,
   };
 
   return {

@@ -27,17 +27,17 @@ import {
   PRIORITY_TO_FEE_LEVEL,
   FEE_LEVELS,
 } from "../../types";
-import { FeePriority } from "clients/fees";
+import { useFeeEstimates } from "clients/fees";
 import { formatFee } from "../../utils";
-import {
-  useFeeBumpContext,
-  setRbfType,
-  setFeeBumpPriority,
-  setFeeBumpRate,
-  setCancelAddress,
-  setChangeAddress,
-} from "../../context";
+// import {
+//   setFeeBumpPriority,
+//   setFeeBumpRate,
+//   setCancelAddress,
+//   setChangeAddress,
+// } from "../../context";
 import { TransactionDetails } from "@caravan/clients";
+import { useAccelerationModal } from "../AccelerationModalContext";
+import { useAnalyzeTransaction } from "../hooks";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -46,75 +46,105 @@ const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
   return txSize ? transaction.fee / txSize : 0;
 };
 
-export const RBFForm: React.FC = () => {
-  const {
-    state: {
-      transaction,
-      recommendation,
-      selectedFeeRate,
-      selectedPriority,
-      rbfType,
-      cancelAddress,
-      changeAddress,
-    },
-    createAcceleratedRBF,
-    createCancelRBF,
-    dispatch,
-    isCreatingRBF,
-  } = useFeeBumpContext();
-
-  // Local state for fee level selection (UI state only)
-  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
-    PRIORITY_TO_FEE_LEVEL[selectedPriority] || FEE_LEVELS.MEDIUM,
+const useFeeLevel = (transaction: TransactionDetails) => {
+  const { data: feeEstimates } = useFeeEstimates();
+  const [currentFeeRate, setCurrentFeeRate] = useState<number>(0);
+  const [selectedPriority, setSelectedPriority] = useState<FeeLevelType>(
+    FEE_LEVELS.MEDIUM,
   );
 
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
-  const handleSubmitRBF = async (options: {
-    isCancel: boolean;
-    cancelAddress?: string;
-    changeAddress?: string;
-  }) => {
-    try {
-      console.log("options", options);
-
-      const isCancel = options.isCancel ?? rbfType === "cancel";
-
-      if (isCancel) {
-        await createCancelRBF({
-          cancelAddress: options.cancelAddress,
-        });
-      } else {
-        await createAcceleratedRBF({
-          changeAddress: options.changeAddress,
-        });
-      }
-
-      // handleNext(); // Move to the next step when done
-    } catch (err) {
-      // Error is already handled by the context and stored in state.error
-      console.error("Error creating fee-bumped transaction:", err);
-      // Error will be displayed in the UI automatically
-    }
+  return {
+    currentFeeRate,
+    setCurrentFeeRate,
+    selectedPriority,
+    setSelectedPriority,
+    originalFee,
+    originalFeeRate,
   };
+};
+
+export const RBFForm: React.FC = () => {
+  // const {
+  //   state: {
+  //     transaction,
+  //     recommendation,
+  //     selectedFeeRate,
+  //     selectedPriority,
+  //     rbfType,
+  //     cancelAddress,
+  //     changeAddress,
+  //   },
+  //   createAcceleratedRBF,
+  //   createCancelRBF,
+  //   dispatch,
+  //   isCreatingRBF,
+  // } = useFeeBumpContext();
+  const { transaction, txHex } = useAccelerationModal();
+  const { analysis } = useAnalyzeTransaction(transaction, txHex);
+  const [rbfType, setRbfType] = useState<RbfType>("accelerate");
+  const { data: feeEstimates } = useFeeEstimates();
+  const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
+    FEE_LEVELS.MEDIUM,
+  );
+  const [feeBumpRate, setFeeBumpRate] = useState<number>(transaction.size);
+  const [cancelAddress, setCancelAddress] = useState<string>("");
+  const [changeAddress, setChangeAddress] = useState<string>("");
+
+  // Local state for fee level selection (UI state only)
+  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
+    FEE_LEVELS.MEDIUM,
+  );
+
+  const originalFee = transaction!.fee;
+  const originalFeeRate = calculateOriginalFeeRate(transaction!);
+
+  // const handleSubmitRBF = async (options: {
+  //   isCancel: boolean;
+  //   cancelAddress?: string;
+  //   changeAddress?: string;
+  // }) => {
+  //   try {
+  //     console.log("options", options);
+
+  //     const isCancel = options.isCancel ?? rbfType === "cancel";
+
+  //     if (isCancel) {
+  //       await createCancelRBF({
+  //         cancelAddress: options.cancelAddress,
+  //       });
+  //     } else {
+  //       await createAcceleratedRBF({
+  //         changeAddress: options.changeAddress,
+  //       });
+  //     }
+
+  //     // handleNext(); // Move to the next step when done
+  //   } catch (err) {
+  //     // Error is already handled by the context and stored in state.error
+  //     console.error("Error creating fee-bumped transaction:", err);
+  //     // Error will be displayed in the UI automatically
+  //   }
+  // };
 
   const minimumFeeRate = useMemo(
     () => Math.max(originalFeeRate + 1, 1),
     [originalFeeRate],
   );
 
-  const isRbfFormValid = useMemo(() => {
-    if (selectedFeeRate < minimumFeeRate) return false;
-    if (rbfType === "cancel" && !cancelAddress.trim()) return false;
-    return true;
-  }, [selectedFeeRate, minimumFeeRate, rbfType, cancelAddress]);
+  // const isRbfFormValid = useMemo(() => {
+  //   if (selectedFeeRate < minimumFeeRate) return false;
+  //   if (rbfType === "cancel" && !cancelAddress.trim()) return false;
+  //   return true;
+  // }, [selectedFeeRate, minimumFeeRate, rbfType, cancelAddress]);
 
   const estimatedNewFee = useMemo(() => {
-    if (!transaction || !selectedFeeRate) return 0;
+    if (!transaction || !feeBumpRate) return 0;
     const txVsize = transaction.vsize || transaction.size;
-    return Math.ceil(txVsize * selectedFeeRate);
-  }, [transaction, selectedFeeRate]);
+    return Math.ceil(txVsize * feeBumpRate);
+  }, [transaction, feeBumpRate]);
 
   const feeDifference = useMemo(() => {
     if (!transaction) return 0;
@@ -122,34 +152,36 @@ export const RBFForm: React.FC = () => {
   }, [transaction, estimatedNewFee]);
 
   // Calculate fee levels based on network estimates
-  const feeLevels = useMemo(() => {
-    const networkEstimates = recommendation?.networkFeeEstimates;
+  // const feeLevels = useMemo(() => {
+  //   const networkEstimates = recommendation?.networkFeeEstimates;
 
-    // If we have network estimates, use them for accurate fee levels
-    if (networkEstimates) {
-      return {
-        [FEE_LEVELS.LOW]: networkEstimates.lowPriority,
-        [FEE_LEVELS.MEDIUM]: networkEstimates.mediumPriority,
-        [FEE_LEVELS.HIGH]: networkEstimates.highPriority,
-      };
-    }
+  //   // If we have network estimates, use them for accurate fee levels
+  //   if (networkEstimates) {
+  //     return {
+  //       [FEE_LEVELS.LOW]: networkEstimates.lowPriority,
+  //       [FEE_LEVELS.MEDIUM]: networkEstimates.mediumPriority,
+  //       [FEE_LEVELS.HIGH]: networkEstimates.highPriority,
+  //     };
+  //   }
 
-    // Fallback if network estimates are not available
-    // Fallback values based on :
-    // https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
-    // These values are reasonable defaults but will be less accurate
-    return {
-      [FEE_LEVELS.LOW]: Math.max(originalFeeRate * 1.5, 20.09),
-      [FEE_LEVELS.MEDIUM]: Math.max(originalFeeRate * 2, 32.75),
-      [FEE_LEVELS.HIGH]: Math.max(originalFeeRate * 3, 32.75),
-    };
-  }, [originalFeeRate, recommendation]);
+  // Fallback if network estimates are not available
+  // Fallback values based on :
+  // https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
+  // These values are reasonable defaults but will be less accurate
+  //   return {
+  //     [FEE_LEVELS.LOW]: Math.max(originalFeeRate * 1.5, 20.09),
+  //     [FEE_LEVELS.MEDIUM]: Math.max(originalFeeRate * 2, 32.75),
+  //     [FEE_LEVELS.HIGH]: Math.max(originalFeeRate * 3, 32.75),
+  //   };
+  // }, [originalFeeRate, recommendation]);
 
   // Calculate max fee rate
   const maxFeeRate = useMemo(() => {
+    const vsize = analysis?.vsize ?? 1; // Prevent division by undefined/zero
+    const estimatedRbfFee = Number(analysis?.estimatedRBFFee) || 0;
     const highestRecommended = Math.max(
-      recommendation?.suggestedRBFFeeRate || 0,
-      recommendation?.networkFeeEstimates?.highPriority || 0,
+      vsize > 0 ? estimatedRbfFee / vsize : 0,
+      feeEstimates[FEE_LEVELS.HIGH] || 0,
     );
 
     return Math.max(
@@ -157,12 +189,12 @@ export const RBFForm: React.FC = () => {
       highestRecommended,
       100, // Maximum ceiling of 100 sat/vB
     );
-  }, [originalFeeRate, recommendation]);
+  }, [originalFeeRate, analysis, feeEstimates]);
 
   // Handle RBF type change
   const handleRbfTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value as RbfType;
-    dispatch(setRbfType(value));
+    setRbfType(value);
   };
 
   // Handle fee level change
@@ -176,17 +208,13 @@ export const RBFForm: React.FC = () => {
         return;
       }
 
-      // For predefined levels, update priority and fee rate
-      const newPriority: FeePriority =
-        FEE_LEVEL_TO_PRIORITY_MAP[newFeeLevel] || selectedPriority;
-
-      if (feeLevels[newFeeLevel]) {
-        const newFeeRate = Math.ceil(feeLevels[newFeeLevel]);
-        dispatch(setFeeBumpPriority(newPriority));
-        dispatch(setFeeBumpRate(newFeeRate));
+      if (feeEstimates[newFeeLevel]) {
+        const newFeeRate = Math.ceil(feeEstimates[newFeeLevel]);
+        setFeeBumpPriority(newFeeLevel);
+        setFeeBumpRate(newFeeRate);
       }
     },
-    [feeLevels, selectedPriority],
+    [feeEstimates],
   );
 
   // Handle slider change
@@ -194,7 +222,7 @@ export const RBFForm: React.FC = () => {
     (_event: Event, newValue: number | number[]) => {
       const value = newValue as number;
       setCurrentFeeLevel(FEE_LEVELS.CUSTOM); // Switch to custom when using slider
-      dispatch(setFeeBumpRate(value));
+      setFeeBumpRate(value);
     },
     [],
   );
@@ -205,7 +233,7 @@ export const RBFForm: React.FC = () => {
       const value = parseInt(event.target.value);
       if (!isNaN(value) && value >= minimumFeeRate) {
         setCurrentFeeLevel(FEE_LEVELS.CUSTOM); // Switch to custom when using slider
-        dispatch(setFeeBumpRate(value));
+        setFeeBumpRate(value);
       }
     },
     [minimumFeeRate],
@@ -215,40 +243,40 @@ export const RBFForm: React.FC = () => {
   const handleCancelAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    dispatch(setCancelAddress(event.target.value));
+    setCancelAddress(event.target.value);
   };
 
   const handleChangeAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    dispatch(setChangeAddress(event.target.value));
+    setChangeAddress(event.target.value);
   };
 
   // Handle form submission
-  const handleSubmit = () => {
-    if (!isRbfFormValid) return;
+  // const handleSubmit = () => {
+  //   if (!isRbfFormValid) return;
 
-    handleSubmitRBF({
-      isCancel: rbfType === RBF_TYPES.CANCEL,
-      cancelAddress: rbfType === RBF_TYPES.CANCEL ? cancelAddress : undefined,
-      changeAddress:
-        rbfType === RBF_TYPES.ACCELERATE && changeAddress
-          ? changeAddress
-          : undefined,
-    });
-  };
+  //   handleSubmitRBF({
+  //     isCancel: rbfType === RBF_TYPES.CANCEL,
+  //     cancelAddress: rbfType === RBF_TYPES.CANCEL ? cancelAddress : undefined,
+  //     changeAddress:
+  //       rbfType === RBF_TYPES.ACCELERATE && changeAddress
+  //         ? changeAddress
+  //         : undefined,
+  //   });
+  // };
 
   // Update local fee level when priority changes from Redux
-  useEffect(() => {
-    const priorityFeeLevel = PRIORITY_TO_FEE_LEVEL[selectedPriority];
-    if (priorityFeeLevel) {
-      setCurrentFeeLevel(priorityFeeLevel);
-    }
-  }, [selectedPriority]);
+  // useEffect(() => {
+  //   const priorityFeeLevel = PRIORITY_TO_FEE_LEVEL[selectedPriority];
+  //   if (priorityFeeLevel) {
+  //     setCurrentFeeLevel(priorityFeeLevel);
+  //   }
+  // }, [selectedPriority]);
 
   // Check if current fee rate matches any predefined level
-  const isCustomFeeRate = !Object.values(feeLevels).some(
-    (level) => Math.ceil(level) === selectedFeeRate,
+  const isCustomFeeRate = !Object.values(feeEstimates).some(
+    (level) => Math.ceil(level) === feeBumpRate,
   );
 
   // Show custom slider if:
@@ -394,7 +422,7 @@ export const RBFForm: React.FC = () => {
                   <Typography variant="body2">
                     Economy
                     <Chip
-                      label={`${Math.ceil(feeLevels[FEE_LEVELS.LOW])} sat/vB`}
+                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.LOW])} sat/vB`}
                       size="small"
                       sx={{ ml: 1 }}
                       style={{
@@ -414,7 +442,7 @@ export const RBFForm: React.FC = () => {
                   <Typography variant="body2">
                     Standard
                     <Chip
-                      label={`${Math.ceil(feeLevels[FEE_LEVELS.MEDIUM])} sat/vB`}
+                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.MEDIUM])} sat/vB`}
                       size="small"
                       sx={{ ml: 1 }}
                       style={{
@@ -434,7 +462,7 @@ export const RBFForm: React.FC = () => {
                   <Typography variant="body2">
                     Priority
                     <Chip
-                      label={`${Math.ceil(feeLevels[FEE_LEVELS.HIGH])} sat/vB`}
+                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.HIGH])} sat/vB`}
                       size="small"
                       sx={{ ml: 1 }}
                       style={{
@@ -455,7 +483,7 @@ export const RBFForm: React.FC = () => {
                     Custom
                     {currentFeeLevel === FEE_LEVELS.CUSTOM && (
                       <Chip
-                        label={`${selectedFeeRate} sat/vB`}
+                        label={`${feeBumpRate} sat/vB`}
                         size="small"
                         sx={{ ml: 1 }}
                         style={{
@@ -475,7 +503,7 @@ export const RBFForm: React.FC = () => {
         {showCustomSlider && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Slider
-              value={selectedFeeRate}
+              value={feeBumpRate}
               onChange={handleSliderChange}
               aria-labelledby="fee-rate-slider"
               min={Math.round(minimumFeeRate * 1000) / 1000}
@@ -498,7 +526,7 @@ export const RBFForm: React.FC = () => {
 
             {/* Numeric input synced to the slider */}
             <TextField
-              value={selectedFeeRate}
+              value={feeBumpRate}
               onChange={handleInputChange}
               type="number"
               InputProps={{
@@ -565,7 +593,7 @@ export const RBFForm: React.FC = () => {
 
       {/* Submit button */}
       <Box display="flex" justifyContent="flex-end">
-        <Button
+        {/* <Button
           variant="contained"
           color="primary"
           onClick={handleSubmit}
@@ -575,7 +603,7 @@ export const RBFForm: React.FC = () => {
           {isCreatingRBF
             ? "Creating Transaction..."
             : `Create ${rbfType === RBF_TYPES.CANCEL ? "Cancel" : "Accelerated"} Transaction`}
-        </Button>
+        </Button> */}
       </Box>
     </Paper>
   );
