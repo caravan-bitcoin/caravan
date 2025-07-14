@@ -1,22 +1,11 @@
 import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
-<<<<<<< HEAD
 import path from "path";
 import fs from "fs";
 
 import bitcoinClient from "./bitcoinClient";
 import createTestWallets, {checkDockerAvailability} from "./testFixtures"
 import { TestState } from "./types";
-=======
-import bitcoinClient from "./bitcoinClient";
-import createTestWallets, {checkDockerAvailability} from "./testFixtures"
-
-
-const globalWalletData ={
-    walletNames: [] as string[],
-    testWallets: [] as any[]
-}
->>>>>>> main
 
 async function globalSetup(_config: FullConfig){
 
@@ -31,7 +20,6 @@ async function globalSetup(_config: FullConfig){
 
     const {walletNames, testWallets} = await createTestWallets(client!);
 
-<<<<<<< HEAD
     const newAddress = await client?.getNewAddress(walletNames[0]);
 
     console.log("new Address",newAddress)
@@ -58,14 +46,6 @@ async function globalSetup(_config: FullConfig){
 
     fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
     process.env.TEST_STATE_FILE = testStateFile
-=======
-    globalWalletData.walletNames = walletNames;
-    globalWalletData.testWallets = testWallets;
-
-    //storing in process.env to access in the test fle
-    process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
-    process.env.TEST_WALLETS = JSON.stringify(testWallets)
->>>>>>> main
 
    } catch (error) {
     console.log("Global setup failed:", error)
