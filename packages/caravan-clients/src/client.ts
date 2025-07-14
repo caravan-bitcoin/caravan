@@ -642,66 +642,95 @@ export class BlockchainClient extends ClientBase {
   count: number = 10,
   skip: number = 0,
   includeWatchOnly: boolean = true
-): Promise<TransactionDetails[]> {
-  try {
-    // Validate parameters
-    if (count < 1 || count > 100) {
-      throw new Error("Count must be between 1 and 100");
-    }
-    
-    if (skip < 0) {
-      throw new Error("Skip must be non-negative");
-    }
+  ): Promise<TransactionDetails[]> {
+  // Validate parameters
+  if (count < 1 || count > 100) {
+    throw new Error("Count must be between 1 and 100");
+  }
+  if (skip < 0) {
+    throw new Error("Skip must be non-negative");
+  }
 
+  try {
     if (this.type === ClientType.PRIVATE) {
       if (!this.bitcoindParams.walletName) {
-        throw new Error(
-          "Wallet name is required for private client transaction listings"
-        );
+        throw new Error("Wallet name is required for private client transaction listings");
       }
 
-      const response = (await callBitcoindWallet({
+      // Get all wallet transactions and filter by address
+      const response = await callBitcoindWallet({
         baseUrl: this.bitcoindParams.url,
         walletName: this.bitcoindParams.walletName,
         auth: this.bitcoindParams.auth,
         method: "listtransactions",
-        params: [address, count, skip, includeWatchOnly],
-      })) as any;
+        params: ["*", count * 5 + skip, skip, includeWatchOnly], // Get extra to account for filtering
+      });
 
-      if (response?.result) {
-        return response.result;
+      if (!response?.result || !Array.isArray(response.result)) {
+        throw new Error("Failed to retrieve transactions from Bitcoin Core");
       }
 
-      throw new Error("Failed to retrieve transactions list");
+      // Filter transactions for the specific address
+      const addressTransactions = response.result.filter(
+        (tx: any) => tx.address === address
+      ).slice(0, count); // Limit to requested count
+
+      // Get detailed info and normalize each transaction
+      const detailedTransactions = await Promise.all(
+        addressTransactions.map(async (tx: any) => {
+          const txResponse = await callBitcoindWallet({
+            baseUrl: this.bitcoindParams.url,
+            walletName: this.bitcoindParams.walletName,
+            auth: this.bitcoindParams.auth,
+            method: "gettransaction",
+            params: [tx.txid, true, true],
+          });
+          
+          return normalizeTransactionData(txResponse.result as any, ClientType.PRIVATE);
+        })
+      );
+
+      return detailedTransactions;
     }
+
+    // Public client (Mempool/Blockstream)
+    if (!this.provider) {
+      throw new Error("Provider must be specified for public clients");
+    }
+
+    let endpoint = "";    
+    if (this.provider === PublicBitcoinProvider.MEMPOOL) {
+      // Mempool API doesn't respect count properly for busy addresses
+      // Request more than needed and slice client-side
+      const safeCount = Math.max(count * 2, 25); // Request at least 25 or double what's needed
+      endpoint = `/address/${address}/txs?count=${safeCount}&skip=${skip}`;
+    } else if (this.provider === PublicBitcoinProvider.BLOCKSTREAM) {
+      // Blockstream API respects pagination properly
+      endpoint = `/address/${address}/txs?limit=${count}&offset=${skip}`;
+    } else {
+      throw new Error(`Unsupported provider: ${this.provider}`);
+    }
+
+    const rawTransactions = await this.Get(endpoint);
     
-    // Public client implementation
-    if (this.provider !== PublicBitcoinProvider.MEMPOOL) {
-      throw new Error("Only Mempool provider is supported for public address transactions");
+    if (!Array.isArray(rawTransactions)) {
+      throw new Error("Invalid response format from API");
     }
 
-    // Handle network-specific base URLs
-    let basePath = "";
-    switch (this.network) {
-      case Network.MAINNET:
-        basePath = "";
-        break;
-      case Network.TESTNET:
-        basePath = "/testnet";
-        break;
-      case Network.SIGNET:
-        basePath = "/signet";
-        break;    
-      default:
-        throw new Error("Unsupported network for public transactions");
-    }
+    // Handle pagination issues - slice to requested count
+    const limitedTransactions = rawTransactions.slice(0, count);
 
-    const result = await this.Get(`${basePath}/api/address/${address}/txs?count=${count}&skip=${skip}`);
-    return result;
+    // Normalize each transaction
+    const normalizedTransactions = limitedTransactions.map((rawTx: any) => 
+      normalizeTransactionData(rawTx as any, ClientType.PUBLIC)
+    );
+
+    return normalizedTransactions;
+
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
+    }
   }
-}
 
   /**
    * Gets detailed information about a wallet transaction including fee information
