@@ -119,8 +119,8 @@ export const fetchTransactionCoins = async (
   txid: string,
   client: BlockchainClient,
 ) => {
-  const coins = new Map<string, Coin>();
   const transaction = await client.getTransaction(txid);
+  const coins = new Map<string, Coin>();
   for (const input of transaction.vin) {
     const { txid, vout } = input;
 
@@ -155,29 +155,4 @@ export const fetchTransactionCoins = async (
     });
   }
   return coins;
-};
-
-/**
- * @description Fetches all the coins for a given transaction.
- * @param txid - The transaction ID to fetch coins from
- * @returns The coins from the transaction
- */
-export const useTransactionCoins = (txid: string) => {
-  const client = useGetClient();
-  const { data: transaction } = useFetchTransactionDetails(txid);
-
-  return useQuery({
-    queryKey: transactionKeys.coins(txid),
-    queryFn: async () => {
-      if (!transaction) {
-        throw new Error("Transaction not found");
-      }
-      const coins = await fetchTransactionCoins(txid, client);
-      return {
-        transaction,
-        coins,
-      };
-    },
-    enabled: !!transaction && !!client,
-  });
 };

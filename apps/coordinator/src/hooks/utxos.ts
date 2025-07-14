@@ -5,6 +5,7 @@ import { UTXO } from "@caravan/fees";
 import { Coin, fetchTransactionCoins } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
+import { TransactionDetails } from "@caravan/clients";
 
 /*
  * need to create a function that given a coin and a slice returns a utxo that can be used
@@ -88,6 +89,47 @@ const getCoinFromSliceUtxos = (slice: Slice): Coin[] => {
 };
 
 /**
+ * Efficiently combines and deduplicates UTXOs from multiple sources for fee bumping
+ *
+ * This function merges UTXOs from pending transactions (required for RBF) with
+ * additional wallet UTXOs (available for adding inputs). It uses an optimized
+ * deduplication strategy to handle large UTXO sets efficiently.
+ *
+ * The order matters: pending UTXOs are prioritized because they're required
+ * for Replace-by-Fee operations, while wallet UTXOs provide additional
+ * flexibility for fee bumping strategies.
+ *
+ * @param pendingUtxos - UTXOs from the pending transaction being fee-bumped
+ * @param walletUtxos - Additional UTXOs from wallet for fee bumping flexibility
+ * @returns Deduplicated array of UTXOs prioritized for fee bumping operations
+ *
+ * @performance Uses Set-based deduplication for O(1) lookup performance
+ * @performance Processes UTXOs in single pass for optimal memory usage
+ *
+ * @example
+ * const combinedUtxos = extractSpendableUtxos(
+ *   pendingTransactionUtxos, // From usePendingUtxos hook
+ *   availableWalletUtxos     // From useWalletUtxos hook
+ * );
+ */
+export const extractSpendableUtxos = (
+  pendingUtxos: UTXO[],
+  walletUtxos: UTXO[],
+): UTXO[] => {
+  const processedUtxoKeys = new Set<string>();
+
+  // Helper function to create unique UTXO identifier
+  const createUtxoKey = (utxo: UTXO): string => `${utxo.txid}:${utxo.vout}`;
+
+  return [...pendingUtxos, ...walletUtxos].filter((utxo) => {
+    const key = createUtxoKey(utxo);
+    if (processedUtxoKeys.has(key)) return false;
+    processedUtxoKeys.add(key);
+    return true;
+  });
+};
+
+/**
  * @description Given a pending transaction from the current wallet, returns an array
  * of UTXO objects that can be used in a fee bumping transaction.
  * @param txid - The transaction ID to fetch utxos from
@@ -139,10 +181,23 @@ export const usePendingUtxos = (txid: string) => {
  */
 export const useWalletUtxos = () => {
   const walletSlices = useSelector(getWalletSlices);
+  return walletSlices.flatMap(getCoinFromSliceUtxos).map(getUtxoFromCoin);
+};
 
-  const utxos = useMemo(() => {
-    return walletSlices.flatMap(getCoinFromSliceUtxos).map(getUtxoFromCoin);
-  }, [walletSlices]);
+export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
+  const {
+    utxos: pendingUtxos,
+    isLoading,
+    isError,
+  } = usePendingUtxos(transaction?.txid || "");
+  const walletUtxos = useWalletUtxos();
 
-  return utxos;
+  // Memoize the combined UTXOs so it only recalculates when dependencies change
+  const availableUtxos = useMemo(() => {
+    // Return empty array if no transaction
+    if (!transaction) return [];
+    return extractSpendableUtxos(pendingUtxos || [], walletUtxos || []);
+  }, [pendingUtxos, walletUtxos, transaction]);
+
+  return { availableUtxos, isLoading, isError };
 };

@@ -101,7 +101,7 @@ export const getWalletSlices = createSelector(
   ],
 );
 
-const getAddressType = (state: WalletState): string =>
+export const getAddressType = (state: WalletState): string =>
   state.settings.addressType;
 const getNetwork = (state: WalletState): string => state.settings.network;
 const getTotalSigners = (state: WalletState): number =>
