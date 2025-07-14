@@ -187,7 +187,6 @@ export class BitcoinCoreService {
     }
     return parsedAddressDescriptors;
   }
-
   async checkBalance(walletName: string) {
     try {
       const walletClient = this.getWalletClient(walletName);
@@ -196,6 +195,62 @@ export class BitcoinCoreService {
       return balance;
     } catch (error) {
       console.log("error", error);
+    }
+  }
+
+  async getNewAddress(walletName: string){
+    try{
+
+      const client = this.getWalletClient(walletName);
+
+      const address = await client?.command("getnewaddress")
+      return address;
+
+    }catch(error){
+      console.log("error",error)
+    }
+  }
+
+  async fundAddress(address: string,walletName: string ,blocks?: number ){
+    try {
+
+      let blockHashes = await this.client?.command("generatetoaddress",blocks ?? 101, address);
+
+      const balance = await this.checkAddressBalance(address,walletName);
+
+      if(blockHashes.length == (blocks ?? 101) && balance > 0) return balance;
+
+      return false;
+
+    } catch (error) {
+      console.log("error",error)
+      return false;
+    }
+  }
+
+  async checkAddressBalance(address:string, walletName: string){
+    try {
+      const walletClient = this.getWalletClient(walletName);
+      const balance = await walletClient?.command("getreceivedbyaddress",address);
+      return balance;
+      
+    } catch (error) {
+      console.log("error",error)
+      return 0;
+    }
+  }
+
+  async sendToAddress(WalletName: string, toAddress: string, amount: number){
+    try {
+      const walletClient = this.getWalletClient(WalletName);
+
+      let txid = await walletClient?.command("sendtoaddress",toAddress,amount);
+
+      return txid;
+      
+    } catch (error) {
+      console.log("error",error)
+      return null;
     }
   }
 }

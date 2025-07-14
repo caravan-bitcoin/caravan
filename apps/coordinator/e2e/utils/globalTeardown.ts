@@ -25,6 +25,10 @@ async function globalTeardown(_config: FullConfig) {
     }
 
     //removing docker containers after use
+    // execSync("docker compose down", {
+    //   cwd: process.cwd(),
+    //   stdio: "inherit",
+    // });
     execSync("docker compose stop", {
       cwd: path.join(process.cwd(),"e2e"),
       stdio: "inherit",

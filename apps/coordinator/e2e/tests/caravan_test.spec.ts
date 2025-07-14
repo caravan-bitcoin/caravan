@@ -3,11 +3,18 @@ import bitcoinClient from "../utils/bitcoinClient";
 import { clientConfig } from "../utils/bitcoinClient";
 import setupPrivateClient from "../testhelpers/clientHelpers"
 
+import { testStateManager } from "../utils/testState";
+import path from "path"
+import fs from "fs"
 
 test.describe("Caravan Wallet Creation", () => {
-  let testWallets: any[] = [];
   let walletNames: string[] = []
   let client = bitcoinClient();
+  
+  
+  const downloadDir = path.join(process.cwd(),'e2e/downloads');
+  let downloadedWalletFile: string;
+
 
   const connectionScenarios = [
     {
@@ -37,11 +44,17 @@ test.describe("Caravan Wallet Creation", () => {
   test.beforeAll(async () => {
     // Setting up test wallets...
 
-    if(process.env.TEST_WALLET_NAMES && process.env.TEST_WALLETS){
-      walletNames= JSON.parse(process.env.TEST_WALLET_NAMES);
-      testWallets = JSON.parse(process.env.TEST_WALLETS)
-    }else{
-      console.log("Error in global setup while creating wallets")
+    //create download dir if not exists
+    if(!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir,{recursive: true})
+    }
+
+    try {
+      const state = testStateManager.getState();
+      walletNames = state.test_wallet_names;
+
+    } catch (error) {
+      console.log("Error in global setup while creating wallets:", error);
     }
   });
 
@@ -98,41 +111,65 @@ test.describe("Caravan Wallet Creation", () => {
     const p2pkh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
       ?.p2pkh.xpub as string;
 
+   //filling xpub1 
     await page.click("div#public-key-1-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    //filling xpub1 
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub1);
 
     await page.click("button[type=button]:has-text('Enter')");
 
-   
+      //filling xpub2
     await page.click("div#public-key-2-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    //filling xpub2
+    
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub2);
     
     await page.click("button[type=button]:has-text('Enter')");
 
+    //filling xpub3
     await page.click("div#public-key-3-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
     
-    //filling xpub3
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub3);
 
     await page.click("button[type=button]:has-text('Enter')");
 
-    await page.locator("button#confirm-wallet[type='button']").click()
+    const downloadPromise = page.waitForEvent('download');
 
+    await page.click('button[type=button]:has-text("Download Wallet Details")');
+
+    //Wait for download to complete
+    const download = await downloadPromise;
+
+    const suggestedFilename = download.suggestedFilename();
+
+    //Save the file to our created download dir
+
+    downloadedWalletFile = path.join(downloadDir,suggestedFilename);
+    await download.saveAs(downloadedWalletFile);
+
+    expect(fs.existsSync(downloadedWalletFile)).toBe(true);
+
+    const walletData = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
+
+    expect(walletData).toHaveProperty('name');
+    expect(walletData).toHaveProperty('network');
+    expect(walletData).toHaveProperty('addressType');
+    expect(walletData).toHaveProperty('extendedPublicKeys');
+
+    // Store the downloaded file path in shared state
+    testStateManager.updateState({ downloadWalletFile: downloadedWalletFile });
+    
   });
 });
