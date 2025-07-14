@@ -15,7 +15,6 @@ import { FeePriority, useFeeEstimates } from "clients/fees";
 import { HelpInformation } from "./HelpInformation";
 
 import { StrategyRadioGroup } from "./StrategyRadioGroup";
-import { useAnalyzeTransaction } from "../../hooks";
 
 /**
  * Component for selecting a fee bumping strategy (RBF or CPFP)
@@ -26,15 +25,12 @@ import { useAnalyzeTransaction } from "../../hooks";
  */
 export const FeeStrategySelector: React.FC = () => {
   const {
-    transaction,
-    txHex,
     setStrategy,
     state: { selectedStrategy },
+    analysis,
   } = useAccelerationModal();
   const { data: networkFeeEstimates, isLoading: isLoadingFeeEstimates } =
     useFeeEstimates();
-
-  const { analysis } = useAnalyzeTransaction(transaction, txHex);
 
   if (!analysis?.recommendedStrategy || isLoadingFeeEstimates) {
     return null;

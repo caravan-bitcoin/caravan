@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -37,7 +37,6 @@ import { formatFee } from "../../utils";
 // } from "../../context";
 import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../AccelerationModalContext";
-import { useAnalyzeTransaction } from "../hooks";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -82,8 +81,8 @@ export const RBFForm: React.FC = () => {
   //   dispatch,
   //   isCreatingRBF,
   // } = useFeeBumpContext();
-  const { transaction, txHex } = useAccelerationModal();
-  const { analysis } = useAnalyzeTransaction(transaction, txHex);
+  const { transaction, analysis } = useAccelerationModal();
+
   const [rbfType, setRbfType] = useState<RbfType>("accelerate");
   const { data: feeEstimates } = useFeeEstimates();
   const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(

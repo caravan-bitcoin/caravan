@@ -7,6 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { FeeBumpStrategy, TxAnalysis } from "@caravan/fees";
+import { useAnalyzeTransaction } from "./hooks";
 
 // =============================================================================
 // STATE TYPES
@@ -141,6 +142,9 @@ function accelerationModalReducer(
 interface AccelerationModalContextType {
   transaction: TransactionDetails;
   txHex: string;
+  analysis: TxAnalysis | null;
+  analysisIsLoading: boolean;
+  analysisError: string | null;
 
   // State
   state: AccelerationModalState;
@@ -191,7 +195,10 @@ export function AccelerationModalProvider({
   txHex,
 }: AccelerationModalProviderProps) {
   const [state, dispatch] = useReducer(accelerationModalReducer, initialState);
-
+  const { analysis, isLoading, error } = useAnalyzeTransaction(
+    transaction,
+    txHex,
+  );
   // Action creators
   const setActiveStep = useCallback((step: number) => {
     dispatch({ type: "SET_ACTIVE_STEP", payload: step });
@@ -252,6 +259,9 @@ export function AccelerationModalProvider({
     isLastStep,
     canGoNext,
     canGoBack,
+    analysis,
+    analysisIsLoading: isLoading,
+    analysisError: error,
   };
 
   return (

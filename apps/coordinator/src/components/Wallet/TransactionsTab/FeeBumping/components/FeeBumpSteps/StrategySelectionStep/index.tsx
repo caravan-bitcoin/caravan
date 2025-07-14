@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { FeeStrategySelector } from "./FeeStrategySelector";
 import { useAccelerationModal } from "../../AccelerationModalContext";
-import { useAnalyzeTransaction } from "../../hooks";
 
 /**
  * Step 1: Strategy Selection
@@ -18,15 +17,14 @@ import { useAnalyzeTransaction } from "../../hooks";
  * FeeStrategySelector once analysis is complete.
  */
 export const StrategySelectionStep: React.FC = () => {
-  const { transaction, txHex } = useAccelerationModal();
-  const { analysis, isLoading } = useAnalyzeTransaction(transaction, txHex);
+  const { analysis, analysisIsLoading } = useAccelerationModal();
 
   // If we have a recommendation, show the strategy selector
   if (analysis?.recommendedStrategy) {
     return <FeeStrategySelector />;
   }
 
-  if (isLoading) {
+  if (analysisIsLoading) {
     return (
       <Box sx={{ py: 2, textAlign: "center" }}>
         <LinearProgress />

@@ -4,7 +4,7 @@ import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
 import { selectWalletConfig } from "selectors/wallet";
 import { useSelector } from "react-redux";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
 
@@ -43,6 +43,14 @@ export const useAnalyzeTransaction = (
     useSelector(selectWalletConfig);
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isErrorAvailableUtxos) {
+      setError("There was an error getting available utxos");
+    } else {
+      setError("");
+    }
+  }, [isErrorAvailableUtxos]);
 
   const analysis = useMemo(() => {
     if (
@@ -89,9 +97,8 @@ export const useAnalyzeTransaction = (
   ]);
 
   return {
-    analysis,
+    analysis: analysis ?? null,
     error,
     isLoading: isLoadingAvailableUtxos || isLoadingFeeEstimates,
-    isError: isErrorAvailableUtxos,
   };
 };

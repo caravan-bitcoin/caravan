@@ -30,7 +30,6 @@ import {
   AccelerationModalProvider,
   useAccelerationModal,
 } from "./AccelerationModalContext";
-import { useAnalyzeTransaction } from "./hooks";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -66,7 +65,6 @@ const STEP_CONFIGS = [
   {
     label: "Configure Transaction",
     component: ConfigurationStep,
-    // component: () => <div>ConfigurationStep</div>,
   },
   // {
   //   label: "Review and Download",
@@ -117,19 +115,18 @@ const AccelerationModalContent: React.FC<
     },
     nextStep,
     previousStep,
-    setDownloadClicked,
-    setPSBTVersionDialog,
-    setErrorDetails,
-    setPSBTVersion,
+    setDownloadClicked, // can probably be removed
+    setPSBTVersionDialog, // can probably be removed
+    setErrorDetails, // can probably be removed
+    setPSBTVersion, // can probably be removed
     resetWizard,
     isLastStep,
     canGoNext,
     canGoBack,
     transaction,
-    txHex,
+    analysisIsLoading,
+    analysisError,
   } = useAccelerationModal();
-
-  const { isLoading, isError } = useAnalyzeTransaction(transaction, txHex);
 
   const handleConfirmDownload = useCallback(() => {
     // TODO: Replace with actual result from fee bump context
@@ -208,7 +205,7 @@ const AccelerationModalContent: React.FC<
   }, [open, transaction, resetWizard]);
 
   const Content = () => {
-    if (isLoading || !CurrentStepComponent) {
+    if (analysisIsLoading || !CurrentStepComponent) {
       return (
         <Box
           display="flex"
@@ -220,7 +217,7 @@ const AccelerationModalContent: React.FC<
         </Box>
       );
     }
-    if (isError) {
+    if (analysisError) {
       return (
         <ErrorDialog
           error="Failed to load available UTXOs"
