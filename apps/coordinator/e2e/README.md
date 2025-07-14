@@ -68,7 +68,7 @@ No manual Docker commands needed! Turbo handles build dependencies automatically
 - **"Docker is required"**: Install Docker and make sure it's running
 - **Port conflicts**: Ensure ports 5173, 8080, and 18443 are free
 - **Build issues**: Run `npm run build --filter=caravan-coordinator` from project root first
-- **Turbo cache issues**: Clear cache with `npx turbo clean`
+- **Turbo cache issues**: Clear cache with `npm run clean` from project root, or manually with `rm -rf .turbo`
 
 ## Manual Control (Optional)
 

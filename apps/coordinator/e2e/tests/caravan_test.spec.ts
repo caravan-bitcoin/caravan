@@ -120,7 +120,6 @@ test.describe("Caravan Wallet Creation", () => {
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub1);
 
     await page.click("button[type=button]:has-text('Enter')");

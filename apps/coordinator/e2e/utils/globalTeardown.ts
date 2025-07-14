@@ -14,7 +14,7 @@ async function globalTeardown(_config: FullConfig) {
 
       for (const walletName in walletNames) {
         try {
-          const exist = await client?.walletexists(walletName);
+          const exist = await client?.walletExists(walletName);
           if (exist) {
             await client?.unloadWallet(walletName);
           }

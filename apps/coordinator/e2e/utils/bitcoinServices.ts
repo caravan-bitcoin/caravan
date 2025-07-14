@@ -101,7 +101,11 @@ export class BitcoinCoreService {
     }
   }
 
+<<<<<<< HEAD
   async walletexists(walletName: string): Promise<boolean> {
+=======
+  async walletExists(walletName: string): Promise<boolean> {
+>>>>>>> main
     try {
       const wallets = await this.listWallets();
 
@@ -187,7 +191,11 @@ export class BitcoinCoreService {
     }
     return parsedAddressDescriptors;
   }
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> main
   async checkBalance(walletName: string) {
     try {
       const walletClient = this.getWalletClient(walletName);
@@ -198,6 +206,7 @@ export class BitcoinCoreService {
       console.log("error", error);
     }
   }
+<<<<<<< HEAD
 
   async getNewAddress(walletName: string){
     try{
@@ -254,4 +263,6 @@ export class BitcoinCoreService {
       return null;
     }
   }
+=======
+>>>>>>> main
 }
