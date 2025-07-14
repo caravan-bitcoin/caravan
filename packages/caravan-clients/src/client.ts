@@ -642,7 +642,7 @@ export class BlockchainClient extends ClientBase {
   count: number = 10,
   skip: number = 0,
   includeWatchOnly: boolean = true
-): Promise<any[]> {
+): Promise<TransactionDetails[]> {
   try {
     // Validate parameters
     if (count < 1 || count > 100) {
