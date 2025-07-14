@@ -1,12 +1,30 @@
 import { TransactionAnalyzer } from "@caravan/fees";
-import { validateTransactionInputs } from "../utils";
+import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
-import { useGetAvailableUtxos } from "../context/hooks";
 import { selectWalletConfig } from "selectors/wallet";
 import { useSelector } from "react-redux";
 import { useMemo, useState } from "react";
 import { TransactionDetails } from "@caravan/clients";
+import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
+
+export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
+  const {
+    utxos: pendingUtxos,
+    isLoading,
+    isError,
+  } = usePendingUtxos(transaction?.txid || "");
+  const walletUtxos = useWalletUtxos();
+
+  // Memoize the combined UTXOs so it only recalculates when dependencies change
+  const availableUtxos = useMemo(() => {
+    // Return empty array if no transaction
+    if (!transaction) return [];
+    return extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []);
+  }, [pendingUtxos, walletUtxos, transaction]);
+
+  return { availableUtxos, isLoading, isError };
+};
 
 export const useAnalyzeTransaction = (
   transaction: TransactionDetails,
@@ -17,8 +35,10 @@ export const useAnalyzeTransaction = (
     isLoading: isLoadingAvailableUtxos,
     isError: isErrorAvailableUtxos,
   } = useGetAvailableUtxos(transaction!);
+
   const { data: feeEstimates, isLoading: isLoadingFeeEstimates } =
     useFeeEstimates();
+
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
 
@@ -60,7 +80,7 @@ export const useAnalyzeTransaction = (
   }, [
     transaction?.txid,
     txHex,
-    availableUtxos.length,
+    availableUtxos,
     feeEstimates,
     network,
     addressType,

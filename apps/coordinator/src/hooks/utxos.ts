@@ -1,9 +1,10 @@
 import { useSelector } from "react-redux";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getWalletSlices, Slice, UTXO as SliceUTXO } from "selectors/wallet";
 import { UTXO } from "@caravan/fees";
-import { Coin, useTransactionCoins } from "clients/transactions";
+import { Coin, fetchTransactionCoins } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
+import { useGetClient } from "hooks/client";
 
 /*
  * need to create a function that given a coin and a slice returns a utxo that can be used
@@ -93,11 +94,24 @@ const getCoinFromSliceUtxos = (slice: Slice): Coin[] => {
  * @returns The utxos from the transaction
  */
 export const usePendingUtxos = (txid: string) => {
-  const { data, isLoading, isError } = useTransactionCoins(txid);
+  const client = useGetClient();
   const walletSlices = useSelector(getWalletSlices);
+  const [coins, setCoins] = useState<Map<string, Coin>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    if (client && txid) {
+      setIsLoading(true);
+      fetchTransactionCoins(txid, client)
+        .then(setCoins)
+        .catch(setIsError)
+        .finally(() => setIsLoading(false));
+    }
+  }, [client, txid]);
 
   const utxos = useMemo(() => {
-    if (!data || !data.coins || data.transaction.status?.confirmed) {
+    if (!coins || coins.size === 0) {
       return [];
     }
 
@@ -106,13 +120,13 @@ export const usePendingUtxos = (txid: string) => {
       walletSlices.map((slice) => [slice.multisig.address, slice]),
     );
 
-    return Array.from(data.coins.values())
+    return Array.from(coins.values())
       .filter((coin) => addressToSlice.has(coin.address))
       .map((coin) => {
         coin.slice = addressToSlice.get(coin.address);
         return getUtxoFromCoin(coin);
       });
-  }, [data, walletSlices]);
+  }, [coins, walletSlices]);
 
   return { utxos, isLoading, isError };
 };

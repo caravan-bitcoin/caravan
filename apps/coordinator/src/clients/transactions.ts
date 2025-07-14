@@ -115,11 +115,12 @@ export interface Coin {
 }
 
 // Service function for fetching transaction coins (spendable outputs from prev txs)
-const fetchTransactionCoins = async (
-  transaction: TransactionDetails,
+export const fetchTransactionCoins = async (
+  txid: string,
   client: BlockchainClient,
 ) => {
   const coins = new Map<string, Coin>();
+  const transaction = await client.getTransaction(txid);
   for (const input of transaction.vin) {
     const { txid, vout } = input;
 
@@ -171,7 +172,7 @@ export const useTransactionCoins = (txid: string) => {
       if (!transaction) {
         throw new Error("Transaction not found");
       }
-      const coins = await fetchTransactionCoins(transaction, client);
+      const coins = await fetchTransactionCoins(txid, client);
       return {
         transaction,
         coins,
