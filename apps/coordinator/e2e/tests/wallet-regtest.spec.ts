@@ -24,59 +24,31 @@ test.describe("Wallet Regtest Configuration", () => {
         fs.readFileSync(downloadedWalletFile, "utf-8"),
       );
 
-      console.log("downloadedWallet",downloadedWalletFile);
-
-      console.log("walletconfig",walletConfig)
-
-      console.log("Original wallet config network:", walletConfig.network);
-
       walletConfig.network = "regtest";
       walletConfig.client.url = "http://localhost:8080";
-
-      console.log("walletconfig",walletConfig)
-
-      console.log("Original wallet config network after:", walletConfig.network);
 
       const allWalletNames = testStateManager.getWalletsNames();
       // Only use the first 3 wallets (signing wallets), not the watcher wallet
       const walletNames = allWalletNames.slice(0, 3);
 
       // Extract descriptors for all wallets efficiently using helper with client
-      console.log("All wallets:", allWalletNames);
-      console.log("Using first 3 wallets for multisig:", walletNames);
       const { xfps, formattedPaths } = await extractThreeWalletDescriptors(walletNames, client);
-      console.log("Extracted xfps:", xfps);
-      console.log("Extracted formattedPaths:", formattedPaths);
 
-      console.log("BEFORE updating extendedPublicKeys:");
       walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
-        console.log(`Key ${index}: xfp='${key.xfp}', bip32Path='${key.bip32Path}'`);
       });
 
       walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
-        console.log(`Updating key ${index}: xfp=${xfps[index]} -> bip32Path=${formattedPaths[index]}`);
         key.xfp = xfps[index];
         key.bip32Path = formattedPaths[index];
       });
 
-      console.log("AFTER updating extendedPublicKeys:");
       walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
-        console.log(`Key ${index}: xfp='${key.xfp}', bip32Path='${key.bip32Path}'`);
       });
-      console.log("path1 check", formattedPaths[0]);
 
-      
-
+    
       // Save the modified file
-      console.log("Writing updated config to file:", downloadedWalletFile);
       const configToWrite = JSON.stringify(walletConfig, null, 2);
       fs.writeFileSync(downloadedWalletFile, configToWrite);
-      
-      // Verify the file was written correctly
-      const writtenConfig = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
-      console.log("Verification - file written with network:", writtenConfig.network);
-      console.log("Verification - first key xfp:", writtenConfig.extendedPublicKeys[0].xfp);
-      console.log("Verification - first key bip32Path:", writtenConfig.extendedPublicKeys[0].bip32Path);
 
     } catch (error) {
       console.log("Error in wallet config modification:", error);
@@ -92,24 +64,14 @@ test.describe("Wallet Regtest Configuration", () => {
     try {
       // Get the modified wallet file
       const modifiedWalletFile = testStateManager.getDownloadedWalletFile();
-      console.log("modifiedwalletFile", modifiedWalletFile);
 
       if (!fs.existsSync(modifiedWalletFile)) {
         throw new Error(`File does not exist at path: ${modifiedWalletFile}`);
       }
-      console.log(
-        "File exists, size:",
-        fs.statSync(modifiedWalletFile).size,
-        "bytes",
-      );
 
       // Navigate to wallet page
       await page.goto("/#/wallet");
 
-      const inputExists = await page.locator("input#upload-config").count();
-      console.log("Number of upload-config inputs found:", inputExists);
-
-      console.log("Setting input files...");
       await page.setInputFiles("input#upload-config", modifiedWalletFile);
 
       await page.locator("#bitcoind-password").fill(clientConfig.password);
@@ -160,7 +122,7 @@ test.describe("Wallet Regtest Configuration", () => {
 
         };
       }
-      console.log("walletAddresses", walletAddresses);
+
       const senderWallet = testStateManager.getState().test_wallet_names[0];
       console.log("senderWallet", senderWallet);
 
@@ -176,6 +138,7 @@ test.describe("Wallet Regtest Configuration", () => {
 
       //Should update to the next index when a deposit is received
       const currentPathSuffix = await getCurrentPathSuffix(page);
+      
       const pathIndex = currentPathSuffix.split("/")[2];
 
       //Should end with 4 (as starting index = 0), as we have send 4 times 
@@ -206,7 +169,6 @@ test.describe("Wallet Regtest Configuration", () => {
       addressTable.forEach((row, index) => {
         expect(row.address).toMatch(/^2[MN]/);
         totalBalance += parseFloat(row.balance);
-        console.log(`Address matched for row: ${index + 1}`);
       });
       
       //Sending 0.5btc each to 4 addresses

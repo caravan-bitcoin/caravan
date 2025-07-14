@@ -1,4 +1,3 @@
-import bitcoinClient from "../utils/bitcoinClient";
 import { MultiWalletDescriptors, WalletDescriptors } from "../utils/types";
 
 
@@ -36,7 +35,6 @@ export async function extractMultiWalletDescriptors(walletNames: string[], clien
   
   const descriptors = await Promise.all(descriptorPromises);
   
-  // Create arrays for backward compatibility
   const xfps = descriptors.map(d => d.xfp);
   const paths = descriptors.map(d => d.path);
   const formattedPaths = descriptors.map(d => d.formattedPath);
