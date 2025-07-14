@@ -642,8 +642,7 @@ export class BlockchainClient extends ClientBase {
   count: number = 10,
   skip: number = 0,
   includeWatchOnly: boolean = true
-  ): Promise<TransactionDetails[]> {
-  // Validate parameters
+): Promise<TransactionDetails[]> {
   if (count < 1 || count > 100) {
     throw new Error("Count must be between 1 and 100");
   }
@@ -657,80 +656,45 @@ export class BlockchainClient extends ClientBase {
         throw new Error("Wallet name is required for private client transaction listings");
       }
 
-      // Get all wallet transactions and filter by address
       const response = await callBitcoindWallet({
         baseUrl: this.bitcoindParams.url,
         walletName: this.bitcoindParams.walletName,
         auth: this.bitcoindParams.auth,
         method: "listtransactions",
-        params: ["*", count * 5 + skip, skip, includeWatchOnly], // Get extra to account for filtering
+        params: ["*", count, skip, includeWatchOnly],
       });
 
       if (!response?.result || !Array.isArray(response.result)) {
         throw new Error("Failed to retrieve transactions from Bitcoin Core");
       }
 
-      // Filter transactions for the specific address
-      const addressTransactions = response.result.filter(
-        (tx: any) => tx.address === address
-      ).slice(0, count); // Limit to requested count
-
-      // Get detailed info and normalize each transaction
-      const detailedTransactions = await Promise.all(
-        addressTransactions.map(async (tx: any) => {
-          const txResponse = await callBitcoindWallet({
-            baseUrl: this.bitcoindParams.url,
-            walletName: this.bitcoindParams.walletName,
-            auth: this.bitcoindParams.auth,
-            method: "gettransaction",
-            params: [tx.txid, true, true],
-          });
-          
-          return normalizeTransactionData(txResponse.result as any, ClientType.PRIVATE);
-        })
+      return response.result.map((tx: any) => 
+        normalizeTransactionData(tx, ClientType.PRIVATE)
       );
-
-      return detailedTransactions;
     }
 
-    // Public client (Mempool/Blockstream)
     if (!this.provider) {
       throw new Error("Provider must be specified for public clients");
     }
 
-    let endpoint = "";    
-    if (this.provider === PublicBitcoinProvider.MEMPOOL) {
-      // Mempool API doesn't respect count properly for busy addresses
-      // Request more than needed and slice client-side
-      const safeCount = Math.max(count * 2, 25); // Request at least 25 or double what's needed
-      endpoint = `/address/${address}/txs?count=${safeCount}&skip=${skip}`;
-    } else if (this.provider === PublicBitcoinProvider.BLOCKSTREAM) {
-      // Blockstream API respects pagination properly
-      endpoint = `/address/${address}/txs?limit=${count}&offset=${skip}`;
-    } else {
-      throw new Error(`Unsupported provider: ${this.provider}`);
-    }
-
+    const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+      ? `limit=${count}&offset=${skip}`
+      : `count=${count}&skip=${skip}`;
+    const endpoint = `/address/${address}/txs?${query}`;
     const rawTransactions = await this.Get(endpoint);
     
     if (!Array.isArray(rawTransactions)) {
       throw new Error("Invalid response format from API");
     }
 
-    // Handle pagination issues - slice to requested count
-    const limitedTransactions = rawTransactions.slice(0, count);
-
-    // Normalize each transaction
-    const normalizedTransactions = limitedTransactions.map((rawTx: any) => 
-      normalizeTransactionData(rawTx as any, ClientType.PUBLIC)
+    return rawTransactions.map((rawTx: any) => 
+      normalizeTransactionData(rawTx, ClientType.PUBLIC)
     );
-
-    return normalizedTransactions;
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
-    }
   }
+}
 
   /**
    * Gets detailed information about a wallet transaction including fee information
