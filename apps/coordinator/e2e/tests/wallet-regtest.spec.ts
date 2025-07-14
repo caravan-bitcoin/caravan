@@ -3,7 +3,12 @@ import { testStateManager } from "../utils/testState";
 
 import fs from "fs";
 import bitcoinClient, { clientConfig } from "../utils/bitcoinClient";
-import { recieveTableData } from "../utils/types";
+import { 
+  extractAddressTableData, 
+  getCurrentReceiveAddress,
+  getCurrentPathSuffix 
+} from "../testhelpers/tableExtractor";
+import { extractThreeWalletDescriptors } from "../testhelpers/bitcoinDescriptors";
 
 
 test.describe("Wallet Regtest Configuration", () => {
@@ -19,44 +24,59 @@ test.describe("Wallet Regtest Configuration", () => {
         fs.readFileSync(downloadedWalletFile, "utf-8"),
       );
 
+      console.log("downloadedWallet",downloadedWalletFile);
+
+      console.log("walletconfig",walletConfig)
+
       console.log("Original wallet config network:", walletConfig.network);
 
       walletConfig.network = "regtest";
       walletConfig.client.url = "http://localhost:8080";
 
-      const walletNames = testStateManager.getWalletsNames();
+      console.log("walletconfig",walletConfig)
 
-      const xfp1 = (await client?.extractAddressDescriptors(walletNames[0]))
-        ?.p2pkh.fingerPrint;
-      const xfp2 = (await client?.extractAddressDescriptors(walletNames[1]))
-        ?.p2pkh.fingerPrint;
-      const xfp3 = (await client?.extractAddressDescriptors(walletNames[2]))
-        ?.p2pkh.fingerPrint;
+      console.log("Original wallet config network after:", walletConfig.network);
 
-      const xpfs = [xfp1, xfp2, xfp3];
+      const allWalletNames = testStateManager.getWalletsNames();
+      // Only use the first 3 wallets (signing wallets), not the watcher wallet
+      const walletNames = allWalletNames.slice(0, 3);
 
-      const path1 = (await client?.extractAddressDescriptors(walletNames[0]))
-        ?.p2pkh.path;
-      const path2 = (await client?.extractAddressDescriptors(walletNames[1]))
-        ?.p2pkh.path;
-      const path3 = (await client?.extractAddressDescriptors(walletNames[2]))
-        ?.p2pkh.path;
+      // Extract descriptors for all wallets efficiently using helper with client
+      console.log("All wallets:", allWalletNames);
+      console.log("Using first 3 wallets for multisig:", walletNames);
+      const { xfps, formattedPaths } = await extractThreeWalletDescriptors(walletNames, client);
+      console.log("Extracted xfps:", xfps);
+      console.log("Extracted formattedPaths:", formattedPaths);
 
-      const paths = [path1, path2, path3].map(
-        (path) => "m/" + path?.replace(/h/g, "'"),
-      );
+      console.log("BEFORE updating extendedPublicKeys:");
+      walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
+        console.log(`Key ${index}: xfp='${key.xfp}', bip32Path='${key.bip32Path}'`);
+      });
 
       walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
-        key.xfp = xpfs[index];
-        key.bip32Path = paths[index];
+        console.log(`Updating key ${index}: xfp=${xfps[index]} -> bip32Path=${formattedPaths[index]}`);
+        key.xfp = xfps[index];
+        key.bip32Path = formattedPaths[index];
       });
-      console.log("path1 check", paths[0]);
+
+      console.log("AFTER updating extendedPublicKeys:");
+      walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
+        console.log(`Key ${index}: xfp='${key.xfp}', bip32Path='${key.bip32Path}'`);
+      });
+      console.log("path1 check", formattedPaths[0]);
+
+      
 
       // Save the modified file
-      fs.writeFileSync(
-        downloadedWalletFile,
-        JSON.stringify(walletConfig, null, 2),
-      );
+      console.log("Writing updated config to file:", downloadedWalletFile);
+      const configToWrite = JSON.stringify(walletConfig, null, 2);
+      fs.writeFileSync(downloadedWalletFile, configToWrite);
+      
+      // Verify the file was written correctly
+      const writtenConfig = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
+      console.log("Verification - file written with network:", writtenConfig.network);
+      console.log("Verification - first key xfp:", writtenConfig.extendedPublicKeys[0].xfp);
+      console.log("Verification - first key bip32Path:", writtenConfig.extendedPublicKeys[0].bip32Path);
 
     } catch (error) {
       console.log("Error in wallet config modification:", error);
@@ -117,28 +137,11 @@ test.describe("Wallet Regtest Configuration", () => {
         .click();
 
       const walletAddresses: string[] = [];
-      let recieveTableData: recieveTableData[] ;
 
       for (let i = 0; i < 4; i++) {
-        await page.waitForSelector("table");
-
-        //Extract complete table data
-        recieveTableData = await page.evaluate(() => {
-          const rows = Array.from(document.querySelectorAll("tbody tr"));
-          console.log("rows:", rows);
-
-          return rows.map((row) => {
-            const cells = Array.from(row.querySelectorAll("td"));
-            return {
-              pathSuffix: cells[1]?.textContent?.trim()!,
-              utxos: cells[2]?.textContent?.trim()!,
-              balance: cells[3]?.textContent?.trim()!,
-              address: cells[4]?.querySelector("code")?.textContent?.trim()!,
-            };
-          });
-        });
-        console.log("table data", recieveTableData);
-        const currentAddress = recieveTableData[0].address!;
+        // Extract current address using helper
+        const currentAddress = await getCurrentReceiveAddress(page);
+        console.log("current address:", currentAddress);
         walletAddresses.push(currentAddress);
         
         // Only click next if not last iteration
@@ -156,14 +159,6 @@ test.describe("Wallet Regtest Configuration", () => {
          );
 
         };
-
-        //! or below approach also works (remove one after discuss)
-        // walletAddresses.push(recieveTableData[0].address!);
-    
-        // await page
-        //   .locator("button[type=button]:has-text('Next Address')")
-        //   .click();
-        //   await page.waitForTimeout(1000);
       }
       console.log("walletAddresses", walletAddresses);
       const senderWallet = testStateManager.getState().test_wallet_names[0];
@@ -180,23 +175,8 @@ test.describe("Wallet Regtest Configuration", () => {
       console.log("txids", txids);
 
       //Should update to the next index when a deposit is received
-     
-      const lastPathSuffix = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll("tbody tr"));
-        console.log("rows:", rows);
-
-        return rows.map((row) => {
-          const cells = Array.from(row.querySelectorAll("td"));
-          return {
-            pathSuffix: cells[1]?.textContent?.trim()!,
-            utxos: cells[2]?.textContent?.trim()!,
-            balance: cells[3]?.textContent?.trim()!,
-            address: cells[4]?.querySelector("code")?.textContent?.trim()!,
-          };
-        });
-      });
-      
-      const pathIndex = lastPathSuffix[0].pathSuffix.split("/")[2];
+      const currentPathSuffix = await getCurrentPathSuffix(page);
+      const pathIndex = currentPathSuffix.split("/")[2];
 
       //Should end with 4 (as starting index = 0), as we have send 4 times 
       expect(pathIndex).toBe("4")
@@ -216,22 +196,8 @@ test.describe("Wallet Regtest Configuration", () => {
 
       await page.waitForTimeout(4000);
 
-      const addressTable = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll("tbody tr"));
-        console.log("rows check", rows);
-
-        return rows.map((row) => {
-          const cells = Array.from(row.querySelectorAll("td"));
-          console.log("cells check:", cells);
-          return {
-            pathSuffix: cells[1]?.textContent?.trim(),
-            utxos: cells[2]?.textContent?.trim(),
-            balance: cells[3]?.textContent?.trim(),
-            last_used: cells[4]?.textContent?.trim(),
-            address: cells[5]?.querySelector("code")?.textContent?.trim(),
-          };
-        });
-      });
+      // Extract address table data using helper
+      const addressTable = await extractAddressTableData(page);
       console.log("addressTable", addressTable);
 
       // This includes both pending and confirmed tx
@@ -239,7 +205,7 @@ test.describe("Wallet Regtest Configuration", () => {
 
       addressTable.forEach((row, index) => {
         expect(row.address).toMatch(/^2[MN]/);
-        totalBalance += parseFloat(row.balance!);
+        totalBalance += parseFloat(row.balance);
         console.log(`Address matched for row: ${index + 1}`);
       });
       
@@ -254,6 +220,4 @@ test.describe("Wallet Regtest Configuration", () => {
       throw error;
     }
   });
-
-  
 });

@@ -41,9 +41,30 @@ export interface rpcConfig {
     timestamp: number
   }
 
-export interface recieveTableData {
+export interface receiveTableData {
     pathSuffix: string,
     utxos: string,
     balance: string,
     address: string
   }
+  
+export interface AddressTableData {
+    pathSuffix: string;
+    utxos: string;
+    balance: string;
+    lastUsed: string;
+    address: string;
+}
+
+export interface WalletDescriptors {
+  xfp: string;
+  path: string;
+  formattedPath: string;
+}
+
+export interface MultiWalletDescriptors {
+  xfps: string[];
+  paths: string[];
+  formattedPaths: string[];
+  descriptors: WalletDescriptors[];
+}
