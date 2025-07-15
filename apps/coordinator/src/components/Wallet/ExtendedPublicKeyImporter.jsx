@@ -298,10 +298,12 @@ class ExtendedPublicKeyImporter extends React.Component {
     const networkError = validateExtendedPublicKey(extendedPublicKey, network);
     let actualExtendedPublicKey = extendedPublicKey;
     if (networkError !== "") {
+
+      // regtest uses tpub like testnet
       try {
         actualExtendedPublicKey = convertExtendedPublicKey(
           extendedPublicKey,
-          network === "testnet" ? "tpub" : "xpub",
+          network === "mainnet"  ? "xpub" : "tpub",
         );
       } catch (error) {
         errback(error.message);
