@@ -89,7 +89,6 @@ export interface FeeBumpResult {
    */
   isCancel?: boolean;
 
-  priority: FeePriority;
   createdAt: string;
 }
 
