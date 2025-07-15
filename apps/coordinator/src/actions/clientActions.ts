@@ -112,8 +112,21 @@ export const setBlockchainClient = () => {
     const { network } = getState().settings;
     const { client } = getState();
 
-    const clientType = getClientType(client);
-    const provider = getClientProvider(client);
+    let clientType = getClientType(client);
+    let provider = getClientProvider(client);
+    console.log("client Type",clientType)
+    console.log("Provider",provider)
+
+    // Handle regtest network: switch to private client if public client was selected
+    if (network === "regtest" && clientType === ClientType.PUBLIC) {
+      clientType = ClientType.PRIVATE;
+      provider = undefined;
+
+      // Update client state to private for regtest
+      dispatch({type: SET_CLIENT_TYPE, value: ClientType.PRIVATE});
+
+
+    }
     const newClient = new BlockchainClient({
       client,
       type: clientType,
