@@ -13,11 +13,11 @@ import { downloadFile } from "utils/index";
  */
 export const ReviewStep = () => {
   const { state } = useAccelerationModal();
-  const { feeBumpPsbt, rbfType } = state;
+  const { feeBumpResult, rbfType } = state;
   const [downloadClicked, setDownloadClicked] = useState(false);
 
   const handleConfirmDownload = useCallback(() => {
-    if (!feeBumpPsbt) {
+    if (!feeBumpResult) {
       return false;
     }
     const timestamp = new Date()
@@ -27,15 +27,15 @@ export const ReviewStep = () => {
 
     const filename = `tx_${rbfType || "unknown"}_${timestamp}.psbt`;
 
-    downloadFile(feeBumpPsbt!, filename);
+    downloadFile(feeBumpResult!, filename);
     setDownloadClicked(true);
     return true;
-  }, [feeBumpPsbt, rbfType]);
+  }, [feeBumpResult, rbfType]);
 
   return (
     <Box>
       {/* Display error if no PSBT is available */}
-      {!feeBumpPsbt && (
+      {!feeBumpResult && (
         <Alert severity="error" sx={{ mb: 2 }}>
           <AlertTitle>No PSBT Available</AlertTitle>
           No fee bump PSBT was created. Please go back and create the
@@ -44,7 +44,7 @@ export const ReviewStep = () => {
       )}
 
       {/* Display transaction details and download button when PSBT is available */}
-      {feeBumpPsbt && (
+      {feeBumpResult && (
         <>
           {/* Transaction comparison component */}
           <TransactionComparison />
