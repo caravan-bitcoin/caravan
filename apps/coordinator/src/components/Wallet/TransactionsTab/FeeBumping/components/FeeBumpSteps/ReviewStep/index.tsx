@@ -1,13 +1,8 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { Box, Typography, Alert, AlertTitle, Button } from "@mui/material";
-import { TransactionComparison } from "../TransactionComparison";
-import { useAccelerationModal } from "../AccelerationModalContext";
-
-interface ReviewStepProps {
-  onDownloadPSBT: () => void;
-  downloadClicked: boolean;
-  selectedPSBTVersion?: "v2" | "v0";
-}
+import { TransactionComparison } from "./TransactionComparison";
+import { useAccelerationModal } from "../../AccelerationModalContext";
+import { downloadFile } from "utils/index";
 
 /**
  * Step 3: Review and Download
@@ -16,12 +11,26 @@ interface ReviewStepProps {
  * It shows the transaction comparison, handles PSBT download, and provides
  * next steps guidance to the user.
  */
-export const ReviewStep: React.FC<ReviewStepProps> = ({
-  onDownloadPSBT,
-  downloadClicked,
-}) => {
+export const ReviewStep = () => {
   const { state } = useAccelerationModal();
-  const { feeBumpPsbt } = state;
+  const { feeBumpPsbt, rbfType } = state;
+  const [downloadClicked, setDownloadClicked] = useState(false);
+
+  const handleConfirmDownload = useCallback(() => {
+    if (!feeBumpPsbt) {
+      return false;
+    }
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .substring(0, 19);
+
+    const filename = `tx_${rbfType || "unknown"}_${timestamp}.psbt`;
+
+    downloadFile(feeBumpPsbt!, filename);
+    setDownloadClicked(true);
+    return true;
+  }, [feeBumpPsbt, rbfType]);
 
   return (
     <Box>
@@ -42,16 +51,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
           {/* Download section */}
           <Box sx={{ mt: 3, textAlign: "center" }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={onDownloadPSBT}
-              size="large"
-              sx={{ mb: 2 }}
-            >
-              Download PSBT
-            </Button>
-
             {/* Success message after download */}
             {downloadClicked && (
               <Alert severity="success" sx={{ mt: 2 }}>
@@ -82,6 +81,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               </Alert>
             </Box>
           </Box>
+          <Button onClick={handleConfirmDownload}>Download PSBT</Button>
         </>
       )}
     </Box>

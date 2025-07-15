@@ -19,8 +19,9 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import CancelIcon from "@mui/icons-material/Cancel";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import { formatFee } from "../utils";
-import { useFeeBumpContext } from "../context";
+import { formatFee } from "../../../utils";
+import { useAccelerationModal } from "../../AccelerationModalContext";
+import { RBF_TYPES } from "../../../types";
 
 /**
  * Component for comparing original and fee-bumped transactions
@@ -36,10 +37,11 @@ import { useFeeBumpContext } from "../context";
 export const TransactionComparison: React.FC = () => {
   // Get state from Context if not provided as props (for backward compatibility)
   const {
-    state: { transaction: originalTx, result },
-  } = useFeeBumpContext();
+    state: { feeBumpPsbt, rbfType, selectedStrategy },
+    transaction: originalTx,
+  } = useAccelerationModal();
 
-  if (!originalTx || !result) {
+  if (!originalTx || !feeBumpPsbt) {
     return null;
   }
 
@@ -48,11 +50,11 @@ export const TransactionComparison: React.FC = () => {
     originalTx.fee / (originalTx.vsize || originalTx.size);
 
   // Calculate fee difference
-  const feeDifference =
-    parseInt(result.newFee) - parseInt(originalTx.fee.toString());
+  // const feeDifference =
+  //   parseInt(result.newFee) - parseInt(originalTx.fee.toString());
 
   // Determine transaction type
-  const txType = result.isCancel ? "Cancel" : "Accelerate";
+  const txType = rbfType === RBF_TYPES.CANCEL ? "Cancel" : "Accelerate";
 
   return (
     <Paper sx={{ p: 2, mb: 2 }}>
@@ -63,14 +65,22 @@ export const TransactionComparison: React.FC = () => {
       {/* Transaction Type Header */}
       <Box mb={3}>
         <Alert
-          severity={result.isCancel ? "warning" : "info"}
-          icon={result.isCancel ? <CancelIcon /> : <CompareArrowsIcon />}
+          severity={rbfType === RBF_TYPES.CANCEL ? "warning" : "info"}
+          icon={
+            rbfType === RBF_TYPES.CANCEL ? (
+              <CancelIcon />
+            ) : (
+              <CompareArrowsIcon />
+            )
+          }
         >
           <AlertTitle>
-            {result.isCancel ? "Cancel Transaction" : "Accelerated Transaction"}
+            {rbfType === RBF_TYPES.CANCEL
+              ? "Cancel Transaction"
+              : "Accelerated Transaction"}
           </AlertTitle>
           <Typography variant="body2">
-            {result.isCancel
+            {rbfType === RBF_TYPES.CANCEL
               ? "This transaction will cancel the original transaction and redirect all funds to a new address."
               : "This transaction will replace the original transaction with the same outputs but a higher fee."}
           </Typography>
@@ -118,7 +128,7 @@ export const TransactionComparison: React.FC = () => {
             New Transaction
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            <strong>Type:</strong> {txType} ({result.strategy})
+            <strong>Type:</strong> {txType} ({selectedStrategy})
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Fee:</strong> {formatFee(result.newFee)}
