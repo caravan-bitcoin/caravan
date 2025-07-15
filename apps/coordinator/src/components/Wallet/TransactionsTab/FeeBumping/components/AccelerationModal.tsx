@@ -18,7 +18,11 @@ import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
 import { Transaction } from "../../types";
-import { ConfigurationStep, StrategySelectionStep } from "./FeeBumpSteps";
+import {
+  ConfigurationStep,
+  StrategySelectionStep,
+  ReviewStep,
+} from "./FeeBumpSteps";
 import { ErrorDialog } from "./ErrorDialog";
 
 import {
@@ -61,10 +65,10 @@ const STEP_CONFIGS = [
     label: "Configure Transaction",
     component: ConfigurationStep,
   },
-  // {
-  //   label: "Review and Download",
-  //   component: ReviewStep,
-  // },
+  {
+    label: "Review and Download",
+    component: ReviewStep,
+  },
 ];
 
 const AccelerationModalWithContext: React.FC<AccelerationModalProps> = ({
@@ -101,7 +105,13 @@ const AccelerationModalContent: React.FC<
   }
 > = ({ open, onClose, stepConfigs }) => {
   const {
-    state: { activeStep, downloadClicked, showErrorDetails },
+    state: {
+      activeStep,
+      downloadClicked,
+      showErrorDetails,
+      selectedStrategy,
+      feeBumpResult,
+    },
     nextStep,
     previousStep,
     setErrorDetails, // can probably be removed
@@ -133,12 +143,8 @@ const AccelerationModalContent: React.FC<
 
     let title = "Fee Bump Transaction";
 
-    // TODO: Replace with actual strategy and result from fee bump context
-    const mockStrategy = FeeBumpStrategy.RBF;
-    const mockResult = { isCancel: false };
-
-    if (mockStrategy === FeeBumpStrategy.RBF && activeStep > 0) {
-      if (mockResult?.isCancel) {
+    if (selectedStrategy === FeeBumpStrategy.RBF && activeStep > 0) {
+      if (feeBumpResult?.isCancel) {
         title = "Cancel Transaction";
       } else {
         title = "Accelerate Transaction";
@@ -155,6 +161,16 @@ const AccelerationModalContent: React.FC<
       transaction.txid.length - 8,
     )}`;
   }, [transaction]);
+
+  // Check if we're on the last step (ReviewStep)
+  const isLastStep = useMemo(() => {
+    return activeStep >= stepConfigs.length - 1;
+  }, [activeStep, stepConfigs.length]);
+
+  // Check if we're on the first step
+  const isFirstStep = useMemo(() => {
+    return activeStep === 0;
+  }, [activeStep]);
 
   // Initialize the wizard when the modal opens
   useEffect(() => {
@@ -235,16 +251,25 @@ const AccelerationModalContent: React.FC<
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         {/* Back button */}
-        <Button color="inherit" onClick={previousStep}>
+        <Button color="inherit" onClick={previousStep} disabled={isFirstStep}>
           Back
         </Button>
 
         <Box sx={{ flex: "1 1 auto" }} />
 
-        {/* Next button - always shown */}
-        <Button variant="contained" onClick={nextStep}>
-          Next
-        </Button>
+        {/* Next button - disabled/hidden on last step */}
+        {!isLastStep && (
+          <Button variant="contained" onClick={nextStep}>
+            Next
+          </Button>
+        )}
+
+        {/* We show a different button on the last step */}
+        {isLastStep && (
+          <Button variant="outlined" onClick={handleClose} color="primary">
+            Close
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
