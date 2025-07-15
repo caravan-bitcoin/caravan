@@ -26,6 +26,7 @@ import { useAccelerationModal } from "../../../AccelerationModalContext";
 import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
 import { FeeLevelSelector } from "./FeeLevelSelector";
 import { TransactionTypeSelector } from "./TransactionTypeSelector";
+import { CustomFeeSlider } from "./CustomFeeSlider";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -309,48 +310,16 @@ export const RBFForm: React.FC = () => {
           feeBumpRate={feeBumpRate}
           disabled={!feeEstimates}
         />
-
+        <Divider sx={{ my: 2 }} />
         {/* Custom fee slider */}
-        {showCustomSlider && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Slider
-              value={feeBumpRate}
-              onChange={handleSliderChange}
-              aria-labelledby="fee-rate-slider"
-              min={Math.round(minimumFeeRate * 1000) / 1000}
-              max={maxFeeRate}
-              step={1}
-              marks={[
-                {
-                  value: Math.round(minimumFeeRate * 1000) / 1000,
-                  label: `${Math.round(minimumFeeRate * 1000) / 1000}`,
-                },
-                {
-                  value: Math.floor((minimumFeeRate + maxFeeRate) / 2),
-                  label: `${Math.floor((minimumFeeRate + maxFeeRate) / 2)}`,
-                },
-                { value: maxFeeRate, label: `${maxFeeRate}` },
-              ]}
-              valueLabelDisplay="on"
-              sx={{ flexGrow: 1 }}
-            />
-
-            {/* Numeric input synced to the slider */}
-            <TextField
-              value={feeBumpRate}
-              onChange={handleInputChange}
-              type="number"
-              InputProps={{
-                inputProps: {
-                  min: minimumFeeRate.toFixed(2),
-                  max: maxFeeRate.toFixed(2),
-                  step: 1,
-                },
-              }}
-              sx={{ width: 100 }}
-            />
-          </Box>
-        )}
+        <CustomFeeSlider
+          feeBumpRate={feeBumpRate}
+          onSliderChange={handleSliderChange}
+          onInputChange={handleInputChange}
+          minimumFeeRate={minimumFeeRate}
+          maxFeeRate={maxFeeRate}
+          show={showCustomSlider}
+        />
       </Box>
 
       <Divider sx={{ my: 2 }} />
