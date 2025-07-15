@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import BigNumber from "bignumber.js";
 import {
   Box,
   Typography,
@@ -46,12 +47,13 @@ export const FeeStrategySelector: React.FC = () => {
           "Creates a new transaction that replaces the original with a higher fee",
         icon: <CompareArrowsIcon fontSize="large" />,
         learnMoreUrl: "https://bitcoinops.org/en/topics/replace-by-fee/",
-        // disabled: !analysis.canRBF,
-        disabled: false,
+        disabled: !analysis.canRBF,
         disabledReason:
           "This transaction does not signal RBF and cannot be replaced",
-        minimumFee: Number(analysis.estimatedRBFFee) / analysis.vsize,
-        suggestedFeeRate: Number(analysis.estimatedRBFFee) / analysis.vsize,
+        minimumFee: new BigNumber(analysis.estimatedRBFFee).toNumber(),
+        suggestedFeeRate: new BigNumber(analysis.estimatedRBFFee)
+          .dividedBy(new BigNumber(analysis.vsize))
+          .toNumber(),
       },
       {
         strategy: FeeBumpStrategy.CPFP,
@@ -64,8 +66,10 @@ export const FeeStrategySelector: React.FC = () => {
         disabledReason: !analysis.canCPFP
           ? "This transaction doesn't have suitable outputs for CPFP"
           : "CPFP support is coming in a future update",
-        minimumFee: Number(analysis.estimatedCPFPFee) / analysis.vsize,
-        suggestedFeeRate: Number(analysis.estimatedCPFPFee) / analysis.vsize,
+        minimumFee: new BigNumber(analysis.estimatedCPFPFee).toNumber(),
+        suggestedFeeRate: new BigNumber(analysis.estimatedCPFPFee)
+          .dividedBy(new BigNumber(analysis.vsize))
+          .toNumber(),
       },
     ],
     [analysis],
@@ -132,6 +136,10 @@ export const FeeStrategySelector: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee rate:{" "}
               <strong>{analysis.feeRate?.toFixed(1)} sat/vB</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your transaction&apos;s current fee :{" "}
+              <strong>{analysis.fee} sats</strong>
             </Typography>
           </Box>
         </Box>
