@@ -3,13 +3,8 @@ import {
   Box,
   Button,
   Divider,
-  Grid,
   Paper,
-  Slider,
-  TextField,
   Typography,
-  Alert,
-  AlertTitle,
   Tooltip,
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
@@ -20,13 +15,14 @@ import {
   FEE_LEVELS,
 } from "../../../../types";
 import { useFeeEstimates } from "clients/fees";
-import { formatFee } from "../../../../utils";
 import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
 import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
+
 import { FeeLevelSelector } from "./FeeLevelSelector";
 import { TransactionTypeSelector } from "./TransactionTypeSelector";
 import { CustomFeeSlider } from "./CustomFeeSlider";
+import { FeeComparison } from "./FeeComparison";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -325,51 +321,11 @@ export const RBFForm: React.FC = () => {
       <Divider sx={{ my: 2 }} />
 
       {/* Fee comparison */}
-      <Box mb={3}>
-        <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-          Fee Comparison
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={4}>
-            <Typography variant="body2" color="text.secondary">
-              Original fee:
-            </Typography>
-            <Typography variant="body1">
-              {formatFee(originalFee.toString())}
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="body2" color="text.secondary">
-              Estimated new fee:
-            </Typography>
-            <Typography variant="body1">
-              {formatFee(estimatedNewFee.toString())}
-            </Typography>
-          </Grid>
-          <Grid item xs={4}>
-            <Typography variant="body2" color="text.secondary">
-              Additional fee:
-            </Typography>
-            <Typography
-              variant="body1"
-              color={feeDifference > 0 ? "error.main" : "success.main"}
-            >
-              {formatFee(feeDifference.toString())}
-            </Typography>
-          </Grid>
-        </Grid>
-
-        {/* Fee explanation */}
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <AlertTitle>How are fees calculated?</AlertTitle>
-          <Typography variant="body2">
-            Transaction fees are calculated as{" "}
-            <strong>fee rate × transaction size</strong>. Higher fee rates make
-            your transaction more attractive to miners, resulting in faster
-            confirmation times.
-          </Typography>
-        </Alert>
-      </Box>
+      <FeeComparison
+        originalFee={originalFee}
+        estimatedNewFee={estimatedNewFee}
+        feeDifference={feeDifference}
+      />
 
       {/* Submit button */}
       <Box display="flex" justifyContent="flex-end">
