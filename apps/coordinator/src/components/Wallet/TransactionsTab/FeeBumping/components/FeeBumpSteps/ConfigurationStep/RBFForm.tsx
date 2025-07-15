@@ -47,6 +47,7 @@ export const RBFForm: React.FC = () => {
     state: { rbfType },
     setRbfType,
     setFeeBumpPsbt,
+    nextStep,
   } = useAccelerationModal();
   const { data: feeEstimates } = useFeeEstimates();
   // const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
@@ -106,11 +107,9 @@ export const RBFForm: React.FC = () => {
 
       // Store the PSBT in context
       setFeeBumpPsbt(psbt);
-      return true; // Allow advancing to next step
+      nextStep();
     } catch (error) {
       console.error("Error creating RBF transaction:", error);
-      // Handle error - you can show error message to user
-      return false; // Don't advance to next step
     }
   };
 
