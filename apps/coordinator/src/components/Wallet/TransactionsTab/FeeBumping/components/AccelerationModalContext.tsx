@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import { FeeBumpStrategy, TxAnalysis } from "@caravan/fees";
+import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/fees";
 import { useAnalyzeTransaction } from "./hooks";
 
 // =============================================================================
@@ -29,6 +29,7 @@ interface AccelerationModalState {
   analysis: TxAnalysis | null;
   analysisIsLoading: boolean;
   analysisIsError: string | null;
+  availableUtxos: UTXO[];
 
   // Strategy selection
   selectedStrategy: FeeBumpStrategy | null;
@@ -62,6 +63,7 @@ const initialState: AccelerationModalState = {
   transaction: null,
   txHex: "",
   analysis: null,
+  availableUtxos: [],
   analysisIsLoading: false,
   analysisIsError: null,
   selectedStrategy: null,
@@ -145,7 +147,7 @@ interface AccelerationModalContextType {
   analysis: TxAnalysis | null;
   analysisIsLoading: boolean;
   analysisError: string | null;
-
+  availableUtxos: UTXO[];
   // State
   state: AccelerationModalState;
 
@@ -195,7 +197,7 @@ export function AccelerationModalProvider({
   txHex,
 }: AccelerationModalProviderProps) {
   const [state, dispatch] = useReducer(accelerationModalReducer, initialState);
-  const { analysis, isLoading, error } = useAnalyzeTransaction(
+  const { analysis, isLoading, error, availableUtxos } = useAnalyzeTransaction(
     transaction,
     txHex,
   );
@@ -260,6 +262,7 @@ export function AccelerationModalProvider({
     canGoNext,
     canGoBack,
     analysis,
+    availableUtxos,
     analysisIsLoading: isLoading,
     analysisError: error,
   };

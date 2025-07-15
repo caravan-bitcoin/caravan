@@ -23,8 +23,6 @@ import {
   FeeLevelType,
   RBF_TYPES,
   FEE_LEVEL_COLORS,
-  FEE_LEVEL_TO_PRIORITY_MAP,
-  PRIORITY_TO_FEE_LEVEL,
   FEE_LEVELS,
 } from "../../../types";
 import { useFeeEstimates } from "clients/fees";
@@ -37,6 +35,7 @@ import { formatFee } from "../../../utils";
 // } from "../../context";
 import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../../AccelerationModalContext";
+import { useCreateCancelRBF } from "../../hooks";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -46,31 +45,20 @@ const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
 };
 
 export const RBFForm: React.FC = () => {
-  // const {
-  //   state: {
-  //     transaction,
-  //     recommendation,
-  //     selectedFeeRate,
-  //     selectedPriority,
-  //     rbfType,
-  //     cancelAddress,
-  //     changeAddress,
-  //   },
-  //   createAcceleratedRBF,
-  //   createCancelRBF,
-  //   dispatch,
-  //   isCreatingRBF,
-  // } = useFeeBumpContext();
-  const { transaction, analysis } = useAccelerationModal();
+  const { transaction, analysis, txHex, availableUtxos } =
+    useAccelerationModal();
 
   const [rbfType, setRbfType] = useState<RbfType>("accelerate");
   const { data: feeEstimates } = useFeeEstimates();
-  const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
-    FEE_LEVELS.MEDIUM,
-  );
+
   const [feeBumpRate, setFeeBumpRate] = useState<number>(transaction.size);
   const [cancelAddress, setCancelAddress] = useState<string>("");
   const [changeAddress, setChangeAddress] = useState<string>("");
+  const { createCancelRBF } = useCreateCancelRBF(
+    transaction,
+    txHex,
+    availableUtxos,
+  );
 
   // Local state for fee level selection (UI state only)
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
@@ -80,31 +68,19 @@ export const RBFForm: React.FC = () => {
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
-  const handleSubmitRBF = async (options: {
-    isCancel: boolean;
-    cancelAddress?: string;
-    changeAddress?: string;
-  }) => {
-    try {
-      console.log("options", options);
-
-      const isCancel = options.isCancel ?? rbfType === "cancel";
-
-      if (isCancel) {
-        await createCancelRBF({
-          cancelAddress: options.cancelAddress,
-        });
-      } else {
-        await createAcceleratedRBF({
-          changeAddress: options.changeAddress,
-        });
+  const handleSubmitRBF = async () => {
+    if (rbfType === RBF_TYPES.CANCEL) {
+      try {
+        const cancelPsbt = createCancelRBF(cancelAddress, feeBumpRate);
+        console.log("Cancel RBF PSBT created:", cancelPsbt);
+        // Handle successful creation - you can dispatch to context or handle as needed
+      } catch (error) {
+        console.error("Error creating cancel RBF:", error);
+        // Handle error - you can show error message to user
       }
-
-      // handleNext(); // Move to the next step when done
-    } catch (err) {
-      // Error is already handled by the context and stored in state.error
-      console.error("Error creating fee-bumped transaction:", err);
-      // Error will be displayed in the UI automatically
+    } else {
+      // Handle accelerated RBF case
+      console.log("Accelerated RBF not implemented yet");
     }
   };
 
@@ -189,7 +165,6 @@ export const RBFForm: React.FC = () => {
 
       if (feeEstimates[newFeeLevel]) {
         const newFeeRate = Math.ceil(feeEstimates[newFeeLevel]);
-        setFeeBumpPriority(newFeeLevel);
         setFeeBumpRate(newFeeRate);
       }
     },
@@ -572,17 +547,19 @@ export const RBFForm: React.FC = () => {
 
       {/* Submit button */}
       <Box display="flex" justifyContent="flex-end">
-        {/* <Button
+        <Button
           variant="contained"
           color="primary"
-          onClick={handleSubmit}
+          onClick={handleSubmitRBF}
           size="large"
-          disabled={isCreatingRBF}
+          disabled={
+            rbfType === RBF_TYPES.CANCEL
+              ? !cancelAddress.trim() || feeBumpRate < minimumFeeRate
+              : feeBumpRate < minimumFeeRate
+          }
         >
-          {isCreatingRBF
-            ? "Creating Transaction..."
-            : `Create ${rbfType === RBF_TYPES.CANCEL ? "Cancel" : "Accelerated"} Transaction`}
-        </Button> */}
+          {`Create ${rbfType === RBF_TYPES.CANCEL ? "Cancel" : "Accelerated"} Transaction`}
+        </Button>
       </Box>
     </Paper>
   );

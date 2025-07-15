@@ -1,12 +1,19 @@
-import { TransactionAnalyzer } from "@caravan/fees";
+import {
+  CancelRbfOptions,
+  createCancelRbfTransaction,
+  TransactionAnalyzer,
+  UTXO,
+} from "@caravan/fees";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
 import { selectWalletConfig } from "selectors/wallet";
 import { useSelector } from "react-redux";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
+import { useGetGlobalXpubs } from "../context/hooks";
+import { DUST_IN_SATOSHIS } from "utils/constants";
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
@@ -98,7 +105,72 @@ export const useAnalyzeTransaction = (
 
   return {
     analysis: analysis ?? null,
+    availableUtxos,
     error,
     isLoading: isLoadingAvailableUtxos || isLoadingFeeEstimates,
   };
+};
+
+export const useCreateCancelRBF = (
+  transaction: TransactionDetails,
+  txHex: string,
+  availableUtxos: UTXO[],
+) => {
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const globalXpubs = useGetGlobalXpubs();
+
+  const createCancelRBF = useCallback(
+    (cancelAddress: string, feeRate: number) => {
+      if (
+        !cancelAddress ||
+        !feeRate ||
+        !globalXpubs ||
+        !availableUtxos ||
+        !transaction ||
+        !txHex
+      ) {
+        throw new Error("Missing required parameters for cancel RBF");
+      }
+
+      const cancelRbfOptions: CancelRbfOptions = {
+        originalTx: txHex,
+        network: network as Network,
+        targetFeeRate: feeRate,
+        absoluteFee: transaction.fee.toString(),
+        availableInputs: availableUtxos,
+        scriptType: addressType as MultisigAddressType,
+        cancelAddress,
+        dustThreshold: DUST_IN_SATOSHIS.toString(),
+        strict: false,
+        fullRBF: true,
+        reuseAllInputs: true,
+        requiredSigners,
+        totalSigners,
+        globalXpubs,
+      };
+
+      try {
+        return createCancelRbfTransaction(cancelRbfOptions);
+      } catch (error) {
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Unknown error creating cancel RBF",
+        );
+      }
+    },
+    [
+      txHex,
+      transaction?.fee,
+      network,
+      addressType,
+      requiredSigners,
+      totalSigners,
+      globalXpubs,
+      availableUtxos,
+    ],
+  );
+
+  return { createCancelRBF };
 };
