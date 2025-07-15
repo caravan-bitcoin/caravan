@@ -13,6 +13,7 @@ import {
   RBF_TYPES,
   RbfType,
   FEE_LEVELS,
+  FeeBumpResult,
 } from "../../../../types";
 import { useFeeEstimates } from "clients/fees";
 import { TransactionDetails } from "@caravan/clients";
@@ -37,16 +38,14 @@ export const RBFForm: React.FC = () => {
     analysis,
     txHex,
     availableUtxos,
-    state: { rbfType },
+    state: { rbfType, selectedStrategy },
     setRbfType,
-    setFeeBumpPsbt,
+    setFeeBumpResult,
     nextStep,
   } = useAccelerationModal();
-  console.log("rbfform-1");
+
   const { data: feeEstimates } = useFeeEstimates();
-  // const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
-  //   FEE_LEVELS.MEDIUM,
-  // );
+
   const [feeBumpRate, setFeeBumpRate] = useState<number>(
     feeEstimates[FEE_LEVELS.MEDIUM],
   );
@@ -89,28 +88,45 @@ export const RBFForm: React.FC = () => {
     }
 
     try {
-      let psbt: string;
+      let result: FeeBumpResult;
+      const txVsize = transaction.vsize || transaction.size;
+      const estimatedNewFee = Math.ceil(txVsize * feeBumpRate).toString();
 
       if (rbfType === RBF_TYPES.CANCEL) {
-        psbt = createCancelRBF(feeBumpRate, cancelAddress);
+        const cancelPsbt = createCancelRBF(feeBumpRate, cancelAddress);
+
+        result = {
+          psbtBase64: cancelPsbt,
+          newFee: estimatedNewFee,
+          newFeeRate: feeBumpRate,
+          strategy: selectedStrategy!,
+          isCancel: true,
+          createdAt: new Date().toISOString(),
+        };
       } else {
         // Handle accelerated RBF case
-        psbt = createAcceleratedRBF(feeBumpRate, changeAddress);
-      }
+        const acceleratedPsbt = createAcceleratedRBF(
+          feeBumpRate,
+          changeAddress,
+        );
 
+        result = {
+          psbtBase64: acceleratedPsbt,
+          newFee: estimatedNewFee,
+          newFeeRate: feeBumpRate,
+          strategy: selectedStrategy!,
+          isCancel: false,
+          createdAt: new Date().toISOString(),
+        };
+      }
+      console.log("result", result);
       // Store the PSBT in context
-      setFeeBumpPsbt(psbt);
+      setFeeBumpResult(result);
       nextStep();
     } catch (error) {
       console.error("Error creating RBF transaction:", error);
     }
   };
-
-  // const isRbfFormValid = useMemo(() => {
-  //   if (selectedFeeRate < minimumFeeRate) return false;
-  //   if (rbfType === "cancel" && !cancelAddress.trim()) return false;
-  //   return true;
-  // }, [selectedFeeRate, minimumFeeRate, rbfType, cancelAddress]);
 
   const estimatedNewFee = useMemo(() => {
     if (!transaction || !feeBumpRate) return 0;
@@ -122,30 +138,6 @@ export const RBFForm: React.FC = () => {
     if (!transaction) return 0;
     return estimatedNewFee - transaction.fee;
   }, [transaction, estimatedNewFee]);
-
-  // Calculate fee levels based on network estimates
-  // const feeLevels = useMemo(() => {
-  //   const networkEstimates = recommendation?.networkFeeEstimates;
-
-  //   // If we have network estimates, use them for accurate fee levels
-  //   if (networkEstimates) {
-  //     return {
-  //       [FEE_LEVELS.LOW]: networkEstimates.lowPriority,
-  //       [FEE_LEVELS.MEDIUM]: networkEstimates.mediumPriority,
-  //       [FEE_LEVELS.HIGH]: networkEstimates.highPriority,
-  //     };
-  //   }
-
-  // Fallback if network estimates are not available
-  // Fallback values based on :
-  // https://b10c.me/blog/003-a-list-of-public-bitcoin-feerate-estimation-apis/
-  // These values are reasonable defaults but will be less accurate
-  //   return {
-  //     [FEE_LEVELS.LOW]: Math.max(originalFeeRate * 1.5, 20.09),
-  //     [FEE_LEVELS.MEDIUM]: Math.max(originalFeeRate * 2, 32.75),
-  //     [FEE_LEVELS.HIGH]: Math.max(originalFeeRate * 3, 32.75),
-  //   };
-  // }, [originalFeeRate, recommendation]);
 
   // Calculate max fee rate
   const maxFeeRate = useMemo(() => {
@@ -221,28 +213,6 @@ export const RBFForm: React.FC = () => {
   ) => {
     setChangeAddress(event.target.value);
   };
-  console.log("rbfform-2");
-  // Handle form submission
-  // const handleSubmit = () => {
-  //   if (!isRbfFormValid) return;
-
-  //   handleProcessRBF({
-  //     isCancel: rbfType === RBF_TYPES.CANCEL,
-  //     cancelAddress: rbfType === RBF_TYPES.CANCEL ? cancelAddress : undefined,
-  //     changeAddress:
-  //       rbfType === RBF_TYPES.ACCELERATE && changeAddress
-  //         ? changeAddress
-  //         : undefined,
-  //   });
-  // };
-
-  // Update local fee level when priority changes from Redux
-  // useEffect(() => {
-  //   const priorityFeeLevel = PRIORITY_TO_FEE_LEVEL[selectedPriority];
-  //   if (priorityFeeLevel) {
-  //     setCurrentFeeLevel(priorityFeeLevel);
-  //   }
-  // }, [selectedPriority]);
 
   // Check if current fee rate matches any predefined level
   const isCustomFeeRate = !Object.values(feeEstimates).some(
@@ -254,7 +224,7 @@ export const RBFForm: React.FC = () => {
   // 2. The current fee rate doesn't match any preset level
   const showCustomSlider =
     currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
-  console.log("rbfform-3");
+
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>

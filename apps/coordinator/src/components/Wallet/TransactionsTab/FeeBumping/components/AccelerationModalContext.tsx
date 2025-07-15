@@ -5,12 +5,10 @@ import React, {
   useReducer,
   ReactNode,
   useCallback,
-  useRef,
-  useEffect,
 } from "react";
 import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/fees";
 import { useAnalyzeTransaction } from "./hooks";
-import { RbfType } from "../types";
+import { RbfType, FeeBumpResult } from "../types";
 
 // =============================================================================
 // STATE TYPES
@@ -41,7 +39,7 @@ interface AccelerationModalState {
   rbfType: RbfType;
 
   // Fee bump PSBT
-  feeBumpPsbt: string | null;
+  feeBumpResult: FeeBumpResult | null;
 }
 
 // =============================================================================
@@ -56,7 +54,7 @@ type AccelerationModalAction =
   | { type: "RESET_WIZARD" }
   | { type: "SET_STRATEGY"; payload: FeeBumpStrategy }
   | { type: "SET_RBF_TYPE"; payload: RbfType }
-  | { type: "SET_FEE_BUMP_PSBT"; payload: string | null }
+  | { type: "SET_FEE_BUMP_RESULT"; payload: FeeBumpResult | null }
   | { type: "SET_STEP_CALLBACK"; payload: (() => boolean) | null }
   | { type: "SET_NEXT_ENABLED"; payload: boolean }
   | { type: "SET_BACK_ENABLED"; payload: boolean }
@@ -79,8 +77,8 @@ const initialState: AccelerationModalState = {
   analysisIsLoading: false,
   analysisIsError: null,
   selectedStrategy: null,
-  rbfType: null,
-  feeBumpPsbt: null,
+  rbfType: "accelerate" as RbfType,
+  feeBumpResult: null,
 };
 
 // =============================================================================
@@ -134,10 +132,10 @@ function accelerationModalReducer(
         rbfType: action.payload,
       };
 
-    case "SET_FEE_BUMP_PSBT":
+    case "SET_FEE_BUMP_RESULT":
       return {
         ...state,
-        feeBumpPsbt: action.payload,
+        feeBumpResult: action.payload,
       };
 
     default:
@@ -167,7 +165,7 @@ interface AccelerationModalContextType {
   resetWizard: () => void;
   setStrategy: (strategy: FeeBumpStrategy) => void;
   setRbfType: (type: RbfType) => void;
-  setFeeBumpPsbt: (psbt: string | null) => void;
+  setFeeBumpResult: (result: FeeBumpResult | null) => void;
 
   // Computed values
   isFirstStep: boolean;
@@ -236,8 +234,8 @@ export function AccelerationModalProvider({
     dispatch({ type: "SET_RBF_TYPE", payload: type });
   }, []);
 
-  const setFeeBumpPsbt = useCallback((psbt: string | null) => {
-    dispatch({ type: "SET_FEE_BUMP_PSBT", payload: psbt });
+  const setFeeBumpResult = useCallback((result: FeeBumpResult | null) => {
+    dispatch({ type: "SET_FEE_BUMP_RESULT", payload: result });
   }, []);
 
   // Computed values
@@ -257,7 +255,7 @@ export function AccelerationModalProvider({
     resetWizard,
     setStrategy,
     setRbfType,
-    setFeeBumpPsbt,
+    setFeeBumpResult,
     isFirstStep,
     isLastStep,
     canGoNext,
