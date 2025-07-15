@@ -24,7 +24,7 @@ export const StrategySelectionStep: React.FC = () => {
     return <FeeStrategySelector />;
   }
 
-  if (analysisIsLoading) {
+  if (!analysisIsLoading) {
     return (
       <Box sx={{ py: 2, textAlign: "center" }}>
         <LinearProgress />
