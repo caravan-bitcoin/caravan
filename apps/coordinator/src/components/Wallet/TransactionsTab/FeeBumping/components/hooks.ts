@@ -11,6 +11,7 @@ import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
 import {
   getChangeAddresses,
+  getExtendedPublicKeyImporters,
   getWalletAddresses,
   selectWalletConfig,
 } from "selectors/wallet";
@@ -18,7 +19,6 @@ import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
-import { useGetGlobalXpubs } from "../context/hooks";
 import { DUST_IN_SATOSHIS } from "utils/constants";
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
@@ -37,6 +37,15 @@ export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   }, [pendingUtxos, walletUtxos, transaction]);
 
   return { availableUtxos, isLoading, isError };
+};
+
+export const useGetGlobalXpubs = () => {
+  const getGlobalXpubs = useSelector(getExtendedPublicKeyImporters); // same for the whole wallet
+  return Object.values(getGlobalXpubs).map((item: any) => ({
+    masterFingerprint: item.rootXfp,
+    path: item.bip32Path,
+    xpub: item.extendedPublicKey,
+  }));
 };
 
 export const useAnalyzeTransaction = (
