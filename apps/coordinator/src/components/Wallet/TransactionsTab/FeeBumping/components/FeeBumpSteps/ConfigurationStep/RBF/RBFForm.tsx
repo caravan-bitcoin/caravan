@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -15,21 +15,20 @@ import {
   Alert,
   AlertTitle,
   Tooltip,
-  Chip,
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
 import {
   FeeLevelType,
   RBF_TYPES,
-  FEE_LEVEL_COLORS,
-  FEE_LEVELS,
   RbfType,
-} from "../../../types";
+  FEE_LEVELS,
+} from "../../../../types";
 import { useFeeEstimates } from "clients/fees";
-import { formatFee } from "../../../utils";
+import { formatFee } from "../../../../utils";
 import { TransactionDetails } from "@caravan/clients";
-import { useAccelerationModal } from "../../AccelerationModalContext";
-import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../hooks";
+import { useAccelerationModal } from "../../../AccelerationModalContext";
+import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
+import { FeeLevelSelector } from "./FeeLevelSelector";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -49,13 +48,21 @@ export const RBFForm: React.FC = () => {
     setFeeBumpPsbt,
     nextStep,
   } = useAccelerationModal();
+  console.log("rbfform-1");
   const { data: feeEstimates } = useFeeEstimates();
   // const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
   //   FEE_LEVELS.MEDIUM,
   // );
-  const [feeBumpRate, setFeeBumpRate] = useState<number>(transaction.size);
+  const [feeBumpRate, setFeeBumpRate] = useState<number>(
+    feeEstimates[FEE_LEVELS.MEDIUM],
+  );
   const [cancelAddress, setCancelAddress] = useState<string>("");
   const [changeAddress, setChangeAddress] = useState<string>("");
+  // Local state for fee level selection (UI state only)
+  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
+    FEE_LEVELS.MEDIUM,
+  );
+
   const { createCancelRBF } = useCreateCancelRBF(
     transaction,
     txHex,
@@ -67,11 +74,6 @@ export const RBFForm: React.FC = () => {
     availableUtxos,
   );
 
-  // Local state for fee level selection (UI state only)
-  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
-    FEE_LEVELS.MEDIUM,
-  );
-
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
@@ -79,11 +81,8 @@ export const RBFForm: React.FC = () => {
     () => Math.max(originalFeeRate + 1, 1),
     [originalFeeRate],
   );
-  useEffect(() => {
-    setRbfType(RBF_TYPES.ACCELERATE);
-  }, []);
 
-  const handleProcessRBF = (): boolean => {
+  const handleProcessRBF = () => {
     // Validate form before proceeding
     if (feeBumpRate < minimumFeeRate) {
       console.error("Fee rate is below minimum required");
@@ -228,7 +227,7 @@ export const RBFForm: React.FC = () => {
   ) => {
     setChangeAddress(event.target.value);
   };
-
+  console.log("rbfform-2");
   // Handle form submission
   // const handleSubmit = () => {
   //   if (!isRbfFormValid) return;
@@ -261,7 +260,7 @@ export const RBFForm: React.FC = () => {
   // 2. The current fee rate doesn't match any preset level
   const showCustomSlider =
     currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
-
+  console.log("rbfform-3");
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>
@@ -383,98 +382,13 @@ export const RBFForm: React.FC = () => {
         </Box>
 
         {/* Fee level selection */}
-        <FormControl component="fieldset" sx={{ mb: 2 }}>
-          <RadioGroup
-            row
-            aria-label="fee-level"
-            name="fee-level"
-            value={currentFeeLevel}
-            onChange={handleFeeLevelChange}
-          >
-            <FormControlLabel
-              value={FEE_LEVELS.LOW}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body2">
-                    Economy
-                    <Chip
-                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.LOW])} sat/vB`}
-                      size="small"
-                      sx={{ ml: 1 }}
-                      style={{
-                        backgroundColor: FEE_LEVEL_COLORS[FEE_LEVELS.LOW],
-                        color: "white",
-                      }}
-                    />
-                  </Typography>
-                </Box>
-              }
-            />
-            <FormControlLabel
-              value={FEE_LEVELS.MEDIUM}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body2">
-                    Standard
-                    <Chip
-                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.MEDIUM])} sat/vB`}
-                      size="small"
-                      sx={{ ml: 1 }}
-                      style={{
-                        backgroundColor: FEE_LEVEL_COLORS[FEE_LEVELS.MEDIUM],
-                        color: "white",
-                      }}
-                    />
-                  </Typography>
-                </Box>
-              }
-            />
-            <FormControlLabel
-              value={FEE_LEVELS.HIGH}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body2">
-                    Priority
-                    <Chip
-                      label={`${Math.ceil(feeEstimates[FEE_LEVELS.HIGH])} sat/vB`}
-                      size="small"
-                      sx={{ ml: 1 }}
-                      style={{
-                        backgroundColor: FEE_LEVEL_COLORS[FEE_LEVELS.HIGH],
-                        color: "white",
-                      }}
-                    />
-                  </Typography>
-                </Box>
-              }
-            />
-            <FormControlLabel
-              value={FEE_LEVELS.CUSTOM}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body2">
-                    Custom
-                    {currentFeeLevel === FEE_LEVELS.CUSTOM && (
-                      <Chip
-                        label={`${feeBumpRate} sat/vB`}
-                        size="small"
-                        sx={{ ml: 1 }}
-                        style={{
-                          backgroundColor: FEE_LEVEL_COLORS[FEE_LEVELS.CUSTOM],
-                          color: "white",
-                        }}
-                      />
-                    )}
-                  </Typography>
-                </Box>
-              }
-            />
-          </RadioGroup>
-        </FormControl>
+        <FeeLevelSelector
+          currentFeeLevel={currentFeeLevel}
+          onFeeLevelChange={handleFeeLevelChange}
+          feeEstimates={feeEstimates || {}}
+          feeBumpRate={feeBumpRate}
+          disabled={!feeEstimates}
+        />
 
         {/* Custom fee slider */}
         {showCustomSlider && (

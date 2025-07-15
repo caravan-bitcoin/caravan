@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
-import { RBFForm } from "./RBFForm";
+import { RBFForm } from "./RBF/RBFForm";
 import { useAccelerationModal } from "../../AccelerationModalContext";
 
 /**
@@ -16,7 +16,7 @@ export const ConfigurationStep: React.FC = () => {
     state: { selectedStrategy },
   } = useAccelerationModal();
 
-  // Show CPFP placeholder (not implemented yet)
+  // Show CPFP placeholder (not implemented yet in next PR)
   if (selectedStrategy === FeeBumpStrategy.CPFP) {
     return (
       <Alert severity="warning">
@@ -28,14 +28,13 @@ export const ConfigurationStep: React.FC = () => {
   }
 
   // Fallback for unknown strategies
-  if (selectedStrategy === FeeBumpStrategy.NONE) {
-    return (
-      <Alert severity="error">
-        <AlertTitle>Unknown Strategy</AlertTitle>
-        Please select a valid fee bumping strategy.
-      </Alert>
-    );
+  if (selectedStrategy === FeeBumpStrategy.RBF) {
+    return <RBFForm />;
   }
-
-  return <RBFForm />;
+  return (
+    <Alert severity="error">
+      <AlertTitle>Unknown Strategy</AlertTitle>
+      Please select a valid fee bumping strategy.
+    </Alert>
+  );
 };
