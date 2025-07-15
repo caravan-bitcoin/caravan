@@ -3,12 +3,8 @@ import {
   Box,
   Button,
   Divider,
-  FormControl,
-  FormControlLabel,
   Grid,
   Paper,
-  Radio,
-  RadioGroup,
   Slider,
   TextField,
   Typography,
@@ -29,6 +25,7 @@ import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
 import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
 import { FeeLevelSelector } from "./FeeLevelSelector";
+import { TransactionTypeSelector } from "./TransactionTypeSelector";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -267,91 +264,14 @@ export const RBFForm: React.FC = () => {
         Configure RBF Transaction
       </Typography>
 
-      <Box mb={3}>
-        <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-          Transaction Type
-        </Typography>
-        <FormControl component="fieldset">
-          <RadioGroup
-            aria-label="rbf-type"
-            name="rbf-type"
-            value={rbfType}
-            onChange={handleRbfTypeChange}
-          >
-            <FormControlLabel
-              value={RBF_TYPES.ACCELERATE}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body1">
-                    Accelerate Transaction
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Keep the same recipient but increase the fee to speed up
-                    confirmation
-                  </Typography>
-                </Box>
-              }
-            />
-            <FormControlLabel
-              value={RBF_TYPES.CANCEL}
-              control={<Radio />}
-              label={
-                <Box>
-                  <Typography variant="body1">Cancel Transaction</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Replace the transaction and redirect all funds to a new
-                    address
-                  </Typography>
-                </Box>
-              }
-            />
-          </RadioGroup>
-        </FormControl>
-      </Box>
-
-      <Divider sx={{ my: 2 }} />
-
-      {rbfType === RBF_TYPES.CANCEL ? (
-        <Box mb={3}>
-          <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-            Cancel Address
-          </Typography>
-          <TextField
-            fullWidth
-            label="Address to send funds to"
-            variant="outlined"
-            value={cancelAddress}
-            onChange={handleCancelAddressChange}
-            error={rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()}
-            helperText={
-              rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()
-                ? "Cancel address is required"
-                : "Enter an address where you want to send all funds"
-            }
-            sx={{ mb: 1 }}
-          />
-          <Alert severity="warning">
-            This will cancel the original transaction and send all funds (minus
-            fees) to this address.
-          </Alert>
-        </Box>
-      ) : (
-        <Box mb={3}>
-          <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-            Change Address (Optional)
-          </Typography>
-          <TextField
-            fullWidth
-            label="Change Address"
-            variant="outlined"
-            value={changeAddress}
-            onChange={handleChangeAddressChange}
-            helperText="Leave empty to use the default change address"
-            sx={{ mb: 1 }}
-          />
-        </Box>
-      )}
+      <TransactionTypeSelector
+        rbfType={rbfType}
+        onRbfTypeChange={handleRbfTypeChange}
+        cancelAddress={cancelAddress}
+        onCancelAddressChange={handleCancelAddressChange}
+        changeAddress={changeAddress}
+        onChangeAddressChange={handleChangeAddressChange}
+      />
 
       <Divider sx={{ my: 2 }} />
 
