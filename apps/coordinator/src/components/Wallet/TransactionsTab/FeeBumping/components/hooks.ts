@@ -90,14 +90,15 @@ export const useAnalyzeTransaction = (
       const analyzer = new TransactionAnalyzer({
         txHex,
         network: network as Network,
-        targetFeeRate: feeEstimates[FeePriority.MEDIUM] ?? 0,
+        targetFeeRate:
+          feeEstimates[FeePriority.MEDIUM] ??
+          (transaction.vsize ? transaction.fee / transaction.vsize : 250),
         absoluteFee: transaction.fee.toString(),
         availableUtxos,
         requiredSigners,
         totalSigners,
         addressType: addressType as MultisigAddressType,
       });
-
       return analyzer.analyze();
     } catch (error) {
       console.error("Error analyzing transaction:", error);
