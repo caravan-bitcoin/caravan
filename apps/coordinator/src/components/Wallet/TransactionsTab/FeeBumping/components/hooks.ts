@@ -1,5 +1,7 @@
 import {
+  AcceleratedRbfOptions,
   CancelRbfOptions,
+  createAcceleratedRbfTransaction,
   createCancelRbfTransaction,
   TransactionAnalyzer,
   UTXO,
@@ -7,7 +9,11 @@ import {
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";
-import { selectWalletConfig } from "selectors/wallet";
+import {
+  getChangeAddresses,
+  getWalletAddresses,
+  selectWalletConfig,
+} from "selectors/wallet";
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { TransactionDetails } from "@caravan/clients";
@@ -111,6 +117,114 @@ export const useAnalyzeTransaction = (
   };
 };
 
+/**
+ * Identifies the change output in a transaction by analyzing output addresses
+ * and wallet data
+ *
+ * This function uses multiple heuristics to identify which output is the change:
+ * 1. Matches against known wallet addresses
+ * 2. Checks BIP32 path patterns (change addresses use path m/1/*)
+ * 3. Position in outputs (change is often the last output)
+ *
+ * @param transaction - The transaction object
+ * @param walletState - The wallet state containing addresses
+ * @returns Index of the change output or undefined if not found
+ *
+ * @see https://en.bitcoin.it/wiki/Privacy#Change_address_detection
+ */
+export const useChangeOutputIndex = (
+  transaction?: TransactionDetails,
+): number | undefined => {
+  const changeAddresses = useSelector(getChangeAddresses);
+  const walletAddresses = useSelector(getWalletAddresses);
+
+  if (!transaction) return undefined;
+  if (!transaction.vout?.length) return undefined;
+
+  const changeAddressesSet = new Set(changeAddresses);
+  const walletAddressesSet = new Set(walletAddresses);
+
+  // 1) First look for any explicit change‑address hits
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && changeAddressesSet.has(addr)) {
+      return i;
+    }
+  }
+
+  // 2) : Check if any output goes to a known wallet address
+  // This is less reliable but can help identify change when the exact
+  // change address isn't recognized
+  for (let i = 0; i < transaction.vout.length; i++) {
+    const addr = transaction.vout[i].scriptPubkeyAddress;
+    if (addr && walletAddressesSet.has(addr)) {
+      return i;
+    }
+  }
+
+  return undefined;
+};
+
+export const useCreateAcceleratedRBF = (
+  transaction: TransactionDetails,
+  txHex: string,
+  availableUtxos: UTXO[],
+) => {
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const globalXpubs = useGetGlobalXpubs();
+  const changeIndex = useChangeOutputIndex(transaction);
+
+  const createAcceleratedRBF = useCallback(
+    (feeRate: number, changeAddress?: string) => {
+      if (
+        !transaction ||
+        !txHex ||
+        !availableUtxos ||
+        !network ||
+        !addressType ||
+        !requiredSigners ||
+        !totalSigners ||
+        !globalXpubs
+      ) {
+        throw new Error("Missing required parameters for accelerated RBF");
+      }
+
+      const rbfOptions: AcceleratedRbfOptions = {
+        originalTx: txHex,
+        network: network as Network,
+        targetFeeRate: feeRate,
+        absoluteFee: transaction.fee.toString(),
+        availableInputs: availableUtxos,
+        requiredSigners,
+        totalSigners,
+        scriptType: addressType as MultisigAddressType,
+        dustThreshold: DUST_IN_SATOSHIS.toString(),
+        ...(changeAddress ? { changeAddress } : { changeIndex }),
+        strict: false, // Less strict validation for better user experience
+        fullRBF: true, // TODO: Change to false and/or use configurable option
+        reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
+        globalXpubs,
+      };
+
+      return createAcceleratedRbfTransaction(rbfOptions);
+    },
+    [
+      transaction,
+      txHex,
+      availableUtxos,
+      network,
+      addressType,
+      requiredSigners,
+      totalSigners,
+      globalXpubs,
+      changeIndex,
+    ],
+  );
+
+  return { createAcceleratedRBF };
+};
+
 export const useCreateCancelRBF = (
   transaction: TransactionDetails,
   txHex: string,
@@ -121,7 +235,7 @@ export const useCreateCancelRBF = (
   const globalXpubs = useGetGlobalXpubs();
 
   const createCancelRBF = useCallback(
-    (cancelAddress: string, feeRate: number) => {
+    (feeRate: number, cancelAddress: string) => {
       if (
         !cancelAddress ||
         !feeRate ||

@@ -1,15 +1,7 @@
 import React from "react";
-import {
-  Box,
-  LinearProgress,
-  Typography,
-  Alert,
-  AlertTitle,
-  Button,
-} from "@mui/material";
+import { Box, Typography, Alert, AlertTitle, Button } from "@mui/material";
 import { TransactionComparison } from "../TransactionComparison";
-import { FeeBumpStatus } from "../../types";
-import { useFeeBumpContext } from "../../context";
+import { useAccelerationModal } from "../AccelerationModalContext";
 
 interface ReviewStepProps {
   onDownloadPSBT: () => void;
@@ -28,33 +20,22 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   onDownloadPSBT,
   downloadClicked,
 }) => {
-  const {
-    state: { status, error, result },
-  } = useFeeBumpContext();
+  const { state } = useAccelerationModal();
+  const { feeBumpPsbt } = state;
 
   return (
     <Box>
-      {/* Show loading indicator while transaction is being created */}
-      {status === FeeBumpStatus.CREATING && (
-        <Box sx={{ py: 2, textAlign: "center" }}>
-          <LinearProgress />
-          <Typography sx={{ mt: 2 }}>
-            Creating transaction and calculating optimal fees...
-          </Typography>
-        </Box>
-      )}
-
-      {/* Display any errors that occurred during transaction creation */}
-      {status === FeeBumpStatus.ERROR && (
+      {/* Display error if no PSBT is available */}
+      {!feeBumpPsbt && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          <AlertTitle>Error Creating Transaction</AlertTitle>
-          {error ||
-            "An unexpected error occurred while creating the transaction."}
+          <AlertTitle>No PSBT Available</AlertTitle>
+          No fee bump PSBT was created. Please go back and create the
+          transaction.
         </Alert>
       )}
 
-      {/* Display transaction details and download button on success */}
-      {status === FeeBumpStatus.SUCCESS && result && (
+      {/* Display transaction details and download button when PSBT is available */}
+      {feeBumpPsbt && (
         <>
           {/* Transaction comparison component */}
           <TransactionComparison />

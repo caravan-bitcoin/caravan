@@ -27,15 +27,9 @@ import {
 } from "../../../types";
 import { useFeeEstimates } from "clients/fees";
 import { formatFee } from "../../../utils";
-// import {
-//   setFeeBumpPriority,
-//   setFeeBumpRate,
-//   setCancelAddress,
-//   setChangeAddress,
-// } from "../../context";
 import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../../AccelerationModalContext";
-import { useCreateCancelRBF } from "../../hooks";
+import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../hooks";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -45,16 +39,29 @@ const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
 };
 
 export const RBFForm: React.FC = () => {
-  const { transaction, analysis, txHex, availableUtxos } =
-    useAccelerationModal();
+  const {
+    transaction,
+    analysis,
+    txHex,
+    availableUtxos,
+    setFeeBumpPsbt,
+    nextStep,
+  } = useAccelerationModal();
 
   const [rbfType, setRbfType] = useState<RbfType>("accelerate");
   const { data: feeEstimates } = useFeeEstimates();
-
+  // const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
+  //   FEE_LEVELS.MEDIUM,
+  // );
   const [feeBumpRate, setFeeBumpRate] = useState<number>(transaction.size);
   const [cancelAddress, setCancelAddress] = useState<string>("");
   const [changeAddress, setChangeAddress] = useState<string>("");
   const { createCancelRBF } = useCreateCancelRBF(
+    transaction,
+    txHex,
+    availableUtxos,
+  );
+  const { createAcceleratedRBF } = useCreateAcceleratedRBF(
     transaction,
     txHex,
     availableUtxos,
@@ -69,18 +76,22 @@ export const RBFForm: React.FC = () => {
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
   const handleSubmitRBF = async () => {
-    if (rbfType === RBF_TYPES.CANCEL) {
-      try {
-        const cancelPsbt = createCancelRBF(cancelAddress, feeBumpRate);
-        console.log("Cancel RBF PSBT created:", cancelPsbt);
-        // Handle successful creation - you can dispatch to context or handle as needed
-      } catch (error) {
-        console.error("Error creating cancel RBF:", error);
-        // Handle error - you can show error message to user
+    try {
+      let psbt: string;
+
+      if (rbfType === RBF_TYPES.CANCEL) {
+        psbt = createCancelRBF(feeBumpRate, cancelAddress);
+      } else {
+        // Handle accelerated RBF case
+        psbt = createAcceleratedRBF(feeBumpRate, changeAddress);
       }
-    } else {
-      // Handle accelerated RBF case
-      console.log("Accelerated RBF not implemented yet");
+
+      // Store the PSBT in context and move to next step
+      setFeeBumpPsbt(psbt);
+      nextStep();
+    } catch (error) {
+      console.error("Error creating RBF transaction:", error);
+      // Handle error - you can show error message to user
     }
   };
 
@@ -193,7 +204,6 @@ export const RBFForm: React.FC = () => {
     [minimumFeeRate],
   );
 
-  // Handle address input changes
   const handleCancelAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {

@@ -33,6 +33,9 @@ interface AccelerationModalState {
 
   // Strategy selection
   selectedStrategy: FeeBumpStrategy | null;
+
+  // Fee bump PSBT
+  feeBumpPsbt: string | null;
 }
 
 // =============================================================================
@@ -48,7 +51,8 @@ type AccelerationModalAction =
   | { type: "SET_ERROR_DETAILS"; payload: boolean }
   | { type: "SET_PSBT_VERSION"; payload: "v2" | "v0" }
   | { type: "RESET_WIZARD" }
-  | { type: "SET_STRATEGY"; payload: FeeBumpStrategy };
+  | { type: "SET_STRATEGY"; payload: FeeBumpStrategy }
+  | { type: "SET_FEE_BUMP_PSBT"; payload: string | null };
 
 // =============================================================================
 // INITIAL STATE
@@ -67,6 +71,7 @@ const initialState: AccelerationModalState = {
   analysisIsLoading: false,
   analysisIsError: null,
   selectedStrategy: null,
+  feeBumpPsbt: null,
 };
 
 // =============================================================================
@@ -132,6 +137,12 @@ function accelerationModalReducer(
         selectedStrategy: action.payload,
       };
 
+    case "SET_FEE_BUMP_PSBT":
+      return {
+        ...state,
+        feeBumpPsbt: action.payload,
+      };
+
     default:
       return state;
   }
@@ -161,6 +172,7 @@ interface AccelerationModalContextType {
   setPSBTVersion: (version: "v2" | "v0") => void;
   resetWizard: () => void;
   setStrategy: (strategy: FeeBumpStrategy) => void;
+  setFeeBumpPsbt: (psbt: string | null) => void;
 
   // Computed values
   isFirstStep: boolean;
@@ -238,6 +250,10 @@ export function AccelerationModalProvider({
     dispatch({ type: "SET_STRATEGY", payload: strategy });
   }, []);
 
+  const setFeeBumpPsbt = useCallback((psbt: string | null) => {
+    dispatch({ type: "SET_FEE_BUMP_PSBT", payload: psbt });
+  }, []);
+
   // Computed values
   const isFirstStep = state.activeStep === 0;
   const isLastStep = state.activeStep === totalSteps - 1;
@@ -257,6 +273,7 @@ export function AccelerationModalProvider({
     setPSBTVersion,
     resetWizard,
     setStrategy,
+    setFeeBumpPsbt,
     isFirstStep,
     isLastStep,
     canGoNext,
