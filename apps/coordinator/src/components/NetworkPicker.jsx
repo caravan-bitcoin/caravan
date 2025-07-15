@@ -63,8 +63,9 @@ const NetworkPicker = ({ setNetwork, network, frozen }) => {
           </RadioGroup>
           <FormHelperText>
             <small>
-            Choose &apos;Mainnet&apos; for real Bitcoin, &apos;Testnet&apos; for testing with test coins, 
-            or &apos;Regtest&apos; for local development with a private bitcoind node.
+              Choose &apos;Mainnet&apos; for real Bitcoin, &apos;Testnet&apos;
+              for testing with test coins, or &apos;Regtest&apos; for local
+              development with a private bitcoind node.
             </small>
           </FormHelperText>
         </FormControl>

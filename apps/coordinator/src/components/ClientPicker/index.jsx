@@ -56,7 +56,6 @@ const ClientPicker = ({
 
   const isRegtest = network === "regtest";
 
-
   const validatePassword = () => {
     return "";
   };
@@ -75,7 +74,9 @@ const ClientPicker = ({
     const value = event.target.value;
     if (value === ClientType.PRIVATE) {
       if (!urlEdited) {
-        setUrl(`http://localhost:${network === "mainnet" ? 8332 : network === "testnet" ? 18332 : 18443 }`);
+        setUrl(
+          `http://localhost:${network === "mainnet" ? 8332 : network === "testnet" ? 18332 : 18443}`,
+        );
       }
       setType(ClientType.PRIVATE);
     } else {
@@ -193,7 +194,8 @@ const ClientPicker = ({
             )}
             {isRegtest && (
               <FormHelperText>
-                Regtest networks require a private bitcoind client. Public explorers are not available.
+                Regtest networks require a private bitcoind client. Public
+                explorers are not available.
               </FormHelperText>
             )}
           </FormControl>

@@ -171,7 +171,7 @@ export const useHandleTransactionExplorerLinkClick = () => {
         );
         if (!confirmed) return;
       }
-      
+
       window.open(explorerUrl, "_blank");
     },
     [client, network, getExplorerUrl],
