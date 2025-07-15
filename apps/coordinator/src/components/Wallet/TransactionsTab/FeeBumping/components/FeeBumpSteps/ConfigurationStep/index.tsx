@@ -1,8 +1,8 @@
 import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
-import { RBFForm } from "../RBF/RBFForm";
-import { useAccelerationModal } from "../AccelerationModalContext";
+import { RBFForm } from "./RBFForm";
+import { useAccelerationModal } from "../../AccelerationModalContext";
 
 /**
  * Step 2: Configuration

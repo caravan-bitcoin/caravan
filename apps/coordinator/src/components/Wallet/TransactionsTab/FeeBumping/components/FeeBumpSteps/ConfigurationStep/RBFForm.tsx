@@ -26,9 +26,9 @@ import {
   FEE_LEVEL_TO_PRIORITY_MAP,
   PRIORITY_TO_FEE_LEVEL,
   FEE_LEVELS,
-} from "../../types";
+} from "../../../types";
 import { useFeeEstimates } from "clients/fees";
-import { formatFee } from "../../utils";
+import { formatFee } from "../../../utils";
 // import {
 //   setFeeBumpPriority,
 //   setFeeBumpRate,
@@ -36,33 +36,13 @@ import { formatFee } from "../../utils";
 //   setChangeAddress,
 // } from "../../context";
 import { TransactionDetails } from "@caravan/clients";
-import { useAccelerationModal } from "../AccelerationModalContext";
+import { useAccelerationModal } from "../../AccelerationModalContext";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
   if (!transaction) return 0;
   const txSize = transaction.vsize || transaction.size;
   return txSize ? transaction.fee / txSize : 0;
-};
-
-const useFeeLevel = (transaction: TransactionDetails) => {
-  const { data: feeEstimates } = useFeeEstimates();
-  const [currentFeeRate, setCurrentFeeRate] = useState<number>(0);
-  const [selectedPriority, setSelectedPriority] = useState<FeeLevelType>(
-    FEE_LEVELS.MEDIUM,
-  );
-
-  const originalFee = transaction!.fee;
-  const originalFeeRate = calculateOriginalFeeRate(transaction!);
-
-  return {
-    currentFeeRate,
-    setCurrentFeeRate,
-    selectedPriority,
-    setSelectedPriority,
-    originalFee,
-    originalFeeRate,
-  };
 };
 
 export const RBFForm: React.FC = () => {
@@ -100,33 +80,33 @@ export const RBFForm: React.FC = () => {
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
-  // const handleSubmitRBF = async (options: {
-  //   isCancel: boolean;
-  //   cancelAddress?: string;
-  //   changeAddress?: string;
-  // }) => {
-  //   try {
-  //     console.log("options", options);
+  const handleSubmitRBF = async (options: {
+    isCancel: boolean;
+    cancelAddress?: string;
+    changeAddress?: string;
+  }) => {
+    try {
+      console.log("options", options);
 
-  //     const isCancel = options.isCancel ?? rbfType === "cancel";
+      const isCancel = options.isCancel ?? rbfType === "cancel";
 
-  //     if (isCancel) {
-  //       await createCancelRBF({
-  //         cancelAddress: options.cancelAddress,
-  //       });
-  //     } else {
-  //       await createAcceleratedRBF({
-  //         changeAddress: options.changeAddress,
-  //       });
-  //     }
+      if (isCancel) {
+        await createCancelRBF({
+          cancelAddress: options.cancelAddress,
+        });
+      } else {
+        await createAcceleratedRBF({
+          changeAddress: options.changeAddress,
+        });
+      }
 
-  //     // handleNext(); // Move to the next step when done
-  //   } catch (err) {
-  //     // Error is already handled by the context and stored in state.error
-  //     console.error("Error creating fee-bumped transaction:", err);
-  //     // Error will be displayed in the UI automatically
-  //   }
-  // };
+      // handleNext(); // Move to the next step when done
+    } catch (err) {
+      // Error is already handled by the context and stored in state.error
+      console.error("Error creating fee-bumped transaction:", err);
+      // Error will be displayed in the UI automatically
+    }
+  };
 
   const minimumFeeRate = useMemo(
     () => Math.max(originalFeeRate + 1, 1),
