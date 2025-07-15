@@ -12,16 +12,11 @@ import {
   StepLabel,
   Stepper,
   Typography,
-  FormControl,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
   CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
-import { downloadFile } from "../../../../../utils";
 import { Transaction } from "../../types";
 import { ConfigurationStep, StrategySelectionStep } from "./FeeBumpSteps";
 import { ErrorDialog } from "./ErrorDialog";
@@ -106,51 +101,15 @@ const AccelerationModalContent: React.FC<
   }
 > = ({ open, onClose, stepConfigs }) => {
   const {
-    state: {
-      activeStep,
-      downloadClicked,
-      showPSBTVersionDialog,
-      showErrorDetails,
-      selectedPsbtVersion,
-    },
+    state: { activeStep, downloadClicked, showErrorDetails },
     nextStep,
     previousStep,
-    setDownloadClicked, // can probably be removed
-    setPSBTVersionDialog, // can probably be removed
     setErrorDetails, // can probably be removed
-    setPSBTVersion, // can probably be removed
     resetWizard,
-    isLastStep,
-    canGoNext,
-    canGoBack,
     transaction,
     analysisIsLoading,
     analysisError,
   } = useAccelerationModal();
-
-  const handleConfirmDownload = useCallback(() => {
-    // TODO: Replace with actual result from fee bump context
-    // For now, we'll create a placeholder result
-    const mockResult = {
-      priority: "medium",
-      isCancel: false,
-      psbtBase64: "placeholder",
-    };
-
-    const priorityStr = mockResult.priority.toLowerCase();
-    const txTypeStr = mockResult.isCancel ? "cancel" : "accelerated";
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[:.]/g, "-")
-      .substring(0, 19);
-
-    const versionStr = selectedPsbtVersion === "v2" ? "v2" : "v0";
-    const filename = `${txTypeStr}_tx_${priorityStr}_${versionStr}_${timestamp}.psbt`;
-
-    downloadFile(mockResult.psbtBase64, filename);
-    setDownloadClicked(true);
-    setPSBTVersionDialog(false);
-  }, [selectedPsbtVersion, setDownloadClicked, setPSBTVersionDialog]);
 
   // Handle modal close with confirmation if PSBT not downloaded
   const handleClose = useCallback(() => {
@@ -276,75 +235,17 @@ const AccelerationModalContent: React.FC<
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         {/* Back button */}
-        <Button color="inherit" disabled={!canGoBack} onClick={previousStep}>
+        <Button color="inherit" onClick={previousStep}>
           Back
         </Button>
 
         <Box sx={{ flex: "1 1 auto" }} />
-        {/* Next button (only on first step) */}
-        {activeStep === 0 && (
-          <Button variant="contained" onClick={nextStep} disabled={!canGoNext}>
-            Next
-          </Button>
-        )}
 
-        {/* Close button (only on last step) */}
-        {isLastStep && (
-          <Button color="primary" variant="contained" onClick={handleClose}>
-            Close
-          </Button>
-        )}
+        {/* Next button - always shown */}
+        <Button variant="contained" onClick={nextStep}>
+          Next
+        </Button>
       </DialogActions>
-      {/* PSBT Version Selection Dialog */}
-      <Dialog
-        open={showPSBTVersionDialog}
-        onClose={() => setPSBTVersionDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Choose PSBT Version</DialogTitle>
-        <DialogContent>
-          <FormControl component="fieldset" sx={{ mt: 1 }}>
-            <RadioGroup
-              value={selectedPsbtVersion}
-              onChange={(e) => setPSBTVersion(e.target.value as "v2" | "v0")}
-            >
-              <FormControlLabel
-                value="v2"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1">
-                      PSBT v2 (Recommended)
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Latest format with better hardware wallet support
-                    </Typography>
-                  </Box>
-                }
-              />
-              <FormControlLabel
-                value="v0"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1">PSBT v0 (Legacy)</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Compatible with older wallets and tools
-                    </Typography>
-                  </Box>
-                }
-              />
-            </RadioGroup>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPSBTVersionDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleConfirmDownload}>
-            Download PSBT
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Dialog>
   );
 };

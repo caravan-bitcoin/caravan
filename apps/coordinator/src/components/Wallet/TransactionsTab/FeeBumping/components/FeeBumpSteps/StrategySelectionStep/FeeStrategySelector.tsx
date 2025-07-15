@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -72,7 +72,7 @@ export const FeeStrategySelector: React.FC = () => {
   );
 
   // Auto-select the first strategy if none is selected
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedStrategy && strategyConfigs.length > 0) {
       setStrategy(strategyConfigs[0].strategy);
     }

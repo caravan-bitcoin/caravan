@@ -5,9 +5,12 @@ import React, {
   useReducer,
   ReactNode,
   useCallback,
+  useRef,
+  useEffect,
 } from "react";
 import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/fees";
 import { useAnalyzeTransaction } from "./hooks";
+import { RbfType } from "../types";
 
 // =============================================================================
 // STATE TYPES
@@ -34,6 +37,9 @@ interface AccelerationModalState {
   // Strategy selection
   selectedStrategy: FeeBumpStrategy | null;
 
+  // RBF configuration
+  rbfType: RbfType;
+
   // Fee bump PSBT
   feeBumpPsbt: string | null;
 }
@@ -46,13 +52,15 @@ type AccelerationModalAction =
   | { type: "SET_ACTIVE_STEP"; payload: number }
   | { type: "NEXT_STEP" }
   | { type: "PREVIOUS_STEP" }
-  | { type: "SET_DOWNLOAD_CLICKED"; payload: boolean }
-  | { type: "SET_PSBT_VERSION_DIALOG"; payload: boolean }
   | { type: "SET_ERROR_DETAILS"; payload: boolean }
-  | { type: "SET_PSBT_VERSION"; payload: "v2" | "v0" }
   | { type: "RESET_WIZARD" }
   | { type: "SET_STRATEGY"; payload: FeeBumpStrategy }
-  | { type: "SET_FEE_BUMP_PSBT"; payload: string | null };
+  | { type: "SET_RBF_TYPE"; payload: RbfType }
+  | { type: "SET_FEE_BUMP_PSBT"; payload: string | null }
+  | { type: "SET_STEP_CALLBACK"; payload: (() => boolean) | null }
+  | { type: "SET_NEXT_ENABLED"; payload: boolean }
+  | { type: "SET_BACK_ENABLED"; payload: boolean }
+  | { type: "SET_NEXT_BUTTON_TEXT"; payload: string };
 
 // =============================================================================
 // INITIAL STATE
@@ -71,6 +79,7 @@ const initialState: AccelerationModalState = {
   analysisIsLoading: false,
   analysisIsError: null,
   selectedStrategy: null,
+  rbfType: null,
   feeBumpPsbt: null,
 };
 
@@ -101,28 +110,10 @@ function accelerationModalReducer(
         activeStep: Math.max(0, state.activeStep - 1),
       };
 
-    case "SET_DOWNLOAD_CLICKED":
-      return {
-        ...state,
-        downloadClicked: action.payload,
-      };
-
-    case "SET_PSBT_VERSION_DIALOG":
-      return {
-        ...state,
-        showPSBTVersionDialog: action.payload,
-      };
-
     case "SET_ERROR_DETAILS":
       return {
         ...state,
         showErrorDetails: action.payload,
-      };
-
-    case "SET_PSBT_VERSION":
-      return {
-        ...state,
-        selectedPsbtVersion: action.payload,
       };
 
     case "RESET_WIZARD":
@@ -135,6 +126,12 @@ function accelerationModalReducer(
       return {
         ...state,
         selectedStrategy: action.payload,
+      };
+
+    case "SET_RBF_TYPE":
+      return {
+        ...state,
+        rbfType: action.payload,
       };
 
     case "SET_FEE_BUMP_PSBT":
@@ -166,12 +163,10 @@ interface AccelerationModalContextType {
   setActiveStep: (step: number) => void;
   nextStep: () => void;
   previousStep: () => void;
-  setDownloadClicked: (clicked: boolean) => void;
-  setPSBTVersionDialog: (show: boolean) => void;
   setErrorDetails: (show: boolean) => void;
-  setPSBTVersion: (version: "v2" | "v0") => void;
   resetWizard: () => void;
   setStrategy: (strategy: FeeBumpStrategy) => void;
+  setRbfType: (type: RbfType) => void;
   setFeeBumpPsbt: (psbt: string | null) => void;
 
   // Computed values
@@ -213,33 +208,20 @@ export function AccelerationModalProvider({
     transaction,
     txHex,
   );
+
   // Action creators
   const setActiveStep = useCallback((step: number) => {
     dispatch({ type: "SET_ACTIVE_STEP", payload: step });
   }, []);
 
-  const nextStep = useCallback(() => {
-    dispatch({ type: "NEXT_STEP" });
-  }, []);
+  const nextStep = useCallback(() => dispatch({ type: "NEXT_STEP" }), []);
 
   const previousStep = useCallback(() => {
     dispatch({ type: "PREVIOUS_STEP" });
   }, []);
 
-  const setDownloadClicked = useCallback((clicked: boolean) => {
-    dispatch({ type: "SET_DOWNLOAD_CLICKED", payload: clicked });
-  }, []);
-
-  const setPSBTVersionDialog = useCallback((show: boolean) => {
-    dispatch({ type: "SET_PSBT_VERSION_DIALOG", payload: show });
-  }, []);
-
   const setErrorDetails = useCallback((show: boolean) => {
     dispatch({ type: "SET_ERROR_DETAILS", payload: show });
-  }, []);
-
-  const setPSBTVersion = useCallback((version: "v2" | "v0") => {
-    dispatch({ type: "SET_PSBT_VERSION", payload: version });
   }, []);
 
   const resetWizard = useCallback(() => {
@@ -248,6 +230,10 @@ export function AccelerationModalProvider({
 
   const setStrategy = useCallback((strategy: FeeBumpStrategy) => {
     dispatch({ type: "SET_STRATEGY", payload: strategy });
+  }, []);
+
+  const setRbfType = useCallback((type: RbfType) => {
+    dispatch({ type: "SET_RBF_TYPE", payload: type });
   }, []);
 
   const setFeeBumpPsbt = useCallback((psbt: string | null) => {
@@ -267,12 +253,10 @@ export function AccelerationModalProvider({
     setActiveStep,
     nextStep,
     previousStep,
-    setDownloadClicked,
-    setPSBTVersionDialog,
     setErrorDetails,
-    setPSBTVersion,
     resetWizard,
     setStrategy,
+    setRbfType,
     setFeeBumpPsbt,
     isFirstStep,
     isLastStep,

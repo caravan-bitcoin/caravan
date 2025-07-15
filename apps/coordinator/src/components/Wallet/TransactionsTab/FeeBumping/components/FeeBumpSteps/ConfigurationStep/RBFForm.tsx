@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -19,11 +19,11 @@ import {
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
 import {
-  RbfType,
   FeeLevelType,
   RBF_TYPES,
   FEE_LEVEL_COLORS,
   FEE_LEVELS,
+  RbfType,
 } from "../../../types";
 import { useFeeEstimates } from "clients/fees";
 import { formatFee } from "../../../utils";
@@ -44,11 +44,10 @@ export const RBFForm: React.FC = () => {
     analysis,
     txHex,
     availableUtxos,
+    state: { rbfType },
+    setRbfType,
     setFeeBumpPsbt,
-    nextStep,
   } = useAccelerationModal();
-
-  const [rbfType, setRbfType] = useState<RbfType>("accelerate");
   const { data: feeEstimates } = useFeeEstimates();
   // const [feeBumpPriority, setFeeBumpPriority] = useState<FeeLevelType>(
   //   FEE_LEVELS.MEDIUM,
@@ -75,7 +74,26 @@ export const RBFForm: React.FC = () => {
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
-  const handleSubmitRBF = async () => {
+  const minimumFeeRate = useMemo(
+    () => Math.max(originalFeeRate + 1, 1),
+    [originalFeeRate],
+  );
+  useEffect(() => {
+    setRbfType(RBF_TYPES.ACCELERATE);
+  }, []);
+
+  const handleProcessRBF = (): boolean => {
+    // Validate form before proceeding
+    if (feeBumpRate < minimumFeeRate) {
+      console.error("Fee rate is below minimum required");
+      return false;
+    }
+
+    if (rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()) {
+      console.error("Cancel address is required for cancel RBF");
+      return false;
+    }
+
     try {
       let psbt: string;
 
@@ -86,19 +104,15 @@ export const RBFForm: React.FC = () => {
         psbt = createAcceleratedRBF(feeBumpRate, changeAddress);
       }
 
-      // Store the PSBT in context and move to next step
+      // Store the PSBT in context
       setFeeBumpPsbt(psbt);
-      nextStep();
+      return true; // Allow advancing to next step
     } catch (error) {
       console.error("Error creating RBF transaction:", error);
       // Handle error - you can show error message to user
+      return false; // Don't advance to next step
     }
   };
-
-  const minimumFeeRate = useMemo(
-    () => Math.max(originalFeeRate + 1, 1),
-    [originalFeeRate],
-  );
 
   // const isRbfFormValid = useMemo(() => {
   //   if (selectedFeeRate < minimumFeeRate) return false;
@@ -220,7 +234,7 @@ export const RBFForm: React.FC = () => {
   // const handleSubmit = () => {
   //   if (!isRbfFormValid) return;
 
-  //   handleSubmitRBF({
+  //   handleProcessRBF({
   //     isCancel: rbfType === RBF_TYPES.CANCEL,
   //     cancelAddress: rbfType === RBF_TYPES.CANCEL ? cancelAddress : undefined,
   //     changeAddress:
@@ -560,7 +574,7 @@ export const RBFForm: React.FC = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={handleSubmitRBF}
+          onClick={handleProcessRBF}
           size="large"
           disabled={
             rbfType === RBF_TYPES.CANCEL

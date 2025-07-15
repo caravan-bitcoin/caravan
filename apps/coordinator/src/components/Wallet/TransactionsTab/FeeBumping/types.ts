@@ -153,7 +153,7 @@ export interface UtxoExtractionResult {
 
 // Component related
 
-export type RbfType = "accelerate" | "cancel";
+export type RbfType = "accelerate" | "cancel" | null;
 
 export const RBF_TYPES = {
   ACCELERATE: "accelerate",
