@@ -99,37 +99,19 @@ export const RBFForm: React.FC = () => {
     }
 
     try {
-      let result: FeeBumpResult;
       const txVsize = transaction.vsize || transaction.size;
       const estimatedNewFee = Math.ceil(txVsize * feeBumpRate).toString();
+      const generatePsbt =
+        rbfType === RBF_TYPES.CANCEL ? createCancelRBF : createAcceleratedRBF;
 
-      if (rbfType === RBF_TYPES.CANCEL) {
-        const cancelPsbt = createCancelRBF(feeBumpRate, cancelAddress);
-
-        result = {
-          psbtBase64: cancelPsbt,
-          newFee: estimatedNewFee,
-          newFeeRate: feeBumpRate,
-          strategy: selectedStrategy!,
-          isCancel: true,
-          createdAt: new Date().toISOString(),
-        };
-      } else {
-        // Handle accelerated RBF case
-        const acceleratedPsbt = createAcceleratedRBF(
-          feeBumpRate,
-          changeAddress,
-        );
-
-        result = {
-          psbtBase64: acceleratedPsbt,
-          newFee: estimatedNewFee,
-          newFeeRate: feeBumpRate,
-          strategy: selectedStrategy!,
-          isCancel: false,
-          createdAt: new Date().toISOString(),
-        };
-      }
+      const result: FeeBumpResult = {
+        psbtBase64: generatePsbt(feeBumpRate, changeAddress),
+        newFee: estimatedNewFee,
+        newFeeRate: feeBumpRate,
+        strategy: selectedStrategy!,
+        isCancel: rbfType === RBF_TYPES.CANCEL,
+        createdAt: new Date().toISOString(),
+      };
 
       // Store the PSBT in context
       setFeeBumpResult(result);
