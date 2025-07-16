@@ -58,7 +58,8 @@ type AccelerationModalAction =
   | { type: "SET_STEP_CALLBACK"; payload: (() => boolean) | null }
   | { type: "SET_NEXT_ENABLED"; payload: boolean }
   | { type: "SET_BACK_ENABLED"; payload: boolean }
-  | { type: "SET_NEXT_BUTTON_TEXT"; payload: string };
+  | { type: "SET_NEXT_BUTTON_TEXT"; payload: string }
+  | { type: "SET_DOWNLOAD_CLICKED"; payload: boolean };
 
 // =============================================================================
 // INITIAL STATE
@@ -138,6 +139,12 @@ function accelerationModalReducer(
         feeBumpResult: action.payload,
       };
 
+    case "SET_DOWNLOAD_CLICKED":
+      return {
+        ...state,
+        downloadClicked: action.payload,
+      };
+
     default:
       return state;
   }
@@ -166,6 +173,7 @@ interface AccelerationModalContextType {
   setStrategy: (strategy: FeeBumpStrategy) => void;
   setRbfType: (type: RbfType) => void;
   setFeeBumpResult: (result: FeeBumpResult | null) => void;
+  setDownloadClicked: (downloaded: boolean) => void;
 }
 
 // =============================================================================
@@ -228,6 +236,10 @@ export function AccelerationModalProvider({
     dispatch({ type: "SET_FEE_BUMP_RESULT", payload: result });
   }, []);
 
+  const setDownloadClicked = useCallback((downloaded: boolean) => {
+    dispatch({ type: "SET_DOWNLOAD_CLICKED", payload: downloaded });
+  }, []);
+
   const contextValue: AccelerationModalContextType = {
     transaction,
     txHex,
@@ -240,6 +252,7 @@ export function AccelerationModalProvider({
     setStrategy,
     setRbfType,
     setFeeBumpResult,
+    setDownloadClicked,
     analysis,
     availableUtxos,
     analysisIsLoading: isLoading,

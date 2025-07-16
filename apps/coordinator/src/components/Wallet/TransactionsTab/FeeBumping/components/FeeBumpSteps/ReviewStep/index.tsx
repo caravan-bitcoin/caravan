@@ -4,7 +4,6 @@ import { Box, Typography, Alert, AlertTitle } from "@mui/material";
 import { PsbtV2 } from "@caravan/psbt";
 
 import { TransactionComparison } from "./TransactionComparison";
-import { PSBTVersionDialog } from "./PSBTVersionDialog";
 import { DownloadSection } from "./DownloadSection";
 import { useAccelerationModal } from "../../AccelerationModalContext";
 import { downloadFile } from "utils/index";
@@ -17,13 +16,9 @@ import { downloadFile } from "utils/index";
  * next steps guidance to the user.
  */
 export const ReviewStep = () => {
-  const { state } = useAccelerationModal();
+  const { state, setDownloadClicked } = useAccelerationModal();
   const { feeBumpResult, rbfType } = state;
-  const [downloadClicked, setDownloadClicked] = useState(false);
-  const [showPSBTVersionDialog, setShowPSBTVersionDialog] = useState(false);
-  const [selectedPsbtVersion, setSelectedPsbtVersion] = useState<"v0" | "v2">(
-    "v2",
-  );
+  const [localdownloadClicked, setlocalDownloadClicked] = useState(false);
 
   // Convert PSBT between versions
   const convertPSBT = useCallback(
@@ -43,55 +38,42 @@ export const ReviewStep = () => {
     [],
   );
 
-  // Handle PSBT download initiation
-  const handleDownloadPSBT = useCallback(() => {
-    setShowPSBTVersionDialog(true);
-  }, []);
+  const handleDownloadPSBT = useCallback(
+    (selectedPsbtVersion: "v0" | "v2") => {
+      if (!feeBumpResult) {
+        return false;
+      }
 
-  // Handle version selection change
-  const handleVersionChange = useCallback((version: "v0" | "v2") => {
-    setSelectedPsbtVersion(version);
-  }, []);
+      try {
+        // Generate filename
+        const txTypeStr = rbfType === "cancel" ? "cancel" : "accelerated";
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-")
+          .substring(0, 19);
+        const versionStr = selectedPsbtVersion;
+        const filename = `${txTypeStr}_tx_${versionStr}_${timestamp}.psbt`;
 
-  // Handle dialog close
-  const handleCloseDialog = useCallback(() => {
-    setShowPSBTVersionDialog(false);
-  }, []);
+        // Convert PSBT to requested version
+        const convertedPSBT = convertPSBT(
+          feeBumpResult.psbtBase64,
+          selectedPsbtVersion,
+        );
 
-  const handleConfirmDownload = useCallback(() => {
-    if (!feeBumpResult) {
-      return false;
-    }
+        // Download file
+        downloadFile(convertedPSBT, filename);
 
-    try {
-      // Generate filename
-      const txTypeStr = rbfType === "cancel" ? "cancel" : "accelerated";
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .substring(0, 19);
-      const versionStr = selectedPsbtVersion;
-      const filename = `${txTypeStr}_tx_${versionStr}_${timestamp}.psbt`;
-
-      // Convert PSBT to requested version
-      const convertedPSBT = convertPSBT(
-        feeBumpResult.psbtBase64,
-        selectedPsbtVersion,
-      );
-
-      // Download file
-      downloadFile(convertedPSBT, filename);
-
-      // Update state
-      setDownloadClicked(true);
-      setShowPSBTVersionDialog(false);
-
-      return true;
-    } catch (error) {
-      console.error("Error downloading PSBT:", error);
-      return false;
-    }
-  }, [feeBumpResult, rbfType]);
+        // Update state
+        setlocalDownloadClicked(true);
+        setDownloadClicked(true);
+        return true;
+      } catch (error) {
+        console.error("Error downloading PSBT:", error);
+        return false;
+      }
+    },
+    [feeBumpResult, rbfType, convertPSBT],
+  );
 
   return (
     <Box>
@@ -115,7 +97,7 @@ export const ReviewStep = () => {
             {/* Success message after download */}
             <DownloadSection
               onDownload={handleDownloadPSBT}
-              downloadClicked={downloadClicked}
+              downloadClicked={localdownloadClicked}
               disabled={!feeBumpResult}
             />
           </Box>
@@ -143,15 +125,6 @@ export const ReviewStep = () => {
               </Typography>
             </Alert>
           </Box>
-
-          {/* PSBT Version Selection Dialog */}
-          <PSBTVersionDialog
-            open={showPSBTVersionDialog}
-            onClose={handleCloseDialog}
-            onConfirm={handleConfirmDownload}
-            selectedVersion={selectedPsbtVersion}
-            onVersionChange={handleVersionChange}
-          />
         </>
       )}
     </Box>

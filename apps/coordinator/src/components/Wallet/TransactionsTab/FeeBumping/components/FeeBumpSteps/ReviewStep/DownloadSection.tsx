@@ -1,16 +1,43 @@
-/* eslint-disable react/prop-types */
 import React from "react";
-import { Typography, Button, Paper, Alert, AlertTitle } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Alert,
+  AlertTitle,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Divider,
+} from "@mui/material";
 import { Download } from "@mui/icons-material";
 
 export interface DownloadSectionProps {
-  onDownload: () => void;
+  onDownload: (version: "v0" | "v2") => void;
   downloadClicked: boolean;
   disabled?: boolean;
 }
 
-export const DownloadSection: React.FC<DownloadSectionProps> = React.memo(
-  ({ onDownload, downloadClicked, disabled = false }) => (
+export const DownloadSection: React.FC<DownloadSectionProps> = ({
+  onDownload,
+  downloadClicked,
+  disabled = false,
+}) => {
+  const [selectedVersion, setSelectedVersion] = React.useState<"v0" | "v2">(
+    "v2",
+  );
+
+  const handleDownload = () => {
+    onDownload(selectedVersion);
+  };
+
+  const handleVersionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedVersion(event.target.value as "v0" | "v2");
+  };
+
+  return (
     <Paper
       sx={{
         p: 3,
@@ -25,23 +52,71 @@ export const DownloadSection: React.FC<DownloadSectionProps> = React.memo(
         Download Transaction
       </Typography>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Download the PSBT file to sign with your hardware wallet
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Choose the PSBT format and download the file to sign with your hardware
+        wallet
       </Typography>
+
+      {/* Version Selector */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+          PSBT Version
+        </Typography>
+
+        <FormControl component="fieldset">
+          <RadioGroup
+            row
+            value={selectedVersion}
+            onChange={handleVersionChange}
+            sx={{ justifyContent: "center" }}
+          >
+            <FormControlLabel
+              value="v2"
+              control={<Radio />}
+              label={
+                <Box textAlign="left">
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    v2 (Recommended)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Latest format, better hardware wallet support
+                  </Typography>
+                </Box>
+              }
+            />
+            <FormControlLabel
+              value="v0"
+              control={<Radio />}
+              label={
+                <Box textAlign="left">
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    v0 (Legacy)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Older format for compatibility
+                  </Typography>
+                </Box>
+              }
+            />
+          </RadioGroup>
+        </FormControl>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
 
       <Button
         variant="contained"
         size="large"
-        onClick={onDownload}
+        onClick={handleDownload}
         startIcon={<Download />}
         disabled={disabled}
         sx={{
-          minWidth: 200,
+          minWidth: 250,
           py: 1.5,
           fontSize: "1rem",
         }}
       >
-        Download PSBT
+        Download PSBT {selectedVersion.toUpperCase()}
       </Button>
 
       {downloadClicked && (
@@ -54,7 +129,5 @@ export const DownloadSection: React.FC<DownloadSectionProps> = React.memo(
         </Alert>
       )}
     </Paper>
-  ),
-);
-
-DownloadSection.displayName = "DownloadSection";
+  );
+};
