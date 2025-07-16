@@ -689,47 +689,70 @@ export class BlockchainClient extends ClientBase {
 
     const addresses = Array.isArray(address) ? address : [address];
     const allTransactions: any[] = [];
+    let anyAddressFailed = false; // Track if any request failed
+    let firstError: Error | null = null; // Track first error
 
-    await Promise.all(
+    // Use allSettled to handle partial failures
+    const results = await Promise.allSettled(
       addresses.map(async (addr) => {
-        const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
-          ? `limit=${count}&offset=${skip}`
-          : `count=${count}&skip=${skip}`;
-        const endpoint = `/address/${addr}/txs?${query}`;
-        const response = await this.Get(endpoint);
-        
-        // Robust response handling without extra function
-        let transactions: any[] = [];
-        
-        // Case 1: Response is already an array
-        if (Array.isArray(response)) {
-          transactions = response;
-        }
-        // Case 2: Response is an object with nested array
-        else if (response && typeof response === 'object') {
-          const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
-          for (const key of nestedKeys) {
-            if (Array.isArray(response[key])) {
-              transactions = response[key];
-              break;
+        try {
+          const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+            ? `limit=${count}&offset=${skip}`
+            : `count=${count}&skip=${skip}`;
+          const endpoint = `/address/${addr}/txs?${query}`;
+          const response = await this.Get(endpoint);
+          
+          // Robust response handling
+          let transactions: any[] = [];
+          
+          // Case 1: Response is already an array
+          if (Array.isArray(response)) {
+            transactions = response;
+          }
+          // Case 2: Response is an object with nested array
+          else if (response && typeof response === 'object') {
+            const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
+            for (const key of nestedKeys) {
+              if (Array.isArray(response[key])) {
+                transactions = response[key];
+                break;
+              }
+            }
+            // Case 3: Single transaction object
+            if (transactions.length === 0 && !Array.isArray(response)) {
+              transactions = [response];
             }
           }
-          // Case 3: Single transaction object
-          if (transactions.length === 0 && !Array.isArray(response)) {
-            transactions = [response];
+          // Case 4: Unexpected format
+          else {
+            console.warn('Unexpected transaction response format:', response);
           }
-        }
-        // Case 4: Unexpected format
-        else {
-          console.warn('Unexpected transaction response format:', response);
-        }
-        
-        if (transactions.length > 0) {
-          allTransactions.push(...transactions);
+          
+          if (transactions.length > 0) {
+            return transactions;
+          }
+          return [];
+        } catch (error) {
+          anyAddressFailed = true;
+          firstError = error as Error;
+          throw error; // Re-throw to mark promise as rejected
         }
       })
     );
 
+    // Process allSettled results
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.length > 0) {
+        allTransactions.push(...result.value);
+      }
+    }
+
+    // Throw if any address failed (preserves test expectations)
+    if (anyAddressFailed && allTransactions.length === 0) {
+      throw firstError || new Error('Failed to fetch transactions for all addresses');
+    }
+
+    // Sort by timestamp (newest first) and apply pagination
     const sortedTransactions = allTransactions
       .sort((a, b) => (b.time || b.timestamp || 0) - (a.time || a.timestamp || 0))
       .slice(0, count);
@@ -740,7 +763,7 @@ export class BlockchainClient extends ClientBase {
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
-    }
+   }
   }
 
 /**
