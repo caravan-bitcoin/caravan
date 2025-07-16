@@ -2028,8 +2028,8 @@ describe('getWalletTransactionHistory', () => {
       await expect(client.getWalletTransactionHistory(0))
         .rejects.toThrow('Count must be between 1 and 1000');
       
-      await expect(client.getWalletTransactionHistory(1001))
-        .rejects.toThrow('Count must be between 1 and 1000');
+      await expect(client.getWalletTransactionHistory(1000001))
+        .rejects.toThrow('Count must be between 1 and 1000000');
     });
 
     it('should validate skip parameter', async () => {
