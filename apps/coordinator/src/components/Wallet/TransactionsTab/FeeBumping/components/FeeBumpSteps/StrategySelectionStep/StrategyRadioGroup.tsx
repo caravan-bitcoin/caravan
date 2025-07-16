@@ -132,7 +132,6 @@ export const StrategyRadioGroup: React.FC<StrategyRadioGroupProps> = ({
   recommendedStrategy,
 }) => {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("handleChange called with:", event.target.value);
     onStrategyChange(event.target.value as FeeBumpStrategy);
   };
 

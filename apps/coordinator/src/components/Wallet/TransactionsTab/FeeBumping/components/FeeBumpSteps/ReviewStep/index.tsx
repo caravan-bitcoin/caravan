@@ -38,42 +38,39 @@ export const ReviewStep = () => {
     [],
   );
 
-  const handleDownloadPSBT = useCallback(
-    (selectedPsbtVersion: "v0" | "v2") => {
-      if (!feeBumpResult) {
-        return false;
-      }
+  const handleDownloadPSBT = (selectedPsbtVersion: "v0" | "v2") => {
+    if (!feeBumpResult) {
+      return false;
+    }
 
-      try {
-        // Generate filename
-        const txTypeStr = rbfType === "cancel" ? "cancel" : "accelerated";
-        const timestamp = new Date()
-          .toISOString()
-          .replace(/[:.]/g, "-")
-          .substring(0, 19);
-        const versionStr = selectedPsbtVersion;
-        const filename = `${txTypeStr}_tx_${versionStr}_${timestamp}.psbt`;
+    try {
+      // Generate filename
+      const txTypeStr = rbfType === "cancel" ? "cancel" : "accelerated";
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .substring(0, 19);
+      const versionStr = selectedPsbtVersion;
+      const filename = `${txTypeStr}_tx_${versionStr}_${timestamp}.psbt`;
 
-        // Convert PSBT to requested version
-        const convertedPSBT = convertPSBT(
-          feeBumpResult.psbtBase64,
-          selectedPsbtVersion,
-        );
+      // Convert PSBT to requested version
+      const convertedPSBT = convertPSBT(
+        feeBumpResult.psbtBase64,
+        selectedPsbtVersion,
+      );
 
-        // Download file
-        downloadFile(convertedPSBT, filename);
+      // Download file
+      downloadFile(convertedPSBT, filename);
 
-        // Update state
-        setlocalDownloadClicked(true);
-        setDownloadClicked(true);
-        return true;
-      } catch (error) {
-        console.error("Error downloading PSBT:", error);
-        return false;
-      }
-    },
-    [feeBumpResult, rbfType, convertPSBT],
-  );
+      // Update state
+      setlocalDownloadClicked(true);
+      setDownloadClicked(true);
+      return true;
+    } catch (error) {
+      console.error("Error downloading PSBT:", error);
+      return false;
+    }
+  };
 
   return (
     <Box>
