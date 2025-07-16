@@ -21,7 +21,6 @@ import { setNetwork as setNetworkAction } from "../actions/settingsActions";
 
 const NetworkPicker = ({ setNetwork, network, frozen }) => {
   const handleNetworkChange = (event) => {
-    console.log("value check", event.target.value)
     setNetwork(event.target.value);
   };
 

@@ -121,15 +121,13 @@ export const setBlockchainClient = () => {
       provider = undefined;
 
       // Update client state to private for regtest
-      dispatch({type: SET_CLIENT_TYPE, value: ClientType.PRIVATE});
+      dispatch({ type: SET_CLIENT_TYPE, value: ClientType.PRIVATE });
 
       // Set default regtest URL if not already set to a regtest port
-      if (!client.url || (!client.url.includes('18443'))){
+      if (!client.url || !client.url.includes("18443")) {
         const defaultRegtestUrl = "http://localhost:18443";
-        dispatch({type: SET_CLIENT_URL, value: defaultRegtestUrl})
+        dispatch({ type: SET_CLIENT_URL, value: defaultRegtestUrl });
       }
-
-
     }
     const newClient = new BlockchainClient({
       client,
