@@ -6,11 +6,10 @@ import {
   FormControlLabel,
   Radio,
   RadioGroup,
-  TextField,
   Typography,
-  Alert,
   Divider,
 } from "@mui/material";
+import { AddressInputSection } from "./AddressInputSection";
 import { RBF_TYPES, RbfType } from "../../../../types";
 
 interface TransactionTypeSelectorProps {
@@ -47,9 +46,6 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
       changeAddress,
       onChangeAddressChange,
     }) => {
-      const hasAddressError =
-        rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim();
-
       return (
         <>
           <Box mb={3}>
@@ -89,46 +85,13 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
 
           <Divider sx={{ my: 2 }} />
 
-          {rbfType === RBF_TYPES.CANCEL ? (
-            <Box mb={3}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-                Cancel Address
-              </Typography>
-              <TextField
-                fullWidth
-                label="Address to send funds to"
-                variant="outlined"
-                value={cancelAddress}
-                onChange={onCancelAddressChange}
-                error={hasAddressError}
-                helperText={
-                  hasAddressError
-                    ? "Cancel address is required"
-                    : "Enter an address where you want to send all funds"
-                }
-                sx={{ mb: 1 }}
-              />
-              <Alert severity="warning">
-                This will cancel the original transaction and send all funds
-                (minus fees) to this address.
-              </Alert>
-            </Box>
-          ) : (
-            <Box mb={3}>
-              <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-                Change Address (Optional)
-              </Typography>
-              <TextField
-                fullWidth
-                label="Change Address"
-                variant="outlined"
-                value={changeAddress}
-                onChange={onChangeAddressChange}
-                helperText="Leave empty to use the default change address"
-                sx={{ mb: 1 }}
-              />
-            </Box>
-          )}
+          <AddressInputSection
+            rbfType={rbfType}
+            cancelAddress={cancelAddress}
+            onCancelAddressChange={onCancelAddressChange}
+            changeAddress={changeAddress}
+            onChangeAddressChange={onChangeAddressChange}
+          />
 
           <Divider sx={{ my: 2 }} />
         </>
