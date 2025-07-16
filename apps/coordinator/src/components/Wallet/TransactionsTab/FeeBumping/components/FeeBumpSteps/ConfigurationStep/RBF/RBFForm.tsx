@@ -79,11 +79,13 @@ export const RBFForm: React.FC = () => {
     // Validate form before proceeding
     if (feeBumpRate < minimumFeeRate) {
       console.error("Fee rate is below minimum required");
+      alert(`Fee rate must be at least ${minimumFeeRate.toFixed(1)} sat/vB`);
       return false;
     }
 
     if (rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()) {
       console.error("Cancel address is required for cancel RBF");
+      alert("Cancel address is required");
       return false;
     }
 
@@ -119,7 +121,7 @@ export const RBFForm: React.FC = () => {
           createdAt: new Date().toISOString(),
         };
       }
-      console.log("result", result);
+
       // Store the PSBT in context
       setFeeBumpResult(result);
       nextStep();

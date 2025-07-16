@@ -172,6 +172,11 @@ const AccelerationModalContent: React.FC<
     return activeStep === 0;
   }, [activeStep]);
 
+  // Check if we're on the configuration step
+  const isConfigurationStep = useMemo(() => {
+    return activeStep === 1;
+  }, [activeStep]);
+
   // Initialize the wizard when the modal opens
   useEffect(() => {
     if (open && transaction) {
@@ -258,8 +263,12 @@ const AccelerationModalContent: React.FC<
         <Box sx={{ flex: "1 1 auto" }} />
 
         {/* Next button - disabled/hidden on last step */}
-        {!isLastStep && (
-          <Button variant="contained" onClick={nextStep}>
+        {!isLastStep && !isConfigurationStep && (
+          <Button
+            variant="contained"
+            onClick={nextStep}
+            disabled={activeStep === 0 && !selectedStrategy}
+          >
             Next
           </Button>
         )}
