@@ -101,11 +101,13 @@ export const RBFForm: React.FC = () => {
     try {
       const txVsize = transaction.vsize || transaction.size;
       const estimatedNewFee = Math.ceil(txVsize * feeBumpRate).toString();
-      const generatePsbt =
-        rbfType === RBF_TYPES.CANCEL ? createCancelRBF : createAcceleratedRBF;
+      const psbtBase64 =
+        rbfType === RBF_TYPES.CANCEL
+          ? createCancelRBF(feeBumpRate, cancelAddress)
+          : createAcceleratedRBF(feeBumpRate, changeAddress);
 
       const result: FeeBumpResult = {
-        psbtBase64: generatePsbt(feeBumpRate, changeAddress),
+        psbtBase64,
         newFee: estimatedNewFee,
         newFeeRate: feeBumpRate,
         strategy: selectedStrategy!,
