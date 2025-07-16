@@ -114,8 +114,11 @@ export const setBlockchainClient = () => {
 
     let clientType = getClientType(client);
     let provider = getClientProvider(client);
+    //! remove once done
     console.log("client Type",clientType)
     console.log("Provider",provider)
+    console.log('url broo', client.url)
+    console.log("client check", client)
 
     // Handle regtest network: switch to private client if public client was selected
     if (network === "regtest" && clientType === ClientType.PUBLIC) {
@@ -124,6 +127,12 @@ export const setBlockchainClient = () => {
 
       // Update client state to private for regtest
       dispatch({type: SET_CLIENT_TYPE, value: ClientType.PRIVATE});
+
+      // Set default regtest URL if not already set to a regtest port
+      if (!client.url || (!client.url.includes('18443'))){
+        const defaultRegtestUrl = "http://localhost:18443";
+        dispatch({type: SET_CLIENT_URL, value: defaultRegtestUrl})
+      }
 
 
     }
