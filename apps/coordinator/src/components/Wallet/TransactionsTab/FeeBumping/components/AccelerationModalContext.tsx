@@ -166,12 +166,6 @@ interface AccelerationModalContextType {
   setStrategy: (strategy: FeeBumpStrategy) => void;
   setRbfType: (type: RbfType) => void;
   setFeeBumpResult: (result: FeeBumpResult | null) => void;
-
-  // Computed values
-  isFirstStep: boolean;
-  isLastStep: boolean;
-  canGoNext: boolean;
-  canGoBack: boolean;
 }
 
 // =============================================================================
@@ -188,16 +182,12 @@ const AccelerationModalContext = createContext<
 
 interface AccelerationModalProviderProps {
   children: ReactNode;
-  totalSteps: number;
-  canProceed?: boolean; // External condition for whether next is allowed
   transaction: TransactionDetails;
   txHex: string;
 }
 
 export function AccelerationModalProvider({
   children,
-  totalSteps,
-  canProceed = true,
   transaction,
   txHex,
 }: AccelerationModalProviderProps) {
@@ -238,12 +228,6 @@ export function AccelerationModalProvider({
     dispatch({ type: "SET_FEE_BUMP_RESULT", payload: result });
   }, []);
 
-  // Computed values
-  const isFirstStep = state.activeStep === 0;
-  const isLastStep = state.activeStep === totalSteps - 1;
-  const canGoNext = !isLastStep && canProceed;
-  const canGoBack = !isFirstStep;
-
   const contextValue: AccelerationModalContextType = {
     transaction,
     txHex,
@@ -256,10 +240,6 @@ export function AccelerationModalProvider({
     setStrategy,
     setRbfType,
     setFeeBumpResult,
-    isFirstStep,
-    isLastStep,
-    canGoNext,
-    canGoBack,
     analysis,
     availableUtxos,
     analysisIsLoading: isLoading,

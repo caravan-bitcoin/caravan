@@ -78,12 +78,7 @@ const AccelerationModalWithContext: React.FC<AccelerationModalProps> = ({
   txHex,
 }) => {
   return (
-    <AccelerationModalProvider
-      totalSteps={STEP_CONFIGS.length}
-      transaction={transaction}
-      txHex={txHex}
-      canProceed={true} // TODO: Add logic here to determine if user can proceed
-    >
+    <AccelerationModalProvider transaction={transaction} txHex={txHex}>
       <AccelerationModalContent
         open={open}
         onClose={onClose}
