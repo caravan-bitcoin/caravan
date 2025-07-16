@@ -1830,11 +1830,11 @@ describe("BlockchainClient", () => {
   describe('getAddressTransactionHistory', () => {
   const testAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
   const testAddress2 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
-  let mockCallBitcoindWallet: any;
 
   beforeEach(() => {
-    mockCallBitcoindWallet = vi.spyOn(wallet, 'callBitcoindWallet');
+  vi.spyOn(wallet, 'callBitcoindWallet');
   });
+
 
   afterEach(() => {
     vi.restoreAllMocks();
