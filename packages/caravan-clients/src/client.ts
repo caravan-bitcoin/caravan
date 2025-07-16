@@ -671,8 +671,8 @@ export class BlockchainClient extends ClientBase {
   count: number = 10,
   skip: number = 0
 ): Promise<TransactionDetails[]> {
-  if (count < 1 || count > 100) {
-    throw new Error("Count must be between 1 and 100");
+  if (count < 1 || count > 100000) {
+    throw new Error("Count must be between 1 and 100000");
   }
   if (skip < 0) {
     throw new Error("Skip must be non-negative");
@@ -788,8 +788,8 @@ export class BlockchainClient extends ClientBase {
   skip: number = 0,
   includeWatchOnly: boolean = true
 ): Promise<TransactionDetails[]> {
-  if (count < 1 || count > 1000000) {
-    throw new Error("Count must be between 1 and 1000000");
+  if (count < 1 || count > 100000) {
+    throw new Error("Count must be between 1 and 100000");
   }
   if (skip < 0) {
     throw new Error("Skip must be non-negative");

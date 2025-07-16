@@ -1849,10 +1849,10 @@ describe("BlockchainClient", () => {
       });
 
       await expect(client.getAddressTransactionHistory(testAddress, 0))
-        .rejects.toThrow('Count must be between 1 and 100');
+        .rejects.toThrow('Count must be between 1 and 100000');
       
-      await expect(client.getAddressTransactionHistory(testAddress, 101))
-        .rejects.toThrow('Count must be between 1 and 100');
+      await expect(client.getAddressTransactionHistory(testAddress, 100001))
+        .rejects.toThrow('Count must be between 1 and 100000');
     });
 
     it('should validate skip parameter', async () => {
@@ -2026,10 +2026,10 @@ describe('getWalletTransactionHistory', () => {
       });
 
       await expect(client.getWalletTransactionHistory(0))
-        .rejects.toThrow('Count must be between 1 and 1000');
+        .rejects.toThrow('Count must be between 1 and 100000');
       
-      await expect(client.getWalletTransactionHistory(1000001))
-        .rejects.toThrow('Count must be between 1 and 1000000');
+      await expect(client.getWalletTransactionHistory(100001))
+        .rejects.toThrow('Count must be between 1 and 100000');
     });
 
     it('should validate skip parameter', async () => {
