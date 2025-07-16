@@ -89,10 +89,16 @@ export const TransactionComparison: React.FC = () => {
       />
 
       {/* Next Steps Information */}
-      <Box mt={3}>
+      <Box
+        mt={3}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
         <Alert severity="info">
           <AlertTitle>Transaction Replacement Process</AlertTitle>
-          <Typography variant="body2">
+          <Typography variant="body2" component="div" sx={{ lineHeight: 1.8 }}>
             Once signed and broadcast, this transaction will attempt to replace
             the original transaction. The network will accept the replacement
             if:
@@ -105,7 +111,7 @@ export const TransactionComparison: React.FC = () => {
               original
             </li>
           </ul>
-          <Typography variant="body2">
+          <Typography variant="body2" component="div" sx={{ lineHeight: 1.8 }}>
             Most nodes should accept this transaction immediately, but expect
             ~10 minutes for full network propagation.
           </Typography>

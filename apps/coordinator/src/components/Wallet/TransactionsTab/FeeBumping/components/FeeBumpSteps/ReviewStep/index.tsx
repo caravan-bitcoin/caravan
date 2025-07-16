@@ -118,26 +118,32 @@ export const ReviewStep = () => {
               downloadClicked={downloadClicked}
               disabled={!feeBumpResult}
             />
-
-            {/* Next steps guidance */}
-            <Box mt={3}>
-              <Alert severity="info">
-                <AlertTitle>Next Steps</AlertTitle>
-                <Typography variant="body2" component="div">
-                  <ol style={{ paddingLeft: "1rem", margin: 0 }}>
-                    <li>
-                      Sign the PSBT using your hardware wallet or the Sign tab
-                    </li>
-                    <li>Broadcast the signed transaction</li>
-                    <li>
-                      The transaction will replace the original pending
-                      transaction
-                    </li>
-                  </ol>
-                </Typography>
-              </Alert>
-            </Box>
           </Box>
+          {/* Next steps guidance */}
+          <Box
+            mt={3}
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <Alert severity="success" sx={{ textAlign: "center" }}>
+              <AlertTitle>Next Steps</AlertTitle>
+              <Typography
+                variant="body2"
+                component="div"
+                sx={{ lineHeight: 1.8 }}
+              >
+                1. Sign the PSBT using your hardware wallet or the Sign tab.
+                <br />
+                2. Broadcast the signed transaction.
+                <br />
+                3. The transaction will replace the original pending
+                transaction.
+              </Typography>
+            </Alert>
+          </Box>
+
           {/* PSBT Version Selection Dialog */}
           <PSBTVersionDialog
             open={showPSBTVersionDialog}
