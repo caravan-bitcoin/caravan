@@ -114,11 +114,6 @@ export const setBlockchainClient = () => {
 
     let clientType = getClientType(client);
     let provider = getClientProvider(client);
-    //! remove once done
-    console.log("client Type",clientType)
-    console.log("Provider",provider)
-    console.log('url broo', client.url)
-    console.log("client check", client)
 
     // Handle regtest network: switch to private client if public client was selected
     if (network === "regtest" && clientType === ClientType.PUBLIC) {

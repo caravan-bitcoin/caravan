@@ -11,8 +11,7 @@ export const useGetClient = (): BlockchainClient => {
   const blockchainClient = useSelector(
     (state: RootState) => state.client.blockchainClient,
   );
-  console.log("network",network)
-  console.log("client",client)
+
   useEffect(() => {
     dispatch(setBlockchainClient());
   }, [
