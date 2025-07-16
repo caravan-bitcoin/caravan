@@ -326,22 +326,7 @@ class WalletSpend extends React.Component {
                             color="primary"
                           />
                         }
-                        label={
-                          <Box display="flex" alignItems="center">
-                            Replace-by-Fee (RBF)
-                            <Tooltip
-                              title="When enabled, this transaction can be replaced with a higher fee transaction later if needed"
-                              arrow
-                            >
-                              <span>
-                                <InfoIcon
-                                  fontSize="small"
-                                  style={{ marginLeft: 8, cursor: "pointer" }}
-                                />
-                              </span>
-                            </Tooltip>
-                          </Box>
-                        }
+                        label="Replace-by-Fee (RBF)"
                       />
                     </Box>
                   </Box>
