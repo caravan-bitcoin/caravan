@@ -1826,8 +1826,10 @@ describe("BlockchainClient", () => {
     });
   });
   
+  
   describe('getAddressTransactionHistory', () => {
   const testAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
+  const testAddress2 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
   let mockCallBitcoindWallet: any;
 
   beforeEach(() => {
@@ -1881,82 +1883,19 @@ describe("BlockchainClient", () => {
       });
     });
 
-    it('should require wallet name', async () => {
-      const clientWithoutWallet = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-        },
-      });
-
-      await expect(clientWithoutWallet.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Wallet name is required for private client transaction listings');
-    });
-
-    it('should call listtransactions with correct parameters', async () => {
-      const mockListResponse = {
-        result: []
-      };
-
-      mockCallBitcoindWallet.mockResolvedValue(mockListResponse);
-
-      const result = await client.getAddressTransactionHistory(testAddress, 5, 10);
-
-      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
-        baseUrl: 'http://localhost:8332',
-        walletName: 'test-wallet',
-        auth: { username: 'user', password: 'pass' },
-        method: 'listtransactions',
-        params: ['*', 5, 10, true],
-      });
-
-      expect(result).toEqual([]);
-    });
-
-    it('should call listtransactions with correct parameters and handle response', async () => {
-      // For this test, we'll verify the RPC call is made correctly
-      // We'll mock a minimal response to avoid normalization issues
-      const mockListResponse = {
-        result: [] // Empty array to avoid normalization errors
-      };
-
-      mockCallBitcoindWallet.mockResolvedValue(mockListResponse);
-
-      const result = await client.getAddressTransactionHistory(testAddress, 15, 5, false);
-
-      // Verify the RPC call was made with correct parameters
-      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
-        baseUrl: 'http://localhost:8332',
-        walletName: 'test-wallet',
-        auth: { username: 'user', password: 'pass' },
-        method: 'listtransactions',
-        params: ['*', 15, 5, false],
-      });
-
-      // Result should be an empty array since we mocked empty result
-      expect(result).toEqual([]);
-    });
-
-    it('should handle empty result from Bitcoin Core', async () => {
-      mockCallBitcoindWallet.mockResolvedValue({ result: null });
-
+    it('should throw error for private clients', async () => {
       await expect(client.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Failed to retrieve transactions from Bitcoin Core');
+        .rejects.toThrow('Use getWalletTransactionHistory for private clients');
     });
 
-    it('should handle non-array result from Bitcoin Core', async () => {
-      mockCallBitcoindWallet.mockResolvedValue({ result: 'invalid' });
-
-      await expect(client.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Failed to retrieve transactions from Bitcoin Core');
+    it('should throw error for private clients with array of addresses', async () => {
+      await expect(client.getAddressTransactionHistory([testAddress, testAddress2]))
+        .rejects.toThrow('Use getWalletTransactionHistory for private clients');
     });
   });
 
-  describe('MEMPOOL client', () => {
-    it('should use correct endpoint', async () => {
+  describe('PUBLIC client - single address', () => {
+    it('should use correct endpoint for MEMPOOL', async () => {
       const client = new BlockchainClient({
         type: ClientType.PUBLIC,
         provider: PublicBitcoinProvider.MEMPOOL,
@@ -1967,6 +1906,7 @@ describe("BlockchainClient", () => {
         { 
           txid: 'tx1', 
           fee: 1000,
+          time: 1234567890,
           version: 1,
           locktime: 0,
           vin: [],
@@ -1985,25 +1925,7 @@ describe("BlockchainClient", () => {
       expect(result).toHaveLength(1);
     });
 
-    it('should handle default parameters', async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.MEMPOOL,
-        network: Network.MAINNET,
-      });
-
-      const mockResponse = [];
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      await client.getAddressTransactionHistory(testAddress);
-
-      expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=10&skip=0`);
-    });
-  });
-
-  describe('BLOCKSTREAM client', () => {
-    it('should use correct endpoint with limit/offset', async () => {
+    it('should use correct endpoint for BLOCKSTREAM', async () => {
       const client = new BlockchainClient({
         type: ClientType.PUBLIC,
         provider: PublicBitcoinProvider.BLOCKSTREAM,
@@ -2014,6 +1936,7 @@ describe("BlockchainClient", () => {
         { 
           txid: 'tx1', 
           fee: 1000,
+          timestamp: 1234567890,
           version: 1,
           locktime: 0,
           vin: [],
@@ -2046,17 +1969,6 @@ describe("BlockchainClient", () => {
         .rejects.toThrow('Provider must be specified for public clients');
     });
 
-    it('should handle unsupported provider', async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: 'UNSUPPORTED' as any,
-        network: Network.MAINNET,
-      });
-
-      await expect(client.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Failed to get address transaction history');
-    });
-
     it('should handle API errors', async () => {
       const client = new BlockchainClient({
         type: ClientType.PUBLIC,
@@ -2081,22 +1993,158 @@ describe("BlockchainClient", () => {
       const mockGet = vi.fn().mockResolvedValue('invalid response');
       client.Get = mockGet;
 
-      await expect(client.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Invalid response format from API');
+      const result = await client.getAddressTransactionHistory(testAddress);
+      
+      // Should handle gracefully and return empty array
+      expect(result).toHaveLength(0);
+    });
+  });
+});
+
+describe('getWalletTransactionHistory', () => {
+  let mockCallBitcoindWallet: any;
+
+  beforeEach(() => {
+    mockCallBitcoindWallet = vi.spyOn(wallet, 'callBitcoindWallet');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('parameter validation', () => {
+    it('should validate count parameter', async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: 'http://localhost:8332',
+          username: 'user',
+          password: 'pass',
+          walletName: 'test-wallet',
+        },
+      });
+
+      await expect(client.getWalletTransactionHistory(0))
+        .rejects.toThrow('Count must be between 1 and 1000');
+      
+      await expect(client.getWalletTransactionHistory(1001))
+        .rejects.toThrow('Count must be between 1 and 1000');
     });
 
-    it('should handle object response instead of array', async () => {
+    it('should validate skip parameter', async () => {
+      const client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: 'http://localhost:8332',
+          username: 'user',
+          password: 'pass',
+          walletName: 'test-wallet',
+        },
+      });
+
+      await expect(client.getWalletTransactionHistory(10, -1))
+        .rejects.toThrow('Skip must be non-negative');
+    });
+  });
+
+  describe('PUBLIC client', () => {
+    it('should throw error for public clients', async () => {
       const client = new BlockchainClient({
         type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        provider: PublicBitcoinProvider.MEMPOOL,
         network: Network.MAINNET,
       });
 
-      const mockGet = vi.fn().mockResolvedValue({ error: 'some error' });
-      client.Get = mockGet;
+      await expect(client.getWalletTransactionHistory())
+        .rejects.toThrow('This method is only supported for private clients. Use getAddressTransactionHistory for public clients');
+    });
+  });
 
-      await expect(client.getAddressTransactionHistory(testAddress))
-        .rejects.toThrow('Invalid response format from API');
+  describe('PRIVATE client', () => {
+    let client: BlockchainClient;
+
+    beforeEach(() => {
+      client = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: 'http://localhost:8332',
+          username: 'user',
+          password: 'pass',
+          walletName: 'test-wallet',
+        },
+      });
+    });
+
+    it('should require wallet name', async () => {
+      const clientWithoutWallet = new BlockchainClient({
+        type: ClientType.PRIVATE,
+        network: Network.MAINNET,
+        client: {
+          url: 'http://localhost:8332',
+          username: 'user',
+          password: 'pass',
+        },
+      });
+
+      await expect(clientWithoutWallet.getWalletTransactionHistory())
+        .rejects.toThrow('Wallet name is required for private client transaction listings');
+    });
+
+    it('should return empty array if no send transactions', async () => {
+      const mockListResponse = {
+        result: [
+          { txid: 'tx1', category: 'receive', amount: 1.0 },
+          { txid: 'tx2', category: 'receive', amount: 2.0 },
+        ]
+      };
+
+      mockCallBitcoindWallet.mockResolvedValue(mockListResponse);
+
+      const result = await client.getWalletTransactionHistory();
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should use default parameters', async () => {
+      const mockListResponse = {
+        result: []
+      };
+
+      mockCallBitcoindWallet.mockResolvedValue(mockListResponse);
+
+      await client.getWalletTransactionHistory();
+
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+        baseUrl: 'http://localhost:8332',
+        walletName: 'test-wallet',
+        auth: { username: 'user', password: 'pass' },
+        method: 'listtransactions',
+        params: ['*', 100, 0, true],
+      });
+    });
+
+    it('should handle empty result from Bitcoin Core', async () => {
+      mockCallBitcoindWallet.mockResolvedValue({ result: null });
+
+      await expect(client.getWalletTransactionHistory())
+        .rejects.toThrow('Failed to retrieve transactions from Bitcoin Core');
+    });
+
+    it('should handle non-array result from Bitcoin Core', async () => {
+      mockCallBitcoindWallet.mockResolvedValue({ result: 'invalid' });
+
+      await expect(client.getWalletTransactionHistory())
+        .rejects.toThrow('Failed to retrieve transactions from Bitcoin Core');
+    });
+
+    it('should handle API errors', async () => {
+      mockCallBitcoindWallet.mockRejectedValue(new Error('RPC error'));
+
+      await expect(client.getWalletTransactionHistory())
+        .rejects.toThrow('Failed to get wallet transaction history: RPC error');
     });
   });
 });

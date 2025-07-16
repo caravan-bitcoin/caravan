@@ -638,10 +638,9 @@ export class BlockchainClient extends ClientBase {
   }
 
   public async getAddressTransactionHistory(
-  address: string,
+  address: string | string[],
   count: number = 10,
-  skip: number = 0,
-  includeWatchOnly: boolean = true
+  skip: number = 0
 ): Promise<TransactionDetails[]> {
   if (count < 1 || count > 100) {
     throw new Error("Count must be between 1 and 100");
@@ -651,48 +650,93 @@ export class BlockchainClient extends ClientBase {
   }
 
   try {
+    // Private clients should use getWalletTransactionHistory instead
     if (this.type === ClientType.PRIVATE) {
-      if (!this.bitcoindParams.walletName) {
-        throw new Error("Wallet name is required for private client transaction listings");
-      }
-
-      const response = await callBitcoindWallet({
-        baseUrl: this.bitcoindParams.url,
-        walletName: this.bitcoindParams.walletName,
-        auth: this.bitcoindParams.auth,
-        method: "listtransactions",
-        params: ["*", count, skip, includeWatchOnly],
-      });
-
-      if (!response?.result || !Array.isArray(response.result)) {
-        throw new Error("Failed to retrieve transactions from Bitcoin Core");
-      }
-
-      return response.result.map((tx: any) => 
-        normalizeTransactionData(tx, ClientType.PRIVATE)
-      );
+      throw new Error("Use getWalletTransactionHistory for private clients");
     }
 
+    // Public client implementation
     if (!this.provider) {
       throw new Error("Provider must be specified for public clients");
     }
 
-    const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
-      ? `limit=${count}&offset=${skip}`
-      : `count=${count}&skip=${skip}`;
-    const endpoint = `/address/${address}/txs?${query}`;
-    const rawTransactions = await this.Get(endpoint);
-    
-    if (!Array.isArray(rawTransactions)) {
-      throw new Error("Invalid response format from API");
-    }
+    const addresses = Array.isArray(address) ? address : [address];
+    const allTransactions: any[] = [];
 
-    return rawTransactions.map((rawTx: any) => 
+    // Fetch transactions for each address
+    await Promise.all(
+      addresses.map(async (addr) => {
+        const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+          ? `limit=${count}&offset=${skip}`
+          : `count=${count}&skip=${skip}`;
+        const endpoint = `/address/${addr}/txs?${query}`;
+        const rawTransactions = await this.Get(endpoint);
+        
+        if (Array.isArray(rawTransactions)) {
+          allTransactions.push(...rawTransactions);
+        }
+      })
+    );
+
+    // Sort by timestamp (newest first) and apply pagination
+    const sortedTransactions = allTransactions
+      .sort((a, b) => (b.time || b.timestamp || 0) - (a.time || a.timestamp || 0))
+      .slice(0, count);
+
+    return sortedTransactions.map((rawTx: any) => 
       normalizeTransactionData(rawTx, ClientType.PUBLIC)
     );
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
+  }
+}
+
+public async getWalletTransactionHistory(
+  count: number = 100,
+  skip: number = 0,
+  includeWatchOnly: boolean = true
+): Promise<TransactionDetails[]> {
+  if (count < 1 || count > 1000) {
+    throw new Error("Count must be between 1 and 1000");
+  }
+  if (skip < 0) {
+    throw new Error("Skip must be non-negative");
+  }
+
+  try {
+    // Public clients should use getAddressTransactionHistory instead
+    if (this.type !== ClientType.PRIVATE) {
+      throw new Error("This method is only supported for private clients. Use getAddressTransactionHistory for public clients");
+    }
+
+    if (!this.bitcoindParams.walletName) {
+      throw new Error("Wallet name is required for private client transaction listings");
+    }
+
+    const response = await callBitcoindWallet({
+      baseUrl: this.bitcoindParams.url,
+      walletName: this.bitcoindParams.walletName,
+      auth: this.bitcoindParams.auth,
+      method: "listtransactions",
+      params: ["*", count, skip, includeWatchOnly],
+    });
+
+    if (!response?.result || !Array.isArray(response.result)) {
+      throw new Error("Failed to retrieve transactions from Bitcoin Core");
+    }
+
+    // Filter only "send" category transactions (spent transactions)
+    // Unspent transactions are already available through other methods
+    const spentTransactions = response.result
+      .filter((tx: any) => tx.category === "send");
+
+    return spentTransactions.map((tx: any) => 
+      normalizeTransactionData(tx, ClientType.PRIVATE)
+    );
+
+  } catch (error: any) {
+    throw new Error(`Failed to get wallet transaction history: ${error.message}`);
   }
 }
 
