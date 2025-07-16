@@ -13,9 +13,8 @@ import {
   Button,
   Alert,
   AlertTitle,
-  Tooltip,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
+
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
