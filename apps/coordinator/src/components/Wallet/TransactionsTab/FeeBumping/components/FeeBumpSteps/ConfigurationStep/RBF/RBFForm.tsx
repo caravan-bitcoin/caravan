@@ -24,6 +24,7 @@ import { FeeLevelSelector } from "./FeeLevelSelector";
 import { TransactionTypeSelector } from "./TransactionTypeSelector";
 import { CustomFeeSlider } from "./CustomFeeSlider";
 import { FeeComparison } from "./FeeComparison";
+import { ErrorDialog } from "../../../ErrorDialog";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -56,6 +57,10 @@ export const RBFForm: React.FC = () => {
     FEE_LEVELS.MEDIUM,
   );
 
+  // Error state
+  const [error, setError] = useState<string>("");
+  const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
+
   const { createCancelRBF } = useCreateCancelRBF(
     transaction,
     txHex,
@@ -76,6 +81,10 @@ export const RBFForm: React.FC = () => {
   );
 
   const handleProcessRBF = () => {
+    // Clear any existing errors
+    setError("");
+    setShowErrorDetails(false);
+
     // Validate form before proceeding
     if (feeBumpRate < minimumFeeRate) {
       console.error("Fee rate is below minimum required");
@@ -126,7 +135,12 @@ export const RBFForm: React.FC = () => {
       setFeeBumpResult(result);
       nextStep();
     } catch (error) {
-      console.error("Error creating RBF transaction:", error);
+      const errorMessage =
+        error instanceof Error
+          ? `Failed to create transaction: ${error.message}`
+          : "An unexpected error occurred while creating the transaction";
+      setError(errorMessage);
+      return false;
     }
   };
 
@@ -233,6 +247,14 @@ export const RBFForm: React.FC = () => {
         Configure RBF Transaction
       </Typography>
 
+      {/* Show error dialog if there's an error */}
+      {error && (
+        <ErrorDialog
+          error={error}
+          showErrorDetails={showErrorDetails}
+          setShowErrorDetails={setShowErrorDetails}
+        />
+      )}
       <TransactionTypeSelector
         rbfType={rbfType}
         onRbfTypeChange={handleRbfTypeChange}
