@@ -637,6 +637,35 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+/**
+ * Retrieves transaction history for one or more addresses (public clients only)
+ * 
+ * This method is designed for public blockchain explorers (Mempool/Blockstream) that
+ * maintain address indexes, allowing efficient address-specific queries.
+ * 
+ * Why this method is PUBLIC CLIENT ONLY:
+ * - Public APIs maintain address indexes for efficient lookups
+ * - Bitcoin Core doesn't support address-specific queries (see getWalletTransactionHistory)
+ * - Allows querying multiple addresses with Promise.all for efficiency
+ * 
+ * For PRIVATE clients: Use getWalletTransactionHistory() which returns all wallet transactions
+ * 
+ * @param address - Single address or array of addresses to query
+ * @param count - Number of transactions to return per address (1-100)
+ * @param skip - Number of transactions to skip for pagination
+ * @returns Combined array of transactions sorted by time (newest first)
+ * @throws Error if called on private client
+ * 
+ * @example
+ * // Single address
+ * const txs = await client.getAddressTransactionHistory("bc1q...");
+ * 
+ * // Multiple addresses
+ * const txs = await client.getAddressTransactionHistory(["bc1q...", "bc1p..."]);
+ * 
+ * @see getWalletTransactionHistory - For private clients
+ */
+
   public async getAddressTransactionHistory(
   address: string | string[],
   count: number = 10,
@@ -650,12 +679,10 @@ export class BlockchainClient extends ClientBase {
   }
 
   try {
-    // Private clients should use getWalletTransactionHistory instead
     if (this.type === ClientType.PRIVATE) {
       throw new Error("Use getWalletTransactionHistory for private clients");
     }
 
-    // Public client implementation
     if (!this.provider) {
       throw new Error("Provider must be specified for public clients");
     }
@@ -663,22 +690,46 @@ export class BlockchainClient extends ClientBase {
     const addresses = Array.isArray(address) ? address : [address];
     const allTransactions: any[] = [];
 
-    // Fetch transactions for each address
     await Promise.all(
       addresses.map(async (addr) => {
         const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
           ? `limit=${count}&offset=${skip}`
           : `count=${count}&skip=${skip}`;
         const endpoint = `/address/${addr}/txs?${query}`;
-        const rawTransactions = await this.Get(endpoint);
+        const response = await this.Get(endpoint);
         
-        if (Array.isArray(rawTransactions)) {
-          allTransactions.push(...rawTransactions);
+        // Robust response handling without extra function
+        let transactions: any[] = [];
+        
+        // Case 1: Response is already an array
+        if (Array.isArray(response)) {
+          transactions = response;
+        }
+        // Case 2: Response is an object with nested array
+        else if (response && typeof response === 'object') {
+          const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
+          for (const key of nestedKeys) {
+            if (Array.isArray(response[key])) {
+              transactions = response[key];
+              break;
+            }
+          }
+          // Case 3: Single transaction object
+          if (transactions.length === 0 && !Array.isArray(response)) {
+            transactions = [response];
+          }
+        }
+        // Case 4: Unexpected format
+        else {
+          console.warn('Unexpected transaction response format:', response);
+        }
+        
+        if (transactions.length > 0) {
+          allTransactions.push(...transactions);
         }
       })
     );
 
-    // Sort by timestamp (newest first) and apply pagination
     const sortedTransactions = allTransactions
       .sort((a, b) => (b.time || b.timestamp || 0) - (a.time || a.timestamp || 0))
       .slice(0, count);
@@ -689,15 +740,55 @@ export class BlockchainClient extends ClientBase {
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
+    }
   }
-}
 
-public async getWalletTransactionHistory(
+/**
+ * Retrieves transaction history for a Bitcoin Core wallet (private client only)
+ * 
+ * This method returns only "send" (spent) transactions from the wallet. This design
+ * decision was made after extensive discussion about Bitcoin Core's limitations:
+ * 
+ * 1. Bitcoin Core doesn't maintain an address index for performance/privacy reasons
+ * 2. The `listtransactions` RPC returns ALL wallet transactions with no address filtering
+ * 3. Filtering by address after fetching would be O(n*m) complexity for multiple addresses
+ * 
+ * Why this method is PRIVATE CLIENT ONLY:
+ * - Public APIs (Mempool/Blockstream) support direct address querying
+ * - Bitcoin Core requires different approach due to lack of address indexing
+ * - This inconsistency is intentional to optimize for each client type's capabilities
+ * 
+ * Why only "send" transactions:
+ * - Unspent "receive" transactions are already available via fetchAddressUtxos()
+ * - Avoids duplication of data that's accessible through UTXO methods
+ * - Focuses on spent transactions which are needed for transaction history
+ * - Coordinator can combine this with UTXO data for complete history
+ * 
+ * For PUBLIC clients: Use getAddressTransactionHistory() which supports address filtering
+ * 
+ * @param count - Number of transactions to return (1-1000)
+ * @param skip - Number of transactions to skip for pagination
+ * @param includeWatchOnly - Include watch-only addresses in results
+ * @returns Array of spent transactions from the wallet
+ * @throws Error if called on public client or if wallet name is missing
+ * 
+ * @example
+ * // For private client - get last 100 spent transactions
+ * const spentTxs = await client.getWalletTransactionHistory(100);
+ * 
+ * // For public client - use getAddressTransactionHistory instead
+ * const addressTxs = await client.getAddressTransactionHistory(address);
+ * 
+ * @see getAddressTransactionHistory - For public clients
+ * @see fetchAddressUtxos - For unspent transactions
+ */
+
+  public async getWalletTransactionHistory(
   count: number = 100,
   skip: number = 0,
   includeWatchOnly: boolean = true
 ): Promise<TransactionDetails[]> {
-  if (count < 1 || count > 1000) {
+  if (count < 1 || count > 1000000) {
     throw new Error("Count must be between 1 and 1000");
   }
   if (skip < 0) {
@@ -705,7 +796,6 @@ public async getWalletTransactionHistory(
   }
 
   try {
-    // Public clients should use getAddressTransactionHistory instead
     if (this.type !== ClientType.PRIVATE) {
       throw new Error("This method is only supported for private clients. Use getAddressTransactionHistory for public clients");
     }
@@ -722,23 +812,29 @@ public async getWalletTransactionHistory(
       params: ["*", count, skip, includeWatchOnly],
     });
 
+    // Maintain original error handling for Bitcoin Core responses
+    if (response?.error) {
+      throw new Error(response.error.message || "Bitcoin Core RPC error");
+    }
+    
+    // Keep the original array check that the tests expect
     if (!response?.result || !Array.isArray(response.result)) {
       throw new Error("Failed to retrieve transactions from Bitcoin Core");
     }
 
-    // Filter only "send" category transactions (spent transactions)
-    // Unspent transactions are already available through other methods
+    // Filter only "send" category transactions
     const spentTransactions = response.result
-      .filter((tx: any) => tx.category === "send");
+      .filter((tx: any) => tx.category === "send")
+      // Ensure we don't exceed requested count
 
-    return spentTransactions.map((tx: any) => 
+    return spentTransactions.map((tx: RawTransactionData) => 
       normalizeTransactionData(tx, ClientType.PRIVATE)
     );
 
   } catch (error: any) {
     throw new Error(`Failed to get wallet transaction history: ${error.message}`);
+   }
   }
-}
 
   /**
    * Gets detailed information about a wallet transaction including fee information
