@@ -167,7 +167,7 @@ export const RBFForm: React.FC = () => {
     return Math.max(
       originalFeeRate + 1,
       highestRecommended,
-      100, // Maximum ceiling of 100 sat/vB
+      1000, // Maximum ceiling of 1000 sat/vB
     );
   }, [originalFeeRate, analysis, feeEstimates]);
 
