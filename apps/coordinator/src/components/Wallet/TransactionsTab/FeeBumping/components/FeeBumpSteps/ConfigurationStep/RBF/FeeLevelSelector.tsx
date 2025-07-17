@@ -29,7 +29,7 @@ const FeeLabel: React.FC<FeeLabelProps> = React.memo(
       </Typography>
       {showChip && feeRate !== undefined && !isNaN(feeRate) && (
         <Chip
-          label={`${Math.ceil(feeRate)} sat/vB`}
+          label={`${Math.ceil(feeRate)} sats/vB`}
           size="small"
           sx={{ ml: 1, backgroundColor: color, color: "white" }}
         />

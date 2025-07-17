@@ -187,7 +187,7 @@ export const StrategyRadioGroup: React.FC<StrategyRadioGroupProps> = ({
                           Suggested fee rate:
                         </Typography>
                         <Typography variant="body2">
-                          {config.suggestedFeeRate} sat/vB
+                          {config.suggestedFeeRate.toFixed(2)} sats/vB
                         </Typography>
                       </Grid>
                     </Grid>

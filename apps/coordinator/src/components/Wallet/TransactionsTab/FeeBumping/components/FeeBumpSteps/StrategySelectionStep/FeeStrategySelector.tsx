@@ -91,21 +91,24 @@ export const FeeStrategySelector: React.FC = () => {
       </Typography>
 
       <Box mb={3}>
-        {analysis.recommendedStrategy === FeeBumpStrategy.NONE ? (
+        {analysis.recommendedStrategy === FeeBumpStrategy.NONE && (
           <Alert severity="info">
             <AlertTitle>No Fee Bump Needed</AlertTitle>
             This transaction doesn&apos;t need fee bumping or no viable strategy
             is available.
           </Alert>
-        ) : (
-          <Alert severity="info">
-            <AlertTitle>Strategy Recommendation</AlertTitle>
-            Based on transaction analysis, we recommend using{" "}
-            <strong>{analysis.recommendedStrategy}</strong> to accelerate this
-            transaction.
-          </Alert>
         )}
       </Box>
+
+      {/* Strategy selection */}
+      <StrategyRadioGroup
+        strategies={strategyConfigs}
+        selectedStrategy={selectedStrategy}
+        onStrategyChange={setStrategy}
+        recommendedStrategy={analysis.recommendedStrategy}
+      />
+
+      <Divider sx={{ my: 2 }} />
 
       {/* Network fee information */}
       {networkFeeEstimates && (
@@ -118,7 +121,7 @@ export const FeeStrategySelector: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 High Priority (~10 min)
               </Typography>
-              <Typography variant="h6">
+              <Typography>
                 {networkFeeEstimates[FeePriority.HIGH]} sat/vB
               </Typography>
             </Paper>
@@ -126,8 +129,8 @@ export const FeeStrategySelector: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Medium Priority (~30 min)
               </Typography>
-              <Typography variant="h6">
-                {networkFeeEstimates[FeePriority.MEDIUM]} sat/vB
+              <Typography>
+                {networkFeeEstimates[FeePriority.MEDIUM]} sats/vB
               </Typography>
             </Paper>
           </Box>
@@ -135,7 +138,7 @@ export const FeeStrategySelector: React.FC = () => {
           <Box mt={1}>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee rate:{" "}
-              <strong>{analysis.feeRate?.toFixed(1)} sat/vB</strong>
+              <strong>{analysis.feeRate?.toFixed(1)} sats/vB</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee :{" "}
@@ -144,16 +147,6 @@ export const FeeStrategySelector: React.FC = () => {
           </Box>
         </Box>
       )}
-
-      <Divider sx={{ my: 2 }} />
-
-      {/* Strategy selection */}
-      <StrategyRadioGroup
-        strategies={strategyConfigs}
-        selectedStrategy={selectedStrategy}
-        onStrategyChange={setStrategy}
-        recommendedStrategy={analysis.recommendedStrategy}
-      />
 
       {/* Help information */}
       <HelpInformation />

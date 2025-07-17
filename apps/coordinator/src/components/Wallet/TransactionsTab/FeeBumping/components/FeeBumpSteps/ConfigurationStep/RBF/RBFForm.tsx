@@ -88,7 +88,7 @@ export const RBFForm: React.FC = () => {
     // Validate form before proceeding
     if (feeBumpRate < minimumFeeRate) {
       console.error("Fee rate is below minimum required");
-      alert(`Fee rate must be at least ${minimumFeeRate.toFixed(1)} sat/vB`);
+      alert(`Fee rate must be at least ${minimumFeeRate.toFixed(1)} sats/vB`);
       return false;
     }
 
@@ -151,7 +151,7 @@ export const RBFForm: React.FC = () => {
     return Math.max(
       originalFeeRate + 1,
       highestRecommended,
-      1000, // Maximum ceiling of 1000 sat/vB
+      1000, // Maximum ceiling of 1000 sats/vB
     );
   }, [originalFeeRate, analysis, feeEstimates]);
 
@@ -269,10 +269,11 @@ export const RBFForm: React.FC = () => {
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Current fee rate: {originalFeeRate.toFixed(1)} sat/vB
+            Current fee rate: {originalFeeRate.toFixed(1)} sats/vB
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Minimum required: {minimumFeeRate.toFixed(1)} sat/vB (per RBF rules)
+            Minimum required: {minimumFeeRate.toFixed(1)} sats/vB (per RBF
+            rules)
           </Typography>
         </Box>
 

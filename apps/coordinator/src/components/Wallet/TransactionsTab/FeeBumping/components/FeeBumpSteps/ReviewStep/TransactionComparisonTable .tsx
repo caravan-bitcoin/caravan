@@ -193,7 +193,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
 
                 {/* Fee Rate Row */}
                 <ComparisonRow
-                  label="Fee Rate (sat/vB)"
+                  label="Fee Rate (sats/vB)"
                   tooltip="The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners."
                   originalValue={comparisonData.feeRate.original}
                   newValue={comparisonData.feeRate.new}
