@@ -113,8 +113,8 @@ export const setBlockchainClient = () => {
     const { network } = getState().settings;
     const { client } = getState();
 
-    const clientType = getClientType(client);
-    const provider = getClientProvider(client);
+    let clientType = getClientType(client);
+    let provider = getClientProvider(client);
 
     // Only create a new client if the values are different
     const { blockchainClient } = client;
@@ -122,7 +122,6 @@ export const setBlockchainClient = () => {
     if (blockchainClient && matchesClient(blockchainClient, client, network)) {
       return blockchainClient;
     }
-
 
     // Handle regtest network: switch to private client if public client was selected
     if (network === "regtest" && clientType === ClientType.PUBLIC) {
