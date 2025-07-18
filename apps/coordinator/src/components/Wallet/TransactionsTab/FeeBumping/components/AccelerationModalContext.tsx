@@ -55,10 +55,6 @@ type AccelerationModalAction =
   | { type: "SET_STRATEGY"; payload: FeeBumpStrategy }
   | { type: "SET_RBF_TYPE"; payload: RbfType }
   | { type: "SET_FEE_BUMP_RESULT"; payload: FeeBumpResult | null }
-  | { type: "SET_STEP_CALLBACK"; payload: (() => boolean) | null }
-  | { type: "SET_NEXT_ENABLED"; payload: boolean }
-  | { type: "SET_BACK_ENABLED"; payload: boolean }
-  | { type: "SET_NEXT_BUTTON_TEXT"; payload: string }
   | { type: "SET_DOWNLOAD_CLICKED"; payload: boolean };
 
 // =============================================================================
