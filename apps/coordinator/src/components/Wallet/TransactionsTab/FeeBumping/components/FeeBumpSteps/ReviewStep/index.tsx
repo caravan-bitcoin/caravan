@@ -1,12 +1,11 @@
-import React, { useCallback } from "react";
+import React from "react";
 import { Box, Typography, Alert, AlertTitle } from "@mui/material";
-
-import { PsbtV2 } from "@caravan/psbt";
 
 import { TransactionComparison } from "./TransactionComparison";
 import { DownloadSection } from "./DownloadSection";
 import { useAccelerationModal } from "../../AccelerationModalContext";
 import { downloadFile } from "utils/index";
+import { convertPSBT } from "../../../utils";
 
 /**
  * Step 3: Review and Download
@@ -18,24 +17,6 @@ import { downloadFile } from "utils/index";
 export const ReviewStep = () => {
   const { state, setDownloadClicked } = useAccelerationModal();
   const { feeBumpResult, rbfType } = state;
-
-  // Convert PSBT between versions
-  const convertPSBT = useCallback(
-    (psbtBase64: string, targetVersion: "v0" | "v2"): string => {
-      try {
-        if (targetVersion === "v0") {
-          // Convert to v0
-          const psbt = new PsbtV2(psbtBase64);
-          return psbt.toV0("base64");
-        }
-        return psbtBase64; // as RBF functions give back V2 PSBT only
-      } catch (error) {
-        console.error("Error converting PSBT:", error);
-        return psbtBase64; // Return original if conversion fails
-      }
-    },
-    [],
-  );
 
   const handleDownloadPSBT = (selectedPsbtVersion: "v0" | "v2") => {
     if (!feeBumpResult) {

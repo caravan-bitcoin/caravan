@@ -1,4 +1,5 @@
 import { UTXO as FeeUTXO } from "@caravan/fees";
+import { PsbtV2 } from "@caravan/psbt";
 
 // =============================================================================
 // HELPER UTILITY FUNCTIONS FOR FORMATTING AND VALIDATION
@@ -107,4 +108,43 @@ export const extractUtxosForFeeBumping = (
     processedUtxoKeys.add(key);
     return true;
   });
+};
+
+/**
+ * Converts a PSBT (Partially Signed Bitcoin Transaction) between different versions.
+ *
+ * @description This function handles conversion between PSBT v0 and v2 formats.
+ * Currently only supports converting from v2 to v0, as RBF functions return v2 PSBTs.
+ * If conversion fails, the original PSBT is returned unchanged.
+ *
+ * @param {string} psbtBase64 - The PSBT encoded as a base64 string
+ * @param {"v0" | "v2"} targetVersion - The desired PSBT version to convert to
+ * @returns {string} The converted PSBT as a base64 string, or the original if conversion fails
+ *
+ * @example
+ * ```typescript
+ * const v2Psbt = "cHNidP8BAH0CAAAAAe..."; // v2 PSBT
+ * const v0Psbt = convertPSBT(v2Psbt, "v0");
+ * ```
+ *
+ * @throws {Error} Logs conversion errors to console but doesn't throw - returns original PSBT
+ *
+ * @since 1.0.0
+ */
+export const convertPSBT = (
+  psbtBase64: string,
+  targetVersion: "v0" | "v2",
+): string => {
+  try {
+    if (targetVersion === "v0") {
+      // Convert from v2 to v0
+      const psbt = new PsbtV2(psbtBase64);
+      return psbt.toV0("base64");
+    }
+    // Return as-is for v2 target since RBF functions already return v2 PSBTs
+    return psbtBase64;
+  } catch (error) {
+    console.error("Error converting PSBT:", error);
+    return psbtBase64; // Return original if conversion fails
+  }
 };
