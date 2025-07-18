@@ -19,6 +19,8 @@ export default defineConfig({
       selectors: path.resolve(__dirname, "./src/selectors"),
       clients: path.resolve(__dirname, "./src/clients"),
       hooks: path.resolve(__dirname, "./src/hooks"),
+      components: path.resolve(__dirname, "./src/components"),
+      actions: path.resolve(__dirname, "./src/actions"),
     },
   },
   plugins: [
