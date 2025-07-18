@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import { Box, Typography, Alert, AlertTitle } from "@mui/material";
 
 import { PsbtV2 } from "@caravan/psbt";
@@ -18,7 +18,6 @@ import { downloadFile } from "utils/index";
 export const ReviewStep = () => {
   const { state, setDownloadClicked } = useAccelerationModal();
   const { feeBumpResult, rbfType } = state;
-  const [localdownloadClicked, setlocalDownloadClicked] = useState(false);
 
   // Convert PSBT between versions
   const convertPSBT = useCallback(
@@ -63,7 +62,6 @@ export const ReviewStep = () => {
       downloadFile(convertedPSBT, filename);
 
       // Update state
-      setlocalDownloadClicked(true);
       setDownloadClicked(true);
       return true;
     } catch (error) {
@@ -94,7 +92,7 @@ export const ReviewStep = () => {
             {/* Success message after download */}
             <DownloadSection
               onDownload={handleDownloadPSBT}
-              downloadClicked={localdownloadClicked}
+              downloadClicked={state.downloadClicked}
               disabled={!feeBumpResult}
             />
           </Box>
