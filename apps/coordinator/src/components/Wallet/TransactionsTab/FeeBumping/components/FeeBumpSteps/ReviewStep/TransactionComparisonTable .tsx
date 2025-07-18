@@ -131,6 +131,50 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
         };
       }, [originalTx, feeBumpResult, originalFeeRate, feeDifference, rbfType]);
 
+      const tableRows = React.useMemo(
+        () => [
+          {
+            label: "Transaction ID",
+            tooltip: "Unique identifier for the Bitcoin transaction",
+            originalValue: comparisonData.txid.original,
+            newValue: comparisonData.txid.new,
+            showDifference: false,
+          },
+          {
+            label: "Status",
+            tooltip: "Current state of the transaction in the network",
+            originalValue: comparisonData.status.original,
+            newValue: comparisonData.status.new,
+            showDifference: false,
+          },
+          {
+            label: "RBF Action",
+            tooltip:
+              "What will happen when this Replace-by-Fee transaction is broadcast",
+            originalValue: comparisonData.rbfAction.original,
+            newValue: comparisonData.rbfAction.new,
+            showDifference: false,
+          },
+          {
+            label: "Fee (sats)",
+            tooltip:
+              "The amount of bitcoin paid to miners to include your transaction in a block",
+            originalValue: comparisonData.fee.original,
+            newValue: comparisonData.fee.new,
+            difference: comparisonData.fee.difference,
+          },
+          {
+            label: "Fee Rate (sats/vB)",
+            tooltip:
+              "The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners.",
+            originalValue: comparisonData.feeRate.original,
+            newValue: comparisonData.feeRate.new,
+            difference: comparisonData.feeRate.difference,
+          },
+        ],
+        [comparisonData],
+      );
+
       return (
         <>
           <Typography variant="subtitle1" gutterBottom>
@@ -155,50 +199,17 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Transaction ID Row */}
-                <ComparisonRow
-                  label="Transaction ID"
-                  tooltip="Unique identifier for the Bitcoin transaction"
-                  originalValue={comparisonData.txid.original}
-                  newValue={comparisonData.txid.new}
-                  showDifference={false}
-                />
-
-                {/* Status Row */}
-                <ComparisonRow
-                  label="Status"
-                  tooltip="Current state of the transaction in the network"
-                  originalValue={comparisonData.status.original}
-                  newValue={comparisonData.status.new}
-                  showDifference={false}
-                />
-
-                {/* RBF Action Row */}
-                <ComparisonRow
-                  label="RBF Action"
-                  tooltip="What will happen when this Replace-by-Fee transaction is broadcast"
-                  originalValue={comparisonData.rbfAction.original}
-                  newValue={comparisonData.rbfAction.new}
-                  showDifference={false}
-                />
-
-                {/* Fee Row */}
-                <ComparisonRow
-                  label="Fee (sats)"
-                  tooltip="The amount of bitcoin paid to miners to include your transaction in a block"
-                  originalValue={comparisonData.fee.original}
-                  newValue={comparisonData.fee.new}
-                  difference={comparisonData.fee.difference}
-                />
-
-                {/* Fee Rate Row */}
-                <ComparisonRow
-                  label="Fee Rate (sats/vB)"
-                  tooltip="The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners."
-                  originalValue={comparisonData.feeRate.original}
-                  newValue={comparisonData.feeRate.new}
-                  difference={comparisonData.feeRate.difference}
-                />
+                {tableRows.map((row) => (
+                  <ComparisonRow
+                    key={row.label}
+                    label={row.label}
+                    tooltip={row.tooltip}
+                    originalValue={row.originalValue}
+                    newValue={row.newValue}
+                    difference={row.difference}
+                    showDifference={row.showDifference}
+                  />
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
