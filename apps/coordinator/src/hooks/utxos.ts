@@ -4,8 +4,8 @@ import { getWalletSlices, Slice, UTXO as SliceUTXO } from "selectors/wallet";
 import { UTXO } from "@caravan/fees";
 import { Coin, fetchTransactionCoins } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
+import { useGetClient } from "hooks/client";
 import { TransactionDetails } from "@caravan/clients";
-import { useGetClient } from "./client";
 
 /*
  * need to create a function that given a coin and a slice returns a utxo that can be used

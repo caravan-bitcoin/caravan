@@ -1,5 +1,5 @@
 import { BlockchainClient } from "@caravan/clients";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useGetClient } from "hooks/client";
 
 export enum FeePriority {
@@ -75,24 +75,18 @@ export const useFeeEstimate = (priority: FeePriority) => {
 };
 
 export const useFeeEstimates = () => {
-  const blockchainClient = useGetClient();
-  const priorities = [FeePriority.HIGH, FeePriority.MEDIUM, FeePriority.LOW];
+  const highPriority = useFeeEstimate(FeePriority.HIGH);
+  const mediumPriority = useFeeEstimate(FeePriority.MEDIUM);
+  const lowPriority = useFeeEstimate(FeePriority.LOW);
 
-  const results = useQueries({
-    queries: priorities.map((priority) => ({
-      queryKey: feeEstimateKeys.feeEstimate(priority),
-      queryFn: () => fetchFeeEstimate(priority, blockchainClient),
-      enabled: !!blockchainClient,
-    })),
-  });
+  const isLoading =
+    highPriority.isLoading || mediumPriority.isLoading || lowPriority.isLoading;
+  const error = highPriority.error || mediumPriority.error || lowPriority.error;
 
-  const isLoading = results.some((result) => result.isLoading);
-  const error = results.find((result) => result.error)?.error;
-
-  const feeEstimates = {
-    [FeePriority.HIGH]: results[0]?.data,
-    [FeePriority.MEDIUM]: results[1]?.data,
-    [FeePriority.LOW]: results[2]?.data,
+  const feeEstimates: Record<FeePriority, number> = {
+    [FeePriority.HIGH]: highPriority.data ?? 1,
+    [FeePriority.MEDIUM]: mediumPriority.data ?? 1,
+    [FeePriority.LOW]: lowPriority.data ?? 1,
   };
 
   return {
