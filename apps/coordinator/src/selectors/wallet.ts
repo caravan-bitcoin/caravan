@@ -490,6 +490,11 @@ export const getTransactionExplorerUrl = createSelector(
   [getNetwork, (state: WalletState) => state.client],
   (network: string, client: WalletState["client"]) => {
     return (txid: string): string => {
+      // Handle regtest - no public explorers available
+      // Return empty string to disable explorer links
+      if (network === "regtest") {
+        return "";
+      }
       // Determine which block explorer to use based on the blockchain client type
       let explorerUrl = `https://blockstream.info/${network === "mainnet" ? "" : "testnet/"}tx/${txid}`;
 
