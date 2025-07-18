@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
+import { useGetClient } from "hooks/client";
 import {
   Box,
   Typography,
@@ -11,6 +12,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
+import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
 import {
   useSortedTransactions,
@@ -35,6 +37,17 @@ import {
 const TransactionsTab: React.FC = () => {
   const network = useSelector((state: any) => state.settings.network);
 
+  // State for the selected transaction for acceleration
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
+    null,
+  );
+  // State for the acceleration modal
+  const [accelerationModalOpen, setAccelerationModalOpen] = useState(false);
+  // State for the raw tx hex
+  const [txHex, setTxHex] = useState<string>("");
+  // Get blockchain client from Redux store
+  const blockchainClient = useGetClient();
+
   // Use our custom hooks for pending transactions
   const { transactions, isLoading, error } = usePendingTransactions();
   const { sortBy, sortDirection, handleSort, sortedTransactions } =
@@ -53,6 +66,36 @@ const TransactionsTab: React.FC = () => {
 
   // Get transactions for current page
   const currentPageTxs = getCurrentPageItems(sortedTransactions);
+
+  // Handle acceleration button click
+  const handleAccelerateTransaction = async (tx: any) => {
+    if (!tx || !blockchainClient) return;
+
+    try {
+      // Fetch the raw transaction he
+      const txHex = await blockchainClient.getTransactionHex(tx.txid);
+      if (!txHex || typeof txHex !== "string") {
+        throw new Error("Invalid transaction hex received");
+      }
+
+      // Set the selected transaction and raw tx hex
+      setSelectedTransaction(tx);
+      setTxHex(txHex);
+
+      // Open the acceleration modal
+      setAccelerationModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching raw transaction:", error);
+      alert("Error fetching transaction details. Please try again.");
+    }
+  };
+
+  // Handle acceleration modal close
+  const handleAccelerationModalClose = () => {
+    setAccelerationModalOpen(false);
+    setSelectedTransaction(null);
+    setTxHex("");
+  };
 
   return (
     <div>
@@ -76,6 +119,7 @@ const TransactionsTab: React.FC = () => {
               sortDirection={sortDirection}
               network={network}
               onClickTransaction={handleExplorerLinkClick}
+              onAccelerateTransaction={handleAccelerateTransaction}
             />
             {/* Pagination controls */}
             {sortedTransactions.length > 0 && (
@@ -122,6 +166,14 @@ const TransactionsTab: React.FC = () => {
           </>
         )}
       </Box>
+      {selectedTransaction && (
+        <AccelerationModal
+          open={accelerationModalOpen}
+          onClose={handleAccelerationModalClose}
+          transaction={selectedTransaction}
+          txHex={txHex}
+        />
+      )}
     </div>
   );
 };
