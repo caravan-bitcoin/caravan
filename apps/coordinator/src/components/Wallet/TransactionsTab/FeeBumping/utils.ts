@@ -67,6 +67,7 @@ export const validateTransactionInputs = (
   }
 };
 
+// TODO: remove this function when we do cleanup elsewhere around old rbf code
 /**
  * Efficiently combines and deduplicates UTXOs from multiple sources for fee bumping
  *
