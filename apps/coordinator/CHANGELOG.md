@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.11.0
+
+### Minor Changes
+
+- [#338](https://github.com/caravan-bitcoin/caravan/pull/338) [`0c66ab1`](https://github.com/caravan-bitcoin/caravan/commit/0c66ab1b9c8c6bc6362bdaf57b595c4deed8dcd2) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - This PR introduces foundational Replace-By-Fee (RBF) support, enabling users to accelerate or cancel unconfirmed transactions directly from the Pending Transactions tab.
+
+### Patch Changes
+
+- [#344](https://github.com/caravan-bitcoin/caravan/pull/344) [`ccc05d3`](https://github.com/caravan-bitcoin/caravan/commit/ccc05d3cbed69c50e6df2ded3145813340d8de90) Thanks [@abbi4code](https://github.com/abbi4code)! - Add regtest network selection to ui for private clients
+
 ## 1.10.0
 
 ### Minor Changes
