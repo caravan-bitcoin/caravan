@@ -144,7 +144,6 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
 export const selectInputIdentifiersFromPSBT = createSelector(
   [(state: WalletState, psbt: Psbt) => psbt],
   (psbt: Psbt) => {
-    console.log("psbt", psbt);
     return new Set(
       psbt.txInputs.map((input) => {
         return createInputIdentifier(

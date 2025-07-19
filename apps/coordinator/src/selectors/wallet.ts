@@ -32,6 +32,7 @@ export interface Slice {
       path: string;
     }[];
   };
+  bip32Path?: string;
   lastUsed?: string;
   lastUsedTime?: number;
 }

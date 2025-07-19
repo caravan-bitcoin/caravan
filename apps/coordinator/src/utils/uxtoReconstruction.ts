@@ -105,7 +105,6 @@ function reconstructSingleUtxo(
   // This is the output that was consumed by a pending transaction we're trying to replace (fee-bump).
   const originalOutput = originalTransaction.vout?.[input.vout];
   if (!originalOutput) {
-    console.log(`Output ${input.vout} not found in transaction ${input.txid}`);
     return null;
   }
 
@@ -114,7 +113,6 @@ function reconstructSingleUtxo(
   const address =
     originalOutput.scriptPubkeyAddress || originalOutput.scriptPubkey;
   if (!address) {
-    console.log(`No address found for ${input.txid}:${input.vout}`);
     return null;
   }
   //  Check if that address is owned by any of our wallet slices.
@@ -139,7 +137,7 @@ function reconstructSingleUtxo(
 
     // Wallet-specific
     multisig: walletSliceForThisAddress.multisig,
-    bip32Path: walletSliceForThisAddress.multisig.bip32Derivation,
+    bip32Path: walletSliceForThisAddress.bip32Path,
     change: walletSliceForThisAddress.change,
   };
 }
