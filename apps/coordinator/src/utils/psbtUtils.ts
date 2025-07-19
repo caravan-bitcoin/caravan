@@ -124,3 +124,21 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
     return false;
   }
 }
+
+/**
+ * Creates a unique identifier for a UTXO input by combining transaction ID and output index.
+ *
+ * This is used throughout the PSBT import process to match UTXOs across different data sources.
+ * The format ensures we can easily compare inputs from PSBTs with UTXOs in our wallet state.
+ *
+ * @param txid - Transaction ID in big-endian (human-readable) format
+ * @param index - Output index (vout) within the transaction
+ * @returns Unique string identifier in format "txid:index"
+ *
+ * @example
+ * ```ts
+ * const id = createInputIdentifier("abc123...", 0); // "abc123...:0"
+ * ```
+ */
+export const createInputIdentifier = (txid: string, index: number): string =>
+  `${txid}:${index}`;
