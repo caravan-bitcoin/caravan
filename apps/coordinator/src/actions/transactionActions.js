@@ -5,7 +5,6 @@ import {
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
-  selectInputsFromPSBT,
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
 } from "../selectors/transaction";
@@ -458,8 +457,9 @@ export function setFeeFromState(outputsTotalSats) {
   };
 }
 
-export function importPSBT(psbtText) {
+export function importPSBT(psbtText, inputs, isRbfPBST) {
   return (dispatch, getState) => {
+    console.log("inputsPSBT", inputs, isRbfPBST);
     let state = getState();
     const { network } = state.settings;
 
@@ -480,16 +480,6 @@ export function importPSBT(psbtText) {
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
-    const inputs = selectInputsFromPSBT(getState(), psbt);
-
-    if (inputs.length === 0) {
-      throw new Error("PSBT does not contain any UTXOs from this wallet.");
-    }
-    if (inputs.length !== psbt.txInputs.length) {
-      throw new Error(
-        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
-      );
-    }
 
     dispatch(setInputs(inputs));
 
@@ -500,7 +490,19 @@ export function importPSBT(psbtText) {
     dispatch(setFeeFromState(outputsTotalSats));
 
     // ==== Extract and import signatures (If they are present)====
-    dispatch(setSignaturesFromPsbt(psbt));
+
+    // For RBF PSBTs, we skip signature extraction because:
+    // 1. The UTXOs used for signature verification aren't in wallet state
+    // 2. The signature extraction functions expect UTXOs to be in spendable slices
+    // 3. RBF PSBTs are typically unsigned anyway (they're new replacement transactions)
+    // 4. Attempting signature extraction would throw errors ...
+    //
+    // Note: If we don't skip this step on RBFed PSBT then setSignaturesFromPsbt confirms for signature by comparing
+    // PSBT inputs against wallet UTXO's and it throws error then that UTXO does not belong to wallet
+    // Also saves compute if skipped :)
+    if (!isRbfPBST) {
+      dispatch(setSignaturesFromPsbt(psbt));
+    }
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));
