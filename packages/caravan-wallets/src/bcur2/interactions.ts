@@ -219,28 +219,41 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
 }
 
 /**
- * Base class for BCUR2 encoding interactions.
- * Provides functionality for encoding data into QR code fragments.
+ * Interaction class for encoding a PSBT transaction into BCUR2 QR codes
+ * for signing by airgapped wallets.
  *
- * @extends IndirectKeystoreInteraction
+ * @extends BCUR2Interaction
  */
-export class BCUR2EncodeInteraction extends IndirectKeystoreInteraction {
-  protected encoder: BCUREncoder2;
+export class BCUR2EncodeTransaction extends BCUR2Interaction {
+  private encoder: BCUREncoder2;
 
-  protected fragments: string[];
+  private psbt: string;
 
-  protected currentFragmentIndex: number;
+  private qrCodeFrames: string[];
+
+  private maxFragmentLength: number;
 
   /**
-   * Creates a new BCUR2 encode interaction instance
-   * @param {string} data - The data to encode
-   * @param {number} maxFragmentLength - Maximum length of each QR code fragment
+   * Creates a new BCUR2 encode transaction interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.psbt - Base64 encoded PSBT to encode
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
    */
-  constructor(data: string, maxFragmentLength: number = 100) {
-    super();
-    this.encoder = new BCUREncoder2(data, maxFragmentLength);
-    this.fragments = [];
-    this.currentFragmentIndex = 0;
+  constructor({
+    psbt,
+    network = Network.MAINNET,
+    maxFragmentLength = 100,
+  }: {
+    psbt: string;
+    network?: BitcoinNetwork;
+    maxFragmentLength?: number;
+  }) {
+    super(network);
+    this.psbt = psbt;
+    this.maxFragmentLength = maxFragmentLength;
+    this.encoder = new BCUREncoder2(psbt, maxFragmentLength);
+    this.qrCodeFrames = [];
   }
 
   /**
@@ -249,184 +262,84 @@ export class BCUR2EncodeInteraction extends IndirectKeystoreInteraction {
    */
   messages() {
     const messages = super.messages();
-    
-    if (this.fragments.length === 0) {
-      messages.push({
-        state: PENDING,
-        level: INFO,
-        code: "bcur2.encode.ready",
-        text: "Ready to encode data into QR codes.",
-      });
-    } else {
+    if (this.qrCodeFrames.length > 0) {
       messages.push({
         state: ACTIVE,
         level: INFO,
-        code: "bcur2.encode.displaying",
-        text: `Displaying QR code ${this.currentFragmentIndex + 1} of ${this.fragments.length}`,
+        code: "bcur2.transaction_encoded",
+        text: `Transaction encoded into ${this.qrCodeFrames.length} QR code frames`,
+      });
+      messages.push({
+        state: PENDING,
+        level: INFO,
+        code: "bcur2.display_animated_qr",
+        text: "Display animated QR codes to your signing device",
+      });
+    } else {
+      messages.push({
+        state: PENDING,
+        level: INFO,
+        code: "bcur2.encoding_transaction",
+        text: "Encoding transaction into QR codes...",
       });
     }
-
     return messages;
   }
 
   /**
-   * Encodes the data and prepares QR code fragments
-   * @returns {Array<string>} Array of QR code fragments
+   * Generates the request data for displaying animated QR codes
+   * @returns {Object} Request data containing QR code frames and metadata
    */
-  encode(): string[] {
-    try {
-      this.fragments = this.encoder.encodePSBT();
-      this.currentFragmentIndex = 0;
-      return this.fragments;
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to encode data: ${errorMessage}`);
+  request() {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
     }
+
+    return {
+      instruction: "Scan these animated QR codes with your signing device",
+      qrCodeFrames: this.qrCodeFrames,
+      fragmentCount: this.qrCodeFrames.length,
+      maxFragmentLength: this.maxFragmentLength,
+      psbtSize: this.psbt.length,
+    };
   }
 
   /**
-   * Gets all QR code fragments
-   * @returns {Array<string>} Array of all QR code fragments
+   * Gets the encoded QR code frames
+   * @returns {string[]} Array of QR code frame strings
    */
-  getFragments(): string[] {
-    return this.fragments;
-  }
-
-  /**
-   * Gets the current QR code fragment
-   * @returns {string|null} Current QR code fragment or null if not available
-   */
-  getCurrentFragment(): string | null {
-    if (this.fragments.length === 0) return null;
-    return this.fragments[this.currentFragmentIndex] || null;
-  }
-
-  /**
-   * Moves to the next QR code fragment
-   * @returns {string|null} Next QR code fragment or null if at the end
-   */
-  nextFragment(): string | null {
-    if (this.currentFragmentIndex < this.fragments.length - 1) {
-      this.currentFragmentIndex++;
-      return this.getCurrentFragment();
+  getQRCodeFrames(): string[] {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
     }
-    return null;
+    return this.qrCodeFrames;
   }
 
   /**
-   * Moves to the previous QR code fragment
-   * @returns {string|null} Previous QR code fragment or null if at the beginning
-   */
-  previousFragment(): string | null {
-    if (this.currentFragmentIndex > 0) {
-      this.currentFragmentIndex--;
-      return this.getCurrentFragment();
-    }
-    return null;
-  }
-
-  /**
-   * Gets the total number of fragments
-   * @returns {number} Total number of QR code fragments
-   */
-  getFragmentCount(): number {
-    return this.fragments.length;
-  }
-
-  /**
-   * Gets the current fragment index (0-based)
-   * @returns {number} Current fragment index
-   */
-  getCurrentFragmentIndex(): number {
-    return this.currentFragmentIndex;
-  }
-
-  /**
-   * Sets the current fragment index
-   * @param {number} index - The fragment index to set
-   * @returns {string|null} The fragment at the specified index or null if invalid
-   */
-  setCurrentFragmentIndex(index: number): string | null {
-    if (index >= 0 && index < this.fragments.length) {
-      this.currentFragmentIndex = index;
-      return this.getCurrentFragment();
-    }
-    return null;
-  }
-
-  /**
-   * Checks if there are more fragments after the current one
-   * @returns {boolean} True if there are more fragments
-   */
-  hasNextFragment(): boolean {
-    return this.currentFragmentIndex < this.fragments.length - 1;
-  }
-
-  /**
-   * Checks if there are fragments before the current one
-   * @returns {boolean} True if there are previous fragments
-   */
-  hasPreviousFragment(): boolean {
-    return this.currentFragmentIndex > 0;
-  }
-
-  /**
-   * Resets the encoder with new data
-   * @param {string} data - New data to encode
-   */
-  setData(data: string): void {
-    this.encoder.setData(data);
-    this.fragments = [];
-    this.currentFragmentIndex = 0;
-  }
-
-  /**
-   * Estimates the number of fragments for the current data
+   * Estimates the number of QR code fragments
    * @returns {number} Estimated fragment count
    */
   estimateFragmentCount(): number {
     return this.encoder.estimateFragmentCount();
   }
-}
 
-/**
- * Interaction class for encoding PSBTs into BCUR2 QR codes.
- * Specifically designed for encoding Partially Signed Bitcoin Transactions.
- */
-export class BCUR2EncodePSBT extends BCUR2EncodeInteraction {
   /**
-   * Creates a new BCUR2 PSBT encode interaction instance
-   * @param {string} psbtBase64 - The base64-encoded PSBT to encode
-   * @param {number} maxFragmentLength - Maximum length of each QR code fragment
+   * Sets a new PSBT to encode
+   * @param {string} psbt - Base64 encoded PSBT
    */
-  constructor(psbtBase64: string, maxFragmentLength: number = 100) {
-    super(psbtBase64, maxFragmentLength);
+  setPSBT(psbt: string): void {
+    this.psbt = psbt;
+    this.encoder.setData(psbt);
+    this.qrCodeFrames = []; // Reset frames to force re-encoding
   }
 
   /**
-   * Returns the status messages for the interaction
-   * @returns {Array} Array of message objects describing the current state
+   * Sets the maximum fragment length for QR codes
+   * @param {number} length - Maximum fragment length
    */
-  messages() {
-    const messages = super.messages();
-    
-    // Override the generic messages with PSBT-specific ones
-    if (this.fragments.length === 0) {
-      messages[messages.length - 1] = {
-        state: PENDING,
-        level: INFO,
-        code: "bcur2.encode.psbt.ready",
-        text: "Ready to encode PSBT into QR codes.",
-      };
-    } else {
-      messages[messages.length - 1] = {
-        state: ACTIVE,
-        level: INFO,
-        code: "bcur2.encode.psbt.displaying",
-        text: `Displaying PSBT QR code ${this.currentFragmentIndex + 1} of ${this.fragments.length}`,
-      };
-    }
-
-    return messages;
+  setMaxFragmentLength(length: number): void {
+    this.maxFragmentLength = length;
+    this.encoder.setMaxFragmentLength(length);
+    this.qrCodeFrames = []; // Reset frames to force re-encoding
   }
 }
