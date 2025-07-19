@@ -30,6 +30,7 @@ import {
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
   callBitcoindWallet,
+  bitcoindListSpentTransactions,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -806,7 +807,7 @@ export class BlockchainClient extends ClientBase {
  * @see fetchAddressUtxos - For unspent transactions
  */
 
-  public async getWalletTransactionHistory(
+public async getWalletTransactionHistory(
   count: number = 100,
   skip: number = 0,
   includeWatchOnly: boolean = true
@@ -818,46 +819,52 @@ export class BlockchainClient extends ClientBase {
     throw new Error("Skip must be non-negative");
   }
 
-  try {
-    if (this.type !== ClientType.PRIVATE) {
-      throw new Error("This method is only supported for private clients. Use getAddressTransactionHistory for public clients");
-    }
-
-    if (!this.bitcoindParams.walletName) {
-      throw new Error("Wallet name is required for private client transaction listings");
-    }
-
-    const response = await callBitcoindWallet({
-      baseUrl: this.bitcoindParams.url,
-      walletName: this.bitcoindParams.walletName,
-      auth: this.bitcoindParams.auth,
-      method: "listtransactions",
-      params: ["*", count, skip, includeWatchOnly],
-    });
-
-    // Maintain original error handling for Bitcoin Core responses
-    if (response?.error) {
-      throw new Error(response.error.message || "Bitcoin Core RPC error");
-    }
-    
-    // Keep the original array check that the tests expect
-    if (!response?.result || !Array.isArray(response.result)) {
-      throw new Error("Failed to retrieve transactions from Bitcoin Core");
-    }
-
-    // Filter only "send" category transactions
-    const spentTransactions = response.result
-      .filter((tx: any) => tx.category === "send")
-      // Ensure we don't exceed requested count
-
-    return spentTransactions.map((tx: RawTransactionData) => 
-      normalizeTransactionData(tx, ClientType.PRIVATE)
-    );
-
-  } catch (error: any) {
-    throw new Error(`Failed to get wallet transaction history: ${error.message}`);
-   }
+  if (this.type !== ClientType.PRIVATE) {
+    throw new Error("This method is only supported for private clients. Use getAddressTransactionHistory for public clients");
   }
+
+  if (!this.bitcoindParams.walletName) {
+    throw new Error("Wallet name is required for private client transaction listings");
+  }
+
+  const spentTransactions = await bitcoindListSpentTransactions({
+    url: this.bitcoindParams.url,
+    auth: this.bitcoindParams.auth,
+    walletName: this.bitcoindParams.walletName,
+    count,
+    skip,
+    includeWatchOnly,
+  });
+
+  return spentTransactions.map((tx): TransactionDetails => {
+    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : undefined;
+    
+    return {
+      txid: tx.txid,
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 0,
+      weight: 0,
+      fee: feeSats,
+      isReceived: false,
+      amount: tx.amount,
+      status: {
+        confirmed: tx.confirmations > 0,
+        blockHeight: tx.blockheight,
+        blockHash: tx.blockhash,
+        blockTime: tx.blocktime,
+      },
+      confirmations: tx.confirmations,
+      category: tx.category,
+      address: tx.address,
+      abandoned: tx.abandoned,
+      time: tx.time,
+    } as TransactionDetails;
+  });
+}
+  
 
   /**
    * Gets detailed information about a wallet transaction including fee information
@@ -872,6 +879,7 @@ export class BlockchainClient extends ClientBase {
    * @param txid - Transaction ID to retrieve
    * @returns Normalized transaction details with fee information
    */
+  
   public async getWalletTransaction(txid: string): Promise<TransactionDetails> {
     if (this.type !== ClientType.PRIVATE) {
       throw new BlockchainClientError(
