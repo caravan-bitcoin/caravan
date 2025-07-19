@@ -55,18 +55,21 @@ const useFetchPendingTransactions = () => {
   });
 };
 
-export const useTransactionWithHex = (txid: string) => {
+export const useTransactionWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
-  return useQuery({
-    queryKey: transactionKeys.txWithHex(txid),
-    queryFn: async () => {
-      const [transaction, transactionHex] = await Promise.all([
-        blockchainClient.getTransaction(txid),
-        blockchainClient.getTransactionHex(txid),
-      ]);
-      return { txid, transaction, transactionHex };
-    },
-    enabled: !!blockchainClient && !!txid,
+  return useQueries({
+    queries: txids.map((txid) => ({
+      queryKey: transactionKeys.txWithHex(txid),
+      queryFn: async () => {
+        const [transaction, transactionHex] = await Promise.all([
+          blockchainClient.getTransaction(txid),
+          blockchainClient.getTransactionHex(txid),
+        ]);
+
+        return { txid, transaction, transactionHex };
+      },
+      enabled: !!txid,
+    })),
   });
 };
 
