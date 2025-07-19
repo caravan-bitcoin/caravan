@@ -175,7 +175,7 @@ test.describe("Wallet Regtest Configuration", () => {
       const senderAddress = testStateManager.getSenderAddress()
       const walletNames = testStateManager.getWalletsNames()
 
-      // Mine one more block to confirm our pending txs
+      // Mine 4 more block to confirm our pending txs
       await client?.fundAddress(senderAddress,walletNames[0],4)
 
       await page.locator("button[type=button]:has-text('Refresh')").click()
