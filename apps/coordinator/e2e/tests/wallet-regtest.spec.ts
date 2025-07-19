@@ -8,7 +8,7 @@ import {
   getCurrentReceiveAddress,
   getCurrentPathSuffix 
 } from "../testhelpers/tableExtractor";
-import { extractThreeWalletDescriptors } from "../testhelpers/bitcoinDescriptors";
+import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors";
 
 
 test.describe("Wallet Regtest Configuration", () => {
@@ -27,15 +27,13 @@ test.describe("Wallet Regtest Configuration", () => {
       walletConfig.network = "regtest";
       walletConfig.client.url = "http://localhost:8080";
 
+
       const allWalletNames = testStateManager.getWalletsNames();
       // Only use the first 3 wallets (signing wallets), not the watcher wallet
       const walletNames = allWalletNames.slice(0, 3);
 
       // Extract descriptors for all wallets efficiently using helper with client
-      const { xfps, formattedPaths } = await extractThreeWalletDescriptors(walletNames, client);
-
-      walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
-      });
+      const { xfps, formattedPaths } = await extractMultiWalletDescriptors(walletNames, client, "p2pkh");
 
       walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {
         key.xfp = xfps[index];
@@ -173,6 +171,17 @@ test.describe("Wallet Regtest Configuration", () => {
       
       //Sending 0.5btc each to 4 addresses
       expect(totalBalance).toBe(2)
+
+      const senderAddress = testStateManager.getSenderAddress()
+      const walletNames = testStateManager.getWalletsNames()
+
+      // Mine one more block to confirm our pending txs
+      await client?.fundAddress(senderAddress,walletNames[0],4)
+
+      await page.locator("button[type=button]:has-text('Refresh')").click()
+
+      // Confirming the balance after confirming tx
+      await expect(page.locator('[data-cy="balance"]')).toHaveText('2 BTC')
 
       console.log(
         'Wallet uploaded successfully - "Addresses imported." message appeared',

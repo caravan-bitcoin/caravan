@@ -37,7 +37,7 @@ export interface rpcConfig {
     downloadWalletFile: string,
     test_wallet_names: string[],
     test_wallets: any[]
-    walletAddress: string
+    senderAddress: string
     timestamp: number
   }
 
@@ -60,6 +60,8 @@ export interface WalletDescriptors {
   xfp: string;
   path: string;
   formattedPath: string;
+  addressType?: string;
+  xpub: string
 }
 
 export interface MultiWalletDescriptors {
@@ -67,4 +69,5 @@ export interface MultiWalletDescriptors {
   paths: string[];
   formattedPaths: string[];
   descriptors: WalletDescriptors[];
+  xpubs: string[]
 }

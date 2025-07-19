@@ -6,6 +6,7 @@ import setupPrivateClient from "../testhelpers/clientHelpers"
 import { testStateManager } from "../utils/testState";
 import path from "path"
 import fs from "fs"
+import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors";
 
 test.describe("Caravan Wallet Creation", () => {
   let walletNames: string[] = []
@@ -104,12 +105,10 @@ test.describe("Caravan Wallet Creation", () => {
     await page.locator("input[name='network'][value='testnet']").setChecked(true);
 
 
-    const p2pkh_xpub1 = (await client?.extractAddressDescriptors(walletNames[0]))
-      ?.p2pkh.xpub as string;
-    const p2pkh_xpub2 = (await client?.extractAddressDescriptors(walletNames[1]))
-      ?.p2pkh.xpub as string;
-    const p2pkh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
-      ?.p2pkh.xpub as string;
+    const { descriptors } = await extractMultiWalletDescriptors(walletNames.slice(0, 3), client, "p2pkh");
+    const p2pkh_xpub1 = descriptors[0].xpub;
+    const p2pkh_xpub2 = descriptors[1].xpub; 
+    const p2pkh_xpub3 = descriptors[2].xpub;
 
    //filling xpub1 
     await page.click("div#public-key-1-importer-select[role='combobox']");

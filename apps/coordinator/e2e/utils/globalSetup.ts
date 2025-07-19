@@ -24,6 +24,7 @@ async function globalSetup(_config: FullConfig){
     
     await client?.fundAddress(newAddress,walletNames[0]);
 
+
     let testStateFile = path.join(process.cwd(), "e2e/temp/test-state.json");
     let tempDir = path.dirname(testStateFile);
 
@@ -36,7 +37,7 @@ async function globalSetup(_config: FullConfig){
         downloadWalletFile: '',
         test_wallet_names: walletNames,
         test_wallets: testWallets,
-        walletAddress: newAddress,
+        senderAddress: newAddress,
         timestamp: Date.now(),
     }
 

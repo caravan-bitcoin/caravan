@@ -39,6 +39,11 @@ export class TestStateManager {
     const state = this.getState();
     return state.test_wallet_names
   }
+
+  getSenderAddress(){
+    const state = this.getState();
+    return state.senderAddress;
+  }
 }
 
 export const testStateManager = new TestStateManager();

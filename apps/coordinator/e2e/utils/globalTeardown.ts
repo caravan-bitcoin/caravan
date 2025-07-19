@@ -24,7 +24,7 @@ async function globalTeardown(_config: FullConfig) {
       }
     }
     
-    execSync("docker compose stop", {
+    execSync("docker compose down", {
       cwd: path.join(process.cwd(),"e2e"),
       stdio: "inherit",
     });
