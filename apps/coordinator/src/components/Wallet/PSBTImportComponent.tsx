@@ -67,17 +67,8 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     isRbf: isRbfPSBT,
     isLoading: reconstructionLoading,
     error: reconstructionError,
-  } = useReconstructedUtxos(
-    pendingTxs,
-    allSlices,
-    missingInputIds.size > 0 ? missingInputIds : new Set(), // Only reconstruct if needed
-  );
-  console.log(
-    "here",
-    reconstructedUtxos,
-    reconstructionLoading,
-    reconstructionError,
-  );
+  } = useReconstructedUtxos(pendingTxs, allSlices, missingInputIds);
+
   // Combine all inputs
   const allInputs = useMemo(() => {
     if (!availableInputs || !parsedPsbt) return [];
@@ -105,8 +96,37 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
       return;
     }
 
+    // Don't proceed if still loading or no PSBT
+    if (!parsedPsbt || reconstructionLoading) {
+      return;
+    }
+
+    const totalPsbtInputs = parsedPsbt.txInputs.length;
+    const resolvedInputsCount = allInputs.length;
+
+    // Check if we have a mismatch after reconstruction is complete
+    if (
+      !reconstructionLoading &&
+      !reconstructionError &&
+      resolvedInputsCount !== totalPsbtInputs
+    ) {
+      if (resolvedInputsCount === 0) {
+        // No inputs found - likely a different wallet
+        setError(
+          "This PSBT does not contain any UTXOs from this wallet. Please ensure you're using the correct wallet or PSBT file.",
+        );
+      } else {
+        // Partial inputs found - should never happen but still handling
+        setError(
+          `Only ${resolvedInputsCount} of ${totalPsbtInputs} PSBT inputs belong to this wallet. Cannot import partial PSBT.`,
+        );
+      }
+      setIsProcessing(false);
+      return;
+    }
+
     // Auto-import when inputs are resolved
-    if (allInputs.length > 0) {
+    if (resolvedInputsCount > 0 && resolvedInputsCount === totalPsbtInputs) {
       try {
         onImport(psbtText, allInputs, isRbfPSBT);
         // Clear state after successful import
@@ -119,7 +139,15 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
         setIsProcessing(false);
       }
     }
-  }, [allInputs.length]);
+  }, [
+    reconstructionError,
+    reconstructionLoading,
+    parsedPsbt,
+    allInputs.length,
+    isRbfPSBT,
+    psbtText,
+    onImport,
+  ]);
 
   // Helper function to detect if content is binary PSBT
   const isBinaryPSBT = useCallback((arrayBuffer: ArrayBuffer): boolean => {
