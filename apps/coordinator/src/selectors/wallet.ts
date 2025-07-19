@@ -234,7 +234,7 @@ export const getConfirmedBalance = createSelector(
     totalBalance - pendingBalance,
 );
 
-interface SliceWithLastUsed extends Slice {
+export interface SliceWithLastUsed extends Slice {
   lastUsed?: string;
   lastUsedTime?: number;
 }
