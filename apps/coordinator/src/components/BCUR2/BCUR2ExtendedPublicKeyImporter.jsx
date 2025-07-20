@@ -35,14 +35,19 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
     enableChangeMethod();
     try {
       // The data is already parsed as an object with the correct structure
-      const { xpub, xfp: fingerprint, path } = data;
+      const { xpub, rootFingerprint, bip32Path } = data;
 
-      validateAndSetRootFingerprint(fingerprint, (error) => {
-        this.setError(error);
-      });
+      // Ensure rootFingerprint is a string
+      const fingerprintStr = rootFingerprint ? String(rootFingerprint) : "";
+      
+      if (fingerprintStr) {
+        validateAndSetRootFingerprint(fingerprintStr, (error) => {
+          this.setError(error);
+        });
+      }
 
       validateAndSetBIP32Path(
-        path,
+        bip32Path,
         () => {
           validateAndSetExtendedPublicKey(xpub, this.setError);
         },

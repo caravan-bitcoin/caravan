@@ -124,3 +124,46 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
     return false;
   }
 }
+
+/**
+ * Extracts signatures from a signed PSBT for use with the signature importer.
+ * 
+ * @param psbtData - The PSBT data (base64 string or Buffer)
+ * @returns Array of signature strings for each input
+ * @throws Error if signatures cannot be extracted
+ */
+export function extractSignaturesFromPSBT(psbtData: string | Buffer): string[] {
+  try {
+    // Load the PSBT (assuming mainnet for now, this could be made configurable)
+    const psbt = loadPsbt(psbtData, Network.MAINNET);
+    if (!psbt) {
+      throw new Error("Could not load PSBT");
+    }
+
+    const signatures: string[] = [];
+    
+    // Extract signatures from each input
+    for (let i = 0; i < psbt.data.inputs.length; i++) {
+      const input = psbt.data.inputs[i];
+      
+      // Look for partial signatures in the input
+      if (input.partialSig && input.partialSig.length > 0) {
+        // Get the first signature (there might be multiple in a multisig)
+        const signature = input.partialSig[0].signature;
+        signatures.push(signature.toString('hex'));
+      } else {
+        // If no signature found for this input, add empty string
+        signatures.push('');
+      }
+    }
+    
+    if (signatures.length === 0 || signatures.every(sig => sig === '')) {
+      throw new Error("No signatures found in PSBT");
+    }
+    
+    return signatures;
+  } catch (e) {
+    console.error("Error extracting signatures from PSBT:", e);
+    throw new Error(`Failed to extract signatures: ${e.message}`);
+  }
+}

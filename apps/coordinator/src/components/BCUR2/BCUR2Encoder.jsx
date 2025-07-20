@@ -40,17 +40,13 @@ const BCUR2Encoder = ({
   // Auto-advance frames when playing
   useEffect(() => {
     if (isPlaying && qrCodeFrames.length > 1) {
-      console.log('Starting QR animation with', qrCodeFrames.length, 'frames, interval:', animationInterval);
       intervalRef.current = setInterval(() => {
         setCurrentFrameIndex((prev) => {
           const next = (prev + 1) % qrCodeFrames.length;
-          console.log('QR frame advancing from', prev, 'to', next);
-          console.log('Current frame content:', qrCodeFrames[next]);
           return next;
         });
       }, animationInterval);
     } else {
-      console.log('Stopping QR animation. isPlaying:', isPlaying, 'frameCount:', qrCodeFrames.length);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -66,18 +62,9 @@ const BCUR2Encoder = ({
 
   // Reset frame index and restart autoplay when frames change
   useEffect(() => {
-    console.log('QR frames changed. New count:', qrCodeFrames.length, 'autoPlay:', autoPlay);
-    if (qrCodeFrames.length > 0) {
-      console.log('QR Code Frame Contents:');
-      qrCodeFrames.forEach((frame, index) => {
-        console.log(`Frame ${index + 1}:`, frame);
-        console.log(`Frame ${index + 1} length:`, frame.length);
-      });
-    }
     setCurrentFrameIndex(0);
     // Restart autoplay if it was enabled and we have multiple frames
     if (autoPlay && qrCodeFrames.length > 1) {
-      console.log('Setting isPlaying to true for autoplay');
       setIsPlaying(true);
     } else if (qrCodeFrames.length <= 1) {
       // Stop playing if we only have one frame or no frames
@@ -87,9 +74,7 @@ const BCUR2Encoder = ({
 
   // Start animation when dialog opens with multiple frames
   useEffect(() => {
-    console.log('Dialog open changed. open:', open, 'autoPlay:', autoPlay, 'frameCount:', qrCodeFrames.length);
     if (open && autoPlay && qrCodeFrames.length > 1) {
-      console.log('Dialog opened with multiple frames, starting autoplay');
       setIsPlaying(true);
     }
   }, [open, autoPlay, qrCodeFrames.length]);
@@ -114,13 +99,6 @@ const BCUR2Encoder = ({
 
   const currentFrame = qrCodeFrames[currentFrameIndex] || "";
   const frameCount = qrCodeFrames.length;
-
-  // Log current frame content when it changes
-  useEffect(() => {
-    if (currentFrame) {
-      console.log(`Displaying frame ${currentFrameIndex + 1} of ${frameCount}:`, currentFrame);
-    }
-  }, [currentFrameIndex, currentFrame, frameCount]);
 
   return (
     <Dialog

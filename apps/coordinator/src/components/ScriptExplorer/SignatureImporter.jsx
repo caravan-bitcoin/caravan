@@ -26,6 +26,7 @@ import TextSignatureImporter from "./TextSignatureImporter";
 import DirectSignatureImporter from "./DirectSignatureImporter";
 import HermitSignatureImporter from "../Hermit/HermitSignatureImporter";
 import ColdcardSignatureImporter from "../Coldcard/ColdcardSignatureImporter";
+import BCUR2SignatureImporter from "../BCUR2/BCUR2SignatureImporter";
 import EditableName from "../EditableName";
 import {
   setSignatureImporterName,
@@ -46,6 +47,7 @@ import {
 } from "@caravan/psbt";
 
 const TEXT = "text";
+const BCUR2 = "bcur2";
 const UNKNOWN = "unknown";
 
 class SignatureImporter extends React.Component {
@@ -127,6 +129,7 @@ class SignatureImporter extends React.Component {
               Coldcard
             </MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
+            <MenuItem value={BCUR2}>BCUR2</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
@@ -225,6 +228,14 @@ class SignatureImporter extends React.Component {
     if (method === TEXT) {
       return (
         <TextSignatureImporter
+          signatureImporter={signatureImporter}
+          validateAndSetSignature={this.validateAndSetSignature}
+        />
+      );
+    }
+    if (method === BCUR2) {
+      return (
+        <BCUR2SignatureImporter
           signatureImporter={signatureImporter}
           validateAndSetSignature={this.validateAndSetSignature}
         />

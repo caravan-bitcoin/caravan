@@ -34,6 +34,7 @@ import {
   importPSBT as importPSBTAction,
 } from "../../actions/transactionActions";
 import { naiveCoinSelection } from "../../utils";
+import BCUR2Reader from "../BCUR2/BCUR2Reader";
 import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
@@ -52,6 +53,7 @@ class WalletSpend extends React.Component {
     this.state = {
       importPSBTDisabled: false,
       importPSBTError: "",
+      showScanPSBT: false,
     };
   }
 
@@ -223,6 +225,37 @@ class WalletSpend extends React.Component {
     }
   };
 
+  handleScanPSBTSuccess = (psbtData) => {
+    const { importPSBT } = this.props;
+    this.setPSBTToggleAndError(true, "");
+
+    try {
+      // The BCUR2 decoder always returns PSBT data in base64 format
+      // so we can pass it directly to importPSBT
+      if (!psbtData || !psbtData.trim()) {
+        this.setPSBTToggleAndError(false, "Invalid or empty PSBT data.");
+        return;
+      }
+
+      importPSBT(psbtData.trim());
+
+      this.setState({ showScanPSBT: false });
+      this.setPSBTToggleAndError(false, "");
+    } catch (e) {
+      this.setPSBTToggleAndError(false, e.message);
+      this.setState({ showScanPSBT: false });
+    }
+  };
+
+  handleScanPSBTStart = () => {
+    this.setState({ showScanPSBT: true });
+    this.setPSBTToggleAndError(false, "");
+  };
+
+  handleScanPSBTClear = () => {
+    this.setState({ showScanPSBT: false });
+  };
+
   render() {
     const {
       autoSpend,
@@ -237,7 +270,7 @@ class WalletSpend extends React.Component {
       inputsTotalSats,
       outputs,
     } = this.props;
-    const { importPSBTDisabled, importPSBTError } = this.state;
+    const { importPSBTDisabled, importPSBTError, showScanPSBT } = this.state;
 
     return (
       <Card>
@@ -282,28 +315,52 @@ class WalletSpend extends React.Component {
                   </Button>
                 </Box>
                 <Box mt={2}>
-                  <label htmlFor="import-psbt">
-                    <input
-                      style={{ display: "none" }}
-                      id="import-psbt"
-                      name="import-psbt"
-                      accept=".psbt,*/*"
-                      onChange={this.handleImportPSBT}
-                      type="file"
-                    />
+                  <Box display="flex" gap={2} alignItems="flex-start">
+                    <label htmlFor="import-psbt">
+                      <input
+                        style={{ display: "none" }}
+                        id="import-psbt"
+                        name="import-psbt"
+                        accept=".psbt,*/*"
+                        onChange={this.handleImportPSBT}
+                        type="file"
+                      />
 
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      component="span"
-                      disabled={importPSBTDisabled}
-                      style={{ marginTop: "20px" }}
-                    >
-                      Import PSBT
-                    </Button>
-                    <FormHelperText error>{importPSBTError}</FormHelperText>
-                  </label>
+                      <Button
+                        color="primary"
+                        variant="contained"
+                        component="span"
+                        disabled={importPSBTDisabled}
+                      >
+                        Import PSBT
+                      </Button>
+                    </label>
+                    
+                    {!showScanPSBT && (
+                      <Button
+                        color="primary"
+                        variant="contained"
+                        onClick={this.handleScanPSBTStart}
+                        disabled={importPSBTDisabled}
+                      >
+                        Scan PSBT QR
+                      </Button>
+                    )}
+                  </Box>
+                  <FormHelperText error>{importPSBTError}</FormHelperText>
                 </Box>
+                {showScanPSBT && (
+                  <Box mt={2}>
+                    <BCUR2Reader
+                      mode="psbt"
+                      onPSBTSuccess={this.handleScanPSBTSuccess}
+                      onSuccess={() => {}} // Not used in PSBT mode
+                      onClear={this.handleScanPSBTClear}
+                      width={300}
+                      autoStart={true}
+                    />
+                  </Box>
+                )}
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
