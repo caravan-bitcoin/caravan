@@ -2,92 +2,34 @@
  * New component that replaces the old PSBT import functionality
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Box, Button, Typography, LinearProgress, Alert } from "@mui/material";
 import {
   Upload as UploadIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { Network } from "@caravan/bitcoin";
-import { useReconstructedUtxos } from "hooks/utxos";
-import { loadPsbt } from "utils/psbtUtils";
-import { matchPsbtInputsToUtxos } from "utils/uxtoReconstruction";
+import { usePsbtInputs } from "hooks/utxos";
+import { isBinaryPSBT, loadPsbt } from "utils/psbtUtils";
 import { useSelector } from "react-redux";
-import {
-  WalletState,
-  getSpendableSlices,
-  getWalletSlices,
-} from "selectors/wallet";
-import { usePendingTransactions } from "clients/transactions";
-import {
-  selectAvailableInputsFromPSBT,
-  selectInputIdentifiersFromPSBT,
-  selectMissingInputIdentifiersFromPSBT,
-} from "selectors/transaction";
+import { WalletState } from "selectors/wallet";
 
 interface PSBTImportComponentProps {
   onImport: (psbtText: string, inputs: any[], isRbfPBST: boolean) => void;
-  network: string;
-  disabled?: boolean;
 }
 
 // Main PSBT Import Component
 export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   onImport,
-  network,
-  disabled = false,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [psbtText, setPsbtText] = useState<string>("");
   const [parsedPsbt, setParsedPsbt] = useState<any>(null);
+  const network = useSelector((state: WalletState) => state.settings.network);
 
-  const allSlices = useSelector(getWalletSlices);
-  const spendableSlices = useSelector(getSpendableSlices);
-
-  const psbtInputIdentifiers = useSelector((state: WalletState) =>
-    parsedPsbt
-      ? selectInputIdentifiersFromPSBT(state, parsedPsbt)
-      : new Set<string>(),
-  );
-  const missingInputIds = useSelector((state: WalletState) =>
-    parsedPsbt
-      ? selectMissingInputIdentifiersFromPSBT(state, parsedPsbt)
-      : new Set<string>(),
-  );
-  const availableInputs = useSelector((state: WalletState) =>
-    parsedPsbt ? selectAvailableInputsFromPSBT(state, parsedPsbt) : [],
-  );
-
-  const { transactions: pendingTxs } = usePendingTransactions();
-
-  // Only fetch reconstructed UTXOs if there are missing inputs
-  const {
-    utxos: reconstructedUtxos,
-    isRbf: isRbfPSBT,
-    isLoading: reconstructionLoading,
-    error: reconstructionError,
-  } = useReconstructedUtxos(pendingTxs, allSlices, missingInputIds);
-
-  // Combine all inputs
-  const allInputs = useMemo(() => {
-    if (!availableInputs || !parsedPsbt) return [];
-
-    // For normal PSBTs, just return available inputs
-    if (!isRbfPSBT) {
-      return availableInputs;
-    }
-
-    if (!reconstructionLoading && reconstructedUtxos.length > 0) {
-      return matchPsbtInputsToUtxos(
-        psbtInputIdentifiers,
-        spendableSlices,
-        reconstructedUtxos,
-      );
-    }
-
-    return [];
-  }, [availableInputs, parsedPsbt, reconstructionLoading, reconstructedUtxos]);
+  const { allInputs, isRbfPSBT, reconstructionLoading, reconstructionError } =
+    usePsbtInputs(parsedPsbt);
 
   useEffect(() => {
     if (reconstructionError) {
@@ -148,20 +90,6 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     psbtText,
     onImport,
   ]);
-
-  // Helper function to detect if content is binary PSBT
-  const isBinaryPSBT = useCallback((arrayBuffer: ArrayBuffer): boolean => {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    // Check for binary PSBT magic bytes (0x70736274ff)
-    return (
-      uint8Array.length >= 5 &&
-      uint8Array[0] === 0x70 &&
-      uint8Array[1] === 0x73 &&
-      uint8Array[2] === 0x62 &&
-      uint8Array[3] === 0x74 &&
-      uint8Array[4] === 0xff
-    );
-  }, []);
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -249,7 +177,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
       // Clear the input value to allow re-importing
       event.target.value = "";
     },
-    [network, isBinaryPSBT],
+    [network],
   );
 
   // Clear error state
@@ -274,14 +202,14 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
           accept=".psbt,*/*"
           onChange={handleFileSelect}
           type="file"
-          disabled={disabled || isLoading}
+          disabled={isLoading}
         />
 
         <Button
           color="primary"
           variant="contained"
           component="span"
-          disabled={disabled || isLoading}
+          disabled={isLoading}
           startIcon={isLoading ? <RefreshIcon /> : <UploadIcon />}
           sx={{ mt: 2 }}
         >

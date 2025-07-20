@@ -1,10 +1,22 @@
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
-import { getWalletSlices, Slice, UTXO as SliceUTXO } from "selectors/wallet";
+import {
+  getSpendableSlices,
+  getWalletSlices,
+  Slice,
+  UTXO as SliceUTXO,
+  WalletState,
+} from "selectors/wallet";
+import {
+  selectAvailableInputsFromPSBT,
+  selectInputIdentifiersFromPSBT,
+  selectMissingInputIdentifiersFromPSBT,
+} from "selectors/transaction";
 import { UTXO } from "@caravan/fees";
 import {
   Coin,
   fetchTransactionCoins,
+  usePendingTransactions,
   useTransactionWithHex,
 } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
@@ -14,6 +26,7 @@ import {
   extractNeededTransactionIds,
   reconstructUtxosFromPendingTransactions,
   ReconstructedUtxos,
+  matchPsbtInputsToUtxos,
 } from "utils/uxtoReconstruction";
 
 /*
@@ -313,5 +326,78 @@ export const useReconstructedUtxos = (
     isRbf,
     isLoading: transactionQueries.some((q) => q.isLoading),
     error: transactionQueries.find((q) => q.error)?.error,
+  };
+};
+
+/**
+ * Custom hook to handle PSBT input resolution and reconstruction of UTXO's
+ * @param  parsedPsbt - The parsed PSBT object
+ * @returns  Contains allInputs, isRbfPSBT, loading/error states
+ */
+export const usePsbtInputs = (parsedPsbt: any) => {
+  const allSlices = useSelector(getWalletSlices);
+  const spendableSlices = useSelector(getSpendableSlices);
+
+  const psbtInputIdentifiers = useSelector((state: WalletState) =>
+    parsedPsbt
+      ? selectInputIdentifiersFromPSBT(state, parsedPsbt)
+      : new Set<string>(),
+  );
+
+  const missingInputIds = useSelector((state: WalletState) =>
+    parsedPsbt
+      ? selectMissingInputIdentifiersFromPSBT(state, parsedPsbt)
+      : new Set<string>(),
+  );
+
+  const availableInputs = useSelector((state: WalletState) =>
+    parsedPsbt ? selectAvailableInputsFromPSBT(state, parsedPsbt) : [],
+  );
+
+  const { transactions: pendingTxs } = usePendingTransactions();
+
+  // Only fetch reconstructed UTXOs if there are missing inputs
+  const {
+    utxos: reconstructedUtxos,
+    isRbf: isRbfPSBT,
+    isLoading: reconstructionLoading,
+    error: reconstructionError,
+  } = useReconstructedUtxos(pendingTxs, allSlices, missingInputIds);
+
+  // Combine all inputs
+  const allInputs = useMemo(() => {
+    if (!availableInputs || !parsedPsbt) return [];
+
+    // For normal PSBTs, just return available inputs
+    if (!isRbfPSBT) {
+      return availableInputs;
+    }
+
+    if (!reconstructionLoading && reconstructedUtxos.length > 0) {
+      return matchPsbtInputsToUtxos(
+        psbtInputIdentifiers,
+        spendableSlices,
+        reconstructedUtxos,
+      );
+    }
+
+    return [];
+  }, [
+    availableInputs,
+    parsedPsbt,
+    isRbfPSBT,
+    reconstructionLoading,
+    reconstructedUtxos,
+    psbtInputIdentifiers,
+    spendableSlices,
+  ]);
+
+  return {
+    allInputs,
+    isRbfPSBT,
+    reconstructionLoading,
+    reconstructionError,
+    psbtInputIdentifiers,
+    missingInputIds,
   };
 };

@@ -142,3 +142,21 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
  */
 export const createInputIdentifier = (txid: string, index: number): string =>
   `${txid}:${index}`;
+
+/**
+ * Detects if content is a binary PSBT by checking magic bytes
+ * @param arrayBuffer - The file content as ArrayBuffer
+ * @returns boolean - True if binary PSBT, false otherwise
+ */
+export const isBinaryPSBT = (arrayBuffer: ArrayBuffer) => {
+  const uint8Array = new Uint8Array(arrayBuffer);
+  // Check for binary PSBT magic bytes (0x70736274ff)
+  return (
+    uint8Array.length >= 5 &&
+    uint8Array[0] === 0x70 &&
+    uint8Array[1] === 0x73 &&
+    uint8Array[2] === 0x62 &&
+    uint8Array[3] === 0x74 &&
+    uint8Array[4] === 0xff
+  );
+};
