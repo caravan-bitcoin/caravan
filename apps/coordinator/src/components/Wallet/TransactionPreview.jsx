@@ -359,6 +359,7 @@ TransactionPreview.propTypes = {
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
+  signatureImporters: PropTypes.shape({}),
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,

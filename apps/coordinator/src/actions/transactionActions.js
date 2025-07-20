@@ -1,7 +1,9 @@
 import BigNumber from "bignumber.js";
 import {
   estimateMultisigTransactionFee,
+  estimateMultisigTransactionFeeRate,
   satoshisToBitcoins,
+  bitcoinsToSatoshis,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
@@ -485,8 +487,32 @@ export function importPSBT(psbtText, inputs, isRbfPBST) {
     // ==== PROCESS INPUTS ====
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
-    // Calculate and set fee
+    // Calculate and set fee and feeRate
     dispatch(setFeeFromState(outputsTotalSats));
+
+    // ==== CALCULATE AND SET FEE RATE ====
+    // Get the updated state after setting the fee
+    state = getState();
+    const {
+      settings: { addressType, requiredSigners, totalSigners },
+      spend: {
+        transaction: { fee },
+      },
+    } = state;
+
+    const feeSats = bitcoinsToSatoshis(fee);
+    const feeRate = estimateMultisigTransactionFeeRate({
+      addressType,
+      numInputs: psbt.txInputs.length,
+      numOutputs: psbt.txOutputs.length,
+      m: requiredSigners,
+      n: totalSigners,
+      feesInSatoshis: feeSats,
+    });
+
+    if (feeRate) {
+      dispatch(setFeeRate(Math.floor(parseFloat(feeRate)).toString()));
+    }
 
     // ==== Extract and import signatures (If they are present)====
 
