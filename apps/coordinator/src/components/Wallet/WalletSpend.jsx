@@ -174,7 +174,6 @@ class WalletSpend extends React.Component {
       addressType,
       requiredSigners,
       totalSigners,
-      network,
     } = this.props;
 
     const dust = dustAnalysis({
