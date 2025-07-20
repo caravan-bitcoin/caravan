@@ -1,6 +1,6 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
-import { Slice, SliceWithLastUsed } from "selectors/wallet";
+import { Slice } from "selectors/wallet";
 import { createInputIdentifier, Input } from "./psbtUtils";
 
 /**
@@ -231,37 +231,20 @@ export function reconstructUtxosFromPendingTransactions(
  *    - Designed for RBF PSBTs where inputs are already marked as spent.
  *
  * @param inputIdentifiers - Set of "txid:index" strings that the PSBT requires
- * @param spendableSlices - Current UTXOs available in wallet (the normal case)
+ * @param availableInputs - Already formatted inputs from wallet (from selectAvailableInputsFromPSBT)
  * @param reconstructedUtxos - UTXOs rebuilt from pending transactions (the RBF case)
  * @returns Complete array of inputs with all metadata needed for transaction signing
- *
- * @example
- * ```ts
- * // For a normal PSBT - reconstructedUtxos will be empty
- * const normalInputs = matchPsbtInputsToUtxos(
- *   psbtInputIds,
- *   spendableSlices,
- *   [] // No reconstruction needed
- * );
- *
- * // For an RBF PSBT - might need both strategies
- * const rbfInputs = matchPsbtInputsToUtxos(
- *   psbtInputIds,
- *   spendableSlices,      // Might find some inputs here
- *   reconstructedUtxos    // Need to fill in the gaps with these
- * );
- * ```
  */
 export function matchPsbtInputsToUtxos(
   inputIdentifiers: Set<string>,
-  spendableSlices: SliceWithLastUsed[],
+  availableInputs: Input[] = [],
   reconstructedUtxos: ReconstructedUtxos[] = [],
 ) {
   const matchedInputs: Input[] = [];
   const alreadyFoundInputs = new Set<string>();
 
   // =====================================================================
-  // STRATEGY 1: The Happy Path - Check Currently Spendable UTXOs
+  // STRATEGY 1: The Happy Path - Use Already Available Inputs
   // =====================================================================
   //
   // This is where we handle normal PSBT imports. If you just created a PSBT
@@ -269,21 +252,12 @@ export function matchPsbtInputsToUtxos(
   // right here in your wallet's spendable slices.
   //
   //
-  spendableSlices.forEach((slice) => {
-    Object.entries(slice || {}).forEach(([, utxo]) => {
-      const utxoIdentifier = createInputIdentifier(utxo.txid, utxo.index);
-      if (inputIdentifiers.has(utxoIdentifier)) {
-        const input: Input = {
-          ...utxo, // All the basic UTXO data (amount, txid, etc.)
-          multisig: slice.multisig, // Multisig configuration for this address
-          bip32Path: slice.multisig.bip32Derivation, // Derivation path (e.g., "m/0/5")
-          change: slice.change, // Is this a change address?
-        };
-
-        matchedInputs.push(input);
-        alreadyFoundInputs.add(utxoIdentifier);
-      }
-    });
+  availableInputs.forEach((input) => {
+    const utxoIdentifier = createInputIdentifier(input.txid, input.index);
+    if (inputIdentifiers.has(utxoIdentifier)) {
+      matchedInputs.push(input);
+      alreadyFoundInputs.add(utxoIdentifier);
+    }
   });
 
   // =====================================================================

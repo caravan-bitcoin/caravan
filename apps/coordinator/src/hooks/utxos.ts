@@ -1,7 +1,6 @@
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
 import {
-  getSpendableSlices,
   getWalletSlices,
   Slice,
   UTXO as SliceUTXO,
@@ -336,7 +335,6 @@ export const useReconstructedUtxos = (
  */
 export const usePsbtInputs = (parsedPsbt: any) => {
   const allSlices = useSelector(getWalletSlices);
-  const spendableSlices = useSelector(getSpendableSlices);
 
   const psbtInputIdentifiers = useSelector((state: WalletState) =>
     parsedPsbt
@@ -376,7 +374,7 @@ export const usePsbtInputs = (parsedPsbt: any) => {
     if (!reconstructionLoading && reconstructedUtxos.length > 0) {
       return matchPsbtInputsToUtxos(
         psbtInputIdentifiers,
-        spendableSlices,
+        availableInputs,
         reconstructedUtxos,
       );
     }
@@ -389,7 +387,6 @@ export const usePsbtInputs = (parsedPsbt: any) => {
     reconstructionLoading,
     reconstructedUtxos,
     psbtInputIdentifiers,
-    spendableSlices,
   ]);
 
   return {
