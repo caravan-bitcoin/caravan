@@ -3,7 +3,6 @@ import {
   estimateMultisigTransactionFee,
   estimateMultisigTransactionFeeRate,
   satoshisToBitcoins,
-  bitcoinsToSatoshis,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
@@ -449,12 +448,28 @@ export function setSignaturesFromPsbt(psbt) {
  * @param {BigNumber} outputsTotalSats - Total satoshis in all outputs
  * @returns {Function} Redux thunk function
  */
-export function setFeeFromState(outputsTotalSats) {
+export function setFeeAndFeeRateFromState(outputsTotalSats, psbt) {
   return (dispatch, getState) => {
     const state = getState();
+    const {
+      settings: { addressType, requiredSigners, totalSigners },
+    } = state;
     const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
     const feeSats = inputsTotalSats.minus(outputsTotalSats);
     const fee = satoshisToBitcoins(feeSats);
+
+    const feeRate = estimateMultisigTransactionFeeRate({
+      addressType,
+      numInputs: psbt.txInputs.length,
+      numOutputs: psbt.txOutputs.length,
+      m: requiredSigners,
+      n: totalSigners,
+      feesInSatoshis: feeSats,
+    });
+
+    if (feeRate) {
+      dispatch(setFeeRate(Math.floor(parseFloat(feeRate)).toString()));
+    }
     dispatch(setFee(fee));
   };
 }
@@ -488,31 +503,7 @@ export function importPSBT(psbtText, inputs, isRbfPBST) {
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
     // Calculate and set fee and feeRate
-    dispatch(setFeeFromState(outputsTotalSats));
-
-    // ==== CALCULATE AND SET FEE RATE ====
-    // Get the updated state after setting the fee
-    state = getState();
-    const {
-      settings: { addressType, requiredSigners, totalSigners },
-      spend: {
-        transaction: { fee },
-      },
-    } = state;
-
-    const feeSats = bitcoinsToSatoshis(fee);
-    const feeRate = estimateMultisigTransactionFeeRate({
-      addressType,
-      numInputs: psbt.txInputs.length,
-      numOutputs: psbt.txOutputs.length,
-      m: requiredSigners,
-      n: totalSigners,
-      feesInSatoshis: feeSats,
-    });
-
-    if (feeRate) {
-      dispatch(setFeeRate(Math.floor(parseFloat(feeRate)).toString()));
-    }
+    dispatch(setFeeAndFeeRateFromState(outputsTotalSats, psbt));
 
     // ==== Extract and import signatures (If they are present)====
 
