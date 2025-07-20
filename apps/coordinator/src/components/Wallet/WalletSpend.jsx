@@ -271,11 +271,7 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <PSBTImportComponent
-                  onImport={this.handleImportPSBT}
-                  network={network}
-                  disabled={false}
-                />
+                <PSBTImportComponent onImport={this.handleImportPSBT} />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
