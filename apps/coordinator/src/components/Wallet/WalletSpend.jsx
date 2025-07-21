@@ -330,7 +330,6 @@ WalletSpend.propTypes = {
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,
-  network: PropTypes.string.isRequired,
 };
 
 WalletSpend.defaultProps = {
