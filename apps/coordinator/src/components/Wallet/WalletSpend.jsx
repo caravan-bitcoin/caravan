@@ -11,7 +11,10 @@ import {
   FormControlLabel,
   FormHelperText,
   Button,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
+
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
@@ -29,6 +32,7 @@ import {
   SPEND_STEP_CREATE,
   SPEND_STEP_PREVIEW,
   SPEND_STEP_SIGN,
+  setRBF,
   setSpendStep as setSpendStepAction,
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
@@ -40,6 +44,10 @@ import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
 import { bigNumberPropTypes } from "../../proptypes/utils";
+import {
+  dustAnalysis,
+  privacyAnalysis,
+} from "../../utils/transactionAnalysisUtils";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
@@ -53,9 +61,13 @@ class WalletSpend extends React.Component {
     this.state = {
       importPSBTDisabled: false,
       importPSBTError: "",
+      feeEstimate: "",
       showScanPSBT: false,
     };
   }
+  handleFeeEstimate = (feeEstimate) => {
+    this.setState({ feeEstimate });
+  };
 
   componentDidUpdate = (prevProps) => {
     const { finalizedOutputs } = this.props;
@@ -118,12 +130,10 @@ class WalletSpend extends React.Component {
     } = this.props;
     setSpendStep(SPEND_STEP_CREATE);
     finalizeOutputs(false);
-
     // for auto spend view, user doesn't have direct knowledge of
     // input nodes and change. So when going back to edit a transaction
     // we want to clear these from the state, since these are added automatically
     // when going from output form to transaction preview
-
     // for manual spend view, we don't store which utxo is selected right now
     // So when going back to edit a transaction we want to clear everything
     // from the state so that there are no surprises
@@ -183,7 +193,7 @@ class WalletSpend extends React.Component {
               const uint8Array = new Uint8Array(arrayBuffer);
               importPSBT(uint8Array);
             } catch (bufferError) {
-              // If direct binary fails, convert to base64
+              // If direct binary fails, convert to base64 if needed
               console.warn(
                 "Direct binary import failed, trying base64:",
                 bufferError.message,
@@ -269,12 +279,52 @@ class WalletSpend extends React.Component {
       inputs,
       inputsTotalSats,
       outputs,
+      selectedUTXOs,
+      transactionOutputs,
+      addressType,
+      requiredSigners,
+      totalSigners,
     } = this.props;
     const { importPSBTDisabled, importPSBTError, showScanPSBT } = this.state;
+
+    const dust = dustAnalysis({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    const privacy = privacyAnalysis({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
 
     return (
       <Card>
         <CardContent>
+          {/* Alerts for dust and fingerprinting */}
+          {dust.hasDustInputs && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Dust Inputs Detected</AlertTitle>
+              {dust.inputCount} of your selected inputs may be considered dust
+              at {feeRate} sat/vB. This could result in higher fees or
+              uneconomical spending.
+            </Alert>
+          )}
+          {privacy && privacy.hasWalletFingerprinting && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
+              {privacy.reason ||
+                "This transaction leaks privacy: exactly one output matches the wallet's script type, making it easy to identify change and link future transactions."}
+              <br />
+              Output types: {privacy.scriptTypes.join(", ")}
+            </Alert>
+          )}
           <Grid container>
             {spendingStep === SPEND_STEP_SIGN && (
               <Grid item md={12}>
@@ -297,13 +347,30 @@ class WalletSpend extends React.Component {
                         }
                         label="Manual"
                       />
+                      {/* Add RBF Toggle */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={this.props.enableRBF}
+                            onChange={(e) =>
+                              this.props.setRBF(e.target.checked)
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Replace-by-Fee (RBF)"
+                      />
                     </Box>
                   </Box>
                 </Grid>
                 <Box component="div" display={autoSpend ? "none" : "block"}>
-                  <NodeSet addNode={addNode} updateNode={updateNode} />
+                  <NodeSet
+                    addNode={addNode}
+                    updateNode={updateNode}
+                    feeRate={feeRate}
+                  />
                 </Box>
-                <OutputsForm />
+                <OutputsForm onFeeEstimate={this.handleFeeEstimate} />
                 <Box mt={2}>
                   <Button
                     onClick={this.handleShowPreview}
@@ -401,6 +468,8 @@ WalletSpend.propTypes = {
   changeAddress: PropTypes.string.isRequired,
   deleteChangeOutput: PropTypes.func.isRequired,
   depositNodes: PropTypes.shape({}),
+  enableRBF: PropTypes.bool,
+  setRBF: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeError: PropTypes.string,
   feeRate: PropTypes.string.isRequired,
@@ -423,6 +492,11 @@ WalletSpend.propTypes = {
   updateAutoSpend: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   importPSBT: PropTypes.func.isRequired,
+  selectedUTXOs: PropTypes.arrayOf(PropTypes.shape({})),
+  transactionOutputs: PropTypes.arrayOf(PropTypes.shape({})),
+  addressType: PropTypes.string,
+  requiredSigners: PropTypes.number,
+  totalSigners: PropTypes.number,
 };
 
 WalletSpend.defaultProps = {
@@ -430,10 +504,16 @@ WalletSpend.defaultProps = {
   balanceError: null,
   changeNodes: {},
   depositNodes: {},
+  enableRBF: true,
   finalizedOutputs: false,
   feeError: null,
   feeRateError: null,
   spendingStep: 0,
+  selectedUTXOs: [],
+  transactionOutputs: [],
+  addressType: "",
+  requiredSigners: 0,
+  totalSigners: 0,
 };
 
 function mapStateToProps(state) {
@@ -443,6 +523,13 @@ function mapStateToProps(state) {
     changeNode: state.wallet.change.nextNode,
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
+    enableRBF: state.spend.transaction.enableRBF,
+    network: state.settings.network,
+    selectedUTXOs: state.spend.transaction.selectedUTXOs,
+    transactionOutputs: state.spend.transaction.transactionOutputs,
+    addressType: state.settings?.addressType,
+    requiredSigners: state.settings?.requiredSigners,
+    totalSigners: state.settings?.totalSigners,
   };
 }
 
@@ -457,6 +544,7 @@ const mapDispatchToProps = {
   resetNodesSpend: resetNodesSpendAction,
   setFeeRate: setFeeRateAction,
   addOutput,
+  setRBF,
   finalizeOutputs: finalizeOutputsAction,
   setChangeAddress: setChangeAddressAction,
   setSpendStep: setSpendStepAction,

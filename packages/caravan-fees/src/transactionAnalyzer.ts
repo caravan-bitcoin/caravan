@@ -1,4 +1,10 @@
-import { Network } from "@caravan/bitcoin";
+import {
+  Network,
+  P2SH_P2WSH,
+  P2SH,
+  P2WSH,
+  MultisigAddressType,
+} from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 import { Transaction } from "bitcoinjs-lib-v6";
 
@@ -12,8 +18,6 @@ import {
   AnalyzerOptions,
   FeeBumpStrategy,
   Satoshis,
-  ScriptType,
-  SCRIPT_TYPES,
   FeeRateSatsPerVByte,
   TxAnalysis,
 } from "./types";
@@ -30,7 +34,7 @@ interface ValidatedAnalyzerOptions {
   incrementalRelayFeeRate: BigNumber;
   requiredSigners: number;
   totalSigners: number;
-  addressType: ScriptType;
+  addressType: MultisigAddressType;
 }
 
 /**
@@ -75,7 +79,7 @@ export class TransactionAnalyzer {
   private readonly _incrementalRelayFeeRate: BigNumber;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
-  private readonly _addressType: ScriptType;
+  private readonly _addressType: MultisigAddressType;
 
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
@@ -728,7 +732,7 @@ export class TransactionAnalyzer {
     validatedOptions.totalSigners = options.totalSigners;
 
     // Address type validation
-    if (!Object.values(SCRIPT_TYPES).includes(options.addressType)) {
+    if (![P2SH_P2WSH, P2SH, P2WSH].includes(options.addressType)) {
       throw new Error(`Invalid address type: ${options.addressType}`);
     }
     validatedOptions.addressType = options.addressType;

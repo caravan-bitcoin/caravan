@@ -207,6 +207,7 @@ function mapStateToProps(state, ownProps) {
     ...state.spend.transaction,
     walletMode: state.wallet.common.walletMode,
     braidNode: braid.nodes[ownProps.bip32Path],
+    feeRate: state.spend.transaction.feeRate,
   };
 }
 

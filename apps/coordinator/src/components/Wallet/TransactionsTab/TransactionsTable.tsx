@@ -15,6 +15,7 @@ import {
   Snackbar,
   Box,
   Typography,
+  Button,
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -228,81 +229,130 @@ const TransactionTableRow: React.FC<{
   tx: TransactionT;
   network?: string;
   onClickTransaction?: (txid: string) => void;
+  onAccelerateTransaction?: (tx: TransactionT) => void;
   onCopySuccess: () => void;
-}> = ({ tx, network, onClickTransaction, onCopySuccess }) => (
-  <TableRow>
-    <TableCell>
-      <Box display="flex" alignItems="center">
-        <Tooltip title={tx.txid}>
-          <Chip
-            label={`${tx.txid.substring(0, 8)}...`}
-            variant="outlined"
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent row click from firing
-              navigator.clipboard
-                .writeText(tx.txid)
-                .then(() => {
-                  onCopySuccess();
-                })
-                .catch((err) => {
-                  console.error("Could not copy text: ", err);
-                });
-            }}
-            style={{ cursor: "pointer" }}
-          />
-        </Tooltip>
-        {tx.isSpent && (
-          <Tooltip title="This transaction created UTXOs that have been spent">
-            <Box display="flex" alignItems="center" ml={1}>
-              <Chip
-                label="Spent"
-                size="small"
-                color="default"
-                sx={{ fontSize: "0.7rem" }}
-              />
-              <HelpOutlineIcon
-                fontSize="small"
-                sx={{ fontSize: "0.9rem", ml: 0.5, color: "text.secondary" }}
-              />
-            </Box>
+  renderActions?: (tx: TransactionT) => React.ReactNode;
+}> = ({
+  tx,
+  network,
+  onClickTransaction,
+  onAccelerateTransaction,
+  onCopySuccess,
+  renderActions,
+}) => {
+  // Check if transaction can be accelerated (pending/unconfirmed)
+  const canAccelerate = !tx.status.confirmed;
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Box display="flex" alignItems="center">
+          <Tooltip title={tx.txid}>
+            <Chip
+              label={`${tx.txid.substring(0, 8)}...`}
+              variant="outlined"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row click from firing
+                navigator.clipboard
+                  .writeText(tx.txid)
+                  .then(() => {
+                    onCopySuccess();
+                  })
+                  .catch((err) => {
+                    console.error("Could not copy text: ", err);
+                  });
+              }}
+              style={{ cursor: "pointer" }}
+            />
+          </Tooltip>
+          {tx.isSpent && (
+            <Tooltip title="This transaction created UTXOs that have been spent">
+              <Box display="flex" alignItems="center" ml={1}>
+                <Chip
+                  label="Spent"
+                  size="small"
+                  color="default"
+                  sx={{ fontSize: "0.7rem" }}
+                />
+                <HelpOutlineIcon
+                  fontSize="small"
+                  sx={{ fontSize: "0.9rem", ml: 0.5, color: "text.secondary" }}
+                />
+              </Box>
+            </Tooltip>
+          )}
+        </Box>
+      </TableCell>
+      <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
+      <TableCell>{tx.vsize || tx.size}</TableCell>
+      <TableCell>
+        <FeeDisplay feeInSats={tx.fee} isReceived={tx.isReceived} />
+      </TableCell>
+      <TableCell>
+        <ValueDisplay valueInSats={tx.valueToWallet} />
+      </TableCell>
+      <TableCell>
+        <Chip
+          label={tx.status.confirmed ? "Confirmed" : "Pending"}
+          color={tx.status.confirmed ? "success" : "warning"}
+          size="small"
+        />
+      </TableCell>
+      {/* Accelerate button for pending transactions */}
+      {canAccelerate &&
+        onAccelerateTransaction &&
+        (tx.isReceived ? (
+          <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+            <TableCell>
+              <Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  disabled={true}
+                >
+                  Accelerate
+                </Button>
+              </Box>
+            </TableCell>
+          </Tooltip>
+        ) : (
+          <TableCell>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAccelerateTransaction(tx);
+              }}
+            >
+              Accelerate
+            </Button>
+          </TableCell>
+        ))}
+      <TableCell>
+        {network && (
+          <Tooltip title="View in your preferred block explorer">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Let parent handle block explorer navigation
+                onClickTransaction?.(tx.txid);
+              }}
+            >
+              <OpenInNew fontSize="small" />
+            </IconButton>
           </Tooltip>
         )}
-      </Box>
-    </TableCell>
-    <TableCell>{formatRelativeTime(tx.status.blockTime)}</TableCell>
-    <TableCell>{tx.vsize || tx.size}</TableCell>
-    <TableCell>
-      <FeeDisplay feeInSats={tx.fee} isReceived={tx.isReceived} />
-    </TableCell>
-    <TableCell>
-      <ValueDisplay valueInSats={tx.valueToWallet} />
-    </TableCell>
-    <TableCell>
-      <Chip
-        label={tx.status.confirmed ? "Confirmed" : "Pending"}
-        color={tx.status.confirmed ? "success" : "warning"}
-        size="small"
-      />
-    </TableCell>
-    <TableCell>
-      {network && (
-        <Tooltip title="View in your preferred block explorer">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Let parent handle block explorer navigation
-              onClickTransaction?.(tx.txid);
-            }}
-          >
-            <OpenInNew fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
-    </TableCell>
-  </TableRow>
-);
+        {/* Render custom actions if provided */}
+        {renderActions && renderActions(tx)}
+      </TableCell>
+    </TableRow>
+  );
+};
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   transactions,
@@ -311,6 +361,8 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   sortDirection,
   network,
   onClickTransaction,
+  onAccelerateTransaction,
+  renderActions,
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -338,7 +390,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   tx={tx}
                   network={network}
                   onClickTransaction={onClickTransaction}
+                  onAccelerateTransaction={onAccelerateTransaction}
                   onCopySuccess={() => setSnackbarOpen(true)}
+                  renderActions={renderActions}
                 />
               ))
             )}
