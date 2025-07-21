@@ -1825,11 +1825,31 @@ describe("BlockchainClient", () => {
       });
     });
   });
-  
-  
-  describe('getAddressTransactionHistory', () => {
+
+
+describe('getAddressTransactionHistory', () => {
   const testAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
   const testAddress2 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+
+  // Helper functions for creating clients
+  const getPublicClient = (providerOverrides = {}) => new BlockchainClient({
+    type: ClientType.PUBLIC,
+    provider: PublicBitcoinProvider.MEMPOOL,
+    network: Network.MAINNET,
+    ...providerOverrides,
+  });
+
+  const getPrivateClient = (clientOverrides = {}) => new BlockchainClient({
+    type: ClientType.PRIVATE,
+    network: Network.MAINNET,
+    client: {
+      url: 'http://localhost:8332',
+      username: 'user',
+      password: 'pass',
+      walletName: 'test-wallet',
+      ...clientOverrides,
+    },
+  });
 
   beforeEach(() => {
     vi.spyOn(wallet, 'callBitcoindWallet');
@@ -1840,17 +1860,9 @@ describe("BlockchainClient", () => {
   });
 
   describe('parameter validation', () => {
-    let client: BlockchainClient;
-
-    beforeEach(() => {
-      client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.MEMPOOL,
-        network: Network.MAINNET,
-      });
-    });
-
     it('should validate count parameter', async () => {
+      const client = getPublicClient();
+
       await expect(client.getAddressTransactionHistory(testAddress, 0))
         .rejects.toThrow('Count must be between 1 and 100000');
 
@@ -1859,163 +1871,130 @@ describe("BlockchainClient", () => {
     });
 
     it('should validate skip parameter', async () => {
+      const client = getPublicClient();
+
       await expect(client.getAddressTransactionHistory(testAddress, 10, -1))
         .rejects.toThrow('Skip must be non-negative');
     });
   });
 
   describe('PRIVATE client', () => {
-    let client: BlockchainClient;
-
-    beforeEach(() => {
-      client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-          walletName: 'test-wallet',
-        },
-      });
-    });
-
     it('should throw error for private clients', async () => {
+      const client = getPrivateClient();
+
       await expect(client.getAddressTransactionHistory(testAddress))
         .rejects.toThrow('Use getWalletTransactionHistory for private clients');
     });
 
     it('should throw error for private clients with array of addresses', async () => {
+      const client = getPrivateClient();
+
       await expect(client.getAddressTransactionHistory([testAddress, testAddress2]))
         .rejects.toThrow('Use getWalletTransactionHistory for private clients');
     });
   });
 
   describe('PUBLIC client', () => {
-    let client: BlockchainClient;
-
     describe('single address', () => {
-      beforeEach(() => {
-        client = new BlockchainClient({
-          type: ClientType.PUBLIC,
-          provider: PublicBitcoinProvider.MEMPOOL,
-          network: Network.MAINNET,
+      it('should use correct endpoint for MEMPOOL', async () => {
+        const client = getPublicClient(); // Uses MEMPOOL by default
+        
+        const mockResponse = [
+          {
+            txid: 'tx1',
+            fee: 1000,
+            time: 1234567890,
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 250,
+            weight: 1000,
+            status: { confirmed: true }
+          }
+        ];
+
+        const mockGet = vi.fn().mockResolvedValue(mockResponse);
+        client.Get = mockGet;
+
+        const result = await client.getAddressTransactionHistory(testAddress, 20, 40);
+
+        expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=20&skip=40`);
+        expect(result).toHaveLength(1);
+        
+        // Validate the transformed data shape and content
+        expect(result[0]).toEqual({
+          txid: 'tx1',
+          fee: 1000,
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          isReceived: false,
+          status: { 
+            confirmed: true,
+            blockHash: undefined,
+            blockHeight: undefined,
+            blockTime: undefined
+          }
         });
       });
+    });
 
-    it('should use correct endpoint for MEMPOOL', async () => {
-  const mockResponse = [
-    {
-      txid: 'tx1',
-      fee: 1000,
-      time: 1234567890,
-      version: 1,
-      locktime: 0,
-      vin: [],
-      vout: [],
-      size: 250,
-      weight: 1000,
-      status: { confirmed: true }
-    }
-  ];
-
-  const mockGet = vi.fn().mockResolvedValue(mockResponse);
-  client.Get = mockGet;
-
-  const result = await client.getAddressTransactionHistory(testAddress, 20, 40);
-
-  expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=20&skip=40`);
-  expect(result).toHaveLength(1);
-  
-  // Validate the transformed data shape and content
-  expect(result[0]).toEqual({
-    txid: 'tx1',
-    fee: 1000,
-    version: 1,
-    locktime: 0,
-    vin: [],
-    vout: [],
-    size: 250,
-    weight: 1000,
-    isReceived: false,
-    status: { 
-      confirmed: true,
-      blockHash: undefined,
-      blockHeight: undefined,
-      blockTime: undefined
-    }
-  });
-});
-
-});
-
-describe('blockstream', () => {
-  beforeEach(() => {
-        client = new BlockchainClient({
-          type: ClientType.PUBLIC,
-          provider: PublicBitcoinProvider.BLOCKSTREAM,
-          network: Network.MAINNET,
-        });
-      });
-
+    describe('blockstream', () => {
       it('should use correct endpoint for BLOCKSTREAM', async () => {
-  const mockResponse = [
-    {
-      txid: 'tx1',
-      fee: 1000,
-      time: 1234567890,
-      version: 1,
-      locktime: 0,
-      vin: [],
-      vout: [],
-      size: 250,
-      weight: 1000,
-      status: { confirmed: true }
-    }
-  ];
+        const client = getPublicClient({ provider: PublicBitcoinProvider.BLOCKSTREAM });
+        
+        const mockResponse = [
+          {
+            txid: 'tx1',
+            fee: 1000,
+            time: 1234567890,
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 250,
+            weight: 1000,
+            status: { confirmed: true }
+          }
+        ];
 
-  const mockGet = vi.fn().mockResolvedValue(mockResponse);
-  client.Get = mockGet;
+        const mockGet = vi.fn().mockResolvedValue(mockResponse);
+        client.Get = mockGet;
 
-  const result = await client.getAddressTransactionHistory(testAddress, 15, 30);
+        const result = await client.getAddressTransactionHistory(testAddress, 15, 30);
 
-  expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=15&offset=30`);
-  expect(result).toHaveLength(1);
-  
-  // Validate the transformed data shape and content
-  expect(result[0]).toEqual({
-    txid: 'tx1',
-    fee: 1000,
-    version: 1,
-    locktime: 0,
-    vin: [],
-    vout: [],
-    size: 250,
-    weight: 1000,
-    isReceived: false,
-    status: { 
-      confirmed: true,
-      blockHash: undefined,
-      blockHeight: undefined,
-      blockTime: undefined
-    }
-  });
-});
+        expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=15&offset=30`);
+        expect(result).toHaveLength(1);
+        
+        // Validate the transformed data shape and content
+        expect(result[0]).toEqual({
+          txid: 'tx1',
+          fee: 1000,
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          isReceived: false,
+          status: { 
+            confirmed: true,
+            blockHash: undefined,
+            blockHeight: undefined,
+            blockTime: undefined
+          }
+        });
+      });
     });
   });
 
   describe('error handling', () => {
-    let client: BlockchainClient;
-
-    beforeEach(() => {
-      client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.MEMPOOL,
-        network: Network.MAINNET,
-      });
-    });
-
     it('should handle missing provider', async () => {
+      const client = getPublicClient();
       (client as any).provider = undefined;
 
       await expect(client.getAddressTransactionHistory(testAddress))
@@ -2023,6 +2002,7 @@ describe('blockstream', () => {
     });
 
     it('should handle API errors', async () => {
+      const client = getPublicClient();
       const mockGet = vi.fn().mockRejectedValue(new Error('Network error'));
       client.Get = mockGet;
 
@@ -2031,6 +2011,7 @@ describe('blockstream', () => {
     });
 
     it('should handle invalid response format gracefully', async () => {
+      const client = getPublicClient();
       const mockGet = vi.fn().mockResolvedValue('invalid response');
       client.Get = mockGet;
 
@@ -2044,8 +2025,128 @@ describe('blockstream', () => {
 describe('getWalletTransactionHistory', () => {
   let mockBitcoindListSpentTransactions: any;
 
+  // Test fixtures
+  const mockApiResponse = {
+    confirmedTransaction: {
+      txid: 'tx1',
+      category: 'send',
+      amount: -0.5,
+      fee: -0.0001,
+      confirmations: 3,
+      blockhash: 'block123',
+      blockheight: 800000,
+      blocktime: 167890000,
+      abandoned: false,
+      time: 167880000,
+      address: 'bc1qaddress',
+      wtxid: 'wtxid1',
+      walletconflicts: [],
+      timereceived: 167880000,
+      'bip125-replaceable': 'no'
+    },
+    unconfirmedTransaction: {
+      txid: 'tx1',
+      category: 'send',
+      amount: -0.5,
+      fee: -0.0001,
+      confirmations: 0, // Unconfirmed
+      // No blockhash, blockheight, blocktime for unconfirmed
+      abandoned: false,
+      time: 167880000,
+      address: 'bc1qaddress',
+      wtxid: 'wtxid1',
+      walletconflicts: [],
+      timereceived: 167880000,
+      'bip125-replaceable': 'yes'
+    },
+    transactionWithoutFee: {
+      txid: 'tx1',
+      category: 'send',
+      amount: -0.5,
+      // No fee field
+      confirmations: 3,
+      blockhash: 'block123',
+      blockheight: 800000,
+      blocktime: 167890000,
+      abandoned: false,
+      time: 167880000,
+      address: 'bc1qaddress',
+      wtxid: 'wtxid1',
+      walletconflicts: [],
+      timereceived: 167880000,
+      'bip125-replaceable': 'no'
+    }
+  };
+
+  const expectedTransformedData = {
+    confirmedTransaction: {
+      txid: 'tx1',
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 0,
+      weight: 0,
+      fee: 10000, // 0.0001 BTC in sats
+      isReceived: false,
+      amount: -0.5,
+      status: {
+        confirmed: true,
+        blockHeight: 800000,
+        blockHash: 'block123',
+        blockTime: 167890000,
+      },
+      confirmations: 3,
+      category: 'send',
+      address: 'bc1qaddress',
+      abandoned: false,
+      time: 167880000
+    },
+    unconfirmedTransaction: {
+      txid: 'tx1',
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 0,
+      weight: 0,
+      fee: 10000,
+      isReceived: false,
+      amount: -0.5,
+      status: {
+        confirmed: false,
+        blockHeight: undefined,
+        blockHash: undefined,
+        blockTime: undefined,
+      },
+      confirmations: 0,
+      category: 'send',
+      address: 'bc1qaddress',
+      abandoned: false,
+      time: 167880000
+    }
+  };
+
+  // Helper function for creating private clients
+  const getPrivateClient = (clientOverrides = {}) => new BlockchainClient({
+    type: ClientType.PRIVATE,
+    network: Network.MAINNET,
+    client: {
+      url: 'http://localhost:8332',
+      username: 'user',
+      password: 'pass',
+      walletName: 'test-wallet',
+      ...clientOverrides,
+    },
+  });
+
+  const getPublicClient = () => new BlockchainClient({
+    type: ClientType.PUBLIC,
+    provider: PublicBitcoinProvider.MEMPOOL,
+    network: Network.MAINNET,
+  });
+
   beforeEach(() => {
-    // Mock the correct function - bitcoindListSpentTransactions
     mockBitcoindListSpentTransactions = vi.spyOn(wallet, 'bitcoindListSpentTransactions');
   });
 
@@ -2055,16 +2156,7 @@ describe('getWalletTransactionHistory', () => {
 
   describe('parameter validation', () => {
     it('should validate count parameter', async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-          walletName: 'test-wallet',
-        },
-      });
+      const client = getPrivateClient();
 
       await expect(client.getWalletTransactionHistory(0))
         .rejects.toThrow('Count must be between 1 and 100000');
@@ -2074,16 +2166,7 @@ describe('getWalletTransactionHistory', () => {
     });
 
     it('should validate skip parameter', async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-          walletName: 'test-wallet',
-        },
-      });
+      const client = getPrivateClient();
 
       await expect(client.getWalletTransactionHistory(10, -1))
         .rejects.toThrow('Skip must be non-negative');
@@ -2092,11 +2175,7 @@ describe('getWalletTransactionHistory', () => {
 
   describe('PUBLIC client', () => {
     it('should throw error for public clients', async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.MEMPOOL,
-        network: Network.MAINNET,
-      });
+      const client = getPublicClient();
 
       await expect(client.getWalletTransactionHistory())
         .rejects.toThrow('This method is only supported for private clients. Use getAddressTransactionHistory for public clients');
@@ -2104,38 +2183,15 @@ describe('getWalletTransactionHistory', () => {
   });
 
   describe('PRIVATE client', () => {
-    let client: BlockchainClient;
-
-    beforeEach(() => {
-      client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-          walletName: 'test-wallet',
-        },
-      });
-    });
-
     it('should require wallet name', async () => {
-      const clientWithoutWallet = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: 'http://localhost:8332',
-          username: 'user',
-          password: 'pass',
-        },
-      });
+      const client = getPrivateClient({ walletName: undefined });
 
-      await expect(clientWithoutWallet.getWalletTransactionHistory())
+      await expect(client.getWalletTransactionHistory())
         .rejects.toThrow('Wallet name is required for private client transaction listings');
     });
 
     it('should return empty array if no spent transactions', async () => {
-      // Mock returns empty array (no send transactions)
+      const client = getPrivateClient();
       mockBitcoindListSpentTransactions.mockResolvedValue([]);
 
       const result = await client.getWalletTransactionHistory();
@@ -2143,56 +2199,18 @@ describe('getWalletTransactionHistory', () => {
     });
 
     it('should map spent transactions correctly', async () => {
-      mockBitcoindListSpentTransactions.mockResolvedValue([
-        {
-          txid: 'tx1',
-          category: 'send',
-          amount: -0.5,
-          fee: -0.0001,
-          confirmations: 3,
-          blockhash: 'block123',
-          blockheight: 800000,
-          blocktime: 167890000,
-          abandoned: false,
-          time: 167880000,
-          address: 'bc1qaddress',
-          wtxid: 'wtxid1',
-          walletconflicts: [],
-          timereceived: 167880000,
-          'bip125-replaceable': 'no'
-        }
-      ]);
+      const client = getPrivateClient();
+      
+      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.confirmedTransaction]);
 
       const result = await client.getWalletTransactionHistory();
-      expect(result).toEqual([
-        {
-          txid: 'tx1',
-          version: 1,
-          locktime: 0,
-          vin: [],
-          vout: [],
-          size: 0,
-          weight: 0,
-          fee: 10000, // 0.0001 BTC in sats
-          isReceived: false,
-          amount: -0.5,
-          status: {
-            confirmed: true,
-            blockHeight: 800000,
-            blockHash: 'block123',
-            blockTime: 167890000,
-          },
-          confirmations: 3,
-          category: 'send',
-          address: 'bc1qaddress',
-          abandoned: false,
-          time: 167880000
-        }
-      ]);
+      expect(result).toEqual([expectedTransformedData.confirmedTransaction]);
     });
 
     it('should use default parameters', async () => {
+      const client = getPrivateClient();
       mockBitcoindListSpentTransactions.mockResolvedValue([]);
+      
       await client.getWalletTransactionHistory();
       
       expect(mockBitcoindListSpentTransactions).toHaveBeenCalledWith({
@@ -2206,69 +2224,38 @@ describe('getWalletTransactionHistory', () => {
     });
 
     it('should handle empty result from Bitcoin Core', async () => {
+      const client = getPrivateClient();
       mockBitcoindListSpentTransactions.mockResolvedValue([]);
+      
       const result = await client.getWalletTransactionHistory();
       expect(result).toEqual([]);
     });
 
     it('should handle API errors', async () => {
+      const client = getPrivateClient();
       mockBitcoindListSpentTransactions.mockRejectedValue(new Error('RPC error'));
       
-      // Note: The error is now thrown by bitcoindListSpentTransactions
-      // so we need to check for that error message
       await expect(client.getWalletTransactionHistory()).rejects.toThrow('RPC error');
     });
 
     it('should handle transactions without fee', async () => {
-      mockBitcoindListSpentTransactions.mockResolvedValue([
-        {
-          txid: 'tx1',
-          category: 'send',
-          amount: -0.5,
-          // No fee field
-          confirmations: 3,
-          blockhash: 'block123',
-          blockheight: 800000,
-          blocktime: 167890000,
-          abandoned: false,
-          time: 167880000,
-          address: 'bc1qaddress',
-          wtxid: 'wtxid1',
-          walletconflicts: [],
-          timereceived: 167880000,
-          'bip125-replaceable': 'no'
-        }
-      ]);
+      const client = getPrivateClient();
+      
+      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.transactionWithoutFee]);
 
       const result = await client.getWalletTransactionHistory();
       expect(result[0].fee).toBeUndefined();
     });
 
     it('should handle unconfirmed transactions', async () => {
-      mockBitcoindListSpentTransactions.mockResolvedValue([
-        {
-          txid: 'tx1',
-          category: 'send',
-          amount: -0.5,
-          fee: -0.0001,
-          confirmations: 0, // Unconfirmed
-          // No blockhash, blockheight, blocktime for unconfirmed
-          abandoned: false,
-          time: 167880000,
-          address: 'bc1qaddress',
-          wtxid: 'wtxid1',
-          walletconflicts: [],
-          timereceived: 167880000,
-          'bip125-replaceable': 'yes'
-        }
-      ]);
+      const client = getPrivateClient();
+      
+      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.unconfirmedTransaction]);
 
       const result = await client.getWalletTransactionHistory();
-      expect(result[0].status.confirmed).toBe(false);
-      expect(result[0].status.blockHeight).toBeUndefined();
-      expect(result[0].status.blockHash).toBeUndefined();
-      expect(result[0].status.blockTime).toBeUndefined();
+      expect(result).toEqual([expectedTransformedData.unconfirmedTransaction]);
     });
   });
 });
+
 });
