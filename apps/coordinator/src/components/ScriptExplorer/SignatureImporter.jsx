@@ -39,6 +39,7 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
+import { bigNumberPropTypes } from "../../proptypes/utils";
 import {
   convertLegacyInput,
   convertLegacyOutput,
@@ -607,9 +608,10 @@ SignatureImporter.propTypes = {
     }),
   ).isRequired,
   fee: PropTypes.string.isRequired,
-  inputs: PropTypes.arrayOf(PropTypes.shape({ amountSats: PropTypes.string }))
-    .isRequired,
-  inputsTotalSats: PropTypes.shape({}).isRequired,
+  inputs: PropTypes.arrayOf(
+    PropTypes.shape({ amountSats: PropTypes.shape(bigNumberPropTypes) }),
+  ).isRequired,
+  inputsTotalSats: PropTypes.shape(bigNumberPropTypes).isRequired,
   isWallet: PropTypes.bool.isRequired,
   network: PropTypes.string.isRequired,
   number: PropTypes.number.isRequired,
