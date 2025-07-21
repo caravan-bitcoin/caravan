@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- [#299](https://github.com/caravan-bitcoin/caravan/pull/299) [`f3e9b27`](https://github.com/caravan-bitcoin/caravan/commit/f3e9b2751b3673451fe637b42fc96ac6fea518ab) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - This introduces a support for exporting xpubs in caravan through BCUR2 Qr codes making wallets like seedsigner, jade etc compatible for the mentioned purpose.
+
+## 0.6.2
+
+### Patch Changes
+
+- [#302](https://github.com/caravan-bitcoin/caravan/pull/302) [`69f580a`](https://github.com/caravan-bitcoin/caravan/commit/69f580a8311ef00de521fffa2b40b0d7e2417d76) Thanks [@cc-unchained](https://github.com/cc-unchained)! - bump trezor connect dependency to 9.6.0
+
 ## 0.6.1
 
 ### Patch Changes

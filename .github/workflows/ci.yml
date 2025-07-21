@@ -2,6 +2,9 @@ name: Test
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -29,3 +32,43 @@ jobs:
       - name: Run tests
         run: |
           npx turbo run ci
+
+  check-coordinator:
+    runs-on: ubuntu-latest
+    outputs:
+      will-test: ${{ steps.check.outputs.will-test }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # changeset status cant be used until https://github.com/changesets/changesets/issues/1055 is fixed
+      - name: Check if caravan-coordinator needs testing
+        id: check
+        run: |
+          # Check if caravan-coordinator is in the changesets
+          if grep -h '^"caravan-coordinator":' .changeset/*.md; then
+            echo "will-test=true" >> $GITHUB_OUTPUT
+            echo "✅ caravan-coordinator will be tested"
+          else
+            echo "will-test=false" >> $GITHUB_OUTPUT
+            echo "❌ caravan-coordinator will not be tested"
+          fi
+    
+  docker:
+    name: Test Docker image build
+    needs: check-coordinator
+    runs-on: ubuntu-latest
+    if: needs.check-coordinator.outputs.will-test == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Test Docker image build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/coordinator/Dockerfile
+          push: false

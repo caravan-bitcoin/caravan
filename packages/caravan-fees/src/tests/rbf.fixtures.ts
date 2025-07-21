@@ -1,6 +1,12 @@
-import { Network } from "@caravan/bitcoin";
+import {
+  Network,
+  P2SH_P2WSH,
+  P2WSH,
+  P2SH,
+  MultisigAddressType,
+} from "@caravan/bitcoin";
 
-import { UTXO, SCRIPT_TYPES } from "../types";
+import { UTXO } from "../types";
 
 export const rbfFixtures = {
   cancelRbf: [
@@ -108,7 +114,7 @@ export const rbfFixtures = {
       ],
       dustThreshold: "546",
       targetFeeRate: 80, // original was 60 sat/vB
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH as MultisigAddressType,
       requiredSigners: 2,
       totalSigners: 3,
       cancelAddress:
@@ -219,7 +225,7 @@ export const rbfFixtures = {
       ],
       dustThreshold: "546",
       targetFeeRate: 80, // original was 60 sat/vB
-      scriptType: SCRIPT_TYPES.P2WSH,
+      scriptType: P2WSH as MultisigAddressType,
       requiredSigners: 2,
       totalSigners: 3,
       changeAddress:
@@ -228,7 +234,7 @@ export const rbfFixtures = {
         inputCount: 3, // 2 inputs + 1 extra UTXO added for fees
         outputCount: 4, //  3 original + 1 change output
         fee: "20880", // absolute fees of tx
-        expectedfee: "39840", // rationalized above
+        expectedfee: "39760", // rationalized above
         feeRate: 80, // rationalized above
       },
     },
@@ -289,7 +295,7 @@ export const rbfFixtures = {
       ] as UTXO[],
       dustThreshold: "546",
       targetFeeRate: 6,
-      scriptType: SCRIPT_TYPES.P2SH_P2WSH,
+      scriptType: P2SH_P2WSH as MultisigAddressType,
       requiredSigners: 1,
       totalSigners: 1,
       changeAddress: "bc1q7y50e8culkenu3tnn66ly6gq9m43y8ymk70k8z",
@@ -298,7 +304,7 @@ export const rbfFixtures = {
         inputCount: 2,
         outputCount: 2,
         fee: "905",
-        expectedFee: "1845",
+        expectedFee: "1357",
         feeRate: 6.029,
       },
     },
@@ -324,7 +330,7 @@ export const rbfFixtures = {
       ],
       network: Network.MAINNET,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2SH,
+      scriptType: P2SH as MultisigAddressType,
       requiredSigners: 1,
       totalSigners: 1,
       targetFeeRate: 10,

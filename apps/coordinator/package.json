@@ -1,7 +1,7 @@
 {
   "name": "caravan-coordinator",
   "private": true,
-  "version": "1.8.2",
+  "version": "1.10.0",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
   "type": "module",
@@ -15,9 +15,9 @@
     "url": "https://github.com/caravan-bitcoin/caravan/issues"
   },
   "homepage": "https://github.com/caravan-bitcoin/caravan",
-  "engineStrict": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=20.18.0 <21.0.0",
+    "npm": ">=10.5.0 <11.0.0"
   },
   "overrides": {
     "jspdf": "2.5.1",
@@ -31,6 +31,7 @@
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.21.0",
+    "@caravan/eslint-config": "*",
     "@inrupt/jest-jsdom-polyfills": "^3.2.1",
     "@testing-library/jest-dom": "^5.6.0",
     "@testing-library/react": "^10.0.4",
@@ -63,8 +64,11 @@
     "standard-version": "^9.0.0",
     "ts-jest": "^29.0.5",
     "typescript": "^5.0.2",
-    "vite": "6.3.3",
-    "vite-plugin-wasm": "^3.3.0"
+    "vite": "6.3.4",
+    "vite-plugin-wasm": "^3.3.0",
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.29",
+    "tsx": "^4.19.4"
   },
   "scripts": {
     "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
@@ -79,6 +83,10 @@
     "test": "__GIT_SHA__=`git rev-parse --short HEAD` jest",
     "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` jest --watch",
     "test:ci": "CI=true jest --coverage",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
+    "test:e2e:install": "npx playwright install",
     "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },
@@ -99,7 +107,8 @@
     "@caravan/bitcoin": "*",
     "@caravan/clients": "*",
     "@caravan/descriptors": "^0.1.1",
-    "@caravan/eslint-config": "*",
+    "@caravan/health": "*",
+    "@caravan/fees": "*",
     "@caravan/psbt": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",
@@ -109,6 +118,8 @@
     "@mui/lab": "^5.0.0-alpha.72",
     "@mui/material": "^5.5.0",
     "@mui/styles": "^5.5.0",
+    "@tanstack/react-query": "^4.40.0",
+    "@tanstack/react-query-devtools": "^4.40.0",
     "@trezor/transport": "^1.1.15",
     "@vitejs/plugin-react": "^3.1.0",
     "axios": "^1.8.2",
@@ -148,6 +159,8 @@
     "redux-promise": "^0.6.0",
     "redux-thunk": "^2.3.0",
     "reselect": "^4.0.0",
-    "sass": "^1.56.2"
+    "sass": "^1.56.2",
+    "bitcoin-core": "^5.0.0",
+    "dotenv": "^16.5.0"
   }
 }

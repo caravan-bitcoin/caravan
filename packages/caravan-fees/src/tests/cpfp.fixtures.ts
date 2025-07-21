@@ -1,6 +1,6 @@
-import { Network } from "@caravan/bitcoin";
+import { MultisigAddressType, Network, P2SH_P2WSH } from "@caravan/bitcoin";
 
-import { UTXO, SCRIPT_TYPES } from "../types";
+import { UTXO } from "../types";
 
 const parentTxHex =
   "020000000001019ef21963fbf5261d3b62f7f0467ab4b6d006b7d25a27d6744c95d9c11f577b210300000000ffffffff02713d0000000000001600147938bb5013f400246165f507ed015853430e28d2007c500200000000160014f2aecd6ab28d970ee8eea34665c181393b8754c60247304402201aaa53e645c14148171c3ea39841ee4ad7451d3a30f651e8a38ca20cec2cab9402206eab21ae37a5e0eaa0fe39d26821133e2c97297897de75b854865b5884a3523b012102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b800000000";
@@ -45,7 +45,7 @@ export const cpfpValidFixtures = [
       changeAddress: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
       network: Network.MAINNET,
       dustThreshold: "546",
-      scriptType: SCRIPT_TYPES.P2SH_P2WSH,
+      scriptType: P2SH_P2WSH as MultisigAddressType,
       targetFeeRate: 6.33,
       absoluteFee: "871",
       requiredSigners: 1,
@@ -57,12 +57,12 @@ export const cpfpValidFixtures = [
         "77f437ae7f796896f1d69e2c9329202d6ac4b4a03fbc0f18e06dfab87f4b0702",
       parentFee: "871",
       parentVsize: 140.25,
-      childVsize: 168,
-      childFee: "1085",
+      childVsize: 116,
+      childFee: "756",
       combinedFeeRate: 6.35,
       changeOutput: {
         address: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
-        value: "38827971",
+        value: "38828300",
       },
     },
   },

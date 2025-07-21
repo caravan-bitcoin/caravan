@@ -1,0 +1,67 @@
+echo "🚀 Pre-commit checks (from $(pwd))..."
+
+# Find the git root directory (works from anywhere in monorepo)
+GIT_ROOT=$(git rev-parse --show-toplevel)
+echo "📁 Git root: $GIT_ROOT"
+
+# 1. Check Node.js version (get it from package.json engines)
+echo "1️⃣ Checking Node.js version..."
+CURRENT_NODE=$(node --version)
+
+# Find package.json with engines field
+ENGINES_FILE="$GIT_ROOT/package.json"
+
+if [ -n "$ENGINES_FILE" ]; then
+    echo "   📋 Using engines from: $ENGINES_FILE"
+
+    # Extract Node version requirement from engines field
+    NODE_REQUIREMENT=$(node -e "
+        try {
+            const pkg = require('$ENGINES_FILE');
+            if (pkg.engines && pkg.engines.node) {
+                console.log(pkg.engines.node);
+            }
+        } catch(e) {
+            console.log('⚠️  package.json with no engines field found')
+            process.exit(1);
+        }
+    ")
+
+    if [ $? -eq 0 ] && [ -n "$NODE_REQUIREMENT" ]; then
+        echo "   📝 Required Node.js: $NODE_REQUIREMENT"
+        echo "   💻 Current Node.js: $CURRENT_NODE"
+
+        # Extract major version for basic check
+        # We are using shell-based version checking
+
+        CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
+        REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+
+        if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
+            echo ""
+            echo "❌ Node.js major version mismatch!"
+            echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
+            echo "   Current:  $CURRENT_NODE"
+            echo ""
+            echo "   To fix this:"
+            echo "   1. Run: nvm use $REQUIRED_MAJOR"
+            echo "   2. Or run: nvm install $REQUIRED_MAJOR"
+            echo "   3. Then try your commit again"
+            echo ""
+            exit 1
+        fi
+
+
+        echo "   ✅ Node.js version OK"
+    else
+        echo "   ⚠️  Could not read engines.node field"
+        exit 1
+    fi
+else
+    echo "   ⚠️  package.json with no engines field found"
+    exit 1
+fi
+
+echo ""
+echo "✅ All pre-commit checks passed!"
+echo ""

@@ -97,6 +97,56 @@ And another good resource for what the workflow should look like [here](https://
 
 [Automating Changesets](https://github.com/changesets/changesets/blob/main/docs/automating-changesets.md)
 
+### Node.js Version Management
+
+#### Required Versions
+This project enforces specific Node.js and npm versions to ensure consistent lockfiles across all contributors:
+
+```json
+{
+  "engines": {
+    "node": ">=20.18.0 <21.0.0",
+    "npm": ">=10.5.0 <11.0.0"
+  }
+}
+```
+
+#### Setup
+Use the correct Node.js version before working on the project:
+
+```shell
+$ nvm use                    # Uses .nvmrc file
+$ npm install               # Automatically checks versions
+```
+
+#### Pre-commit Hooks
+Husky automatically runs pre-commit checks that:
+
+- ✅ Verify your Node.js version matches requirements
+- ✅ Validate package-lock.json changes are consistent
+- ✅ Run linting (if available)
+
+#### Common Issues
+
+**Version mismatch during install:**
+```shell
+$ nvm use 20.18.0
+$ npm install
+```
+
+**Pre-commit version error:**
+```shell
+$ nvm use
+$ git commit    # Try again
+```
+
+**Large lockfile changes warning:**
+- Usually means wrong Node.js version was used
+- Check `node --version` and ensure it matches requirements
+- Re-run `npm install` with correct version if needed
+
+The system prevents lockfile conflicts by ensuring everyone uses compatible Node.js/npm versions.
+
 
 ## Getting started
 
@@ -296,17 +346,17 @@ module.exports = {
 - Run the development server with turbo: `turbo run dev`
 - Add to `ClientPicker/index.tsx` (as an example):
 ```typescript
-import { BlockchainClient, ClientType } from "@caravan/clients";
+import { BlockchainClient, ClientType, PublicBitcoinProvider, Network } from "@caravan/clients";
 
 ...
   // add this function to the component and put it to use!
   const getFees = async () => {
-    const blockchainClient = new BlockchainClient({
-      type: ClientType.MEMPOOL,
-      client,
-      network,
+    const client = new BlockchainClient({
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
+      network: Network.MAINNET,
     });
-    return await blockchainClient.getFeeEstimate(3);
+    return await client.getFeeEstimate(3);
   };
 ...
 ```

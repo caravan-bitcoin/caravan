@@ -1,0 +1,166 @@
+/* Container */
+.swa-slider-container {
+  width: 100%;
+}
+
+/* Header */
+.waste-analysis-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.waste-analysis-description {
+  margin-bottom: 16px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Box */
+.potential-fee-waste-container {
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 600px; /* make it half-width */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Title */
+.potential-fee-waste-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Slider */
+.slider-container {
+  position: relative;
+  padding: 0 8px;
+  margin-bottom: 16px;
+  height: 30px;
+}
+
+.gradient-track {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(to right, #4caf50, #ffeb3b, #ff9800, #f44336);
+  border-radius: 2px;
+  z-index: 0;
+}
+
+.custom-slider {
+  position: relative;
+  z-index: 1;
+}
+
+.custom-slider .MuiSlider-track {
+  background-color: transparent !important;
+}
+
+.custom-slider .MuiSlider-rail {
+  background-color: transparent !important;
+}
+
+.custom-slider .MuiSlider-thumb {
+  background-color: #e7e7e7;
+  border: 2px solid #1976d2;
+  width: 20px;
+  height: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.custom-slider .MuiSlider-thumb:hover,
+.custom-slider .MuiSlider-thumb.Mui-focusVisible {
+  box-shadow: 0 0 0 8px rgba(25, 118, 210, 0.16);
+}
+
+/* Waste Amount Below */
+.waste-amount-container {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+  margin-top: -8px;
+}
+
+.waste-amount-text {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.waste-amount-units {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #555;
+}
+
+/* Tooltip Icon */
+.info-icon-button {
+  padding: 4px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.info-icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.info-icon {
+  font-size: 16px;
+}
+
+/* Fee Estimate */
+.fee-estimate-text {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* Fee Label */
+.fee-level-indicator {
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Levels */
+.fee-level-very-low {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #4caf50;
+}
+
+.fee-level-low {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ff9800;
+}
+
+.fee-level-medium {
+  background-color: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #ffeb3b;
+}
+
+.fee-level-high {
+  background-color: #fce4ec;
+  color: #c2185b;
+  border: 1px solid #e91e63;
+}
+
+.fee-level-very-high {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #f44336;
+}

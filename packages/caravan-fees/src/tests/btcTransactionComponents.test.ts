@@ -9,6 +9,8 @@ import {
   validOutputTemplateFixtures,
   invalidOutputTemplateFixtures,
   utxoFixture,
+  bip32DerivationFixtures,
+  multisigUtxoFixtures,
 } from "./btcTransactionComponents.fixtures";
 
 describe("BtcTxInputTemplate", () => {
@@ -31,7 +33,7 @@ describe("BtcTxInputTemplate", () => {
       if (expected.error) {
         const temp = new BtcTxInputTemplate(data);
         expect(() => {
-          temp.setSequence(data.sequence!);
+          temp.sequence = data.sequence!;
         }).toThrow(expected.error);
       } else {
         const input = new BtcTxInputTemplate(data);
@@ -56,7 +58,7 @@ describe("BtcTxInputTemplate", () => {
   describe("setSequence", () => {
     it("should set sequence number", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
-      input.setSequence(0xfffffffd);
+      input.sequence = 0xfffffffd;
       expect(input.sequence).toBe(0xfffffffd);
       expect(input.isRBFEnabled()).toBe(true);
     });
@@ -64,7 +66,7 @@ describe("BtcTxInputTemplate", () => {
     it("should throw error when setting invalid sequence number", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       expect(() => {
-        input.setSequence(0x100000000); // Greater than 32-bit unsigned integer
+        input.sequence = 0x100000000; // Greater than 32-bit unsigned integer
       }).toThrow("Invalid sequence number");
     });
   });
@@ -76,7 +78,7 @@ describe("BtcTxInputTemplate", () => {
         script: Buffer.from("dummy_script"),
         value: 123456,
       };
-      input.setWitnessUtxo(witnessUtxo);
+      input.witnessUtxo = witnessUtxo;
       expect(input.witnessUtxo).toEqual(witnessUtxo);
     });
   });
@@ -85,7 +87,7 @@ describe("BtcTxInputTemplate", () => {
     it("should set non-witness UTXO", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       const nonWitnessUtxo = Buffer.from(utxoFixture.prevTxHex!, "hex");
-      input.setNonWitnessUtxo(nonWitnessUtxo);
+      input.nonWitnessUtxo = nonWitnessUtxo;
       expect(input.nonWitnessUtxo).toEqual(nonWitnessUtxo);
     });
 
@@ -93,7 +95,7 @@ describe("BtcTxInputTemplate", () => {
       const input = new BtcTxInputTemplate(validInputTemplateFixtures[0].data);
       const invalidNonWitnessUtxo = Buffer.from("invalid_utxo");
       expect(() => {
-        input.setNonWitnessUtxo(invalidNonWitnessUtxo);
+        input.nonWitnessUtxo = invalidNonWitnessUtxo;
       }).toThrow("Invalid non-witness UTXO");
     });
   });
@@ -114,7 +116,202 @@ describe("BtcTxInputTemplate", () => {
     it("should convert input template to UTXO", () => {
       const input = BtcTxInputTemplate.fromUTXO(utxoFixture);
       const convertedUTXO = input.toUTXO();
+
       expect(convertedUTXO).toEqual(utxoFixture);
+    });
+  });
+
+  describe("BtcTxInputTemplate - Multisig Extensions", () => {
+    describe("setRedeemScript", () => {
+      it("should set redeem script", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const redeemScript = Buffer.from(
+          "5221023b66728c8bd8175973e4004860b9cc57fa882be226e5693b498e421948eb2471f",
+          "hex",
+        );
+
+        input.redeemScript = redeemScript;
+        expect(input.redeemScript).toEqual(redeemScript);
+      });
+
+      it("should handle undefined redeem script", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        expect(input.redeemScript).toBeUndefined();
+      });
+    });
+
+    describe("setWitnessScript", () => {
+      it("should set witness script", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const witnessScript = Buffer.from(
+          "5221023b66728c8bd8175973e4004860b9cc57fa882be226e5693b498e421948eb2471f",
+          "hex",
+        );
+
+        input.witnessScript = witnessScript;
+        expect(input.witnessScript).toEqual(witnessScript);
+      });
+
+      it("should handle undefined witness script", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        expect(input.witnessScript).toBeUndefined();
+      });
+    });
+
+    describe("setBip32Derivations", () => {
+      it("should set BIP32 derivations", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+
+        input.bip32Derivations = bip32DerivationFixtures;
+        expect(input.bip32Derivations).toEqual(bip32DerivationFixtures);
+      });
+
+      it("should handle empty BIP32 derivations", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+
+        input.bip32Derivations = [];
+        expect(input.bip32Derivations).toEqual([]);
+      });
+
+      it("should create defensive copy of derivations", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const originalDerivations = [...bip32DerivationFixtures];
+
+        input.bip32Derivations = originalDerivations;
+        originalDerivations.push({
+          pubkey: Buffer.from("newkey", "hex"),
+          masterFingerprint: Buffer.from("newfingerprint", "hex"),
+          path: "m/44'/0'/0'/0/0",
+        });
+
+        expect(input.bip32Derivations).toEqual(bip32DerivationFixtures);
+      });
+    });
+
+    describe("fromUTXO with multisig fields", () => {
+      it("should create input template from P2SH multisig UTXO", () => {
+        const utxo = multisigUtxoFixtures[0];
+        const input = BtcTxInputTemplate.fromUTXO(utxo);
+
+        expect(input.txid).toBe(utxo.txid);
+        expect(input.vout).toBe(utxo.vout);
+        expect(input.amountSats).toBe(utxo.value);
+        expect(input.redeemScript).toEqual(utxo.redeemScript);
+        expect(input.witnessScript).toBeUndefined();
+        expect(input.bip32Derivations).toEqual(utxo.bip32Derivations);
+      });
+
+      it("should create input template from P2WSH multisig UTXO", () => {
+        const utxo = multisigUtxoFixtures[1];
+        const input = BtcTxInputTemplate.fromUTXO(utxo);
+
+        expect(input.txid).toBe(utxo.txid);
+        expect(input.vout).toBe(utxo.vout);
+        expect(input.amountSats).toBe(utxo.value);
+        expect(input.redeemScript).toBeUndefined();
+        expect(input.witnessScript).toEqual(utxo.witnessScript);
+        expect(input.bip32Derivations).toEqual(utxo.bip32Derivations);
+        expect(input.witnessUtxo).toEqual(utxo.witnessUtxo);
+      });
+
+      it("should create input template from P2SH-P2WSH multisig UTXO", () => {
+        const utxo = multisigUtxoFixtures[2];
+        const input = BtcTxInputTemplate.fromUTXO(utxo);
+
+        expect(input.txid).toBe(utxo.txid);
+        expect(input.vout).toBe(utxo.vout);
+        expect(input.amountSats).toBe(utxo.value);
+        expect(input.redeemScript).toEqual(utxo.redeemScript);
+        expect(input.witnessScript).toEqual(utxo.witnessScript);
+        expect(input.bip32Derivations).toEqual(utxo.bip32Derivations);
+        expect(input.witnessUtxo).toEqual(utxo.witnessUtxo);
+      });
+    });
+
+    describe("toUTXO with multisig fields", () => {
+      it("should convert input template with multisig data back to UTXO", () => {
+        const originalUtxo = multisigUtxoFixtures[0];
+        const input = BtcTxInputTemplate.fromUTXO(originalUtxo);
+        const convertedUtxo = input.toUTXO();
+
+        expect(convertedUtxo).toEqual(originalUtxo);
+      });
+
+      it("should handle undefined multisig fields in toUTXO conversion", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const convertedUtxo = input.toUTXO();
+
+        expect(convertedUtxo.redeemScript).toBeUndefined();
+        expect(convertedUtxo.witnessScript).toBeUndefined();
+        expect(convertedUtxo.bip32Derivations).toEqual([]);
+      });
+    });
+
+    describe("Multisig validation scenarios", () => {
+      it("should pass validation with complete multisig data", () => {
+        const input = BtcTxInputTemplate.fromUTXO(multisigUtxoFixtures[0]);
+        expect(input.isValid()).toBe(true);
+        expect(input.hasRequiredFieldsforPSBT()).toBe(true);
+      });
+
+      it("should pass validation with partial multisig data", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const witnessUtxo = {
+          script: Buffer.from("dummy_script"),
+          value: 123456,
+        };
+        input.witnessUtxo = witnessUtxo;
+        input.redeemScript = Buffer.from("redeem_script", "hex");
+
+        expect(input.isValid()).toBe(true);
+        expect(input.hasRequiredFieldsforPSBT()).toBe(true);
+      });
+    });
+
+    describe("Edge cases", () => {
+      it("should handle UTXO with only bip32Derivations", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        input.bip32Derivations = bip32DerivationFixtures;
+
+        expect(input.bip32Derivations).toEqual(bip32DerivationFixtures);
+        expect(input.redeemScript).toBeUndefined();
+        expect(input.witnessScript).toBeUndefined();
+      });
+
+      it("should handle UTXO with only scripts (no derivations)", () => {
+        const input = new BtcTxInputTemplate(
+          validInputTemplateFixtures[0].data,
+        );
+        const redeemScript = Buffer.from("redeem_script", "hex");
+        const witnessScript = Buffer.from("witness_script", "hex");
+
+        input.redeemScript = redeemScript;
+        input.witnessScript = witnessScript;
+
+        expect(input.redeemScript).toEqual(redeemScript);
+        expect(input.witnessScript).toEqual(witnessScript);
+        expect(input.bip32Derivations).toEqual([]);
+      });
     });
   });
 });
