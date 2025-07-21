@@ -89,10 +89,17 @@ export interface WalletState {
 // only care about inbound to deposit account, not change
 const getDepositSlices = (state: WalletState): Slice[] =>
   Object.values(state.wallet.deposits.nodes);
-export const getWalletSlices = (state: WalletState): Slice[] => [
-  ...Object.values(state.wallet.deposits.nodes),
-  ...Object.values(state.wallet.change.nodes),
-];
+
+export const getWalletSlices = createSelector(
+  [
+    (state: WalletState) => state.wallet.deposits.nodes,
+    (state: WalletState) => state.wallet.change.nodes,
+  ],
+  (depositNodes, changeNodes) => [
+    ...Object.values(depositNodes),
+    ...Object.values(changeNodes),
+  ],
+);
 
 export const getAddressType = (state: WalletState): string =>
   state.settings.addressType;
@@ -490,6 +497,11 @@ export const getTransactionExplorerUrl = createSelector(
   [getNetwork, (state: WalletState) => state.client],
   (network: string, client: WalletState["client"]) => {
     return (txid: string): string => {
+      // Handle regtest - no public explorers available
+      // Return empty string to disable explorer links
+      if (network === "regtest") {
+        return "";
+      }
       // Determine which block explorer to use based on the blockchain client type
       let explorerUrl = `https://blockstream.info/${network === "mainnet" ? "" : "testnet/"}tx/${txid}`;
 

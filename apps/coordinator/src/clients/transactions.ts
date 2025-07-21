@@ -119,8 +119,8 @@ export const fetchTransactionCoins = async (
   txid: string,
   client: BlockchainClient,
 ) => {
-  const coins = new Map<string, Coin>();
   const transaction = await client.getTransaction(txid);
+  const coins = new Map<string, Coin>();
   for (const input of transaction.vin) {
     const { txid, vout } = input;
 

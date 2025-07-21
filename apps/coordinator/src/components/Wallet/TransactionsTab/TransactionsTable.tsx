@@ -15,6 +15,7 @@ import {
   Snackbar,
   Box,
   Typography,
+  Button,
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -228,8 +229,20 @@ const TransactionTableRow: React.FC<{
   tx: TransactionT;
   network?: string;
   onClickTransaction?: (txid: string) => void;
+  onAccelerateTransaction?: (tx: TransactionT) => void;
   onCopySuccess: () => void;
-}> = ({ tx, network, onClickTransaction, onCopySuccess }) => {
+  renderActions?: (tx: TransactionT) => React.ReactNode;
+}> = ({
+  tx,
+  network,
+  onClickTransaction,
+  onAccelerateTransaction,
+  onCopySuccess,
+  renderActions,
+}) => {
+  // Check if transaction can be accelerated (pending/unconfirmed)
+  const canAccelerate = !tx.status.confirmed;
+
   return (
     <TableRow>
       <TableCell>
@@ -286,6 +299,39 @@ const TransactionTableRow: React.FC<{
           size="small"
         />
       </TableCell>
+      {/* Accelerate button for pending transactions */}
+      {canAccelerate &&
+        onAccelerateTransaction &&
+        (tx.isReceived ? (
+          <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+            <TableCell>
+              <Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  disabled={true}
+                >
+                  Accelerate
+                </Button>
+              </Box>
+            </TableCell>
+          </Tooltip>
+        ) : (
+          <TableCell>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAccelerateTransaction(tx);
+              }}
+            >
+              Accelerate
+            </Button>
+          </TableCell>
+        ))}
       <TableCell>
         {network && (
           <Tooltip title="View in your preferred block explorer">
@@ -301,6 +347,8 @@ const TransactionTableRow: React.FC<{
             </IconButton>
           </Tooltip>
         )}
+        {/* Render custom actions if provided */}
+        {renderActions && renderActions(tx)}
       </TableCell>
     </TableRow>
   );
@@ -313,6 +361,8 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   sortDirection,
   network,
   onClickTransaction,
+  onAccelerateTransaction,
+  renderActions,
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -340,7 +390,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   tx={tx}
                   network={network}
                   onClickTransaction={onClickTransaction}
+                  onAccelerateTransaction={onAccelerateTransaction}
                   onCopySuccess={() => setSnackbarOpen(true)}
+                  renderActions={renderActions}
                 />
               ))
             )}

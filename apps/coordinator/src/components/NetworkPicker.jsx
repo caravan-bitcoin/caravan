@@ -50,11 +50,22 @@ const NetworkPicker = ({ setNetwork, network, frozen }) => {
               checked={network === Network.TESTNET}
               disabled={frozen}
             />
+            <FormControlLabel
+              id="regtest"
+              control={<Radio color="primary" />}
+              name="network"
+              value="regtest"
+              label="Regtest"
+              onChange={handleNetworkChange}
+              checked={network === Network.REGTEST}
+              disabled={frozen}
+            />
           </RadioGroup>
           <FormHelperText>
             <small>
-              Choose &apos;Mainnet&apos; if you don&apos;t understand the
-              difference.
+              Choose &apos;Mainnet&apos; for real Bitcoin, &apos;Testnet&apos;
+              for testing with test coins, or &apos;Regtest&apos; for local
+              development with a private bitcoind node.
             </small>
           </FormHelperText>
         </FormControl>

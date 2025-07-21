@@ -14,6 +14,7 @@ import {
   Alert,
   AlertTitle,
 } from "@mui/material";
+
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
@@ -31,6 +32,7 @@ import {
   SPEND_STEP_CREATE,
   SPEND_STEP_PREVIEW,
   SPEND_STEP_SIGN,
+  setRBF,
   setSpendStep as setSpendStepAction,
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
@@ -312,6 +314,19 @@ class WalletSpend extends React.Component {
                         }
                         label="Manual"
                       />
+                      {/* Add RBF Toggle */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={this.props.enableRBF}
+                            onChange={(e) =>
+                              this.props.setRBF(e.target.checked)
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Replace-by-Fee (RBF)"
+                      />
                     </Box>
                   </Box>
                 </Grid>
@@ -396,6 +411,8 @@ WalletSpend.propTypes = {
   changeAddress: PropTypes.string.isRequired,
   deleteChangeOutput: PropTypes.func.isRequired,
   depositNodes: PropTypes.shape({}),
+  enableRBF: PropTypes.bool,
+  setRBF: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeError: PropTypes.string,
   feeRate: PropTypes.string.isRequired,
@@ -430,6 +447,7 @@ WalletSpend.defaultProps = {
   balanceError: null,
   changeNodes: {},
   depositNodes: {},
+  enableRBF: true,
   finalizedOutputs: false,
   feeError: null,
   feeRateError: null,
@@ -448,6 +466,8 @@ function mapStateToProps(state) {
     changeNode: state.wallet.change.nextNode,
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
+    enableRBF: state.spend.transaction.enableRBF,
+    network: state.settings.network,
     selectedUTXOs: state.spend.transaction.selectedUTXOs,
     transactionOutputs: state.spend.transaction.transactionOutputs,
     addressType: state.settings?.addressType,
@@ -467,6 +487,7 @@ const mapDispatchToProps = {
   resetNodesSpend: resetNodesSpendAction,
   setFeeRate: setFeeRateAction,
   addOutput,
+  setRBF,
   finalizeOutputs: finalizeOutputsAction,
   setChangeAddress: setChangeAddressAction,
   setSpendStep: setSpendStepAction,
