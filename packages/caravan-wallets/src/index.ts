@@ -20,6 +20,7 @@ import {
   BCUR2,
   BCUR2ExportExtendedPublicKey,
   BCUR2EncodeTransaction,
+  BCUR2SignMultisigTransaction,
 } from "./bcur2/interactions";
 import {
   BITBOX,
@@ -455,6 +456,11 @@ export function SignMultisigTransaction({
         keyDetails,
         addressType: walletConfig.addressType,
         returnSignatureArray,
+      });
+    case BCUR2:
+      return new BCUR2SignMultisigTransaction({
+        psbt,
+        network,
       });
     default:
       return new UnsupportedInteraction({

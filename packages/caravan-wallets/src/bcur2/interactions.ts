@@ -5,7 +5,7 @@
  * useful for airgapped hardware wallets.
  */
 
-import { BitcoinNetwork, Network } from "@caravan/bitcoin";
+import { BitcoinNetwork, Network, parseSignaturesFromPSBT } from "@caravan/bitcoin";
 
 import {
   IndirectKeystoreInteraction,
@@ -341,5 +341,182 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
     this.maxFragmentLength = length;
     this.encoder.setMaxFragmentLength(length);
     this.qrCodeFrames = []; // Reset frames to force re-encoding
+  }
+}
+
+/**
+ * Interaction class for signing multisig transactions using BCUR2 QR codes.
+ * This class handles the complete signing workflow:
+ * 1. Encodes the transaction PSBT into QR codes for display
+ * 2. Accepts the signed PSBT back from the device via QR code scanning
+ * 3. Parses and extracts signatures from the signed PSBT
+ *
+ * @extends BCUR2Interaction
+ */
+export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
+  private encoder: BCUREncoder2;
+
+  private psbt: string;
+
+  private qrCodeFrames: string[];
+
+  private maxFragmentLength: number;
+
+  /**
+   * Creates a new BCUR2 sign multisig transaction interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.psbt - Base64 encoded PSBT to sign
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
+   */
+  constructor({
+    psbt,
+    network = Network.MAINNET,
+    maxFragmentLength = 100,
+  }: {
+    psbt: string;
+    network?: BitcoinNetwork;
+    maxFragmentLength?: number;
+  }) {
+    super(network);
+    
+    if (!psbt) {
+      throw new Error("PSBT is required for signing");
+    }
+    
+    this.psbt = psbt;
+    this.maxFragmentLength = maxFragmentLength;
+    this.encoder = new BCUREncoder2(psbt, maxFragmentLength);
+    this.qrCodeFrames = [];
+    
+    // Set workflow for test framework
+    this.workflow = ["request", "parse"];
+  }
+
+  /**
+   * Returns the status messages for the interaction
+   * @returns {Array} Array of message objects describing the current state
+   */
+  messages() {
+    const messages = super.messages();
+    
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.display_qr_for_signing",
+      text: "Display the QR codes to your signing device",
+    });
+    
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.scan_signed_psbt",
+      text: "After signing, scan the signed PSBT QR codes from your device",
+    });
+    
+    return messages;
+  }
+
+  /**
+   * Generates the request data for the signing process
+   * @returns {Object} Request data containing QR code frames for display
+   */
+  request() {
+    // Generate QR frames if not already done
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+
+    const requestData = {
+      instruction: "Display these QR codes to your signing device, then scan the signed result",
+      qrCodeFrames: this.qrCodeFrames,
+      fragmentCount: this.qrCodeFrames.length,
+      maxFragmentLength: this.maxFragmentLength,
+      psbtSize: this.psbt.length,
+    };
+    
+    return requestData;
+  }
+
+  /**
+   * Parses a signed PSBT and extracts signatures
+   * @param {string} signedPSBTData - The signed PSBT data (base64 or UR format)
+   * @returns {Object} Object with signatures property for test framework compatibility
+   */
+  parse(signedPSBTData: string): { signatures: string[] } {
+    try {
+      // Reset decoder for new scan
+      this.decoder.reset();
+      
+      // If it's a UR format (multi-part QR), process with decoder
+      if (signedPSBTData.toLowerCase().startsWith("ur:")) {
+        this.decoder.receivePart(signedPSBTData);
+        
+        if (!this.decoder.isComplete()) {
+          throw new Error("Incomplete PSBT data received - scan all QR code parts");
+        }
+        
+        const psbtData = this.decoder.getDecodedPSBT();
+        if (!psbtData) {
+          throw new Error("Failed to decode PSBT data");
+        }
+        
+        const signatures = this.extractSignatures(psbtData);
+        // Find the first non-empty signature array (the one that was actually signed)
+        const signatureArrays = Object.values(signatures);
+        const actualSignatures = signatureArrays.find(sigArray => sigArray && sigArray.length > 0) || [];
+        const result = { signatures: actualSignatures };
+        return result;
+      } else {
+        // If it's base64 PSBT, process directly
+        const signatures = this.extractSignatures(signedPSBTData);
+        // Find the first non-empty signature array (the one that was actually signed)
+        const signatureArrays = Object.values(signatures);
+        const actualSignatures = signatureArrays.find(sigArray => sigArray && sigArray.length > 0) || [];
+        const result = { signatures: actualSignatures };
+        return result;
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Error parsing signed PSBT: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Extracts signatures from a base64 PSBT
+   * @private
+   * @param {string} psbtBase64 - Base64 encoded PSBT
+   * @returns {Object} Object mapping public keys to signature arrays (same format as parseSignaturesFromPSBT)
+   */
+  private extractSignatures(psbtBase64: string): { [publicKey: string]: string[] } {
+    try {
+      if (!psbtBase64 || psbtBase64.length === 0) {
+        throw new Error("No signatures found");
+      }
+      
+      // Convert base64 PSBT to hex for parseSignaturesFromPSBT
+      const psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
+      const signatures = parseSignaturesFromPSBT(psbtHex);
+      if (!signatures) {
+        throw new Error("No signatures found in PSBT");
+      }
+      
+      // Return the signatures object directly (same format as HERMIT)
+      return signatures;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to extract signatures: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Gets the encoded QR code frames for the transaction
+   * @returns {string[]} Array of QR code frame strings
+   */
+  getQRCodeFrames(): string[] {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+    return this.qrCodeFrames;
   }
 }
