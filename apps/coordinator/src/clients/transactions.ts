@@ -55,7 +55,7 @@ const useFetchPendingTransactions = () => {
   });
 };
 
-export const useTransactionWithHex = (txids: string[]) => {
+export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
   return useQueries({
     queries: txids.map((txid) => ({

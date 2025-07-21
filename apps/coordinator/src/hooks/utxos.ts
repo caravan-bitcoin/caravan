@@ -16,7 +16,7 @@ import {
   Coin,
   fetchTransactionCoins,
   usePendingTransactions,
-  useTransactionWithHex,
+  useTransactionsWithHex,
 } from "clients/transactions";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
@@ -298,7 +298,7 @@ export const useReconstructedUtxos = (
   );
 
   // Fetch all needed transactions with hex
-  const transactionQueries = useTransactionWithHex(neededTxids);
+  const transactionQueries = useTransactionsWithHex(neededTxids);
 
   // Reconstruct UTXOs from fetched data
   const { reconstructedUtxos, isRbf } = useMemo(() => {
