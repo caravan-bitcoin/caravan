@@ -76,7 +76,7 @@ import {
  */
 export const VERSION: string = version;
 
-export { MULTISIG_ROOT } from './constants';
+export { MULTISIG_ROOT } from "./constants";
 
 /**
  * Keystores which support direct interactions.
@@ -706,9 +706,7 @@ export function ConfigAdapter({
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
-export * from "./bcur2/interactions";
-export * from "./bcur2/decoder";
-export * from "./bcur2/encoder";
+export * from "./bcur2";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
