@@ -667,7 +667,7 @@ export class BlockchainClient extends ClientBase {
  * @see getWalletTransactionHistory - For private clients
  */
 
-  public async getAddressTransactionHistory(
+public async getAddressTransactionHistory(
   address: string | string[],
   count: number = 10,
   skip: number = 0
@@ -690,8 +690,8 @@ export class BlockchainClient extends ClientBase {
 
     const addresses = Array.isArray(address) ? address : [address];
     const allTransactions: any[] = [];
-    let anyAddressFailed = false; // Track if any request failed
-    let firstError: Error | null = null; // Track first error
+    let anyAddressFailed = false;
+    let firstError: Error | null = null;
 
     // Use allSettled to handle partial failures
     const results = await Promise.allSettled(
@@ -702,10 +702,10 @@ export class BlockchainClient extends ClientBase {
             : `count=${count}&skip=${skip}`;
           const endpoint = `/address/${addr}/txs?${query}`;
           const response = await this.Get(endpoint);
-          
+                  
           // Robust response handling
           let transactions: any[] = [];
-          
+                  
           // Case 1: Response is already an array
           if (Array.isArray(response)) {
             transactions = response;
@@ -719,20 +719,19 @@ export class BlockchainClient extends ClientBase {
                 break;
               }
             }
-            // Case 3: Single transaction object
-            if (transactions.length === 0 && !Array.isArray(response)) {
+            // Case 3: Single transaction object (only if it has a txid)
+            if (transactions.length === 0 && response.txid) {
               transactions = [response];
             }
           }
-          // Case 4: Unexpected format
+          // Case 4: Unexpected format - just return empty array
           else {
             console.warn('Unexpected transaction response format:', response);
+            transactions = [];
           }
-          
-          if (transactions.length > 0) {
-            return transactions;
-          }
-          return [];
+                  
+          // Always ensure we return an array
+          return Array.isArray(transactions) ? transactions : [];
         } catch (error) {
           anyAddressFailed = true;
           firstError = error as Error;
@@ -741,31 +740,78 @@ export class BlockchainClient extends ClientBase {
       })
     );
 
-    // Process allSettled results
+    // Process allSettled results - include empty arrays too
     for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.length > 0) {
-        allTransactions.push(...result.value);
+      if (result.status === 'fulfilled') {
+        const transactions = result.value;
+        if (Array.isArray(transactions)) {
+          allTransactions.push(...transactions);
+        }
       }
     }
 
-    // Throw if any address failed (preserves test expectations)
+    // Throw if any address failed AND we got no results at all
     if (anyAddressFailed && allTransactions.length === 0) {
       throw firstError || new Error('Failed to fetch transactions for all addresses');
     }
 
+    // Defensive: Ensure allTransactions is always an array
+    if (!Array.isArray(allTransactions)) {
+      console.warn('allTransactions is not an array:', allTransactions);
+      return [];
+    }
+
     // Sort by timestamp (newest first) and apply pagination
     const sortedTransactions = allTransactions
-      .sort((a, b) => (b.time || b.timestamp || 0) - (a.time || a.timestamp || 0))
+      .sort((a, b) => {
+        const timeA = a?.time || a?.timestamp || 0;
+        const timeB = b?.time || b?.timestamp || 0;
+        return timeB - timeA;
+      })
       .slice(0, count);
 
-    return sortedTransactions.map((rawTx: any) => 
-      normalizeTransactionData(rawTx, ClientType.PUBLIC)
-    );
+    // Final safety check
+    if (!Array.isArray(sortedTransactions)) {
+      console.warn('sortedTransactions is not an array:', sortedTransactions);
+      return [];
+    }
+
+    // Map to normalized format with error handling
+    try {
+      return sortedTransactions.map((rawTx: any) => {
+        if (!rawTx || typeof rawTx !== 'object') {
+          console.warn('Invalid transaction object:', rawTx);
+          // Return a minimal valid transaction object
+          return {
+            txid: 'unknown',
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 0,
+            weight: 0,
+            fee: 0,
+            isReceived: false,
+            status: {
+              confirmed: false,
+              blockHeight: undefined,
+              blockHash: undefined,
+              blockTime: undefined,
+            }
+          } as TransactionDetails;
+        }
+        return normalizeTransactionData(rawTx, ClientType.PUBLIC);
+      });
+    } catch (mapError) {
+      console.error('Error in transaction mapping:', mapError);
+      console.error('sortedTransactions:', sortedTransactions);
+      throw mapError;
+    }
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
-   }
   }
+}
 
 /**
  * Retrieves transaction history for a Bitcoin Core wallet (private client only)
