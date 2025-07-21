@@ -507,15 +507,20 @@ export function importPSBT(psbtText, inputs, isRbfPBST) {
 
     // ==== Extract and import signatures (If they are present)====
 
-    // For RBF PSBTs, we skip signature extraction because:
-    // 1. The UTXOs used for signature verification aren't in wallet state
-    // 2. The signature extraction functions expect UTXOs to be in spendable slices
-    // 3. RBF PSBTs are typically unsigned anyway (they're new replacement transactions)
-    // 4. Attempting signature extraction would throw errors ...
+    // We currently skip signature extraction for RBF PSBTs because:
+    // 1. The UTXOs required for signature verification might not be available in the current wallet state.
+    // 2. Signature extraction is tightly coupled to `selectAvailableInputsFromPSBT`, which relies on spendable slices.
+    // 3. In some flows (e.g., external RBF workflows), partially signed PSBTs may still be valid, but our logic doesn’t currently support those cases.
+    // 4. Attempting extraction without proper UTXO context may cause errors or incorrect behavior.
     //
-    // Note: If we don't skip this step on RBFed PSBT then setSignaturesFromPsbt confirms for signature by comparing
-    // PSBT inputs against wallet UTXO's and it throws error then that UTXO does not belong to wallet
-    // Also saves compute if skipped :)
+    // NOTE: This is a limitation of the current implementation, not a fundamental restriction.
+    // It's entirely possible for RBF PSBTs to be partially signed—e.g., in shared wallets where one party creates and signs an RBF,
+    // then sends it to a co-signer for completion.
+    //
+    // TODO: Decouple signature extraction from wallet-bound spendable slices so we can support
+    // partial sig extraction for externally signed or collaboratively constructed PSBTs.
+    //
+    // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
     if (!isRbfPBST) {
       dispatch(setSignaturesFromPsbt(psbt));
     }
