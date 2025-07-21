@@ -146,16 +146,6 @@ class WalletSpend extends React.Component {
     deleteChangeOutput();
   };
 
-  handleImportPSBT = (psbtText, resolvedInputs, hasPendingInputs) => {
-    const { importPSBT } = this.props;
-    try {
-      importPSBT(psbtText, resolvedInputs, hasPendingInputs);
-    } catch (error) {
-      // The PSBTImportComponent will handle error display
-      throw new Error(error);
-    }
-  };
-
   render() {
     const {
       autoSpend,
@@ -270,7 +260,7 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <PSBTImportComponent onImport={this.handleImportPSBT} />
+                <PSBTImportComponent onImport={this.props.importPSBT} />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
