@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Box, Typography, Alert, Button } from "@mui/material";
+import { Box, Alert, Button } from "@mui/material";
 import BCUR2Reader from "./BCUR2Reader";
 import { extractSignaturesFromPSBT } from "../../utils/psbtUtils";
 

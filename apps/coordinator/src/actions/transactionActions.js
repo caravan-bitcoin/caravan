@@ -622,128 +622,124 @@ export function importPSBT(psbtText) {
     let state = getState();
     const { network } = state.settings;
 
-    try {
-      // Handles both PSBTv0 and PSBTv2
-      const psbt = loadPsbt(psbtText, network);
+    // Handles both PSBTv0 and PSBTv2
+    const psbt = loadPsbt(psbtText, network);
 
-      if (!psbt) {
-        throw new Error("Could not parse PSBT.");
-      }
-
-      if (psbt.txInputs.length === 0) {
-        throw new Error("PSBT does not contain any inputs.");
-      }
-      if (psbt.txOutputs.length === 0) {
-        throw new Error("PSBT does not contain any outputs.");
-      }
-
-      dispatch(resetOutputs());
-      dispatch(setUnsignedPSBT(psbt.toBase64()));
-
-      // ==== PROCESS INPUTS ====
-      const inputs = selectInputsFromPSBT(getState(), psbt);
-
-      if (inputs.length === 0) {
-        throw new Error("PSBT does not contain any UTXOs from this wallet.");
-      }
-      if (inputs.length !== psbt.txInputs.length) {
-        throw new Error(
-          `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
-        );
-      }
-
-      dispatch(setInputs(inputs));
-
-      // ==== PROCESS OUTPUTS ====
-      const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
-
-      // Calculate and set fee
-      dispatch(setFeeFromState(outputsTotalSats));
-
-      // ==== Extract and import signatures (If they are present)====
-      let hasMissingScripts = false;
-      let hasMissingUtxos = false;
-
-      psbt.data.inputs.forEach((input, index) => {
-        const inputInfo = {
-          hasRedeemScript: !!input.redeemScript,
-          hasWitnessScript: !!input.witnessScript,
-          hasNonWitnessUtxo: !!input.nonWitnessUtxo,
-          hasWitnessUtxo: !!input.witnessUtxo,
-          hasPartialSig:
-            !!input.partialSig && Object.keys(input.partialSig).length > 0,
-        };
-
-        // Check if this input has signatures but no scripts
-        if (
-          inputInfo.hasPartialSig &&
-          !inputInfo.hasRedeemScript &&
-          !inputInfo.hasWitnessScript
-        ) {
-          hasMissingScripts = true;
-        }
-
-        // Check if this input is missing UTXO data needed for signature validation
-        if (
-          inputInfo.hasPartialSig &&
-          !inputInfo.hasNonWitnessUtxo &&
-          !inputInfo.hasWitnessUtxo
-        ) {
-          hasMissingUtxos = true;
-        }
-      });
-
-      if (hasMissingScripts || hasMissingUtxos) {
-        try {
-          // Enhance the PSBT with script data from our wallet
-          const enhancedPsbt = enhancePSBTWithScripts(psbt, inputs);
-
-          // Check if we still have missing UTXO data and try to add it
-          if (hasMissingUtxos) {
-            // Add UTXO data from our wallet inputs
-            enhancedPsbt.data.inputs.forEach((psbtInput, index) => {
-              const walletInput = inputs[index];
-              if (
-                walletInput &&
-                !psbtInput.witnessUtxo &&
-                !psbtInput.nonWitnessUtxo
-              ) {
-                // For segwit inputs, add witnessUtxo
-                if (
-                  walletInput.multisig &&
-                  walletInput.multisig.name &&
-                  walletInput.multisig.name.includes("p2wsh")
-                ) {
-                  // For P2WSH, witnessUtxo.script should be the output script (P2WSH script hash)
-                  // not the witness script (multisig script)
-                  psbtInput.witnessUtxo = {
-                    script: walletInput.multisig.output, // This is the P2WSH output script
-                    value: parseInt(walletInput.amountSats),
-                  };
-                }
-              }
-            });
-          }
-
-          // Try signature processing with enhanced PSBT
-          dispatch(setSignaturesFromPsbt(enhancedPsbt));
-        } catch (enhanceError) {
-          // Continue without signature import
-        }
-      } else {
-        // No missing scripts detected, try normal signature processing
-        try {
-          dispatch(setSignaturesFromPsbt(psbt));
-        } catch (sigError) {
-          // Continue without signature import
-        }
-      }
-
-      // Finalize the transaction
-      dispatch(finalizeOutputs(true));
-    } catch (error) {
-      throw error; // Re-throw to maintain original behavior
+    if (!psbt) {
+      throw new Error("Could not parse PSBT.");
     }
+
+    if (psbt.txInputs.length === 0) {
+      throw new Error("PSBT does not contain any inputs.");
+    }
+    if (psbt.txOutputs.length === 0) {
+      throw new Error("PSBT does not contain any outputs.");
+    }
+
+    dispatch(resetOutputs());
+    dispatch(setUnsignedPSBT(psbt.toBase64()));
+
+    // ==== PROCESS INPUTS ====
+    const inputs = selectInputsFromPSBT(getState(), psbt);
+
+    if (inputs.length === 0) {
+      throw new Error("PSBT does not contain any UTXOs from this wallet.");
+    }
+    if (inputs.length !== psbt.txInputs.length) {
+      throw new Error(
+        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
+      );
+    }
+
+    dispatch(setInputs(inputs));
+
+    // ==== PROCESS OUTPUTS ====
+    const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
+
+    // Calculate and set fee
+    dispatch(setFeeFromState(outputsTotalSats));
+
+    // ==== Extract and import signatures (If they are present)====
+    let hasMissingScripts = false;
+    let hasMissingUtxos = false;
+
+    psbt.data.inputs.forEach((input) => {
+      const inputInfo = {
+        hasRedeemScript: !!input.redeemScript,
+        hasWitnessScript: !!input.witnessScript,
+        hasNonWitnessUtxo: !!input.nonWitnessUtxo,
+        hasWitnessUtxo: !!input.witnessUtxo,
+        hasPartialSig:
+          !!input.partialSig && Object.keys(input.partialSig).length > 0,
+      };
+
+      // Check if this input has signatures but no scripts
+      if (
+        inputInfo.hasPartialSig &&
+        !inputInfo.hasRedeemScript &&
+        !inputInfo.hasWitnessScript
+      ) {
+        hasMissingScripts = true;
+      }
+
+      // Check if this input is missing UTXO data needed for signature validation
+      if (
+        inputInfo.hasPartialSig &&
+        !inputInfo.hasNonWitnessUtxo &&
+        !inputInfo.hasWitnessUtxo
+      ) {
+        hasMissingUtxos = true;
+      }
+    });
+
+    if (hasMissingScripts || hasMissingUtxos) {
+      try {
+        // Enhance the PSBT with script data from our wallet
+        const enhancedPsbt = enhancePSBTWithScripts(psbt, inputs);
+
+        // Check if we still have missing UTXO data and try to add it
+        if (hasMissingUtxos) {
+          // Add UTXO data from our wallet inputs
+          enhancedPsbt.data.inputs.forEach((psbtInput, index) => {
+            const walletInput = inputs[index];
+            if (
+              walletInput &&
+              !psbtInput.witnessUtxo &&
+              !psbtInput.nonWitnessUtxo
+            ) {
+              // For segwit inputs, add witnessUtxo
+              if (
+                walletInput.multisig &&
+                walletInput.multisig.name &&
+                walletInput.multisig.name.includes("p2wsh")
+              ) {
+                // For P2WSH, witnessUtxo.script should be the output script (P2WSH script hash)
+                // not the witness script (multisig script)
+                psbtInput.witnessUtxo = {
+                  script: walletInput.multisig.output, // This is the P2WSH output script
+                  value: parseInt(walletInput.amountSats),
+                };
+              }
+            }
+          });
+        }
+
+        // Try signature processing with enhanced PSBT
+        dispatch(setSignaturesFromPsbt(enhancedPsbt));
+      } catch (enhanceError) {
+        // Continue without signature import
+      }
+    } else {
+      // No missing scripts detected, try normal signature processing
+      try {
+        dispatch(setSignaturesFromPsbt(psbt));
+      } catch (sigError) {
+        // Continue without signature import
+      }
+    }
+
+    // Finalize the transaction
+    dispatch(finalizeOutputs(true));
   };
 }
 
