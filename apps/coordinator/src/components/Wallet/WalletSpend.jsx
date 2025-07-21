@@ -402,7 +402,7 @@ class WalletSpend extends React.Component {
                         Import PSBT
                       </Button>
                     </label>
-                    
+
                     {!showScanPSBT && (
                       <Button
                         color="primary"

@@ -5,7 +5,6 @@ import {
   multisigRedeemScript,
   multisigWitnessScript,
   generateMultisigFromPublicKeys,
-  scriptToHex,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
@@ -473,29 +472,49 @@ function enhancePSBTWithScripts(psbt, walletInputs) {
 
       // If this is already a proper Caravan Multisig object, we can use it directly
       if (multisig.redeem && multisig.address) {
-        const isP2WSH = multisig.name && multisig.name.includes('p2wsh');
-        const isP2SH = multisig.name && multisig.name.includes('p2sh') && !multisig.name.includes('p2wsh');
-        const isNestedSegwit = multisig.name && multisig.name.includes('p2sh') && multisig.name.includes('p2wsh');
+        const isP2WSH = multisig.name && multisig.name.includes("p2wsh");
+        const isP2SH =
+          multisig.name &&
+          multisig.name.includes("p2sh") &&
+          !multisig.name.includes("p2wsh");
+        const isNestedSegwit =
+          multisig.name &&
+          multisig.name.includes("p2sh") &&
+          multisig.name.includes("p2wsh");
 
         if (isP2WSH) {
           // Pure P2WSH: only witness script needed
-          if (!psbtInput.witnessScript && multisig.redeem && multisig.redeem.output) {
+          if (
+            !psbtInput.witnessScript &&
+            multisig.redeem &&
+            multisig.redeem.output
+          ) {
             psbtInput.witnessScript = multisig.redeem.output;
           }
           // Ensure we don't add redeemScript for pure P2WSH
           if (psbtInput.redeemScript) {
             delete psbtInput.redeemScript;
           }
-          
+
           // Check and add BIP32 derivation data if missing
-          if (!psbtInput.bip32Derivation || psbtInput.bip32Derivation.length === 0) {
-            if (multisig.bip32Derivation && multisig.bip32Derivation.length > 0) {
+          if (
+            !psbtInput.bip32Derivation ||
+            psbtInput.bip32Derivation.length === 0
+          ) {
+            if (
+              multisig.bip32Derivation &&
+              multisig.bip32Derivation.length > 0
+            ) {
               psbtInput.bip32Derivation = multisig.bip32Derivation;
             }
           }
         } else if (isP2SH) {
           // Pure P2SH: only redeem script needed
-          if (!psbtInput.redeemScript && multisig.redeem && multisig.redeem.output) {
+          if (
+            !psbtInput.redeemScript &&
+            multisig.redeem &&
+            multisig.redeem.output
+          ) {
             psbtInput.redeemScript = multisig.redeem.output;
           }
         } else if (isNestedSegwit) {
@@ -503,15 +522,27 @@ function enhancePSBTWithScripts(psbt, walletInputs) {
           if (!psbtInput.redeemScript && multisig.output) {
             psbtInput.redeemScript = multisig.output; // The P2WSH output script
           }
-          if (!psbtInput.witnessScript && multisig.redeem && multisig.redeem.output) {
+          if (
+            !psbtInput.witnessScript &&
+            multisig.redeem &&
+            multisig.redeem.output
+          ) {
             psbtInput.witnessScript = multisig.redeem.output; // The actual multisig script
           }
         } else {
           // Fallback: try to determine from existing PSBT structure
-          if (!psbtInput.redeemScript && multisig.redeem && multisig.redeem.output) {
+          if (
+            !psbtInput.redeemScript &&
+            multisig.redeem &&
+            multisig.redeem.output
+          ) {
             psbtInput.redeemScript = multisig.redeem.output;
           }
-          if (!psbtInput.witnessScript && multisig.redeem && multisig.redeem.output) {
+          if (
+            !psbtInput.witnessScript &&
+            multisig.redeem &&
+            multisig.redeem.output
+          ) {
             psbtInput.witnessScript = multisig.redeem.output;
           }
         }
@@ -519,7 +550,12 @@ function enhancePSBTWithScripts(psbt, walletInputs) {
       }
 
       // Skip if multisig doesn't have required properties for manual construction
-      if (!multisig.addressType || !multisig.requiredSigners || !multisig.totalSigners || !multisig.publicKeys) {
+      if (
+        !multisig.addressType ||
+        !multisig.requiredSigners ||
+        !multisig.totalSigners ||
+        !multisig.publicKeys
+      ) {
         return;
       }
 
@@ -530,7 +566,7 @@ function enhancePSBTWithScripts(psbt, walletInputs) {
           network,
           multisig.addressType,
           multisig.requiredSigners,
-          ...multisig.publicKeys
+          ...multisig.publicKeys,
         );
 
         if (!properMultisig) {
@@ -589,7 +625,7 @@ export function importPSBT(psbtText) {
     try {
       // Handles both PSBTv0 and PSBTv2
       const psbt = loadPsbt(psbtText, network);
-      
+
       if (!psbt) {
         throw new Error("Could not parse PSBT.");
       }
@@ -627,23 +663,32 @@ export function importPSBT(psbtText) {
       // ==== Extract and import signatures (If they are present)====
       let hasMissingScripts = false;
       let hasMissingUtxos = false;
-      
+
       psbt.data.inputs.forEach((input, index) => {
         const inputInfo = {
           hasRedeemScript: !!input.redeemScript,
           hasWitnessScript: !!input.witnessScript,
           hasNonWitnessUtxo: !!input.nonWitnessUtxo,
           hasWitnessUtxo: !!input.witnessUtxo,
-          hasPartialSig: !!input.partialSig && Object.keys(input.partialSig).length > 0,
+          hasPartialSig:
+            !!input.partialSig && Object.keys(input.partialSig).length > 0,
         };
-        
+
         // Check if this input has signatures but no scripts
-        if (inputInfo.hasPartialSig && !inputInfo.hasRedeemScript && !inputInfo.hasWitnessScript) {
+        if (
+          inputInfo.hasPartialSig &&
+          !inputInfo.hasRedeemScript &&
+          !inputInfo.hasWitnessScript
+        ) {
           hasMissingScripts = true;
         }
-        
+
         // Check if this input is missing UTXO data needed for signature validation
-        if (inputInfo.hasPartialSig && !inputInfo.hasNonWitnessUtxo && !inputInfo.hasWitnessUtxo) {
+        if (
+          inputInfo.hasPartialSig &&
+          !inputInfo.hasNonWitnessUtxo &&
+          !inputInfo.hasWitnessUtxo
+        ) {
           hasMissingUtxos = true;
         }
       });
@@ -652,26 +697,34 @@ export function importPSBT(psbtText) {
         try {
           // Enhance the PSBT with script data from our wallet
           const enhancedPsbt = enhancePSBTWithScripts(psbt, inputs);
-          
+
           // Check if we still have missing UTXO data and try to add it
           if (hasMissingUtxos) {
             // Add UTXO data from our wallet inputs
             enhancedPsbt.data.inputs.forEach((psbtInput, index) => {
               const walletInput = inputs[index];
-              if (walletInput && !psbtInput.witnessUtxo && !psbtInput.nonWitnessUtxo) {
+              if (
+                walletInput &&
+                !psbtInput.witnessUtxo &&
+                !psbtInput.nonWitnessUtxo
+              ) {
                 // For segwit inputs, add witnessUtxo
-                if (walletInput.multisig && walletInput.multisig.name && walletInput.multisig.name.includes('p2wsh')) {
+                if (
+                  walletInput.multisig &&
+                  walletInput.multisig.name &&
+                  walletInput.multisig.name.includes("p2wsh")
+                ) {
                   // For P2WSH, witnessUtxo.script should be the output script (P2WSH script hash)
                   // not the witness script (multisig script)
                   psbtInput.witnessUtxo = {
                     script: walletInput.multisig.output, // This is the P2WSH output script
-                    value: parseInt(walletInput.amountSats)
+                    value: parseInt(walletInput.amountSats),
                   };
                 }
               }
             });
           }
-          
+
           // Try signature processing with enhanced PSBT
           dispatch(setSignaturesFromPsbt(enhancedPsbt));
         } catch (enhanceError) {
@@ -688,7 +741,6 @@ export function importPSBT(psbtText) {
 
       // Finalize the transaction
       dispatch(finalizeOutputs(true));
-      
     } catch (error) {
       throw error; // Re-throw to maintain original behavior
     }

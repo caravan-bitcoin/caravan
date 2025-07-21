@@ -105,7 +105,7 @@ class WalletSign extends React.Component {
 
   handleExportForSigning = () => {
     const { unsignedPSBT, network } = this.props;
-    
+
     if (!unsignedPSBT) {
       console.error("No unsigned PSBT available for export");
       return;
@@ -122,7 +122,7 @@ class WalletSign extends React.Component {
 
       // Get the QR code frames
       const qrCodeFrames = interaction.getQRCodeFrames();
-      
+
       this.setState({
         showBCUR2Encoder: true,
         qrCodeFrames,
@@ -144,7 +144,7 @@ class WalletSign extends React.Component {
     const { spent } = this.state;
     const { showBCUR2Encoder, qrCodeFrames } = this.state;
     const { unsignedPSBT } = this.props;
-    
+
     return (
       <Box>
         <Button href="#" onClick={this.handleCancel}>
@@ -165,7 +165,7 @@ class WalletSign extends React.Component {
           >
             Abandon Transaction
           </Button>
-          
+
           {unsignedPSBT && (
             <Button
               variant="outlined"

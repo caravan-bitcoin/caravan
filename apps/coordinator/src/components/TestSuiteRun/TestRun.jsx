@@ -165,10 +165,15 @@ Derivation: ${test.params.derivation}
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={() => this.setState({ showBCURExport: !this.state?.showBCURExport })}
+                    onClick={() =>
+                      this.setState({
+                        showBCURExport: !this.state?.showBCURExport,
+                      })
+                    }
                     style={{ marginRight: "1em" }}
                   >
-                    {this.state?.showBCURExport ? "Hide" : "Show"} Transaction QR for Signing
+                    {this.state?.showBCURExport ? "Hide" : "Show"} Transaction
+                    QR for Signing
                   </Button>
                 </Box>
                 {this.state?.showBCURExport && (
@@ -177,7 +182,11 @@ Derivation: ${test.params.derivation}
                       Scan these QR codes with your signing device:
                     </Typography>
                     <BCUR2Encoder
-                      qrCodeFrames={test.interaction().request().qrCodeFrames || [test.interaction().request()]}
+                      qrCodeFrames={
+                        test.interaction().request().qrCodeFrames || [
+                          test.interaction().request(),
+                        ]
+                      }
                       title="Sign Transaction"
                       open={true}
                       onClose={() => this.setState({ showBCURExport: false })}
@@ -213,7 +222,7 @@ Derivation: ${test.params.derivation}
               )}
             {keystore.type === BCUR2 &&
               test.interaction().workflow[0] === "request" &&
-              status === PENDING && 
+              status === PENDING &&
               !test.unsignedTransaction && (
                 <Box align="center">
                   <Typography variant="body1" gutterBottom>
@@ -236,15 +245,25 @@ Derivation: ${test.params.derivation}
               <Box>
                 <BCUR2Reader
                   onStart={this.start}
-                  onSuccess={test.unsignedTransaction ? undefined : this.resolve}
-                  onPSBTSuccess={test.unsignedTransaction ? (psbtData) => {
-                    // For signing tests, we need to parse the PSBT through the interaction
-                    const parsedData = test.interaction().parse(psbtData);
-                    
-                    this.resolve(parsedData);
-                  } : undefined}
+                  onSuccess={
+                    test.unsignedTransaction ? undefined : this.resolve
+                  }
+                  onPSBTSuccess={
+                    test.unsignedTransaction
+                      ? (psbtData) => {
+                          // For signing tests, we need to parse the PSBT through the interaction
+                          const parsedData = test.interaction().parse(psbtData);
+
+                          this.resolve(parsedData);
+                        }
+                      : undefined
+                  }
                   onClear={this.reset}
-                  startText={test.unsignedTransaction ? "Scan the Signed PSBT QR Code Sequence" : "Scan the BCUR2 QR Code Sequence"}
+                  startText={
+                    test.unsignedTransaction
+                      ? "Scan the Signed PSBT QR Code Sequence"
+                      : "Scan the BCUR2 QR Code Sequence"
+                  }
                   network={test.interaction().network}
                   mode={test.unsignedTransaction ? "psbt" : "xpub"}
                 />
@@ -354,11 +373,11 @@ Derivation: ${test.params.derivation}
 
   resolve = (actual) => {
     const { test } = this.props;
-    
+
     const postprocessed = test.postprocess(actual);
-    
+
     const result = test.resolve(postprocessed);
-    
+
     this.handleResult(result);
   };
 

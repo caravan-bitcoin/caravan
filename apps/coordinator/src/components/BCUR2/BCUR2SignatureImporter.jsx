@@ -55,7 +55,7 @@ class BCUR2SignatureImporter extends React.Component {
 
   handlePSBTSuccess = (psbtData) => {
     const { validateAndSetSignature } = this.props;
-    
+
     try {
       // Extract signatures from the PSBT
       const signatures = extractSignaturesFromPSBT(psbtData);
@@ -63,7 +63,7 @@ class BCUR2SignatureImporter extends React.Component {
         this.setError("No signatures found in the PSBT");
         return;
       }
-      
+
       // Use the existing validation function
       validateAndSetSignature(signatures, this.setError);
     } catch (e) {

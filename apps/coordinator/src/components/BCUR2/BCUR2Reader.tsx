@@ -33,7 +33,9 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const decoder = useMemo(() => new BCURDecoder2(), []);
-  const statusRef = useRef<"idle" | "active" | "complete" | "error">(autoStart ? "active" : "idle");
+  const statusRef = useRef<"idle" | "active" | "complete" | "error">(
+    autoStart ? "active" : "idle",
+  );
 
   const handleStart = () => {
     onStart?.();
@@ -61,7 +63,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
     }
 
     const text = result?.getText?.();
-    
+
     if (!text || !text.toLowerCase().startsWith("ur:")) {
       return;
     }
@@ -77,7 +79,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
         if (mode === "psbt") {
           // Handle PSBT scanning
           const psbtData = decoder.getDecodedPSBT();
-          
+
           if (!psbtData) {
             throw new Error("Failed to decode PSBT data.");
           }
@@ -94,7 +96,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
         } else {
           // Handle extended public key scanning (original functionality)
           const extendedPublicKeyData = decoder.getDecodedData(network);
-          
+
           if (!extendedPublicKeyData)
             throw new Error("Failed to decode extended public key data.");
           if (!extendedPublicKeyData.bip32Path)
@@ -172,8 +174,8 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
 
       {!error && isScanning && (
         <Typography variant="body2" sx={{ mt: 1 }}>
-          {mode === "psbt" 
-            ? "Scanning PSBT QR code... Show all QR parts in sequence." 
+          {mode === "psbt"
+            ? "Scanning PSBT QR code... Show all QR parts in sequence."
             : "Scanning... Show all QR parts in sequence."}
           {progress && ` Progress: ${progress}`}
         </Typography>

@@ -39,7 +39,7 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
 
       // Ensure rootFingerprint is a string
       const fingerprintStr = rootFingerprint ? String(rootFingerprint) : "";
-      
+
       if (fingerprintStr) {
         validateAndSetRootFingerprint(fingerprintStr, (error) => {
           this.setError(error);

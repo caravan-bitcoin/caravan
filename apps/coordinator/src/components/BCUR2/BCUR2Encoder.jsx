@@ -88,8 +88,8 @@ const BCUR2Encoder = ({
   };
 
   const handlePrevious = () => {
-    setCurrentFrameIndex((prev) => 
-      prev === 0 ? qrCodeFrames.length - 1 : prev - 1
+    setCurrentFrameIndex((prev) =>
+      prev === 0 ? qrCodeFrames.length - 1 : prev - 1,
     );
   };
 
@@ -107,7 +107,7 @@ const BCUR2Encoder = ({
       maxWidth="md"
       fullWidth
       PaperProps={{
-        sx: { minHeight: "600px" }
+        sx: { minHeight: "600px" },
       }}
     >
       <DialogTitle>
@@ -122,23 +122,28 @@ const BCUR2Encoder = ({
       </DialogTitle>
 
       <DialogContent>
-        <Box display="flex" flexDirection="column" alignItems="center" spacing={3}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          spacing={3}
+        >
           {/* QR Code Display */}
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 2, 
-              display: "flex", 
-              alignItems: "center", 
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
               justifyContent: "center",
               minWidth: qrSize + 32,
               minHeight: qrSize + 32,
             }}
           >
             {currentFrame ? (
-              <QRCode 
-                value={currentFrame} 
-                size={qrSize} 
+              <QRCode
+                value={currentFrame}
+                size={qrSize}
                 level="M"
                 includeMargin={true}
               />
@@ -152,7 +157,7 @@ const BCUR2Encoder = ({
           {/* Frame Information */}
           {frameCount > 1 && (
             <Box textAlign="center">
-              <Chip 
+              <Chip
                 label={`Frame ${currentFrameIndex + 1} of ${frameCount}`}
                 color="primary"
                 variant="outlined"
@@ -209,11 +214,13 @@ const BCUR2Encoder = ({
           {/* Instructions */}
           <Box textAlign="center" maxWidth={400}>
             <Typography variant="body1" gutterBottom>
-              Scan these QR codes with your signing device to sign the transaction.
+              Scan these QR codes with your signing device to sign the
+              transaction.
             </Typography>
             {frameCount > 1 && (
               <Typography variant="body2" color="textSecondary">
-                Your device will need to scan all {frameCount} frames to reconstruct the complete transaction.
+                Your device will need to scan all {frameCount} frames to
+                reconstruct the complete transaction.
               </Typography>
             )}
           </Box>

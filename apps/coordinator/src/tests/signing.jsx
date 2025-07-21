@@ -31,9 +31,11 @@ class SignMultisigTransactionTest extends Test {
     if (this.params.keystore === HERMIT) {
       tempResult = this.interaction().parse(result);
     }
-    
-    const finalResult = tempResult.signatures ? tempResult.signatures : tempResult;
-    
+
+    const finalResult = tempResult.signatures
+      ? tempResult.signatures
+      : tempResult;
+
     return finalResult;
   }
 
@@ -43,7 +45,7 @@ class SignMultisigTransactionTest extends Test {
     if (!expected || !actual || expected.length !== actual.length) {
       return false;
     }
-    
+
     // Get the unsigned PSBT for validation
     let psbtHex;
     try {
@@ -52,53 +54,57 @@ class SignMultisigTransactionTest extends Test {
         this.params.inputs,
         this.params.outputs,
       );
-      
+
       // The unsignedMultisigPSBT returns { ...psbt, txn } so we need to access the PSBT methods
       // Try different approaches to get the hex
-      if (typeof unsignedPSBTWrapper.toHex === 'function') {
+      if (typeof unsignedPSBTWrapper.toHex === "function") {
         psbtHex = unsignedPSBTWrapper.toHex();
-      } else if (typeof unsignedPSBTWrapper.toBase64 === 'function') {
+      } else if (typeof unsignedPSBTWrapper.toBase64 === "function") {
         const psbtBase64 = unsignedPSBTWrapper.toBase64();
-        psbtHex = Buffer.from(psbtBase64, 'base64').toString('hex');
+        psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
       } else if (unsignedPSBTWrapper.txn) {
         // The txn property contains the hex transaction, but we need the full PSBT
         // Try to reconstruct the PSBT hex from the wrapper
-        if (typeof unsignedPSBTWrapper.data?.toBuffer === 'function') {
-          psbtHex = unsignedPSBTWrapper.data.toBuffer().toString('hex');
-        } else if (typeof unsignedPSBTWrapper.toBuffer === 'function') {
-          psbtHex = unsignedPSBTWrapper.toBuffer().toString('hex');
+        if (typeof unsignedPSBTWrapper.data?.toBuffer === "function") {
+          psbtHex = unsignedPSBTWrapper.data.toBuffer().toString("hex");
+        } else if (typeof unsignedPSBTWrapper.toBuffer === "function") {
+          psbtHex = unsignedPSBTWrapper.toBuffer().toString("hex");
         } else {
           // Fallback: use the txn hex (though this is just the transaction, not the full PSBT)
           psbtHex = unsignedPSBTWrapper.txn;
         }
       } else if (Buffer.isBuffer(unsignedPSBTWrapper)) {
-        psbtHex = unsignedPSBTWrapper.toString('hex');
-      } else if (typeof unsignedPSBTWrapper === 'string') {
-        if (unsignedPSBTWrapper.startsWith('70736274')) {
+        psbtHex = unsignedPSBTWrapper.toString("hex");
+      } else if (typeof unsignedPSBTWrapper === "string") {
+        if (unsignedPSBTWrapper.startsWith("70736274")) {
           psbtHex = unsignedPSBTWrapper;
         } else {
-          psbtHex = Buffer.from(unsignedPSBTWrapper, 'base64').toString('hex');
+          psbtHex = Buffer.from(unsignedPSBTWrapper, "base64").toString("hex");
         }
       } else {
-        throw new Error(`Unknown PSBT format returned: ${typeof unsignedPSBTWrapper}, constructor: ${unsignedPSBTWrapper?.constructor?.name}`);
+        throw new Error(
+          `Unknown PSBT format returned: ${typeof unsignedPSBTWrapper}, constructor: ${unsignedPSBTWrapper?.constructor?.name}`,
+        );
       }
     } catch (e) {
       return false;
     }
-    
+
     // Validate each signature cryptographically
     for (let inputIndex = 0; inputIndex < expected.length; inputIndex++) {
       const expectedSig = expected[inputIndex];
       const actualSig = actual[inputIndex];
-      
+
       if (!expectedSig || !actualSig) {
         return false;
       }
-      
+
       // Convert hex string to Buffer if needed
-      const sigBuffer = typeof actualSig === 'string' ? 
-        Buffer.from(actualSig, 'hex') : actualSig;
-      
+      const sigBuffer =
+        typeof actualSig === "string"
+          ? Buffer.from(actualSig, "hex")
+          : actualSig;
+
       // Validate the actual signature cryptographically
       const validatedPubkey = validateMultisigPsbtSignature(
         psbtHex,
@@ -106,17 +112,17 @@ class SignMultisigTransactionTest extends Test {
         sigBuffer,
         this.params.inputs[inputIndex].amountSats,
       );
-      
+
       if (!validatedPubkey) {
         return false;
       }
-      
+
       // Check if the validated pubkey matches the expected one
       if (validatedPubkey !== this.params.publicKeys[inputIndex]) {
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -240,7 +246,7 @@ class SignMultisigTransactionTest extends Test {
         returnSignatureArray: true,
       });
     }
-    
+
     const interaction = SignMultisigTransaction({
       keystore: this.params.keystore,
       network: this.params.network,
@@ -252,7 +258,7 @@ class SignMultisigTransactionTest extends Test {
       psbt: this.params.psbt,
       returnSignatureArray: this.params.returnSignatureArray,
     });
-    
+
     return interaction;
   }
 
