@@ -1903,34 +1903,54 @@ describe("BlockchainClient", () => {
         });
       });
 
-      it('should use correct endpoint for MEMPOOL', async () => {
-        const mockResponse = [
-          {
-            txid: 'tx1',
-            fee: 1000,
-            time: 1234567890,
-            version: 1,
-            locktime: 0,
-            vin: [],
-            vout: [],
-            size: 250,
-            weight: 1000,
-            status: { confirmed: true }
-          }
-        ];
+    it('should use correct endpoint for MEMPOOL', async () => {
+  const mockResponse = [
+    {
+      txid: 'tx1',
+      fee: 1000,
+      time: 1234567890,
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 250,
+      weight: 1000,
+      status: { confirmed: true }
+    }
+  ];
 
-        const mockGet = vi.fn().mockResolvedValue(mockResponse);
-        client.Get = mockGet;
+  const mockGet = vi.fn().mockResolvedValue(mockResponse);
+  client.Get = mockGet;
 
-        const result = await client.getAddressTransactionHistory(testAddress, 20, 40);
+  const result = await client.getAddressTransactionHistory(testAddress, 20, 40);
 
-        expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=20&skip=40`);
-        expect(result).toHaveLength(1);
-      });
-    });
+  expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=20&skip=40`);
+  expect(result).toHaveLength(1);
+  
+  // Validate the transformed data shape and content
+  expect(result[0]).toEqual({
+    txid: 'tx1',
+    fee: 1000,
+    version: 1,
+    locktime: 0,
+    vin: [],
+    vout: [],
+    size: 250,
+    weight: 1000,
+    isReceived: false,
+    status: { 
+      confirmed: true,
+      blockHash: undefined,
+      blockHeight: undefined,
+      blockTime: undefined
+    }
+  });
+});
 
-    describe('blockstream', () => {
-      beforeEach(() => {
+});
+
+describe('blockstream', () => {
+  beforeEach(() => {
         client = new BlockchainClient({
           type: ClientType.PUBLIC,
           provider: PublicBitcoinProvider.BLOCKSTREAM,
@@ -1939,29 +1959,48 @@ describe("BlockchainClient", () => {
       });
 
       it('should use correct endpoint for BLOCKSTREAM', async () => {
-        const mockResponse = [
-          {
-            txid: 'tx1',
-            fee: 1000,
-            time: 1234567890,
-            version: 1,
-            locktime: 0,
-            vin: [],
-            vout: [],
-            size: 250,
-            weight: 1000,
-            status: { confirmed: true }
-          }
-        ];
+  const mockResponse = [
+    {
+      txid: 'tx1',
+      fee: 1000,
+      time: 1234567890,
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 250,
+      weight: 1000,
+      status: { confirmed: true }
+    }
+  ];
 
-        const mockGet = vi.fn().mockResolvedValue(mockResponse);
-        client.Get = mockGet;
+  const mockGet = vi.fn().mockResolvedValue(mockResponse);
+  client.Get = mockGet;
 
-        const result = await client.getAddressTransactionHistory(testAddress, 15, 30);
+  const result = await client.getAddressTransactionHistory(testAddress, 15, 30);
 
-        expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=15&offset=30`);
-        expect(result).toHaveLength(1);
-      });
+  expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=15&offset=30`);
+  expect(result).toHaveLength(1);
+  
+  // Validate the transformed data shape and content
+  expect(result[0]).toEqual({
+    txid: 'tx1',
+    fee: 1000,
+    version: 1,
+    locktime: 0,
+    vin: [],
+    vout: [],
+    size: 250,
+    weight: 1000,
+    isReceived: false,
+    status: { 
+      confirmed: true,
+      blockHash: undefined,
+      blockHeight: undefined,
+      blockTime: undefined
+    }
+  });
+});
     });
   });
 
