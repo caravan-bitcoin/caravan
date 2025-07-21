@@ -884,7 +884,7 @@ public async getWalletTransactionHistory(
 
   return spentTransactions.map((tx) => {
     
-    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : undefined;
+    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : 0;
     
     // Explicitly type the transaction object - TypeScript will ensure it matches TransactionDetails
     const transformedTx: TransactionDetails = {

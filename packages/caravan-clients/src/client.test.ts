@@ -2559,7 +2559,7 @@ describe('getWalletTransactionHistory', () => {
       mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.transactionWithoutFee]);
 
       const result = await client.getWalletTransactionHistory();
-      expect(result[0].fee).toBeUndefined();
+      expect(result[0].fee).toBe(0);
     });
 
     it('should handle unconfirmed transactions', async () => {

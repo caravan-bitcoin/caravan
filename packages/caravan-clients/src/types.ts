@@ -136,7 +136,7 @@ export interface TransactionDetails {
   size: number;
   vsize?: number;
   weight: number;
-  fee?: number; // Made optional since it can be undefined for some transactions
+  fee: number; 
   status: {
     confirmed: boolean;
     blockHeight?: number;
