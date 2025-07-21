@@ -836,10 +836,12 @@ public async getWalletTransactionHistory(
     includeWatchOnly,
   });
 
-  return spentTransactions.map((tx): TransactionDetails => {
+  return spentTransactions.map((tx) => {
+    
     const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : undefined;
     
-    return {
+    // Explicitly type the transaction object - TypeScript will ensure it matches TransactionDetails
+    const transformedTx: TransactionDetails = {
       txid: tx.txid,
       version: 1,
       locktime: 0,
@@ -861,7 +863,9 @@ public async getWalletTransactionHistory(
       address: tx.address,
       abandoned: tx.abandoned,
       time: tx.time,
-    } as TransactionDetails;
+    };
+    
+    return transformedTx;
   });
 }
   
