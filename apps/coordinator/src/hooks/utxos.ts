@@ -354,7 +354,6 @@ export const usePsbtInputs = (parsedPsbt: any) => {
 
   const { transactions: pendingTxs } = usePendingTransactions();
 
-  // Only fetch reconstructed UTXOs if there are missing inputs
   const {
     utxos: reconstructedUtxos,
     isRbf: isRbfPSBT,
