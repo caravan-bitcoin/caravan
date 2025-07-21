@@ -15,7 +15,11 @@ import { useSelector } from "react-redux";
 import { WalletState } from "selectors/wallet";
 
 interface PSBTImportComponentProps {
-  onImport: (psbtText: string, inputs: any[], isRbfPBST: boolean) => void;
+  onImport: (
+    psbtText: string,
+    inputs: any[],
+    hasPendingInputs: boolean,
+  ) => void;
 }
 
 // Main PSBT Import Component
@@ -28,8 +32,12 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   const [parsedPsbt, setParsedPsbt] = useState<any>(null);
   const network = useSelector((state: WalletState) => state.settings.network);
 
-  const { allInputs, isRbfPSBT, reconstructionLoading, reconstructionError } =
-    usePsbtInputs(parsedPsbt);
+  const {
+    allInputs,
+    hasPendingInputs,
+    reconstructionLoading,
+    reconstructionError,
+  } = usePsbtInputs(parsedPsbt);
 
   useEffect(() => {
     if (reconstructionError) {
@@ -70,7 +78,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     // Auto-import when inputs are resolved
     if (resolvedInputsCount > 0 && resolvedInputsCount === totalPsbtInputs) {
       try {
-        onImport(psbtText, allInputs, isRbfPSBT);
+        onImport(psbtText, allInputs, hasPendingInputs);
         // Clear state after successful import
         setPsbtText("");
         setParsedPsbt(null);
@@ -86,7 +94,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     reconstructionLoading,
     parsedPsbt,
     allInputs.length,
-    isRbfPSBT,
+    hasPendingInputs,
     psbtText,
     onImport,
   ]);

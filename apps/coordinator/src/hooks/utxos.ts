@@ -301,9 +301,12 @@ export const useReconstructedUtxos = (
   const transactionQueries = useTransactionsWithHex(neededTxids);
 
   // Reconstruct UTXOs from fetched data
-  const { reconstructedUtxos, isRbf } = useMemo(() => {
+  const { reconstructedUtxos, hasPendingInputs } = useMemo(() => {
     if (transactionQueries.some((q) => q.isLoading)) {
-      return { reconstructedUtxos: [] as ReconstructedUtxos[], isRbf: false };
+      return {
+        reconstructedUtxos: [] as ReconstructedUtxos[],
+        hasPendingInputs: false,
+      };
     }
 
     const txLookup = new Map(
@@ -322,7 +325,7 @@ export const useReconstructedUtxos = (
 
   return {
     utxos: reconstructedUtxos,
-    isRbf,
+    hasPendingInputs,
     isLoading: transactionQueries.some((q) => q.isLoading),
     error: transactionQueries.find((q) => q.error)?.error,
   };
@@ -356,7 +359,7 @@ export const usePsbtInputs = (parsedPsbt: any) => {
 
   const {
     utxos: reconstructedUtxos,
-    isRbf: isRbfPSBT,
+    hasPendingInputs,
     isLoading: reconstructionLoading,
     error: reconstructionError,
   } = useReconstructedUtxos(pendingTxs, allSlices, missingInputIds);
@@ -366,7 +369,7 @@ export const usePsbtInputs = (parsedPsbt: any) => {
     if (!availableInputs || !parsedPsbt) return [];
 
     // For normal PSBTs, just return available inputs
-    if (!isRbfPSBT) {
+    if (!hasPendingInputs) {
       return availableInputs;
     }
 
@@ -382,7 +385,7 @@ export const usePsbtInputs = (parsedPsbt: any) => {
   }, [
     availableInputs,
     parsedPsbt,
-    isRbfPSBT,
+    hasPendingInputs,
     reconstructionLoading,
     reconstructedUtxos,
     psbtInputIdentifiers,
@@ -390,7 +393,7 @@ export const usePsbtInputs = (parsedPsbt: any) => {
 
   return {
     allInputs,
-    isRbfPSBT,
+    hasPendingInputs,
     reconstructionLoading,
     reconstructionError,
     psbtInputIdentifiers,

@@ -146,10 +146,10 @@ class WalletSpend extends React.Component {
     deleteChangeOutput();
   };
 
-  handleImportPSBT = (psbtText, resolvedInputs, isRbfPBST) => {
+  handleImportPSBT = (psbtText, resolvedInputs, hasPendingInputs) => {
     const { importPSBT } = this.props;
     try {
-      importPSBT(psbtText, resolvedInputs, isRbfPBST);
+      importPSBT(psbtText, resolvedInputs, hasPendingInputs);
     } catch (error) {
       // The PSBTImportComponent will handle error display
       throw new Error(error);

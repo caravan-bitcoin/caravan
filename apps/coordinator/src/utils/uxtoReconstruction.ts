@@ -170,9 +170,9 @@ export function reconstructUtxosFromPendingTransactions(
   >,
   allSlices: Slice[],
   neededInputIds: Set<string>, // Derived from the PSBT
-): { reconstructedUtxos: ReconstructedUtxos[]; isRbf: boolean } {
+): { reconstructedUtxos: ReconstructedUtxos[]; hasPendingInputs: boolean } {
   const reconstructedUtxos: ReconstructedUtxos[] = [];
-  let isRbf = false;
+  let hasPendingInputs = false;
 
   // Loop through each unconfirmed transaction
   for (const pendingTx of pendingTransactions) {
@@ -187,7 +187,7 @@ export function reconstructUtxosFromPendingTransactions(
       // Only proceed if this input is one we're looking to reconstruct
       if (!neededInputIds.has(inputId)) continue;
       // Mark that at least one of our needed inputs was consumed by a pending tx
-      isRbf = true;
+      hasPendingInputs = true;
       const originalTxData = originalTxLookup.get(input.txid);
       if (!originalTxData) continue;
 
@@ -206,7 +206,7 @@ export function reconstructUtxosFromPendingTransactions(
     }
   }
 
-  return { reconstructedUtxos, isRbf };
+  return { reconstructedUtxos, hasPendingInputs };
 }
 
 /*
