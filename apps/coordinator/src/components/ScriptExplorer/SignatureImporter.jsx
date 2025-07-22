@@ -9,7 +9,14 @@ import {
   getMaskedDerivation,
   P2SH,
 } from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import {
+  JADE,
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+} from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -126,6 +133,7 @@ class SignatureImporter extends React.Component {
             <MenuItem value={COLDCARD} disabled={!isWallet}>
               Coldcard
             </MenuItem>
+            <MenuItem value={JADE}>Jade</MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
@@ -157,7 +165,12 @@ class SignatureImporter extends React.Component {
     } = this.props;
     const { method } = signatureImporter;
 
-    if (method === BITBOX || method === TREZOR || method === LEDGER) {
+    if (
+      method === BITBOX ||
+      method === TREZOR ||
+      method === LEDGER ||
+      method === JADE
+    ) {
       return (
         <DirectSignatureImporter
           network={network}
