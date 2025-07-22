@@ -44,6 +44,7 @@ interface HermitSignatureImporterProps {
   network: Network;
   inputs: LegacyInput[];
   outputs: LegacyOutput[];
+  enableRBF: boolean;
 }
 
 interface HermitSignatureImporterState {
@@ -62,6 +63,7 @@ class HermitSignatureImporter extends React.Component<
     network: string;
     inputs: never[];
     outputs: never[];
+    enableRBF: boolean;
   };
 
   constructor(props: HermitSignatureImporterProps) {
@@ -105,6 +107,7 @@ class HermitSignatureImporter extends React.Component<
       outputs,
       setUnsignedPSBT,
       unsignedPsbtFromState,
+      enableRBF,
     } = this.props;
     let psbtToSign;
 
@@ -113,9 +116,16 @@ class HermitSignatureImporter extends React.Component<
     // be a scaffolded PSBT without any inputs.
 
     if (unsignedPsbtFromState === "" && inputs.length > 0) {
+      const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
       psbtToSign = getUnsignedMultisigPsbtV0({
         network,
-        inputs: inputs.map(convertLegacyInput),
+        inputs: inputs.map((input) => {
+          const convertedInput = convertLegacyInput(input);
+          return {
+            ...convertedInput,
+            sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+          };
+        }),
         outputs: outputs.map(convertLegacyOutput),
         includeGlobalXpubs: true,
       }).toBase64();
@@ -347,11 +357,12 @@ class HermitSignatureImporter extends React.Component<
 }
 
 function mapStateToProps(state: {
-  spend: { transaction: { unsignedPSBT: any } };
+  spend: { transaction: { unsignedPSBT: any; enableRBF: boolean } };
 }) {
   return {
     ...state.spend.transaction,
     unsignedPsbtFromState: state.spend.transaction.unsignedPSBT,
+    enableRBF: state.spend.transaction.enableRBF,
   };
 }
 

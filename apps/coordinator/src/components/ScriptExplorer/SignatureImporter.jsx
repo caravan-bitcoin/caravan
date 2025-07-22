@@ -351,6 +351,7 @@ class SignatureImporter extends React.Component {
       network,
       outputs,
       setSigningKey,
+      enableRBF,
     } = this.props;
     this.setState({ signedPsbt });
     if (!Array.isArray(inputsSignatures)) {
@@ -397,9 +398,16 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
+          const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
           const args = {
             network,
-            inputs: inputs.map(convertLegacyInput),
+            inputs: inputs.map((input) => {
+              const convertedInput = convertLegacyInput(input);
+              return {
+                ...convertedInput,
+                sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+              };
+            }),
             outputs: outputs.map(convertLegacyOutput),
           };
           const psbt = getUnsignedMultisigPsbtV0(args);
@@ -495,9 +503,16 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
+              const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
               const args = {
                 network,
-                inputs: inputs.map(convertLegacyInput),
+                inputs: inputs.map((input) => {
+                  const convertedInput = convertLegacyInput(input);
+                  return {
+                    ...convertedInput,
+                    sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+                  };
+                }),
                 outputs: outputs.map(convertLegacyOutput),
               };
               const psbt = getUnsignedMultisigPsbtV0(args);
@@ -627,6 +642,7 @@ SignatureImporter.propTypes = {
   unsignedPSBT: PropTypes.string,
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
+  enableRBF: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   ledgerPolicyHmacs: PropTypes.array.isRequired,
 };

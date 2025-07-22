@@ -32,6 +32,7 @@ export interface Slice {
       path: string;
     }[];
   };
+  bip32Path?: string;
   lastUsed?: string;
   lastUsedTime?: number;
 }
@@ -234,7 +235,7 @@ export const getConfirmedBalance = createSelector(
     totalBalance - pendingBalance,
 );
 
-interface SliceWithLastUsed extends Slice {
+export interface SliceWithLastUsed extends Slice {
   lastUsed?: string;
   lastUsedTime?: number;
 }
