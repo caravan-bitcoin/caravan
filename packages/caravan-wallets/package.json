@@ -78,6 +78,7 @@
     "@caravan/bitcoin": "*",
     "@caravan/psbt": "*",
     "@keystonehq/bc-ur-registry": "^0.7.0",
+    "@ngraveio/bc-ur": "^1.1.13",
     "@ledgerhq/hw-app-btc": "^5.34.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.27.12",

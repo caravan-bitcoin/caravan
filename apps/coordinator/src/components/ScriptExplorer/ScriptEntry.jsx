@@ -357,27 +357,30 @@ class ScriptEntry extends React.Component {
           </form>
 
           <Box mt={2}>
-            <label htmlFor="import-psbt">
-              <input
-                style={{ display: "none" }}
-                id="import-psbt"
-                name="import-psbt"
-                accept="application/base64"
-                onChange={this.handleImportPSBT}
-                type="file"
-              />
+            <Grid container spacing={2} alignItems="center">
+              <Grid item>
+                <label htmlFor="import-psbt">
+                  <input
+                    style={{ display: "none" }}
+                    id="import-psbt"
+                    name="import-psbt"
+                    accept="application/base64"
+                    onChange={this.handleImportPSBT}
+                    type="file"
+                  />
 
-              <Button
-                color="primary"
-                variant="contained"
-                component="span"
-                disabled={importPSBTDisabled}
-                style={{ marginTop: "2em" }}
-              >
-                Import PSBT
-              </Button>
-              <FormHelperText error>{importPSBTError}</FormHelperText>
-            </label>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    component="span"
+                    disabled={importPSBTDisabled}
+                  >
+                    Import PSBT
+                  </Button>
+                </label>
+              </Grid>
+            </Grid>
+            <FormHelperText error>{importPSBTError}</FormHelperText>
           </Box>
 
           {scriptHex !== "" && !this.hasScriptError() ? (

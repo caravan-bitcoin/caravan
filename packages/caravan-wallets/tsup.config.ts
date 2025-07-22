@@ -10,6 +10,7 @@ export default defineConfig({
         util: true,
         crypto: true,
         buffer: true,
+        assert: true,
       },
     }),
     provideSelf(),
