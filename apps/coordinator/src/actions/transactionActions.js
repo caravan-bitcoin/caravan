@@ -474,7 +474,7 @@ export function setFeeAndFeeRateFromState(outputsTotalSats, psbt) {
   };
 }
 
-export function importPSBT(psbtText, inputs, isRbfPBST) {
+export function importPSBT(psbtText, inputs, hasPendingInputs) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
@@ -521,7 +521,7 @@ export function importPSBT(psbtText, inputs, isRbfPBST) {
     // partial sig extraction for externally signed or collaboratively constructed PSBTs.
     //
     // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
-    if (!isRbfPBST) {
+    if (!hasPendingInputs) {
       dispatch(setSignaturesFromPsbt(psbt));
     }
 
