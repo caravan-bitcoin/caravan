@@ -5,6 +5,8 @@ import {
   createCancelRbfTransaction,
   TransactionAnalyzer,
   UTXO,
+  createCPFPTransaction,
+  CPFPOptions,
 } from "@caravan/fees";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
@@ -297,4 +299,63 @@ export const useCreateCancelRBF = (
   );
 
   return { createCancelRBF };
+};
+
+export const useCreateCPFP = (
+  transaction: TransactionDetails,
+  txHex: string,
+  availableUtxos: UTXO[],
+) => {
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const globalXpubs = useGetGlobalXpubs();
+
+  const createCPFP = useCallback(
+    (feeRate: number, spendableOutputIndex: number, changeAddress: string) => {
+      if (
+        !transaction ||
+        !txHex ||
+        !availableUtxos ||
+        !network ||
+        !addressType ||
+        !requiredSigners ||
+        !totalSigners ||
+        !globalXpubs ||
+        !changeAddress ||
+        spendableOutputIndex === undefined
+      ) {
+        throw new Error("Missing required parameters for CPFP");
+      }
+
+      const cpfpOptions: CPFPOptions = {
+        originalTx: txHex,
+        network: network as Network,
+        targetFeeRate: feeRate,
+        absoluteFee: transaction.fee.toString(),
+        availableInputs: availableUtxos,
+        requiredSigners,
+        totalSigners,
+        scriptType: addressType as MultisigAddressType,
+        dustThreshold: DUST_IN_SATOSHIS.toString(),
+        spendableOutputIndex,
+        changeAddress,
+        strict: false, // Less strict validation for better user experience
+        globalXpubs,
+      };
+
+      return createCPFPTransaction(cpfpOptions);
+    },
+    [
+      transaction,
+      txHex,
+      availableUtxos,
+      network,
+      addressType,
+      requiredSigners,
+      totalSigners,
+      globalXpubs,
+    ],
+  );
+
+  return { createCPFP };
 };
