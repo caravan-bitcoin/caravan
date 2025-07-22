@@ -22,6 +22,7 @@ import {
   RawTransactionData,
   ListTransactionsItem,
   WalletTransactionResponse,
+  WalletTransactionDetails
 } from "./types";
 import {
   bitcoindGetAddressStatus,
@@ -857,7 +858,7 @@ public async getWalletTransactionHistory(
   count: number = 100,
   skip: number = 0,
   includeWatchOnly: boolean = true
-): Promise<TransactionDetails[]> {
+): Promise<WalletTransactionDetails[]> {
   if (count < 1 || count > 100000) {
     throw new Error("Count must be between 1 and 100000");
   }
@@ -883,11 +884,9 @@ public async getWalletTransactionHistory(
   });
 
   return spentTransactions.map((tx) => {
-    
     const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : 0;
     
-    // Explicitly type the transaction object - TypeScript will ensure it matches TransactionDetails
-    const transformedTx: TransactionDetails = {
+    const transformedTx: WalletTransactionDetails = {
       txid: tx.txid,
       version: 1,
       locktime: 0,
@@ -897,13 +896,14 @@ public async getWalletTransactionHistory(
       weight: 0,
       fee: feeSats,
       isReceived: false,
-      amount: tx.amount,
       status: {
         confirmed: tx.confirmations > 0,
         blockHeight: tx.blockheight,
         blockHash: tx.blockhash,
         blockTime: tx.blocktime,
       },
+      // Required wallet-specific properties
+      amount: tx.amount,
       confirmations: tx.confirmations,
       category: tx.category,
       address: tx.address,

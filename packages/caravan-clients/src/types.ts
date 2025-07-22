@@ -144,8 +144,9 @@ export interface TransactionDetails {
     blockTime?: number;
   };
   isReceived?: boolean;
-  
-  // Wallet-specific properties (optional since they don't apply to all transaction types)
+}
+
+export interface WalletTransactionDetails extends TransactionDetails {
   amount?: number;
   confirmations?: number;
   category?: string;
