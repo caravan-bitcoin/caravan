@@ -1,9 +1,14 @@
 import { test, expect } from "@playwright/test";
 import bitcoinClient, { clientConfig } from "../utils/bitcoinClient";
 import { testStateManager } from "../utils/testState";
+import path from "path";
+import fs from "fs";
 
 test.describe("Transaction Creation and Signing", () => {
   const client = bitcoinClient();
+  const downloadDir = path.join(process.cwd(),'e2e/downloads');
+  //!check the psbt file type, if we can build a type for it ??
+  let downloadedpsbtFile: any;
 
   test("should create transaction with auto coin selection and allow manual signing", async ({
     page,
@@ -51,14 +56,11 @@ test.describe("Transaction Creation and Signing", () => {
     await page
     .locator("button[role=tab][type=button]:has-text('Send')")
     .click();
-    const walletNames = testStateManager.getWalletsNames();
-
-
 
     const receiverAddress = testStateManager.getReceiver().address;
     console.log("destinationAddress",receiverAddress);
 
-    // Destination Address
+    // Receiver Address
     await page.locator('input[name="destination"]').fill(receiverAddress);
 
     await page.waitForTimeout(2000)
@@ -76,6 +78,43 @@ test.describe("Transaction Creation and Signing", () => {
     
     await page.waitForTimeout(2000)
 
+    const downloadPromise = page.waitForEvent("download");
+
+    await page.click('button[type=button]:has-text("Download Unsigned PSBT")');
+
+    //Wait for download to complete
+    const downloadedFile = await downloadPromise;
+    console.log("downloadedFile",downloadPromise)
+
+    // const fileName = downloadedFile.suggestedFilename();
+
+    //Save the file in our created downloads directory
+    downloadedpsbtFile = path.join(downloadDir, "unsignedPSBT");
+
+    await downloadedFile.saveAs(downloadedpsbtFile);
+
+    expect(fs.existsSync(downloadedpsbtFile)).toBe(true);
+
+    // base-64 encoded psbt string 
+    const psbtData = fs.readFileSync(downloadedpsbtFile, 'utf8')
+
+    console.log("psbtdata", psbtData)
+
+    // Store the downloaded file path in shared state
+    // testStateManager.updateState({ downloadWalletFile: downloadedWalletFile });
+
+    
+
+    //! steps more 
+    // 1. check inside the psbt data 
+    // 2. make new methods for psbt signing, 
+    // 3. sign the tx and get the signatures, check also what does we get after signing 
+    // what will happen in case we sign with wrong wallet, do we got any sort of error as well
+    // 
+
+
+
+
     //!handling the PSBT file 
 
     } catch (error:any) {
@@ -84,4 +123,34 @@ test.describe("Transaction Creation and Signing", () => {
     }
   });
 });
+
+/*
+//!
+    const downloadPromise = page.waitForEvent('download');
+
+    await page.click('button[type=button]:has-text("Download Wallet Details")');
+
+    //Wait for download to complete
+    const download = await downloadPromise;
+
+    const suggestedFilename = download.suggestedFilename();
+
+    //Save the file to our created download dir
+
+    downloadedWalletFile = path.join(downloadDir,suggestedFilename);
+    await download.saveAs(downloadedWalletFile);
+
+    expect(fs.existsSync(downloadedWalletFile)).toBe(true);
+
+    const walletData = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
+
+    expect(walletData).toHaveProperty('name');
+    expect(walletData).toHaveProperty('network');
+    expect(walletData).toHaveProperty('addressType');
+    expect(walletData).toHaveProperty('extendedPublicKeys');
+
+    // Store the downloaded file path in shared state
+    testStateManager.updateState({ downloadWalletFile: downloadedWalletFile });
+//!
+*/
 

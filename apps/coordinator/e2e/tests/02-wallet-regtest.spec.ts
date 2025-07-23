@@ -172,11 +172,10 @@ test.describe("Wallet Regtest Configuration", () => {
       //Sending 0.5btc each to 4 addresses
       expect(totalBalance).toBe(2)
 
-      const senderAddress = testStateManager.getSenderAddress()
-      const walletNames = testStateManager.getWalletsNames()
-
+      const senderRef = testStateManager.getSender()
+      
       // Mine 4 more block to confirm our pending txs
-      await client?.fundAddress(senderAddress,walletNames[0],4)
+      await client?.fundAddress(senderRef.address,senderRef.walletName,4)
 
       await page.locator("button[type=button]:has-text('Refresh')").click()
 
