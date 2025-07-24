@@ -33,11 +33,28 @@ export interface rpcConfig {
     watcherWallet?: string,
   }
 
+  export interface walletReference {
+    walletName: string,
+    address: string 
+  }
+
+  export interface downloadedFiles {
+    WalletFile?: string,
+    UnsignedPsbt?: string
+  }
+
+  export interface uploadFiles {
+
+  }
   export interface TestState {
-    downloadWalletFile: string,
+    downloadDir: string,
+    uploadDir: string,
+    downloadDirFiles: downloadedFiles,
+    uploadedDirFiles?: string[],
     test_wallet_names: string[],
     test_wallets: any[]
-    senderAddress: string
+    sender: walletReference,
+    receiver: walletReference,
     timestamp: number
   }
 
@@ -70,4 +87,39 @@ export interface MultiWalletDescriptors {
   formattedPaths: string[];
   descriptors: WalletDescriptors[];
   xpubs: string[]
+}
+
+export interface SignedPsbtResult {
+  unsignedPsbtPath: string
+  signedPsbtPath: string
+  signedPsbtBase64: string 
+  isComplete?: boolean 
+  walletsSigned: string[] 
+}
+
+export interface PsbtData {
+  version: number
+  inputCount: number
+  outputCount: number
+  inputs: PsbtInputData[]
+  outputs: PsbtOutputData[]
+  hasSignatures: boolean
+  isComplete: boolean
+  base64: string 
+}
+
+export interface PsbtInputData {
+  txid: string
+  vout: number 
+  sequence?: number
+  signatures: { [pubkey: string]: string}
+  signatureCount: number 
+  redeemScript?: string 
+  witnessScript?: string 
+}
+
+export interface PsbtOutputData {
+  address?: string 
+  value: number 
+  scriptPubKey: string 
 }

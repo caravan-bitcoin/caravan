@@ -372,8 +372,63 @@ export class BitcoinCoreService {
  * @returns Combined PSBT with all signatures
  */
 
+  async combinePsbt(psbtArray: string[]): Promise<string>{
+    try {
+      if(psbtArray.length < 2){
+        throw new Error("Need at least 2 PSBTs to combine")
+      }
+      
+      // So, combinepsbt will take this array of PSBTs and will merge their signatures
+      const combinePsbt = await this.client.command("combinepsbt", psbtArray)
+
+      console.log(`successfully combined ${psbtArray.length} psbts: ${combinePsbt}`)
+
+      return combinePsbt;
+      
+    } catch (error) {
+      console.log("error",error)
+      throw new Error(`Failed to combine PSBTs: ${error}`)
+    }
+  }
   
+  /**
+   * Decodes a PSBT and returns detailed information about its structure and signatures
+   * 
+   * @param psbtBase64 - Base64 encoded PSBT string
+   * @returns Decoded PSBT information including inputs, outputs, and signature data
+   */
+  async decodePsbt(psbtBase64: string): Promise<any> {
+    try {
+      const decodedPsbt = await this.client.command("decodepsbt", psbtBase64);
+      return decodedPsbt;
+    } catch (error) {
+      throw new Error(`Failed to decode PSBT: ${error}`);
+    }
+  }
 
+  /**
+   * Finalize a PSBT and extracts the raw transaction hex
+   * This will convert a fully signed PSBT into a broadcastable transaction
+   * 
+   * @param fullySignedPsbt - Base64 encoded fully signed PSBT
+   * @param extract - Whether to extract the final transaction (def: true)
+   * @returns Object with finalized PSBT and transaction hex (if extracted)
+   */
 
+  async finalizePsbt(fullySignedPsbt: string, extract: boolean = true): Promise<{psbt?: string, hex?: string, complete: boolean}> {
+      try {
+        // finalizepsbt completes the PSBT by adding final scriptsig/scriptwitness 
+        const result = await this.client.command("finalizepsbt", fullySignedPsbt, extract);
+        
+        console.log("final PSBT result: ", {complete: result.complete, txhex: result?.hex})
 
+        return {
+          psbt: result.psbt,
+          hex: result.hex,
+          complete: result.complete
+        };
+      } catch (error) {
+        throw new Error(`Failed to finalize PSBT: ${error}`)
+      }
+  }
 }

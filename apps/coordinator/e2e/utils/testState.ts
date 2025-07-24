@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { TestState } from "./types";
+import { TestState, walletReference } from "./types";
 
 export class TestStateManager {
   private stateFile: string;
@@ -11,7 +11,7 @@ export class TestStateManager {
 
   getState(): TestState {
     if (!fs.existsSync(this.stateFile)) {
-      throw new Error("Test state file not found.")
+      throw new Error("Test state file not found.");
     }
     return JSON.parse(fs.readFileSync(this.stateFile, 'utf-8'))
   }
@@ -27,12 +27,23 @@ export class TestStateManager {
 
   getDownloadedWalletFile(): string{
     const state = this.getState();
-
-    if(!state.downloadWalletFile){
+    const walletFile = state.downloadDirFiles.WalletFile
+    
+    if(!walletFile){
       throw new Error('Wallet file not yet downloaded. Make sure wallet creation test ran first.');
-
     }
-    return state.downloadWalletFile;
+    return walletFile;
+  }
+
+  getDownloadedUnsignedPsbtFile(): string{
+    const state = this.getState();
+    const unsignedPsbtFile = state.downloadDirFiles.UnsignedPsbt
+
+    if(!unsignedPsbtFile){
+      throw new Error("Unsigned psbt file not yet downloaded.");
+    }
+
+    return unsignedPsbtFile;
   }
 
   getWalletsNames(){
@@ -40,9 +51,14 @@ export class TestStateManager {
     return state.test_wallet_names
   }
 
-  getSenderAddress(){
+  getSender():walletReference{
     const state = this.getState();
-    return state.senderAddress;
+    return state.sender;
+  }
+
+  getReceiver():walletReference {
+    const state = this.getState();
+    return state.receiver;
   }
 }
 

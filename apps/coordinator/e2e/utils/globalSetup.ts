@@ -20,9 +20,10 @@ async function globalSetup(_config: FullConfig){
 
     const {walletNames, testWallets} = await createTestWallets(client!);
 
-    const newAddress = await client?.getNewAddress(walletNames[0]);
-    
-    await client?.fundAddress(newAddress,walletNames[0]);
+    const senderAddress = await client?.getNewAddress(walletNames[0]);
+    await client?.fundAddress(senderAddress,walletNames[0]);
+
+    const receiverAddress = await client?.getNewAddress(walletNames[1]);
 
 
     let testStateFile = path.join(process.cwd(), "e2e/temp/test-state.json");
@@ -31,13 +32,26 @@ async function globalSetup(_config: FullConfig){
     if(!fs.existsSync(tempDir)){
         fs.mkdirSync(tempDir, {recursive: true})
     }
-     
+
+    //! think of handling this in better way (this looks so unprof)
     // Storing initial state
     const testState: TestState = {
-        downloadWalletFile: '',
+        downloadDir: path.join(process.cwd(), 'e2e/downloads'),
+        uploadDir: path.join(process.cwd(),'e2e/uploads'),
+        downloadDirFiles: {
+            WalletFile: "",
+            UnsignedPsbt: "",
+        },
         test_wallet_names: walletNames,
         test_wallets: testWallets,
-        senderAddress: newAddress,
+        sender: {
+            address: senderAddress,
+            walletName: walletNames[0]
+        },
+        receiver: {
+            address: receiverAddress,
+            walletName: walletNames[1]
+        },
         timestamp: Date.now(),
     }
 

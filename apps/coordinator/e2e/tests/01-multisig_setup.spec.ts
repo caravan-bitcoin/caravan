@@ -13,7 +13,7 @@ test.describe("Caravan Wallet Creation", () => {
   let client = bitcoinClient();
   
   
-  const downloadDir = path.join(process.cwd(),'e2e/downloads');
+  const downloadDir = testStateManager.getState().downloadDir;
   let downloadedWalletFile: string;
 
 
@@ -168,7 +168,7 @@ test.describe("Caravan Wallet Creation", () => {
     expect(walletData).toHaveProperty('extendedPublicKeys');
 
     // Store the downloaded file path in shared state
-    testStateManager.updateState({ downloadWalletFile: downloadedWalletFile });
+    testStateManager.updateState({ downloadDirFiles: {WalletFile: downloadedWalletFile} });
     
   });
 });
