@@ -117,7 +117,6 @@ export const usePendingTransactions = () => {
       };
     });
 
-  // 🔥 KEY FIX: Detect when transactions move from pending to confirmed
   useEffect(() => {
     const prevIds = prevPendingTxIds.current;
     const currentIds = currentPendingTxIds;
