@@ -230,7 +230,6 @@ export const useCompletedTransactions = (
       !!blockchainClient &&
       (clientType === "private" || walletAddresses.length > 0),
     staleTime: 30000, // Cache for 30 seconds
-    // 🔥 KEY FIX: Add refetch settings to ensure fresh data
     refetchOnWindowFocus: true, // Refetch when user comes back to tab
     refetchInterval: 60000, // Poll every 60 seconds for new confirmed transactions
   });
