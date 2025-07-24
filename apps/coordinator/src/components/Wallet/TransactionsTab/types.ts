@@ -1,5 +1,8 @@
 // TODO: This should come from the `clients` package
 // Types for the transaction data
+import type { TransactionDetails } from "@caravan/clients";
+// TODO: This should come from the `clients` package
+// Types for the transaction data
 export interface Transaction {
   txid: string;
   version: number;
@@ -21,13 +24,14 @@ export interface Transaction {
 
 export interface TransactionTableProps {
   transactions: Transaction[];
-  onSort: (property: keyof TransactionT) => void;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
+  onSort: (property: SortBy) => void; // Changed from string to SortBy to match the hook
+  sortBy: SortBy; // Changed from string to SortBy for consistency
+  sortDirection: SortDirection; // Use the proper type instead of "asc" | "desc"
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onAccelerateTransaction?: (tx: TransactionT) => void;
   renderActions?: (tx: TransactionT) => React.ReactNode;
+  showAcceleration?: boolean; // Add this prop to control acceleration button visibility
 }
 
 // How our Transaction Table's should look like
@@ -65,3 +69,9 @@ export interface FeeDisplayProps {
 export interface ValueDisplayProps {
   valueInSats?: number | null;
 }
+export interface CompletedTransaction extends TransactionDetails {
+  valueToWallet: number;
+  isReceived: boolean;
+}
+
+export type TransactionType = "pending" | "confirmed";

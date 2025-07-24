@@ -27,6 +27,8 @@ import {
   TransactionTableProps,
   FeeDisplayProps,
   ValueDisplayProps,
+  SortBy,
+  SortDirection,
 } from "./types";
 
 // Helper function to format the relative time
@@ -35,14 +37,17 @@ const formatRelativeTime = (timestamp?: number): string => {
   return formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true });
 };
 
-// Column definitions with sorting configuration
-const columns = [
+// Column definitions with sorting configuration - dynamic based on showAcceleration
+const getColumns = (showAcceleration: boolean) => [
   { id: "txid", label: "Transaction ID", sortable: false },
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "valueToWallet", label: "Value", sortable: true },
   { id: "status", label: "Status", sortable: false },
+  ...(showAcceleration
+    ? [{ id: "accelerate", label: "Accelerate", sortable: false }]
+    : []),
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -196,12 +201,12 @@ export const ValueDisplay: React.FC<ValueDisplayProps> = ({ valueInSats }) => {
   );
 };
 
-// Table header with sort labels
+// Table header with sort labels - Updated to use proper types
 const TransactionTableHeader: React.FC<{
   columns: Array<{ id: string; label: string; sortable: boolean }>;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
-  onSort: (property: keyof TransactionT) => void;
+  sortBy: SortBy;
+  sortDirection: SortDirection;
+  onSort: (property: SortBy) => void;
 }> = ({ columns, sortBy, sortDirection, onSort }) => (
   <TableHead>
     <TableRow>
@@ -210,8 +215,8 @@ const TransactionTableHeader: React.FC<{
           {column.sortable ? (
             <TableSortLabel
               active={sortBy === column.id}
-              direction={sortDirection}
-              onClick={() => onSort(column.id as keyof TransactionT)}
+              direction={sortBy === column.id ? sortDirection : "asc"}
+              onClick={() => onSort(column.id as SortBy)}
             >
               {column.label}
             </TableSortLabel>
@@ -224,9 +229,10 @@ const TransactionTableHeader: React.FC<{
   </TableHead>
 );
 
-// A single transaction row
+// A single transaction row - Updated to handle showAcceleration prop
 const TransactionTableRow: React.FC<{
   tx: TransactionT;
+  showAcceleration: boolean;
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onAccelerateTransaction?: (tx: TransactionT) => void;
@@ -234,6 +240,7 @@ const TransactionTableRow: React.FC<{
   renderActions?: (tx: TransactionT) => React.ReactNode;
 }> = ({
   tx,
+  showAcceleration,
   network,
   onClickTransaction,
   onAccelerateTransaction,
@@ -241,7 +248,7 @@ const TransactionTableRow: React.FC<{
   renderActions,
 }) => {
   // Check if transaction can be accelerated (pending/unconfirmed)
-  const canAccelerate = !tx.status.confirmed;
+  const canAccelerate = !tx.status.confirmed && showAcceleration;
 
   return (
     <TableRow>
@@ -299,39 +306,41 @@ const TransactionTableRow: React.FC<{
           size="small"
         />
       </TableCell>
-      {/* Accelerate button for pending transactions */}
-      {canAccelerate &&
-        onAccelerateTransaction &&
-        (tx.isReceived ? (
-          <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
-            <TableCell>
-              <Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  color="primary"
-                  disabled={true}
-                >
-                  Accelerate
-                </Button>
-              </Box>
-            </TableCell>
-          </Tooltip>
-        ) : (
-          <TableCell>
-            <Button
-              variant="outlined"
-              size="small"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAccelerateTransaction(tx);
-              }}
-            >
-              Accelerate
-            </Button>
-          </TableCell>
-        ))}
+
+      {/* Accelerate button column - only show if showAcceleration is true */}
+      {showAcceleration && (
+        <TableCell>
+          {canAccelerate &&
+            onAccelerateTransaction &&
+            (tx.isReceived ? (
+              <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+                <span>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="primary"
+                    disabled={true}
+                  >
+                    Accelerate
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="outlined"
+                size="small"
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAccelerateTransaction(tx);
+                }}
+              >
+                Accelerate
+              </Button>
+            ))}
+        </TableCell>
+      )}
+
       <TableCell>
         {network && (
           <Tooltip title="View in your preferred block explorer">
@@ -363,8 +372,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onClickTransaction,
   onAccelerateTransaction,
   renderActions,
+  showAcceleration = false, // Default to false for backward compatibility
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  // Get dynamic columns based on showAcceleration
+  const columns = getColumns(showAcceleration);
 
   return (
     <>
@@ -380,7 +393,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             {transactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
-                  No transactions found
+                  <Typography variant="body2" color="textSecondary" py={2}>
+                    No transactions found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
@@ -388,6 +403,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <TransactionTableRow
                   key={tx.txid}
                   tx={tx}
+                  showAcceleration={showAcceleration}
                   network={network}
                   onClickTransaction={onClickTransaction}
                   onAccelerateTransaction={onAccelerateTransaction}
