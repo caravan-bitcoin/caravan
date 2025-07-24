@@ -20,6 +20,7 @@ export interface Transaction {
   isReceived?: boolean;
   vsize?: number;
   valueToWallet?: number;
+  amount?: number;
 }
 
 export interface TransactionTableProps {
@@ -48,6 +49,7 @@ export interface TransactionT {
   vsize?: number;
   isReceived?: boolean;
   valueToWallet?: number;
+  amount?: number;
 }
 
 // For MUI's Select component

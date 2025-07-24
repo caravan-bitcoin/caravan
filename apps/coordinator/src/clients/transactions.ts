@@ -1,7 +1,11 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useEffect, useRef } from "react";
-import { BlockchainClient, TransactionDetails } from "@caravan/clients";
+import {
+  BlockchainClient,
+  TransactionDetails,
+  WalletTransactionDetails,
+} from "@caravan/clients";
 import {
   getPendingTransactionIds,
   getWalletAddresses,
@@ -174,7 +178,7 @@ export const useCompletedTransactions = (
         throw new Error("No blockchain client available");
       }
 
-      let transactions: TransactionDetails[];
+      let transactions: WalletTransactionDetails[];
       if (clientType === "private") {
         // For private clients, use wallet transaction history
         transactions = await blockchainClient.getWalletTransactionHistory(

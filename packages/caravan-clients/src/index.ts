@@ -5,4 +5,5 @@ export type {
   Transaction,
   FeeRatePercentile,
   TransactionDetails,
+  WalletTransactionDetails,
 } from "./types";

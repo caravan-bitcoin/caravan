@@ -399,18 +399,26 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map((tx) => (
-                <TransactionTableRow
-                  key={tx.txid}
-                  tx={tx}
-                  showAcceleration={showAcceleration}
-                  network={network}
-                  onClickTransaction={onClickTransaction}
-                  onAccelerateTransaction={onAccelerateTransaction}
-                  onCopySuccess={() => setSnackbarOpen(true)}
-                  renderActions={renderActions}
-                />
-              ))
+              transactions
+                .map((tx) => ({
+                  ...tx,
+                  valueToWallet:
+                    typeof tx.amount === "number" && tx.amount !== 0
+                      ? Math.round(tx.amount * 1e8)
+                      : tx.valueToWallet,
+                }))
+                .map((tx) => (
+                  <TransactionTableRow
+                    key={tx.txid}
+                    tx={tx}
+                    showAcceleration={showAcceleration}
+                    network={network}
+                    onClickTransaction={onClickTransaction}
+                    onAccelerateTransaction={onAccelerateTransaction}
+                    onCopySuccess={() => setSnackbarOpen(true)}
+                    renderActions={renderActions}
+                  />
+                ))
             )}
           </TableBody>
         </Table>
