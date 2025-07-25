@@ -15,6 +15,22 @@ import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
 export type CryptoPSBTFromCBORFactory = (cbor: Buffer) => CryptoPSBT;
 
 /**
+ * Supported UR types for BCUR2 decoding
+ */
+export type SupportedURType = "crypto-account" | "crypto-hdkey" | "crypto-psbt";
+
+/**
+ * Type guard to check if a string is a supported UR type
+ */
+function isSupportedURType(type: string): type is SupportedURType {
+  return (
+    type === "crypto-account" ||
+    type === "crypto-hdkey" ||
+    type === "crypto-psbt"
+  );
+}
+
+/**
  * Interface representing decoded extended public key data from a BCUR2 QR code
  * @interface ExtendedPublicKeyData
  */
@@ -114,13 +130,33 @@ export class BCURDecoder2 {
   /**
    * Processes decoded CBOR data based on the UR type
    * @private
-   * @param {string} type - The UR type (crypto-account, crypto-hdkey, or crypto-psbt)
+   * @param {SupportedURType} type - The UR type (crypto-account, crypto-hdkey, or crypto-psbt)
    * @param {Buffer} cbor - The decoded CBOR data
    * @param {BitcoinNetwork} network - The Bitcoin network to use
    * @returns {ExtendedPublicKeyData|string|null} The decoded wallet data or PSBT string or null if error
    */
   private handleDecodedResult(
-    type: string,
+    type: "crypto-account",
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | null;
+  private handleDecodedResult(
+    type: "crypto-hdkey",
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | null;
+  private handleDecodedResult(
+    type: "crypto-psbt",
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): string | null;
+  private handleDecodedResult(
+    type: SupportedURType,
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | string | null;
+  private handleDecodedResult(
+    type: SupportedURType,
     cbor: Buffer,
     network: BitcoinNetwork
   ): ExtendedPublicKeyData | string | null {
@@ -133,7 +169,9 @@ export class BCURDecoder2 {
         case "crypto-psbt":
           return this.handleCryptoPSBT(cbor);
         default:
-          throw new Error(`Unsupported UR type: ${type}`);
+          // This should never happen due to TypeScript's exhaustiveness checking
+          const exhaustiveCheck: never = type;
+          throw new Error(`Unsupported UR type: ${exhaustiveCheck}`);
       }
     } catch (err: any) {
       console.error("Error decoding UR:", err);
@@ -199,6 +237,11 @@ export class BCURDecoder2 {
 
     try {
       const result = this.decoder.resultUR();
+
+      if (!isSupportedURType(result.type)) {
+        throw new Error(`Unsupported UR type: ${result.type}`);
+      }
+
       const decodedResult = this.handleDecodedResult(
         result.type,
         Buffer.from(result.cbor.buffer),
@@ -226,6 +269,11 @@ export class BCURDecoder2 {
 
     try {
       const result = this.decoder.resultUR();
+
+      if (!isSupportedURType(result.type)) {
+        throw new Error(`Unsupported UR type: ${result.type}`);
+      }
+
       if (result.type !== "crypto-psbt") {
         throw new Error("QR code does not contain PSBT data");
       }
