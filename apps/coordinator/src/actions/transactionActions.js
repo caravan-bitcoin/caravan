@@ -1,11 +1,11 @@
 import BigNumber from "bignumber.js";
 import {
   estimateMultisigTransactionFee,
+  estimateMultisigTransactionFeeRate,
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
-  selectInputsFromPSBT,
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
 } from "../selectors/transaction";
@@ -25,6 +25,7 @@ export const SET_REQUIRED_SIGNERS = "SET_REQUIRED_SIGNERS";
 export const SET_TOTAL_SIGNERS = "SET_TOTAL_SIGNERS";
 
 export const SET_INPUTS = "SET_INPUTS";
+export const SET_ENABLE_RBF = "SET_ENABLE_RBF";
 
 export const ADD_OUTPUT = "ADD_OUTPUT";
 export const SET_OUTPUT_ADDRESS = "SET_OUTPUT_ADDRESS";
@@ -158,6 +159,13 @@ export function deleteChangeOutput() {
     if (!changeOutputIndex) return;
 
     dispatch(deleteOutput(changeOutputIndex));
+  };
+}
+
+export function setRBF(enabled) {
+  return {
+    type: SET_ENABLE_RBF,
+    value: enabled,
   };
 }
 
@@ -440,17 +448,33 @@ export function setSignaturesFromPsbt(psbt) {
  * @param {BigNumber} outputsTotalSats - Total satoshis in all outputs
  * @returns {Function} Redux thunk function
  */
-export function setFeeFromState(outputsTotalSats) {
+export function setFeeAndFeeRateFromState(outputsTotalSats, psbt) {
   return (dispatch, getState) => {
     const state = getState();
+    const {
+      settings: { addressType, requiredSigners, totalSigners },
+    } = state;
     const inputsTotalSats = BigNumber(state.spend.transaction.inputsTotalSats);
     const feeSats = inputsTotalSats.minus(outputsTotalSats);
     const fee = satoshisToBitcoins(feeSats);
+
+    const feeRate = estimateMultisigTransactionFeeRate({
+      addressType,
+      numInputs: psbt.txInputs.length,
+      numOutputs: psbt.txOutputs.length,
+      m: requiredSigners,
+      n: totalSigners,
+      feesInSatoshis: feeSats,
+    });
+
+    if (feeRate) {
+      dispatch(setFeeRate(Math.floor(parseFloat(feeRate)).toString()));
+    }
     dispatch(setFee(fee));
   };
 }
 
-export function importPSBT(psbtText) {
+export function importPSBT(psbtText, inputs, hasPendingInputs) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
@@ -472,27 +496,34 @@ export function importPSBT(psbtText) {
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
-    const inputs = selectInputsFromPSBT(getState(), psbt);
-
-    if (inputs.length === 0) {
-      throw new Error("PSBT does not contain any UTXOs from this wallet.");
-    }
-    if (inputs.length !== psbt.txInputs.length) {
-      throw new Error(
-        `Only ${inputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
-      );
-    }
 
     dispatch(setInputs(inputs));
 
     // ==== PROCESS INPUTS ====
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
-    // Calculate and set fee
-    dispatch(setFeeFromState(outputsTotalSats));
+    // Calculate and set fee and feeRate
+    dispatch(setFeeAndFeeRateFromState(outputsTotalSats, psbt));
 
     // ==== Extract and import signatures (If they are present)====
-    dispatch(setSignaturesFromPsbt(psbt));
+
+    // We currently skip signature extraction for RBF PSBTs because:
+    // 1. The UTXOs required for signature verification might not be available in the current wallet state.
+    // 2. Signature extraction is tightly coupled to `selectAvailableInputsFromPSBT`, which relies on spendable slices.
+    // 3. In some flows (e.g., external RBF workflows), partially signed PSBTs may still be valid, but our logic doesn’t currently support those cases.
+    // 4. Attempting extraction without proper UTXO context may cause errors or incorrect behavior.
+    //
+    // NOTE: This is a limitation of the current implementation, not a fundamental restriction.
+    // It's entirely possible for RBF PSBTs to be partially signed—e.g., in shared wallets where one party creates and signs an RBF,
+    // then sends it to a co-signer for completion.
+    //
+    // TODO: Decouple signature extraction from wallet-bound spendable slices so we can support
+    // partial sig extraction for externally signed or collaboratively constructed PSBTs.
+    //
+    // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
+    if (!hasPendingInputs) {
+      dispatch(setSignaturesFromPsbt(psbt));
+    }
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));

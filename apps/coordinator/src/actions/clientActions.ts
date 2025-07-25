@@ -31,6 +31,7 @@ export interface ClientSettings {
   username: string;
   password: string;
   walletName?: string;
+  blockchainClient?: BlockchainClient;
 }
 
 // Ideally we'd just use the hook to get the client
@@ -91,13 +92,13 @@ export const getClientProvider = (client: ClientSettings) => {
 export const updateBlockchainClient = () => {
   return (
     dispatch: Dispatch<any>,
-    getState: () => { settings: any; client: any },
+    getState: () => { settings: any; client: ClientSettings },
   ) => {
     const { network } = getState().settings;
     const { client } = getState();
     const { blockchainClient } = client;
 
-    if (matchesClient(blockchainClient, client, network)) {
+    if (blockchainClient && matchesClient(blockchainClient, client, network)) {
       return blockchainClient;
     }
     return dispatch(setBlockchainClient());
@@ -112,8 +113,31 @@ export const setBlockchainClient = () => {
     const { network } = getState().settings;
     const { client } = getState();
 
-    const clientType = getClientType(client);
-    const provider = getClientProvider(client);
+    let clientType = getClientType(client);
+    let provider = getClientProvider(client);
+
+    // Only create a new client if the values are different
+    const { blockchainClient } = client;
+
+    if (blockchainClient && matchesClient(blockchainClient, client, network)) {
+      return blockchainClient;
+    }
+
+    // Handle regtest network: switch to private client if public client was selected
+    if (network === "regtest" && clientType === ClientType.PUBLIC) {
+      clientType = ClientType.PRIVATE;
+      provider = undefined;
+
+      // Update client state to private for regtest
+      dispatch({ type: SET_CLIENT_TYPE, value: ClientType.PRIVATE });
+
+      // Set default regtest URL if not already set to a regtest port
+      if (!client.url || !client.url.includes("18443")) {
+        const defaultRegtestUrl = "http://localhost:18443";
+        dispatch({ type: SET_CLIENT_URL, value: defaultRegtestUrl });
+      }
+    }
+
     const newClient = new BlockchainClient({
       client,
       type: clientType,
@@ -121,8 +145,8 @@ export const setBlockchainClient = () => {
       network,
       throttled: provider === PublicBitcoinProvider.BLOCKSTREAM,
     });
-
     dispatch({ type: SET_BLOCKCHAIN_CLIENT, value: newClient });
+
     return newClient;
   };
 };
