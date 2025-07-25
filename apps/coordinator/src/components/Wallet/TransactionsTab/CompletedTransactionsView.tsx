@@ -3,11 +3,13 @@ import {
   CircularProgress,
   Typography,
   Box,
+  Button,
   Pagination,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Divider,
 } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import {
@@ -20,7 +22,11 @@ import { Transaction } from "./types";
 interface Props {
   transactions: Transaction[];
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: any;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  totalLoaded: number;
   network?: string;
   onClickTransaction?: (txid: string) => void;
 }
@@ -28,7 +34,11 @@ interface Props {
 export const CompletedTransactionsView: React.FC<Props> = ({
   transactions,
   isLoading,
+  isLoadingMore,
   error,
+  hasMore,
+  onLoadMore,
+  totalLoaded,
   network,
   onClickTransaction,
 }) => {
@@ -36,7 +46,7 @@ export const CompletedTransactionsView: React.FC<Props> = ({
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
-  // Set up pagination for completed transactions (same as pending)
+  // Set up pagination for the currently loaded transactions
   const {
     page,
     rowsPerPage,
@@ -89,7 +99,7 @@ export const CompletedTransactionsView: React.FC<Props> = ({
         onClickTransaction={onClickTransaction || handleExplorerLinkClick}
       />
 
-      {/* Pagination Controls - Same as Pending Transactions */}
+      {/* Standard Pagination Controls (for loaded transactions) */}
       {sortedTransactions.length > 0 && (
         <Box
           display="flex"
@@ -111,6 +121,7 @@ export const CompletedTransactionsView: React.FC<Props> = ({
               <MenuItem value="10">10</MenuItem>
               <MenuItem value="25">25</MenuItem>
               <MenuItem value="50">50</MenuItem>
+              <MenuItem value="100">100</MenuItem>
             </Select>
           </FormControl>
 
@@ -127,6 +138,57 @@ export const CompletedTransactionsView: React.FC<Props> = ({
               size="small"
             />
           </Box>
+        </Box>
+      )}
+
+      {/* Load More Section (if there are more transactions to load from API) */}
+      {(hasMore || isLoadingMore) && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Box
+            display="flex"
+            flexDirection="column"
+            justifyContent="center"
+            alignItems="center"
+            p={2}
+            gap={1}
+          >
+            {isLoadingMore ? (
+              <Box display="flex" alignItems="center" gap={2}>
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="textSecondary">
+                  Loading more transactions...
+                </Typography>
+              </Box>
+            ) : hasMore ? (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  size="medium"
+                >
+                  Load More Transactions
+                </Button>
+                <Typography variant="caption" color="textSecondary">
+                  Loaded {totalLoaded} transactions so far
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="body2" color="textSecondary">
+                All transactions loaded ({totalLoaded} total)
+              </Typography>
+            )}
+          </Box>
+        </>
+      )}
+
+      {/* Summary Info */}
+      {!hasMore && !isLoadingMore && (
+        <Box display="flex" justifyContent="center" mt={1}>
+          <Typography variant="caption" color="textSecondary">
+            Showing all {totalLoaded} completed transactions
+          </Typography>
         </Box>
       )}
     </Box>

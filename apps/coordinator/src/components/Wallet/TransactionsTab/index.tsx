@@ -12,12 +12,14 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Button,
 } from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import {
   usePendingTransactions,
-  useCompletedTransactions,
+  useCompletedTransactionsWithLoadMore,
 } from "clients/transactions";
 import { CompletedTransactionsView } from "./CompletedTransactionsView";
 import {
@@ -49,11 +51,17 @@ const TransactionsTab: React.FC = () => {
   const pendingIsLoading = pendingTransactionsResult?.isLoading || false;
   const pendingError = pendingTransactionsResult?.error || null;
 
-  // Use completed transactions hook (regular one, not paginated)
-  const completedTransactionsResult = useCompletedTransactions(100, 0); // Get more transactions
-  const completedTransactions = completedTransactionsResult?.data || [];
-  const completedIsLoading = completedTransactionsResult?.isLoading || false;
-  const completedError = completedTransactionsResult?.error || null;
+  // Use enhanced completed transactions hook with load more functionality
+  const {
+    data: completedTransactions,
+    isLoading: completedIsLoading,
+    isLoadingMore: completedIsLoadingMore,
+    error: completedError,
+    hasMore: completedHasMore,
+    loadMore: loadMoreCompleted,
+    reset: resetCompleted,
+    totalLoaded: completedTotalLoaded,
+  } = useCompletedTransactionsWithLoadMore(100); // Load 100 transactions at a time
 
   const sortingResult = useSortedTransactions(pendingTransactions);
   const sortBy = sortingResult?.sortBy || "blockTime";
@@ -118,22 +126,37 @@ const TransactionsTab: React.FC = () => {
     <div>
       {/* Tab Navigation */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          aria-label="transaction tabs"
-        >
-          <Tab
-            label={`Pending (${pendingTransactions.length})`}
-            id="pending-tab"
-            aria-controls="pending-tabpanel"
-          />
-          <Tab
-            label={`Completed (${completedTransactions.length})`}
-            id="completed-tab"
-            aria-controls="completed-tabpanel"
-          />
-        </Tabs>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="transaction tabs"
+          >
+            <Tab
+              label={`Pending (${pendingTransactions.length})`}
+              id="pending-tab"
+              aria-controls="pending-tabpanel"
+            />
+            <Tab
+              label={`Completed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
+              id="completed-tab"
+              aria-controls="completed-tabpanel"
+            />
+          </Tabs>
+
+          {/* Refresh button for completed transactions */}
+          {tabValue === 1 && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<RefreshIcon />}
+              onClick={resetCompleted}
+              disabled={completedIsLoading}
+            >
+              Refresh
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Pending Transactions Tab */}
@@ -243,7 +266,11 @@ const TransactionsTab: React.FC = () => {
           <CompletedTransactionsView
             transactions={completedTransactions}
             isLoading={completedIsLoading}
+            isLoadingMore={completedIsLoadingMore}
             error={completedError}
+            hasMore={completedHasMore}
+            onLoadMore={loadMoreCompleted}
+            totalLoaded={completedTotalLoaded}
             network={network}
             onClickTransaction={handleExplorerLinkClick}
           />
