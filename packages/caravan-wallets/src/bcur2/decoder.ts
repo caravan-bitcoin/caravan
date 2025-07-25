@@ -140,21 +140,25 @@ export class BCURDecoder2 {
     cbor: Buffer,
     network: BitcoinNetwork
   ): ExtendedPublicKeyData | null;
+
   private handleDecodedResult(
     type: "crypto-hdkey",
     cbor: Buffer,
     network: BitcoinNetwork
   ): ExtendedPublicKeyData | null;
+
   private handleDecodedResult(
     type: "crypto-psbt",
     cbor: Buffer,
     network: BitcoinNetwork
   ): string | null;
+
   private handleDecodedResult(
     type: SupportedURType,
     cbor: Buffer,
     network: BitcoinNetwork
   ): ExtendedPublicKeyData | string | null;
+
   private handleDecodedResult(
     type: SupportedURType,
     cbor: Buffer,
@@ -168,10 +172,11 @@ export class BCURDecoder2 {
           return this.handleCryptoHDKey(cbor, network);
         case "crypto-psbt":
           return this.handleCryptoPSBT(cbor);
-        default:
+        default: {
           // This should never happen due to TypeScript's exhaustiveness checking
           const exhaustiveCheck: never = type;
           throw new Error(`Unsupported UR type: ${exhaustiveCheck}`);
+        }
       }
     } catch (err: any) {
       console.error("Error decoding UR:", err);
