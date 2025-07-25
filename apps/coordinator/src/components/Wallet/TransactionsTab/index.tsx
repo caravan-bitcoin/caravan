@@ -43,14 +43,14 @@ const TransactionsTab: React.FC = () => {
   // Get blockchain client from Redux store
   const blockchainClient = useGetClient();
 
-  // Use our custom hooks for pending transactions with SAFE DEFAULTS
+  // Use our custom hooks for pending transactions
   const pendingTransactionsResult = usePendingTransactions();
   const pendingTransactions = pendingTransactionsResult?.transactions || [];
   const pendingIsLoading = pendingTransactionsResult?.isLoading || false;
   const pendingError = pendingTransactionsResult?.error || null;
 
-  // Use completed transactions hook
-  const completedTransactionsResult = useCompletedTransactions(50, 0); // Get more completed transactions
+  // Use completed transactions hook (regular one, not paginated)
+  const completedTransactionsResult = useCompletedTransactions(100, 0); // Get more transactions
   const completedTransactions = completedTransactionsResult?.data || [];
   const completedIsLoading = completedTransactionsResult?.isLoading || false;
   const completedError = completedTransactionsResult?.error || null;
@@ -63,7 +63,7 @@ const TransactionsTab: React.FC = () => {
 
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
-  // Set up pagination for pending transactions with SAFE DEFAULTS
+  // Set up pagination for pending transactions
   const paginationResult = useTransactionPagination(sortedTransactions.length);
   const {
     page,
@@ -74,7 +74,7 @@ const TransactionsTab: React.FC = () => {
     handleRowsPerPageChange,
   } = paginationResult;
 
-  // Get transactions for current page with SAFE DEFAULTS
+  // Get transactions for current page
   const currentPageTxs = getCurrentPageItems
     ? getCurrentPageItems(sortedTransactions)
     : [];
@@ -244,6 +244,8 @@ const TransactionsTab: React.FC = () => {
             transactions={completedTransactions}
             isLoading={completedIsLoading}
             error={completedError}
+            network={network}
+            onClickTransaction={handleExplorerLinkClick}
           />
         )}
       </div>
