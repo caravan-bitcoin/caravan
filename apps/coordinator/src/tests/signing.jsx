@@ -55,37 +55,8 @@ class SignMultisigTransactionTest extends Test {
         this.params.outputs,
       );
 
-      // The unsignedMultisigPSBT returns { ...psbt, txn } so we need to access the PSBT methods
-      // Try different approaches to get the hex
-      if (typeof unsignedPSBTWrapper.toHex === "function") {
-        psbtHex = unsignedPSBTWrapper.toHex();
-      } else if (typeof unsignedPSBTWrapper.toBase64 === "function") {
-        const psbtBase64 = unsignedPSBTWrapper.toBase64();
-        psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
-      } else if (unsignedPSBTWrapper.txn) {
-        // The txn property contains the hex transaction, but we need the full PSBT
-        // Try to reconstruct the PSBT hex from the wrapper
-        if (typeof unsignedPSBTWrapper.data?.toBuffer === "function") {
-          psbtHex = unsignedPSBTWrapper.data.toBuffer().toString("hex");
-        } else if (typeof unsignedPSBTWrapper.toBuffer === "function") {
-          psbtHex = unsignedPSBTWrapper.toBuffer().toString("hex");
-        } else {
-          // Fallback: use the txn hex (though this is just the transaction, not the full PSBT)
-          psbtHex = unsignedPSBTWrapper.txn;
-        }
-      } else if (Buffer.isBuffer(unsignedPSBTWrapper)) {
-        psbtHex = unsignedPSBTWrapper.toString("hex");
-      } else if (typeof unsignedPSBTWrapper === "string") {
-        if (unsignedPSBTWrapper.startsWith("70736274")) {
-          psbtHex = unsignedPSBTWrapper;
-        } else {
-          psbtHex = Buffer.from(unsignedPSBTWrapper, "base64").toString("hex");
-        }
-      } else {
-        throw new Error(
-          `Unknown PSBT format returned: ${typeof unsignedPSBTWrapper}, constructor: ${unsignedPSBTWrapper?.constructor?.name}`,
-        );
-      }
+      // The unsignedMultisigPSBT returns { data, txn } where data is the actual PSBT
+      psbtHex = unsignedPSBTWrapper.data.toBuffer().toString("hex");
     } catch (e) {
       return false;
     }
