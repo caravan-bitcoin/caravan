@@ -17,10 +17,8 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
-import {
-  usePendingTransactions,
-  useCompletedTransactionsWithLoadMore,
-} from "clients/transactions";
+import { usePendingTransactions } from "clients/transactions";
+import { useCompletedTransactionsWithLoadMore } from "hooks/transaction";
 import { CompletedTransactionsView } from "./CompletedTransactionsView";
 import {
   useSortedTransactions,
