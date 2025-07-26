@@ -16,10 +16,10 @@ export type CryptoPSBTFactory = (buffer: Buffer) => CryptoPSBT;
  * Supports encoding of:
  * - PSBT: Partially Signed Bitcoin Transactions in base64 format
  */
-export class BCUREncoder2 {
-  private data: string;
+export class BCUR2Encoder {
+  private _data: string;
 
-  private maxFragmentLength: number;
+  private _maxFragmentLength: number;
 
   private cryptoPSBTFactory: CryptoPSBTFactory;
 
@@ -34,8 +34,8 @@ export class BCUREncoder2 {
     maxFragmentLength: number = 100,
     cryptoPSBTFactory: CryptoPSBTFactory = (buffer) => new CryptoPSBT(buffer)
   ) {
-    this.data = data;
-    this.maxFragmentLength = maxFragmentLength;
+    this._data = data;
+    this._maxFragmentLength = maxFragmentLength;
     this.cryptoPSBTFactory = cryptoPSBTFactory;
   }
 
@@ -47,13 +47,13 @@ export class BCUREncoder2 {
   encodePSBT(): string[] {
     try {
       // Convert base64 PSBT to buffer
-      const psbtBuffer = Buffer.from(this.data.trim(), "base64");
+      const psbtBuffer = Buffer.from(this._data.trim(), "base64");
 
       // Create CryptoPSBT object
       const cryptoPSBT = this.cryptoPSBTFactory(psbtBuffer);
 
       // Use CryptoPSBT's built-in UREncoder with fragment length
-      const encoder = cryptoPSBT.toUREncoder(this.maxFragmentLength);
+      const encoder = cryptoPSBT.toUREncoder(this._maxFragmentLength);
 
       // Generate all fragments
       const frames: string[] = [];
@@ -69,34 +69,30 @@ export class BCUREncoder2 {
 
   /**
    * Sets new data to encode
-   * @param data - The new data to encode
    */
-  setData(data: string): void {
-    this.data = data;
+  set data(data: string) {
+    this._data = data;
   }
 
   /**
    * Gets the current data
-   * @returns The current data string
    */
-  getData(): string {
-    return this.data;
+  get data(): string {
+    return this._data;
   }
 
   /**
    * Sets the maximum fragment length for QR codes
-   * @param length - Maximum fragment length
    */
-  setMaxFragmentLength(length: number): void {
-    this.maxFragmentLength = length;
+  set maxFragmentLength(length: number) {
+    this._maxFragmentLength = length;
   }
 
   /**
    * Gets the current maximum fragment length
-   * @returns The current maximum fragment length
    */
-  getMaxFragmentLength(): number {
-    return this.maxFragmentLength;
+  get maxFragmentLength(): number {
+    return this._maxFragmentLength;
   }
 
   /**
@@ -105,9 +101,9 @@ export class BCUREncoder2 {
    */
   estimateFragmentCount(): number {
     try {
-      const psbtBuffer = Buffer.from(this.data.trim(), "base64");
+      const psbtBuffer = Buffer.from(this._data.trim(), "base64");
       const cryptoPSBT = this.cryptoPSBTFactory(psbtBuffer);
-      const encoder = cryptoPSBT.toUREncoder(this.maxFragmentLength);
+      const encoder = cryptoPSBT.toUREncoder(this._maxFragmentLength);
       return encoder.fragmentsLength;
     } catch (err: any) {
       throw new Error(`Failed to estimate fragment count: ${err.message}`);

@@ -246,17 +246,13 @@ Derivation: ${test.params.derivation}
                 <BCUR2Reader
                   onStart={this.start}
                   onSuccess={
-                    test.unsignedTransaction ? undefined : this.resolve
-                  }
-                  onPSBTSuccess={
                     test.unsignedTransaction
                       ? (psbtData) => {
                           // For signing tests, we need to parse the PSBT through the interaction
                           const parsedData = test.interaction().parse(psbtData);
-
                           this.resolve(parsedData);
                         }
-                      : undefined
+                      : this.resolve
                   }
                   onClear={this.reset}
                   startText={

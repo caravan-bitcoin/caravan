@@ -3,7 +3,7 @@ import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
 import { UR } from "@ngraveio/bc-ur";
 import { mockDeep, MockProxy } from 'vitest-mock-extended';
 
-import { BCURDecoder2 } from "../decoder";
+import { BCUR2Decoder } from "../decoder";
 
 // Mock the bc-ur-registry module for the utils functions
 vi.mock("@keystonehq/bc-ur-registry", () => {
@@ -75,13 +75,13 @@ vi.mock("@caravan/bitcoin", () => {
   };
 });
 
-describe("BCURDecoder2", () => {
+describe("BCUR2Decoder", () => {
   let mockDecoder: MockProxy<URRegistryDecoder>;
-  let decoder: BCURDecoder2;
+  let decoder: BCUR2Decoder;
 
   beforeEach(() => {
     mockDecoder = mockDeep<URRegistryDecoder>();
-    decoder = new BCURDecoder2(mockDecoder);
+    decoder = new BCUR2Decoder(mockDecoder);
     
     // Setup default mock behaviors
     mockDecoder.isComplete.mockReturnValue(false);

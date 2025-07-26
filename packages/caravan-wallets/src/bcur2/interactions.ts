@@ -18,21 +18,21 @@ import {
   INFO,
 } from "../interaction";
 
-import { BCURDecoder2 } from "./decoder";
-import { BCUREncoder2 } from "./encoder";
+import { BCUR2Decoder } from "./decoder";
+import { BCUR2Encoder } from "./encoder";
 
 /**
- * Factory function type for creating BCURDecoder2 instances
+ * Factory function type for creating BCUR2Decoder instances
  */
-export type BCURDecoder2Factory = () => BCURDecoder2;
+export type BCUR2DecoderFactory = () => BCUR2Decoder;
 
 /**
- * Factory function type for creating BCUREncoder2 instances
+ * Factory function type for creating BCUR2Encoder instances
  */
-export type BCUREncoder2Factory = (
+export type BCUR2EncoderFactory = (
   data: string,
   maxFragmentLength: number
-) => BCUREncoder2;
+) => BCUR2Encoder;
 
 /** Constant defining BCUR2 interactions */
 export const BCUR2 = "bcur2";
@@ -45,20 +45,20 @@ export const BCUR2 = "bcur2";
  * @extends IndirectKeystoreInteraction
  */
 export class BCUR2Interaction extends IndirectKeystoreInteraction {
-  protected decoder: BCURDecoder2;
+  protected decoder: BCUR2Decoder;
 
   protected network: BitcoinNetwork;
 
-  protected decoderFactory: BCURDecoder2Factory;
+  protected decoderFactory: BCUR2DecoderFactory;
 
   /**
    * Creates a new BCUR2 interaction instance
    * @param {BitcoinNetwork} network - The Bitcoin network to use (mainnet or testnet)
-   * @param {BCURDecoder2Factory} decoderFactory - Factory function for creating BCURDecoder2 instances
+   * @param {BCUR2DecoderFactory} decoderFactory - Factory function for creating BCUR2Decoder instances
    */
   constructor(
     network: BitcoinNetwork = Network.MAINNET,
-    decoderFactory: BCURDecoder2Factory = () => new BCURDecoder2()
+    decoderFactory: BCUR2DecoderFactory = () => new BCUR2Decoder()
   ) {
     super();
     this.network = network;
@@ -118,7 +118,7 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
  * Handles the scanning and decoding of multi-part QR codes containing
  * extended public key (xpub) data in the BCUR2 format.
  *
- * This interaction class works with the BCURDecoder2 class to process
+ * This interaction class works with the BCUR2Decoder class to process
  * multi-part QR codes. It expects QR codes to contain:
  * - Extended public key (xpub)
  * - Root fingerprint (xfp)
@@ -152,7 +152,7 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
    * @param {Object} params - The constructor parameters
    * @param {BitcoinNetwork} [params.network=Network.MAINNET] - The Bitcoin network to use
    * @param {string} params.bip32Path - The BIP32 derivation path to request
-   * @param {BCURDecoder2Factory} [params.decoderFactory] - Factory function for creating BCURDecoder2 instances
+   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
    */
   constructor({
     network = Network.MAINNET,
@@ -161,7 +161,7 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
-    decoderFactory?: BCURDecoder2Factory;
+    decoderFactory?: BCUR2DecoderFactory;
   }) {
     super(network, decoderFactory);
     this.bip32Path = bip32Path;
@@ -252,7 +252,7 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
  * @extends BCUR2Interaction
  */
 export class BCUR2EncodeTransaction extends BCUR2Interaction {
-  private encoder: BCUREncoder2;
+  private encoder: BCUR2Encoder;
 
   private psbt: string;
 
@@ -260,7 +260,7 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
 
   private maxFragmentLength: number;
 
-  private encoderFactory: BCUREncoder2Factory;
+  private encoderFactory: BCUR2EncoderFactory;
 
   /**
    * Creates a new BCUR2 encode transaction interaction
@@ -268,21 +268,21 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
    * @param {string} params.psbt - Base64 encoded PSBT to encode
    * @param {BitcoinNetwork} params.network - The Bitcoin network
    * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
-   * @param {BCURDecoder2Factory} [params.decoderFactory] - Factory function for creating BCURDecoder2 instances
-   * @param {BCUREncoder2Factory} [params.encoderFactory] - Factory function for creating BCUREncoder2 instances
+   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
    */
   constructor({
     psbt,
     network = Network.MAINNET,
     maxFragmentLength = 100,
     decoderFactory,
-    encoderFactory = (data, maxLen) => new BCUREncoder2(data, maxLen),
+    encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
   }: {
     psbt: string;
     network?: BitcoinNetwork;
     maxFragmentLength?: number;
-    decoderFactory?: BCURDecoder2Factory;
-    encoderFactory?: BCUREncoder2Factory;
+    decoderFactory?: BCUR2DecoderFactory;
+    encoderFactory?: BCUR2EncoderFactory;
   }) {
     super(network, decoderFactory);
     this.psbt = psbt;
@@ -365,7 +365,7 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
    */
   setPSBT(psbt: string): void {
     this.psbt = psbt;
-    this.encoder.setData(psbt);
+    this.encoder.data = psbt;
     this.qrCodeFrames = []; // Reset frames to force re-encoding
   }
 
@@ -375,7 +375,7 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
    */
   setMaxFragmentLength(length: number): void {
     this.maxFragmentLength = length;
-    this.encoder.setMaxFragmentLength(length);
+    this.encoder.maxFragmentLength = length;
     this.qrCodeFrames = []; // Reset frames to force re-encoding
   }
 }
@@ -390,7 +390,7 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
  * @extends BCUR2Interaction
  */
 export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
-  private encoder: BCUREncoder2;
+  private encoder: BCUR2Encoder;
 
   private psbt: string;
 
@@ -398,7 +398,7 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
 
   private maxFragmentLength: number;
 
-  private encoderFactory: BCUREncoder2Factory;
+  private encoderFactory: BCUR2EncoderFactory;
 
   /**
    * Creates a new BCUR2 sign multisig transaction interaction
@@ -406,21 +406,21 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
    * @param {string} params.psbt - Base64 encoded PSBT to sign
    * @param {BitcoinNetwork} params.network - The Bitcoin network
    * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
-   * @param {BCURDecoder2Factory} [params.decoderFactory] - Factory function for creating BCURDecoder2 instances
-   * @param {BCUREncoder2Factory} [params.encoderFactory] - Factory function for creating BCUREncoder2 instances
+   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
    */
   constructor({
     psbt,
     network = Network.MAINNET,
     maxFragmentLength = 100,
     decoderFactory,
-    encoderFactory = (data, maxLen) => new BCUREncoder2(data, maxLen),
+    encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
   }: {
     psbt: string;
     network?: BitcoinNetwork;
     maxFragmentLength?: number;
-    decoderFactory?: BCURDecoder2Factory;
-    encoderFactory?: BCUREncoder2Factory;
+    decoderFactory?: BCUR2DecoderFactory;
+    encoderFactory?: BCUR2EncoderFactory;
   }) {
     super(network, decoderFactory);
 

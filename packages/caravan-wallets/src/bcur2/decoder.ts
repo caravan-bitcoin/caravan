@@ -51,7 +51,7 @@ export interface ExtendedPublicKeyData {
  * - crypto-account: Contains output descriptors with keys
  * - crypto-hdkey: Contains hierarchical deterministic keys
  */
-export class BCURDecoder2 {
+export class BCUR2Decoder {
   private decoder: URRegistryDecoder;
 
   private error: string | null = null;

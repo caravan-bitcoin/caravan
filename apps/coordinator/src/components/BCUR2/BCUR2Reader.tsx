@@ -1,73 +1,37 @@
 import React from "react";
 import { ExtendedPublicKeyData } from "@caravan/wallets";
 import { BitcoinNetwork } from "@caravan/bitcoin";
-import BCUR2XPubReader from "./BCUR2XPubReader";
-import BCUR2PSBTReader from "./BCUR2PSBTReader";
+import BCUR2Scanner from "./BCUR2Scanner";
 
-type ScanMode = "xpub" | "psbt";
-
-interface BCUR2ReaderProps {
+interface BCUR2ReaderBaseProps {
   onStart?: () => void;
-  onSuccess?: (data: ExtendedPublicKeyData) => void;
-  onPSBTSuccess?: (psbt: string) => void;
   onClear: () => void;
   startText?: string;
   width?: string | number;
-  network?: BitcoinNetwork;
-  mode?: ScanMode;
   autoStart?: boolean;
+  validatePSBT?: (psbt: string) => boolean;
 }
 
+interface BCUR2ReaderXPubProps extends BCUR2ReaderBaseProps {
+  mode: "xpub";
+  network: BitcoinNetwork;
+  onSuccess: (data: ExtendedPublicKeyData) => void;
+}
+
+interface BCUR2ReaderPSBTProps extends BCUR2ReaderBaseProps {
+  mode: "psbt";
+  network?: BitcoinNetwork;
+  onSuccess: (psbt: string) => void;
+}
+
+type BCUR2ReaderProps = BCUR2ReaderXPubProps | BCUR2ReaderPSBTProps;
+
 /**
- * Wrapper component that provides backward compatibility for BCUR2Reader.
- * Automatically selects the appropriate reader based on the provided callbacks.
- * If both onSuccess and onPSBTSuccess are provided, defaults to PSBT mode.
+ * Wrapper component that renders the appropriate BCUR2 reader based on mode.
+ * TypeScript ensures type safety for the onSuccess callback based on the mode.
  */
-const BCUR2Reader: React.FC<BCUR2ReaderProps> = ({
-  onStart,
-  onSuccess,
-  onPSBTSuccess,
-  onClear,
-  startText,
-  width,
-  network,
-  mode,
-  autoStart = false,
-}) => {
-  // Determine the mode based on props if not explicitly provided
-  const detectedMode: ScanMode = mode || (onPSBTSuccess ? "psbt" : "xpub");
-
-  if (detectedMode === "psbt" && onPSBTSuccess) {
-    return (
-      <BCUR2PSBTReader
-        onStart={onStart}
-        onSuccess={onPSBTSuccess}
-        onClear={onClear}
-        startText={startText}
-        width={width}
-        autoStart={autoStart}
-      />
-    );
-  }
-
-  if (detectedMode === "xpub" && onSuccess) {
-    return (
-      <BCUR2XPubReader
-        onStart={onStart}
-        onSuccess={onSuccess}
-        onClear={onClear}
-        startText={startText}
-        width={width}
-        network={network}
-        autoStart={autoStart}
-      />
-    );
-  }
-
-  // Fallback - should not normally reach here
-  throw new Error(
-    "BCUR2Reader: Either onSuccess (for xpub) or onPSBTSuccess (for PSBT) must be provided",
-  );
+const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
+  return <BCUR2Scanner {...props} />;
 };
 
 export default BCUR2Reader;
