@@ -31,7 +31,7 @@ import {
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
   callBitcoindWallet,
-  bitcoindListSpentTransactions,
+  EnhancedTransactionItem,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -874,41 +874,107 @@ public async getWalletTransactionHistory(
     throw new Error("Wallet name is required for private client transaction listings");
   }
 
-  const spentTransactions = await bitcoindListSpentTransactions({
-    url: this.bitcoindParams.url,
-    auth: this.bitcoindParams.auth,
+  // Call Bitcoin Core's listtransactions directly to get ALL transactions (not just spent ones)
+  const response = await callBitcoindWallet({
+    baseUrl: this.bitcoindParams.url,
     walletName: this.bitcoindParams.walletName,
-    count,
-    skip,
-    includeWatchOnly,
+    auth: this.bitcoindParams.auth,
+    method: "listtransactions",
+    params: ["*", count, skip, includeWatchOnly],
   });
 
-  return spentTransactions.map((tx) => {
-    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : 0;
+  if (!response?.result || !Array.isArray(response.result)) {
+    throw new Error("Failed to retrieve transactions from Bitcoin Core");
+  }
+
+  // Include both send AND receive transactions (and other categories)
+  const allTransactions = response.result.filter(
+    (tx: ListTransactionsItem) => 
+      tx.category === "send" || 
+      tx.category === "receive" || 
+      tx.category === "generate" ||
+      tx.category === "immature"
+  );
+
+  // Fetch detailed transaction info in parallel to get size/weight data
+  const detailedTransactions = await Promise.allSettled(
+    allTransactions.map(async (tx): Promise<EnhancedTransactionItem> => {
+      try {
+        // Get full transaction details which includes size/vsize/weight
+        const fullTx = await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "gettransaction",
+          params: [tx.txid, false, true], // [txid, include_watchonly, verbose]
+        }) as { result?: WalletTransactionResponse };
+
+        // Extract size data with proper fallbacks
+        const decoded = fullTx.result?.decoded;
+        const size = decoded?.size ?? 0;
+        const vsize = decoded?.vsize ?? decoded?.size ?? 0; // Use size as fallback for vsize
+        const weight = decoded?.weight ?? (decoded?.size ? decoded.size * 4 : 0); // Estimate weight as size * 4
+
+        return {
+          ...tx,
+          size,
+          vsize,
+          weight,
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch details for transaction ${tx.txid}:`, error);
+        // Fallback to original transaction data with 0 size
+        return {
+          ...tx,
+          size: 0,
+          vsize: 0,
+          weight: 0,
+        };
+      }
+    })
+  );
+
+  return detailedTransactions.map((result, index) => {
+    const enhancedTx: EnhancedTransactionItem = result.status === 'fulfilled' 
+      ? result.value 
+      : {
+          ...allTransactions[index],
+          size: 0,
+          vsize: 0,
+          weight: 0,
+        };
+    
+    const feeSats = enhancedTx.fee ? Math.abs(enhancedTx.fee * 100000000) : 0;
+    
+    // Determine if this is a received transaction
+    const isReceived = enhancedTx.category === "receive" || 
+                      enhancedTx.category === "generate" || 
+                      enhancedTx.category === "immature";
     
     const transformedTx: WalletTransactionDetails = {
-      txid: tx.txid,
+      txid: enhancedTx.txid,
       version: 1,
       locktime: 0,
       vin: [],
       vout: [],
-      size: 0,
-      weight: 0,
+      size: enhancedTx.size || 0,        // ✅ Ensure it's always a number
+      vsize: enhancedTx.vsize || 0,      // ✅ Ensure it's always a number
+      weight: enhancedTx.weight || 0,    // ✅ Ensure it's always a number
       fee: feeSats,
-      isReceived: false,
+      isReceived: isReceived,            // ✅ Now properly detects receive transactions
       status: {
-        confirmed: tx.confirmations > 0,
-        blockHeight: tx.blockheight,
-        blockHash: tx.blockhash,
-        blockTime: tx.blocktime,
+        confirmed: enhancedTx.confirmations > 0,
+        blockHeight: enhancedTx.blockheight,
+        blockHash: enhancedTx.blockhash,
+        blockTime: enhancedTx.blocktime,
       },
       // Required wallet-specific properties
-      amount: tx.amount,
-      confirmations: tx.confirmations,
-      category: tx.category,
-      address: tx.address,
-      abandoned: tx.abandoned,
-      time: tx.time,
+      amount: enhancedTx.amount,
+      confirmations: enhancedTx.confirmations,
+      category: enhancedTx.category,
+      address: enhancedTx.address,
+      abandoned: enhancedTx.abandoned,
+      time: enhancedTx.time,
     };
     
     return transformedTx;
