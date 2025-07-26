@@ -16,13 +16,9 @@ import {
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { RootState } from "reducers";
 
 // Define the state interface for proper typing
-interface RootState {
-  client: {
-    type: "public" | "private";
-  };
-}
 
 // Query key factory for transactions
 const transactionKeys = {
@@ -238,8 +234,6 @@ export const useCompletedTransactionsWithLoadMore = (
             ? tx.isReceived
             : calculateTransactionValue(tx, walletAddresses) > 0,
       }));
-
-      // 🔥 KEY LOGIC: Determine if there are more transactions
       // If we got exactly pageSize transactions, there might be more
       // If we got less than pageSize, we've reached the end
       const mightHaveMore = confirmedTransactions.length === pageSize;
