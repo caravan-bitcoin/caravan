@@ -2338,7 +2338,7 @@ describe('getAddressTransactionHistory - Response Transformation', () => {
 });
 
 describe('getWalletTransactionHistory', () => {
-  let mockBitcoindListSpentTransactions: any;
+  let mockCallBitcoindWallet: any;
 
   // Test fixtures
   const mockApiResponse = {
@@ -2359,8 +2359,24 @@ describe('getWalletTransactionHistory', () => {
       timereceived: 167880000,
       'bip125-replaceable': 'no'
     },
+    receiveTransaction: {
+      txid: 'tx2',
+      category: 'receive',
+      amount: 1.0,
+      confirmations: 5,
+      blockhash: 'block456',
+      blockheight: 800001,
+      blocktime: 167890100,
+      abandoned: false,
+      time: 167880100,
+      address: 'bc1qreceiveaddress',
+      wtxid: 'wtxid2',
+      walletconflicts: [],
+      timereceived: 167880100,
+      'bip125-replaceable': 'no'
+    },
     unconfirmedTransaction: {
-      txid: 'tx1',
+      txid: 'tx3',
       category: 'send',
       amount: -0.5,
       fee: -0.0001,
@@ -2369,13 +2385,13 @@ describe('getWalletTransactionHistory', () => {
       abandoned: false,
       time: 167880000,
       address: 'bc1qaddress',
-      wtxid: 'wtxid1',
+      wtxid: 'wtxid3',
       walletconflicts: [],
       timereceived: 167880000,
       'bip125-replaceable': 'yes'
     },
     transactionWithoutFee: {
-      txid: 'tx1',
+      txid: 'tx4',
       category: 'send',
       amount: -0.5,
       // No fee field
@@ -2386,10 +2402,20 @@ describe('getWalletTransactionHistory', () => {
       abandoned: false,
       time: 167880000,
       address: 'bc1qaddress',
-      wtxid: 'wtxid1',
+      wtxid: 'wtxid4',
       walletconflicts: [],
       timereceived: 167880000,
       'bip125-replaceable': 'no'
+    }
+  };
+
+  const mockDetailedTransactionResponse = {
+    result: {
+      decoded: {
+        size: 250,
+        vsize: 140,
+        weight: 560
+      }
     }
   };
 
@@ -2400,8 +2426,9 @@ describe('getWalletTransactionHistory', () => {
       locktime: 0,
       vin: [],
       vout: [],
-      size: 0,
-      weight: 0,
+      size: 250,
+      vsize: 140,
+      weight: 560,
       fee: 10000, // 0.0001 BTC in sats
       isReceived: false,
       amount: -0.5,
@@ -2417,14 +2444,39 @@ describe('getWalletTransactionHistory', () => {
       abandoned: false,
       time: 167880000
     },
-    unconfirmedTransaction: {
-      txid: 'tx1',
+    receiveTransaction: {
+      txid: 'tx2',
       version: 1,
       locktime: 0,
       vin: [],
       vout: [],
-      size: 0,
-      weight: 0,
+      size: 250,
+      vsize: 140,
+      weight: 560,
+      fee: 0, // No fee for receive transactions
+      isReceived: true,
+      amount: 1.0,
+      status: {
+        confirmed: true,
+        blockHeight: 800001,
+        blockHash: 'block456',
+        blockTime: 167890100,
+      },
+      confirmations: 5,
+      category: 'receive',
+      address: 'bc1qreceiveaddress',
+      abandoned: false,
+      time: 167880100
+    },
+    unconfirmedTransaction: {
+      txid: 'tx3',
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 250,
+      vsize: 140,
+      weight: 560,
       fee: 10000,
       isReceived: false,
       amount: -0.5,
@@ -2462,7 +2514,7 @@ describe('getWalletTransactionHistory', () => {
   });
 
   beforeEach(() => {
-    mockBitcoindListSpentTransactions = vi.spyOn(wallet, 'bitcoindListSpentTransactions');
+    mockCallBitcoindWallet = vi.spyOn(wallet, 'callBitcoindWallet');
   });
 
   afterEach(() => {
@@ -2505,42 +2557,60 @@ describe('getWalletTransactionHistory', () => {
         .rejects.toThrow('Wallet name is required for private client transaction listings');
     });
 
-    it('should return empty array if no spent transactions', async () => {
+    it('should return empty array if no transactions', async () => {
       const client = getPrivateClient();
-      mockBitcoindListSpentTransactions.mockResolvedValue([]);
+      
+      // Mock the listtransactions call to return empty array
+      mockCallBitcoindWallet.mockResolvedValue({
+        result: []
+      });
 
       const result = await client.getWalletTransactionHistory();
       expect(result).toHaveLength(0);
     });
 
-    it('should map spent transactions correctly', async () => {
+    it('should map send and receive transactions correctly', async () => {
       const client = getPrivateClient();
       
-      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.confirmedTransaction]);
+      // Mock the listtransactions call
+      mockCallBitcoindWallet
+        .mockResolvedValueOnce({
+          result: [mockApiResponse.confirmedTransaction, mockApiResponse.receiveTransaction]
+        })
+        // Mock the gettransaction calls for detailed data
+        .mockResolvedValue(mockDetailedTransactionResponse);
 
       const result = await client.getWalletTransactionHistory();
-      expect(result).toEqual([expectedTransformedData.confirmedTransaction]);
+      
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject(expectedTransformedData.confirmedTransaction);
+      expect(result[1]).toMatchObject(expectedTransformedData.receiveTransaction);
     });
 
     it('should use default parameters', async () => {
       const client = getPrivateClient();
-      mockBitcoindListSpentTransactions.mockResolvedValue([]);
+      
+      mockCallBitcoindWallet.mockResolvedValue({
+        result: []
+      });
       
       await client.getWalletTransactionHistory();
       
-      expect(mockBitcoindListSpentTransactions).toHaveBeenCalledWith({
-        url: 'http://localhost:8332',
+      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+        baseUrl: 'http://localhost:8332',
         walletName: 'test-wallet',
         auth: { username: 'user', password: 'pass' },
-        count: 100,
-        skip: 0,
-        includeWatchOnly: true,
+        method: 'listtransactions',
+        params: ['*', 100, 0, true],
       });
     });
 
     it('should handle empty result from Bitcoin Core', async () => {
       const client = getPrivateClient();
-      mockBitcoindListSpentTransactions.mockResolvedValue([]);
+      
+      mockCallBitcoindWallet.mockResolvedValue({
+        result: []
+      });
       
       const result = await client.getWalletTransactionHistory();
       expect(result).toEqual([]);
@@ -2548,7 +2618,7 @@ describe('getWalletTransactionHistory', () => {
 
     it('should handle API errors', async () => {
       const client = getPrivateClient();
-      mockBitcoindListSpentTransactions.mockRejectedValue(new Error('RPC error'));
+      mockCallBitcoindWallet.mockRejectedValue(new Error('RPC error'));
       
       await expect(client.getWalletTransactionHistory()).rejects.toThrow('RPC error');
     });
@@ -2556,7 +2626,13 @@ describe('getWalletTransactionHistory', () => {
     it('should handle transactions without fee', async () => {
       const client = getPrivateClient();
       
-      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.transactionWithoutFee]);
+      // Mock the listtransactions call
+      mockCallBitcoindWallet
+        .mockResolvedValueOnce({
+          result: [mockApiResponse.transactionWithoutFee]
+        })
+        // Mock the gettransaction call for detailed data
+        .mockResolvedValue(mockDetailedTransactionResponse);
 
       const result = await client.getWalletTransactionHistory();
       expect(result[0].fee).toBe(0);
@@ -2565,10 +2641,64 @@ describe('getWalletTransactionHistory', () => {
     it('should handle unconfirmed transactions', async () => {
       const client = getPrivateClient();
       
-      mockBitcoindListSpentTransactions.mockResolvedValue([mockApiResponse.unconfirmedTransaction]);
+      // Mock the listtransactions call
+      mockCallBitcoindWallet
+        .mockResolvedValueOnce({
+          result: [mockApiResponse.unconfirmedTransaction]
+        })
+        // Mock the gettransaction call for detailed data
+        .mockResolvedValue(mockDetailedTransactionResponse);
 
       const result = await client.getWalletTransactionHistory();
-      expect(result).toEqual([expectedTransformedData.unconfirmedTransaction]);
+      expect(result[0]).toMatchObject(expectedTransformedData.unconfirmedTransaction);
+    });
+
+    it('should handle gettransaction failures gracefully', async () => {
+      const client = getPrivateClient();
+      
+      // Mock the listtransactions call
+      mockCallBitcoindWallet
+        .mockResolvedValueOnce({
+          result: [mockApiResponse.confirmedTransaction]
+        })
+        // Mock the gettransaction call to fail
+        .mockRejectedValue(new Error('Transaction not found'));
+
+      const result = await client.getWalletTransactionHistory();
+      
+      // Should still return the transaction but with 0 size/weight
+      expect(result).toHaveLength(1);
+      expect(result[0].size).toBe(0);
+      expect(result[0].vsize).toBe(0);
+      expect(result[0].weight).toBe(0);
+    });
+
+    it('should filter out unsupported transaction categories', async () => {
+      const client = getPrivateClient();
+      
+      const unsupportedTransaction = {
+        ...mockApiResponse.confirmedTransaction,
+        txid: 'tx5',
+        category: 'orphan' // Unsupported category
+      };
+      
+      // Mock the listtransactions call with mixed categories
+      mockCallBitcoindWallet
+        .mockResolvedValueOnce({
+          result: [
+            mockApiResponse.confirmedTransaction, // send - should be included
+            mockApiResponse.receiveTransaction,   // receive - should be included
+            unsupportedTransaction                // orphan - should be filtered out
+          ]
+        })
+        // Mock the gettransaction calls for detailed data
+        .mockResolvedValue(mockDetailedTransactionResponse);
+
+      const result = await client.getWalletTransactionHistory();
+      
+      // Should only return send and receive transactions, not orphan
+      expect(result).toHaveLength(2);
+      expect(result.some(tx => tx.category === 'orphan')).toBe(false);
     });
   });
 });
