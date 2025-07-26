@@ -76,8 +76,6 @@ test.describe("Wallet Regtest Configuration", () => {
 
       await page.locator("#confirm-wallet").click();
 
-      await page.waitForTimeout(1000);
-
       const isEnabled = await page
         .locator("button[type=button]:has-text('Import Addresses')")
         .isEnabled();
@@ -122,17 +120,13 @@ test.describe("Wallet Regtest Configuration", () => {
       }
 
       const senderWallet = testStateManager.getState().test_wallet_names[0];
-      console.log("senderWallet", senderWallet);
 
       const txids: string[] = [];
 
       for (const address of walletAddresses) {
-        console.log("address check in walletAddressses", address);
         const txid = await client?.sendToAddress(senderWallet, address, 0.5);
         txids.push(txid);
       }
-
-      console.log("txids", txids);
 
       //Should update to the next index when a deposit is received
       const currentPathSuffix = await getCurrentPathSuffix(page);
@@ -155,11 +149,8 @@ test.describe("Wallet Regtest Configuration", () => {
         .locator("button[role=tab][type=button]:has-text('Addresses')")
         .click();
 
-      await page.waitForTimeout(4000);
-
       // Extract address table data using helper
       const addressTable = await extractAddressTableData(page);
-      console.log("addressTable", addressTable);
 
       // This includes both pending and confirmed tx
       let totalBalance= 0;
@@ -182,10 +173,7 @@ test.describe("Wallet Regtest Configuration", () => {
 
       // Confirming the balance after confirming tx
       await expect(page.locator('[data-cy="balance"]')).toHaveText('2 BTC')
-
-      console.log(
-        'Wallet uploaded successfully - "Addresses imported." message appeared',
-      );
+      
     } catch (error) {
       console.log("Error in wallet import:", error);
       throw error;

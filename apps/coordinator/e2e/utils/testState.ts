@@ -11,7 +11,7 @@ export class TestStateManager {
 
   getState(): TestState {
     if (!fs.existsSync(this.stateFile)) {
-      throw new Error("Test state file not found.")
+      throw new Error("Test state file not found.");
     }
     return JSON.parse(fs.readFileSync(this.stateFile, 'utf-8'))
   }
