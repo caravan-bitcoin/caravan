@@ -42,8 +42,6 @@ test.describe("Wallet Regtest Configuration", () => {
         key.bip32Path = formattedPaths[index];
       });
 
-      walletConfig.extendedPublicKeys.forEach((key: any, index: number) => {});
-
       // Save the modified file
       const configToWrite = JSON.stringify(walletConfig, null, 2);
       fs.writeFileSync(downloadedWalletFile, configToWrite);
