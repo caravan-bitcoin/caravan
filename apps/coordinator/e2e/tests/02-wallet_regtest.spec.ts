@@ -128,7 +128,7 @@ test.describe("Wallet Regtest Configuration", () => {
 
       for (const address of walletAddresses) {
         console.log("address check in walletAddressses", address);
-        const txid = await client?.sendToAddress(senderWallet, address, 0.5);
+        const txid = await client?.sendToAddress(senderWallet, address, 2);
         txids.push(txid);
       }
 
@@ -170,7 +170,7 @@ test.describe("Wallet Regtest Configuration", () => {
       });
       
       //Sending 0.5btc each to 4 addresses
-      expect(totalBalance).toBe(2)
+      expect(totalBalance).toBe(8)
 
       const senderRef = testStateManager.getSender()
       
@@ -180,7 +180,7 @@ test.describe("Wallet Regtest Configuration", () => {
       await page.locator("button[type=button]:has-text('Refresh')").click()
 
       // Confirming the balance after confirming tx
-      await expect(page.locator('[data-cy="balance"]')).toHaveText('2 BTC')
+      await expect(page.locator('[data-cy="balance"]')).toHaveText('8 BTC')
 
       console.log(
         'Wallet uploaded successfully - "Addresses imported." message appeared',

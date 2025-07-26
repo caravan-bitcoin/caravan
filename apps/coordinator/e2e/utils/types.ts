@@ -123,3 +123,42 @@ export interface PsbtOutputData {
   value: number 
   scriptPubKey: string 
 }
+
+// UTXO Selection Types
+export interface UTXOInfo {
+  amount: number; // in BTC
+  checkboxSelector: string;
+  txid: string;
+  index: string;
+}
+
+export interface AddressUTXOData {
+  pathSuffix: string;
+  balance: number; // in BTC, converted from string
+  address: string;
+  utxos: UTXOInfo[];
+  isExpanded: boolean;
+}
+
+export interface SimpleUTXOSelectionResult {
+  selectedUTXOs: UTXOInfo[];
+  totalAmount: number;
+}
+
+export interface IndividualSignatureResult {
+  signatures: string[];
+  publicKeys: string[];
+  inputIndex: number;
+}
+
+export interface IndividualPsbtResult {
+  walletName: string;
+  signedPsbt: string;
+  partialSignPsbtPath: string;
+  signatures: IndividualSignatureResult[];
+}
+
+export interface IndividualSignedPsbtsResult {
+  individualPsbts: IndividualPsbtResult[];
+  unsignedPsbtPath: string;
+}

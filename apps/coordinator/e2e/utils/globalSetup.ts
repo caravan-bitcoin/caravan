@@ -21,7 +21,7 @@ async function globalSetup(_config: FullConfig){
     const {walletNames, testWallets} = await createTestWallets(client!);
 
     const senderAddress = await client?.getNewAddress(walletNames[0]);
-    await client?.fundAddress(senderAddress,walletNames[0]);
+    await client?.fundAddress(senderAddress,walletNames[0],300);
 
     const receiverAddress = await client?.getNewAddress(walletNames[1]);
 

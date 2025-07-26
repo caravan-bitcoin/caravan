@@ -335,12 +335,12 @@ export class BitcoinCoreService {
       const input = decodedPbst.inputs[inputIndex];
 
       // Check if this input has partial signatures
-      if(input.partial_signature){
+      if(input.partial_signatures){
         const signatures: string[] = [];
         const publicKeys: string[] = [];
 
         // Extract each signature and its corresponding public key
-        for(const [pubkey, signature] of Object.entries(input.partial_signature)){
+        for(const [pubkey, signature] of Object.entries(input.partial_signatures)){
           publicKeys.push(pubkey);
           signatures.push(signature as string);
         }
