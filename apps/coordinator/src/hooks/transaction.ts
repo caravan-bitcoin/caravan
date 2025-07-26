@@ -100,7 +100,7 @@ export const useCompletedTransactionsWithLoadMore = (
 
         if (addressesToQuery.length === 0) {
           console.warn(
-            "⚠️ No wallet addresses available to query for transaction history",
+            "No wallet addresses available to query for transaction history",
           );
           return [];
         }
@@ -173,7 +173,7 @@ export const useCompletedTransactionsWithLoadMore = (
         }
       },
       onError: (error) => {
-        console.error("🚨 Query error:", error);
+        console.error("Query error:", error);
       },
     },
   );
