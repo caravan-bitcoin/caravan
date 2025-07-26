@@ -165,8 +165,8 @@ export const useAddressTransactionHistory = (
       );
     },
     enabled: !!blockchainClient && addresses.length > 0,
-    staleTime: 30000, // Cache for 30 seconds
-    cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
+    staleTime: 30000,
+    cacheTime: 5 * 60 * 1000,
   });
 };
 

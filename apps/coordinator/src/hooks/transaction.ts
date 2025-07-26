@@ -157,7 +157,7 @@ export const useCompletedTransactionsWithLoadMore = (
 
         if (addressesToQuery.length === 0) {
           console.warn(
-            "⚠️ No wallet addresses available to query for transaction history",
+            "No wallet addresses available to query for transaction history",
           );
           return [];
         }
