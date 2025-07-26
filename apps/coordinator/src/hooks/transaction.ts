@@ -13,8 +13,6 @@ import type { MultisigAddressType } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
 import {
   transactionKeys,
-  useWalletTransactionHistory,
-  useAddressTransactionHistory,
   processTransactionsWithWalletData,
 } from "clients/transactions";
 
@@ -52,55 +50,41 @@ export function useTransactionAnalysis() {
   }, [inputs, outputs, feeRate, requiredSigners, totalSigners, addressType]);
 }
 
-// Hook for completed transactions with address-based fetching
-export const useCompletedTransactions = (
+// PRIVATE CLIENT HOOKS - Only for wallet-based queries
+export const usePrivateClientTransactions = (
   count: number = 10,
   skip: number = 0,
 ) => {
-  const clientType = useSelector((state: WalletState) => state.client.type);
+  const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
+  const clientType = useSelector((state: WalletState) => state.client.type);
 
-  // Get spent addresses for public clients - with proper typing
-  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
-  const spentAddresses = spentSlices.map(
-    (slice: SliceWithLastUsed) => slice.multisig.address,
-  );
+  return useQuery({
+    queryKey: transactionKeys.walletHistory(count, skip),
+    queryFn: async (): Promise<TransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
 
-  // Use appropriate query based on client type
-  const walletHistoryQuery = useWalletTransactionHistory(count, skip);
-  const addressHistoryQuery = useAddressTransactionHistory(
-    walletAddresses.length > 0 ? walletAddresses : spentAddresses,
-    count,
-    skip,
-  );
+      const rawTransactions =
+        await blockchainClient.getWalletTransactionHistory(count, skip);
 
-  // Select the appropriate query based on client type
-  const activeQuery =
-    clientType === "private" ? walletHistoryQuery : addressHistoryQuery;
-  const { data: rawTransactions = [], ...queryResult } = activeQuery;
-
-  // Process transactions with wallet-specific metadata
-  const processedTransactions = useMemo(() => {
-    return processTransactionsWithWalletData(
-      rawTransactions,
-      walletAddresses,
-      true, // filter confirmed transactions only
-    );
-  }, [rawTransactions, walletAddresses]);
-
-  return {
-    ...queryResult,
-    data: processedTransactions,
-  };
+      return processTransactionsWithWalletData(
+        rawTransactions,
+        walletAddresses,
+        true, // filter confirmed transactions only
+      );
+    },
+    enabled: !!blockchainClient && clientType === "private",
+  });
 };
 
-// NEW HOOKS: Load more functionality for completed transactions
-export const useCompletedTransactionsWithLoadMore = (
+export const usePrivateClientTransactionsWithLoadMore = (
   pageSize: number = 100,
 ) => {
   const blockchainClient = useGetClient();
-  const clientType = useSelector((state: WalletState) => state.client.type);
   const walletAddresses = useSelector(getWalletAddresses);
+  const clientType = useSelector((state: WalletState) => state.client.type);
 
   // State for managing loaded transactions and pagination
   const [allTransactions, setAllTransactions] = useState<TransactionDetails[]>(
@@ -109,13 +93,6 @@ export const useCompletedTransactionsWithLoadMore = (
   const [currentOffset, setCurrentOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
-  // Get spent addresses for public clients
-  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
-  const spentAddresses = spentSlices.map(
-    (slice: SliceWithLastUsed) => slice.multisig.address,
-  );
-
-  // Query for fetching transactions
   const { isLoading, error, isFetching, refetch } = useQuery(
     transactionKeys.completed(pageSize, currentOffset),
     async (): Promise<TransactionDetails[]> => {
@@ -123,118 +100,57 @@ export const useCompletedTransactionsWithLoadMore = (
         throw new Error("No blockchain client available");
       }
 
-      const addressesToQuery =
-        walletAddresses.length > 0 ? walletAddresses : spentAddresses;
-
-      let rawTransactions;
-
-      if (clientType === "private") {
-        // For private clients, use wallet transaction history
-        rawTransactions = await blockchainClient.getWalletTransactionHistory(
+      const rawTransactions =
+        await blockchainClient.getWalletTransactionHistory(
           pageSize,
           currentOffset,
         );
-      } else {
-        // For public clients, use all wallet addresses
-        if (addressesToQuery.length === 0) {
-          console.warn(
-            "No wallet addresses available to query for transaction history",
-          );
-          return [];
-        }
 
-        try {
-          rawTransactions = await blockchainClient.getAddressTransactionHistory(
-            addressesToQuery,
-            pageSize,
-            currentOffset,
-          );
-        } catch (error) {
-          console.error("Error fetching address transaction history:", error);
-          // Fallback: if querying all addresses fails, try just spent addresses
-          if (spentAddresses.length > 0) {
-            rawTransactions =
-              await blockchainClient.getAddressTransactionHistory(
-                spentAddresses,
-                pageSize,
-                currentOffset,
-              );
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      // Process transactions using the centralized utility
       const processedTransactions = processTransactionsWithWalletData(
         rawTransactions,
         walletAddresses,
         true, // filter confirmed transactions only
       );
 
-      // Determine if there are more transactions
-      const mightHaveMore = processedTransactions.length === pageSize;
-      setHasMore(mightHaveMore);
-
+      setHasMore(processedTransactions.length === pageSize);
       return processedTransactions;
     },
     {
-      enabled:
-        !!blockchainClient &&
-        (clientType === "private" || walletAddresses.length > 0),
-      staleTime: 0, // Set to 0 so data is always considered stale
-      cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes but mark as stale immediately
-      refetchOnMount: true, // Always refetch when component mounts
-      refetchOnWindowFocus: false, // Optional: disable refetch on window focus
+      enabled: !!blockchainClient && clientType === "private",
       onSuccess: (newTransactions) => {
         if (currentOffset === 0) {
-          // First load - replace all transactions
           setAllTransactions(newTransactions);
         } else {
-          // Load more - append to existing transactions
           setAllTransactions((prev) => {
-            // Avoid duplicates by checking txid
             const existingTxIds = new Set(prev.map((tx) => tx.txid));
             const uniqueNewTransactions = newTransactions.filter(
               (tx) => !existingTxIds.has(tx.txid),
             );
-
             return [...prev, ...uniqueNewTransactions];
           });
         }
       },
-      onError: (error) => {
-        console.error("Query error:", error);
-      },
     },
   );
 
-  // Reset state when key dependencies change (but not on initial mount)
+  // Reset state when client changes
   const isInitialMount = useRef(true);
-
   useEffect(() => {
     if (isInitialMount.current) {
-      // Skip reset on initial mount
       isInitialMount.current = false;
       return;
     }
-
     setCurrentOffset(0);
     setAllTransactions([]);
     setHasMore(true);
-  }, [blockchainClient, clientType, walletAddresses.length]);
+  }, [blockchainClient]);
 
-  // Load more function
   const loadMore = useCallback(() => {
     if (!isFetching && hasMore) {
-      const newOffset = currentOffset + pageSize;
-      setCurrentOffset(newOffset);
-    } else {
-      console.log("Cannot load more:", { isFetching, hasMore });
+      setCurrentOffset(currentOffset + pageSize);
     }
   }, [isFetching, hasMore, currentOffset, pageSize]);
 
-  // Reset function (useful for refreshing)
   const reset = useCallback(() => {
     setCurrentOffset(0);
     setAllTransactions([]);
@@ -244,15 +160,223 @@ export const useCompletedTransactionsWithLoadMore = (
 
   return {
     data: allTransactions,
-    isLoading: isLoading && currentOffset === 0, // Only show loading for initial load
-    isLoadingMore: isFetching && currentOffset > 0, // Show loading more for subsequent loads
+    isLoading: isLoading && currentOffset === 0,
+    isLoadingMore: isFetching && currentOffset > 0,
     error,
     hasMore,
     loadMore,
     reset,
     refetch,
     totalLoaded: allTransactions.length,
-    currentOffset,
-    pageSize,
   };
+};
+
+// PUBLIC CLIENT HOOKS - Only for address-based queries
+export const usePublicClientTransactions = (
+  count: number = 10,
+  skip: number = 0,
+) => {
+  const blockchainClient = useGetClient();
+  const walletAddresses = useSelector(getWalletAddresses);
+  const clientType = useSelector((state: WalletState) => state.client.type);
+
+  // Get spent addresses as fallback
+  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
+  const spentAddresses = spentSlices.map(
+    (slice: SliceWithLastUsed) => slice.multisig.address,
+  );
+
+  const addressesToQuery =
+    walletAddresses.length > 0 ? walletAddresses : spentAddresses;
+
+  return useQuery({
+    queryKey: transactionKeys.addressHistory(addressesToQuery, count, skip),
+    queryFn: async (): Promise<TransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+
+      if (addressesToQuery.length === 0) {
+        return [];
+      }
+
+      const rawTransactions =
+        await blockchainClient.getAddressTransactionHistory(
+          addressesToQuery,
+          count,
+          skip,
+        );
+
+      return processTransactionsWithWalletData(
+        rawTransactions,
+        walletAddresses,
+        true, // filter confirmed transactions only
+      );
+    },
+    enabled:
+      !!blockchainClient &&
+      clientType === "public" &&
+      addressesToQuery.length > 0,
+  });
+};
+
+export const usePublicClientTransactionsWithLoadMore = (
+  pageSize: number = 100,
+) => {
+  const blockchainClient = useGetClient();
+  const walletAddresses = useSelector(getWalletAddresses);
+  const clientType = useSelector((state: WalletState) => state.client.type);
+
+  // Get spent addresses as fallback
+  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
+  const spentAddresses = spentSlices.map(
+    (slice: SliceWithLastUsed) => slice.multisig.address,
+  );
+
+  const addressesToQuery =
+    walletAddresses.length > 0 ? walletAddresses : spentAddresses;
+
+  // State for managing loaded transactions and pagination
+  const [allTransactions, setAllTransactions] = useState<TransactionDetails[]>(
+    [],
+  );
+  const [currentOffset, setCurrentOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  const { isLoading, error, isFetching, refetch } = useQuery(
+    transactionKeys.completed(pageSize, currentOffset),
+    async (): Promise<TransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+
+      if (addressesToQuery.length === 0) {
+        console.warn("No addresses available to query for transaction history");
+        return [];
+      }
+
+      try {
+        const rawTransactions =
+          await blockchainClient.getAddressTransactionHistory(
+            addressesToQuery,
+            pageSize,
+            currentOffset,
+          );
+
+        const processedTransactions = processTransactionsWithWalletData(
+          rawTransactions,
+          walletAddresses,
+          true, // filter confirmed transactions only
+        );
+
+        setHasMore(processedTransactions.length === pageSize);
+        return processedTransactions;
+      } catch (error) {
+        console.error("Error fetching address transaction history:", error);
+        // Fallback: if querying all addresses fails, try just spent addresses
+        if (spentAddresses.length > 0 && walletAddresses.length > 0) {
+          const rawTransactions =
+            await blockchainClient.getAddressTransactionHistory(
+              spentAddresses,
+              pageSize,
+              currentOffset,
+            );
+
+          const processedTransactions = processTransactionsWithWalletData(
+            rawTransactions,
+            walletAddresses,
+            true,
+          );
+
+          setHasMore(processedTransactions.length === pageSize);
+          return processedTransactions;
+        }
+        throw error;
+      }
+    },
+    {
+      enabled:
+        !!blockchainClient &&
+        clientType === "public" &&
+        addressesToQuery.length > 0,
+      onSuccess: (newTransactions) => {
+        if (currentOffset === 0) {
+          setAllTransactions(newTransactions);
+        } else {
+          setAllTransactions((prev) => {
+            const existingTxIds = new Set(prev.map((tx) => tx.txid));
+            const uniqueNewTransactions = newTransactions.filter(
+              (tx) => !existingTxIds.has(tx.txid),
+            );
+            return [...prev, ...uniqueNewTransactions];
+          });
+        }
+      },
+    },
+  );
+
+  // Reset state when addresses or client changes
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setCurrentOffset(0);
+    setAllTransactions([]);
+    setHasMore(true);
+  }, [blockchainClient, addressesToQuery.length]);
+
+  const loadMore = useCallback(() => {
+    if (!isFetching && hasMore) {
+      setCurrentOffset(currentOffset + pageSize);
+    }
+  }, [isFetching, hasMore, currentOffset, pageSize]);
+
+  const reset = useCallback(() => {
+    setCurrentOffset(0);
+    setAllTransactions([]);
+    setHasMore(true);
+    refetch();
+  }, [refetch]);
+
+  return {
+    data: allTransactions,
+    isLoading: isLoading && currentOffset === 0,
+    isLoadingMore: isFetching && currentOffset > 0,
+    error,
+    hasMore,
+    loadMore,
+    reset,
+    refetch,
+    totalLoaded: allTransactions.length,
+  };
+};
+
+// UNIFIED HOOKS - Smart hooks that choose the right implementation based on client type
+export const useCompletedTransactions = (
+  count: number = 10,
+  skip: number = 0,
+) => {
+  const clientType = useSelector((state: WalletState) => state.client.type);
+
+  const privateQuery = usePrivateClientTransactions(count, skip);
+  const publicQuery = usePublicClientTransactions(count, skip);
+
+  // Return the appropriate query based on client type
+  // The unused query will just be disabled via the `enabled` condition in each hook
+  return clientType === "private" ? privateQuery : publicQuery;
+};
+
+export const useCompletedTransactionsWithLoadMore = (
+  pageSize: number = 100,
+) => {
+  const clientType = useSelector((state: WalletState) => state.client.type);
+
+  const privateQuery = usePrivateClientTransactionsWithLoadMore(pageSize);
+  const publicQuery = usePublicClientTransactionsWithLoadMore(pageSize);
+
+  // Return the appropriate query based on client type
+  // The unused query will just be disabled via the `enabled` condition in each hook
+  return clientType === "private" ? privateQuery : publicQuery;
 };
