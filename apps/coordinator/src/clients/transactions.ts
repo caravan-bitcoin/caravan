@@ -14,16 +14,14 @@ import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
-// Query key factory for transactions
+// Centralized query key factory for all transaction-related queries
 export const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
-  // all the coins for a given transaction
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  // New query keys for completed transactions
   walletHistory: (count: number, skip: number) =>
     [...transactionKeys.all, "walletHistory", count, skip] as const,
   addressHistory: (addresses: string[], count: number, skip: number) =>
@@ -34,6 +32,8 @@ export const transactionKeys = {
       count,
       skip,
     ] as const,
+  completed: (count: number, skip: number) =>
+    [...transactionKeys.all, "completed", count, skip] as const,
 };
 
 // Service function for fetching transaction details
@@ -45,6 +45,26 @@ const fetchTransactionDetails = async (
     throw new Error("No blockchain client available");
   }
   return await client.getTransaction(txid);
+};
+
+// Utility function to process transactions with wallet metadata
+export const processTransactionsWithWalletData = (
+  transactions: WalletTransactionDetails[],
+  walletAddresses: string[],
+  filterConfirmed: boolean = false,
+): TransactionDetails[] => {
+  const filteredTransactions = filterConfirmed
+    ? transactions.filter((tx) => tx.status?.confirmed === true)
+    : transactions;
+
+  return filteredTransactions.map((tx) => ({
+    ...tx,
+    valueToWallet: calculateTransactionValue(tx, walletAddresses),
+    isReceived:
+      tx.isReceived !== undefined
+        ? tx.isReceived
+        : calculateTransactionValue(tx, walletAddresses) > 0,
+  }));
 };
 
 export const useFetchTransactionDetails = (txid: string) => {
@@ -98,19 +118,12 @@ export const usePendingTransactions = () => {
   const error = transactionQueries.find((query) => query.error)?.error;
 
   // Process transactions with calculated values and filter out confirmed ones
-  const transactions = transactionQueries
-    .filter((query) => query.data && !query.data.status?.confirmed)
-    .map((query) => {
-      const tx = query.data!;
-      return {
-        ...tx,
-        valueToWallet: calculateTransactionValue(tx, walletAddresses),
-        isReceived:
-          tx.isReceived !== undefined
-            ? tx.isReceived
-            : calculateTransactionValue(tx, walletAddresses) > 0,
-      };
-    });
+  const transactions = processTransactionsWithWalletData(
+    transactionQueries
+      .filter((query) => query.data && !query.data.status?.confirmed)
+      .map((query) => query.data!),
+    walletAddresses,
+  );
 
   return {
     transactions,
@@ -122,6 +135,13 @@ export const usePendingTransactions = () => {
   };
 };
 
+// Base query configuration for transaction history
+const TRANSACTION_QUERY_CONFIG = {
+  staleTime: 30000, // Cache for 30 seconds
+  cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
+};
+
+// TanStack Query hook for wallet transaction history (private clients)
 export const useWalletTransactionHistory = (count: number, skip: number) => {
   const blockchainClient = useGetClient();
 
@@ -134,8 +154,7 @@ export const useWalletTransactionHistory = (count: number, skip: number) => {
       return await blockchainClient.getWalletTransactionHistory(count, skip);
     },
     enabled: !!blockchainClient,
-    staleTime: 30000, // Cache for 30 seconds
-    cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
+    ...TRANSACTION_QUERY_CONFIG,
   });
 };
 
@@ -165,8 +184,7 @@ export const useAddressTransactionHistory = (
       );
     },
     enabled: !!blockchainClient && addresses.length > 0,
-    staleTime: 30000,
-    cacheTime: 5 * 60 * 1000,
+    ...TRANSACTION_QUERY_CONFIG,
   });
 };
 
