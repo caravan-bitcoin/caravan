@@ -199,7 +199,7 @@ export const useCompletedTransactionsWithLoadMore = (
       const newOffset = currentOffset + pageSize;
       setCurrentOffset(newOffset);
     } else {
-      console.log("⏸Cannot load more:", { isFetching, hasMore });
+      console.log("Cannot load more:", { isFetching, hasMore });
     }
   }, [isFetching, hasMore, currentOffset, pageSize]);
 

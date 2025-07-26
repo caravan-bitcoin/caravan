@@ -12,9 +12,7 @@ import {
   MenuItem,
   Tabs,
   Tab,
-  Button,
 } from "@mui/material";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
@@ -57,7 +55,6 @@ const TransactionsTab: React.FC = () => {
     error: completedError,
     hasMore: completedHasMore,
     loadMore: loadMoreCompleted,
-    reset: resetCompleted,
     totalLoaded: completedTotalLoaded,
   } = useCompletedTransactionsWithLoadMore(100); // Load 100 transactions at a time
 
@@ -141,19 +138,6 @@ const TransactionsTab: React.FC = () => {
               aria-controls="completed-tabpanel"
             />
           </Tabs>
-
-          {/* Refresh button for completed transactions */}
-          {tabValue === 1 && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<RefreshIcon />}
-              onClick={resetCompleted}
-              disabled={completedIsLoading}
-            >
-              Refresh
-            </Button>
-          )}
         </Box>
       </Box>
 
