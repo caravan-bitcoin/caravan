@@ -1,6 +1,10 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { BlockchainClient, TransactionDetails } from "@caravan/clients";
+import {
+  BlockchainClient,
+  TransactionDetails,
+  WalletTransactionDetails,
+} from "@caravan/clients";
 import {
   getPendingTransactionIds,
   getWalletAddresses,
@@ -10,8 +14,8 @@ import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
-// Query key factory for pending transactions
-const transactionKeys = {
+// Query key factory for transactions
+export const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
@@ -19,6 +23,17 @@ const transactionKeys = {
     [...transactionKeys.all, txid, "withHex"] as const,
   // all the coins for a given transaction
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
+  // New query keys for completed transactions
+  walletHistory: (count: number, skip: number) =>
+    [...transactionKeys.all, "walletHistory", count, skip] as const,
+  addressHistory: (addresses: string[], count: number, skip: number) =>
+    [
+      ...transactionKeys.all,
+      "addressHistory",
+      addresses.sort().join(","),
+      count,
+      skip,
+    ] as const,
 };
 
 // Service function for fetching transaction details
@@ -105,6 +120,54 @@ export const usePendingTransactions = () => {
       transactionQueries.forEach((query) => query.refetch());
     },
   };
+};
+
+export const useWalletTransactionHistory = (count: number, skip: number) => {
+  const blockchainClient = useGetClient();
+
+  return useQuery({
+    queryKey: transactionKeys.walletHistory(count, skip),
+    queryFn: async (): Promise<WalletTransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+      return await blockchainClient.getWalletTransactionHistory(count, skip);
+    },
+    enabled: !!blockchainClient,
+    staleTime: 30000, // Cache for 30 seconds
+    cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
+  });
+};
+
+// TanStack Query hook for address transaction history (public clients)
+export const useAddressTransactionHistory = (
+  addresses: string[],
+  count: number,
+  skip: number,
+) => {
+  const blockchainClient = useGetClient();
+
+  return useQuery({
+    queryKey: transactionKeys.addressHistory(addresses, count, skip),
+    queryFn: async (): Promise<WalletTransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+
+      if (addresses.length === 0) {
+        return [];
+      }
+
+      return await blockchainClient.getAddressTransactionHistory(
+        addresses,
+        count,
+        skip,
+      );
+    },
+    enabled: !!blockchainClient && addresses.length > 0,
+    staleTime: 30000, // Cache for 30 seconds
+    cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
+  });
 };
 
 export interface Coin {
