@@ -21,7 +21,6 @@ const transactionKeys = {
     [...transactionKeys.all, "completed", count, skip] as const,
 };
 
-// EXISTING HOOK: Transaction analysis for dust and privacy
 export function useTransactionAnalysis() {
   const {
     inputs = [],
@@ -100,7 +99,7 @@ export const useCompletedTransactionsWithLoadMore = (
 
         if (addressesToQuery.length === 0) {
           console.warn(
-            "No wallet addresses available to query for transaction history",
+            "⚠️ No wallet addresses available to query for transaction history",
           );
           return [];
         }
@@ -232,7 +231,7 @@ export const useCompletedTransactions = (
   skip: number = 0,
 ) => {
   const blockchainClient = useGetClient();
-  const clientType = useSelector((state: RootState) => state.client.type);
+  const clientType = useSelector((state: WalletState) => state.client.type);
   const walletAddresses = useSelector(getWalletAddresses);
 
   // Get spent addresses for public clients - with proper typing
