@@ -57,7 +57,6 @@ import {
   ERROR,
 } from "./interaction";
 
-
 /**
  * What's going on with this TrezorConnect import?
  * For some reason the way trezor/connect and trezor/connect-web export their default
@@ -118,9 +117,7 @@ const ENV_TREZOR_BLOCKBOOK_URL =
 
 const TREZOR_CONNECT_URL =
   ENV_TREZOR_CONNECT_URL ||
-  (typeof window === "undefined"
-    ? ""
-    : `https://${window?.location.hostname}:8088/`);
+  (typeof window === "undefined" ? "" : "https://connect.trezor.io/9.6.0/");
 const TREZOR_BLOCKBOOK_URL =
   ENV_TREZOR_BLOCKBOOK_URL ||
   (typeof window === "undefined"
