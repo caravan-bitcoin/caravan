@@ -38,12 +38,7 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-  validateMultisigPsbtSignature,
-} from "@caravan/psbt";
+import { validateMultisigPsbtSignature } from "@caravan/psbt";
 
 const TEXT = "text";
 const UNKNOWN = "unknown";
@@ -348,8 +343,6 @@ class SignatureImporter extends React.Component {
       inputs,
       signatureImporters,
       setComplete,
-      network,
-      outputs,
       setSigningKey,
       unsignedPSBT,
     } = this.props;

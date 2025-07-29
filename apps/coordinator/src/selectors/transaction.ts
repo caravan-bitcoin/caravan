@@ -1,4 +1,3 @@
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";

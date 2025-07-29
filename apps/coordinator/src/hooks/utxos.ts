@@ -8,7 +8,6 @@ import {
 } from "selectors/wallet";
 import {
   selectAvailableInputsFromPSBT,
-  selectInputIdentifiersFromPSBT,
   selectMissingInputIdentifiersFromPSBT,
 } from "selectors/transaction";
 import { UTXO } from "@caravan/fees";
