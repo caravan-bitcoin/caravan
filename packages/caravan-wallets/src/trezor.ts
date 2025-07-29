@@ -1103,6 +1103,7 @@ function trezorInput(input, bip32Path) {
     prev_hash: input.txid,
     prev_index: input.index,
     address_n: bip32PathToSequence(bip32Path),
+    sequence: input.sequence,
     ...(input.amountSats && {
       amount: new BigNumber(input.amountSats).toString(),
     }),
