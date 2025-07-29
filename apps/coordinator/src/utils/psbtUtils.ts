@@ -5,6 +5,7 @@ import {
   autoLoadPSBT as psbtPackageAutoLoad,
 } from "@caravan/psbt";
 import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt as `autoLoadPSBT` uses this Psbt Object
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
@@ -71,6 +72,12 @@ export interface SignatureSet {
   signatures: Buffer[] | string[];
   publicKeys: string[];
 }
+
+/**
+ * Converts transaction ID from big-endian to little-endian format
+ */
+export const convertTxidToLittleEndian = (hash: Buffer): string =>
+  reverseBuffer(hash).toString("hex");
 
 /**
  * Loads a PSBT from a string or buffer, handling both PSBTv0 and PSBTv2 formats.
@@ -158,5 +165,35 @@ export const isBinaryPSBT = (arrayBuffer: ArrayBuffer) => {
     uint8Array[2] === 0x62 &&
     uint8Array[3] === 0x74 &&
     uint8Array[4] === 0xff
+  );
+};
+
+export const getSequenceForInput = (
+  psbt: Psbt,
+  inputIdentifier: string,
+): number | undefined => {
+  return psbt.txInputs.find((input) => {
+    const identifier = createInputIdentifier(
+      convertTxidToLittleEndian(input.hash),
+      input.index,
+    );
+    return identifier === inputIdentifier;
+  })?.sequence;
+};
+
+export const getInputIdentifiersFromPsbt = (psbt: Psbt): Set<string> => {
+  return new Set(
+    psbt.txInputs.map((input) => {
+      return createInputIdentifier(
+        /*
+         * All input TXIDs are expected to be in **big-endian**
+         * format (human-readable format). Which we get from block explorers, wallets, APIs
+         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
+         * internal data structures and processing so here we convert the txid to little-endian format
+         */
+        convertTxidToLittleEndian(input.hash),
+        input.index,
+      );
+    }),
   );
 };

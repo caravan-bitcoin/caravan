@@ -27,6 +27,8 @@ import {
   ReconstructedUtxos,
   matchPsbtInputsToUtxos,
 } from "utils/uxtoReconstruction";
+import { Psbt } from "bitcoinjs-lib";
+import { getInputIdentifiersFromPsbt } from "utils/psbtUtils";
 
 /*
  * need to create a function that given a coin and a slice returns a utxo that can be used
@@ -336,13 +338,13 @@ export const useReconstructedUtxos = (
  * @param  parsedPsbt - The parsed PSBT object
  * @returns  Contains allInputs, isRbfPSBT, loading/error states
  */
-export const usePsbtInputs = (parsedPsbt: any) => {
+export const usePsbtInputs = (parsedPsbt: Psbt) => {
   const allSlices = useSelector(getWalletSlices);
 
-  const psbtInputIdentifiers = useSelector((state: WalletState) =>
-    parsedPsbt
-      ? selectInputIdentifiersFromPSBT(state, parsedPsbt)
-      : new Set<string>(),
+  const psbtInputIdentifiers = useMemo(
+    () =>
+      parsedPsbt ? getInputIdentifiersFromPsbt(parsedPsbt) : new Set<string>(),
+    [parsedPsbt],
   );
 
   const missingInputIds = useSelector((state: WalletState) =>
