@@ -14,7 +14,7 @@ const ColdcardSignatureImporter = ({
   validateAndSetSignature,
   network,
 }) => {
-  const { psbt } = useSelector((state) => state.spend.transaction);
+  const { unsignedPSBT } = useSelector((state) => state.spend.transaction);
   return (
     <IndirectSignatureImporter
       network={network}
@@ -23,7 +23,7 @@ const ColdcardSignatureImporter = ({
       outputs={outputs}
       inputsTotalSats={inputsTotalSats}
       fee={fee}
-      psbt={psbt}
+      psbt={unsignedPSBT}
       extendedPublicKeyImporter={extendedPublicKeyImporter}
       validateAndSetSignature={validateAndSetSignature}
       Signer={ColdcardSigner}
