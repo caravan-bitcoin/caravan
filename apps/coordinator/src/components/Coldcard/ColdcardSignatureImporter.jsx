@@ -2,6 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import IndirectSignatureImporter from "../ScriptExplorer/IndirectSignatureImporter";
 import ColdcardSigner from "./ColdcardSigner";
+import { useSelector } from "react-redux";
 
 const ColdcardSignatureImporter = ({
   signatureImporter,
@@ -13,6 +14,7 @@ const ColdcardSignatureImporter = ({
   validateAndSetSignature,
   network,
 }) => {
+  const { psbt } = useSelector((state) => state.spend.transaction);
   return (
     <IndirectSignatureImporter
       network={network}
@@ -21,6 +23,7 @@ const ColdcardSignatureImporter = ({
       outputs={outputs}
       inputsTotalSats={inputsTotalSats}
       fee={fee}
+      psbt={psbt}
       extendedPublicKeyImporter={extendedPublicKeyImporter}
       validateAndSetSignature={validateAndSetSignature}
       Signer={ColdcardSigner}
