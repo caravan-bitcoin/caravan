@@ -247,7 +247,7 @@ class UTXOSet extends React.Component {
           {`Available Inputs (${localInputs.length})`}{" "}
         </Typography>
         <p>The following UTXOs will be spent as inputs in a new transaction.</p>
-        <Table>
+        <Table data-testid="nested-utxo-table">
           <TableHead>
             <TableRow hover>
               {showSelection && !hideSelectAllInHeader && (

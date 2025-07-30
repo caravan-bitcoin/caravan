@@ -1,14 +1,18 @@
-import { Page } from "@playwright/test";
-import { AddressTableData, receiveTableData, AddressUTXOData, UTXOInfo, SimpleUTXOSelectionResult } from "../utils/types";
-
+import { Page, expect } from "@playwright/test";
+import {
+  AddressTableData,
+  receiveTableData,
+} from "../utils/types";
 
 /**
  * Extracts receive table data from the current page
  * Used in Receive tab where columns are: Index, Path Suffix, UTXOs, Balance, Address
  */
-export async function extractReceiveTableData(page: Page): Promise<receiveTableData[]> {
+export async function extractReceiveTableData(
+  page: Page,
+): Promise<receiveTableData[]> {
   await page.waitForSelector("table");
-  
+
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
     console.log("Extracting receive table rows:", rows.length);
@@ -29,9 +33,11 @@ export async function extractReceiveTableData(page: Page): Promise<receiveTableD
  * Extracts address table data from the current page
  * Used in Addresses tab where columns are: Index, Path Suffix, UTXOs, Balance, Last Used, Address
  */
-export async function extractAddressTableData(page: Page): Promise<AddressTableData[]> {
+export async function extractAddressTableData(
+  page: Page,
+): Promise<AddressTableData[]> {
   await page.waitForSelector("table");
-  
+
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
     console.log("Extracting address table rows:", rows.length);
@@ -47,6 +53,52 @@ export async function extractAddressTableData(page: Page): Promise<AddressTableD
       };
     });
   });
+}
+/**
+ * Select UTXOs from the main table until target amount is reached.
+ * @param page playwright page object.
+ * @param targetAmount desired total balance to select.
+ * @returns total value of the selected UTXOs.
+ */
+
+export async function selectUTXOs(page: Page, targetAmount: number) {
+  const mainTable = page.getByTestId("main-utxo-table");
+  await expect(mainTable).toBeVisible();
+
+  // Locate all rows within the table using a "starts with" attribute selector
+  const rows = mainTable.locator('[data-testid^="main-utxo-row-"]');
+
+  let selectedUTXOValue = 0;
+
+  for (const row of await rows.all()) {
+    if(selectedUTXOValue >= targetAmount){
+      // stop once the target is met
+      break;
+    }
+
+    // Get balance 
+    const balanceText = await row.locator("td").nth(3).textContent();
+    const balance = parseFloat(balanceText?.trim()!);
+
+    console.log("balance Check", balance);
+
+    // Find and Check the checkbox to select this 
+    const checkbox = row.locator('input[name="spend"][type="checkbox"]')
+    // const checkbox = row.locator('[data-testid^="utxo-checkbox-"]')
+
+    await page.waitForTimeout(2000)
+
+    console.log("checkBox find: ", checkbox)
+    
+    if (await checkbox.isVisible() && !await checkbox.isDisabled()) {
+      await checkbox.check();
+      selectedUTXOValue += balance;
+    }
+    await page.waitForTimeout(2000)
+    console.log("selectedUTXOval: ", selectedUTXOValue)
+  }
+
+  return { selectedUTXOValue };
 }
 
 /**
@@ -72,126 +124,10 @@ export async function getCurrentPathSuffix(page: Page): Promise<string> {
 }
 
 /**
- * Simple UTXO extraction for testing - just gets basic info
- */
-export async function extractUTXOData(page: Page): Promise<AddressUTXOData[]> {
-  await page.waitForSelector("table");
-  
-  const addressData: AddressUTXOData[] = await page.evaluate(() => {
-    const mainTableRows = Array.from(document.querySelectorAll("tbody tr"));
-
-    return mainTableRows.map((row) => {
-      const cells = Array.from(row.querySelectorAll("td"));
-      
-      const pathSuffix = cells[1]?.textContent?.trim() || "";
-      const balanceText = cells[3]?.textContent?.trim() || "0";
-      const balance = parseFloat(balanceText) || 0;
-      const address = cells[5]?.querySelector("code")?.textContent?.trim() || "";
-      
-      // Check if expanded
-      const accordion = cells[5]?.querySelector(".MuiAccordion-root");
-      const isExpanded = !accordion?.querySelector(".MuiCollapse-root")?.getAttribute("style")?.includes("min-height: 0px");
-      
-      // Extract UTXOs if expanded
-      let utxos: UTXOInfo[] = [];
-      if (isExpanded) {
-        const utxoTable = accordion?.querySelector("table");
-        if (utxoTable) {
-          const utxoRows = Array.from(utxoTable.querySelectorAll("tbody tr"));
-          utxos = utxoRows.map((utxoRow, utxoIndex) => {
-            const utxoCells = Array.from(utxoRow.querySelectorAll("td"));
-            
-            const txid = utxoCells[2]?.querySelector("code")?.textContent?.trim() || "";
-            const index = utxoCells[3]?.textContent?.trim() || "";
-            const amountText = utxoCells[4]?.textContent?.trim() || "0";
-            const amount = parseFloat(amountText) || 0;
-            
-            const utxoCheckbox = utxoCells[0]?.querySelector("input[type='checkbox']");
-            const checkboxTestId = utxoCheckbox?.getAttribute("data-testid");
-            const checkboxSelector = checkboxTestId ? 
-              `[data-testid="${checkboxTestId}"]` : 
-              `table tbody tr:nth-child(${utxoIndex + 1}) input[type="checkbox"]`;
-            
-            return { amount, checkboxSelector, txid, index };
-          });
-        }
-      }
-      
-      return { pathSuffix, balance, address, utxos, isExpanded };
-    });
-  });
-  
-  return addressData;
-}
-
-/**
- * Simple function to expand an address row
- */
-export async function expandAddress(page: Page, addressIndex: number): Promise<void> {
-  const expandButton = page.locator(`tbody tr:nth-child(${addressIndex + 1}) .MuiAccordionSummary-root`);
-  await expandButton.click();
-  await page.waitForTimeout(500);
-}
-
-/**
- * Simple UTXO selection - just pick UTXOs until we have enough
- */
-export async function selectUTXOsForAmount(page: Page, targetAmount: number): Promise<SimpleUTXOSelectionResult> {
-  // First extract data
-  let addressData = await extractUTXOData(page);
-  
-  // Expand addresses that aren't expanded but have balance
-  for (let i = 0; i < addressData.length; i++) {
-    const addr = addressData[i];
-    if (!addr.isExpanded && addr.balance > 0) {
-      console.log(`Expanding address ${addr.pathSuffix} to see UTXOs`);
-      await expandAddress(page, i);
-    }
-  }
-  
-  // Re-extract after expansion
-  addressData = await extractUTXOData(page);
-  
-  // Collect all UTXOs
-  const allUTXOs: UTXOInfo[] = [];
-  addressData.forEach(addr => {
-    allUTXOs.push(...addr.utxos);
-  });
-  
-  // Simple selection: just pick UTXOs until we have enough
-  const selectedUTXOs: UTXOInfo[] = [];
-  let totalAmount = 0;
-  
-  for (const utxo of allUTXOs) {
-    selectedUTXOs.push(utxo);
-    totalAmount += utxo.amount;
-    
-    if (totalAmount >= targetAmount) {
-      break;
-    }
-  }
-  
-  if (totalAmount < targetAmount) {
-    throw new Error(`Not enough UTXOs. Need ${targetAmount} BTC, only found ${totalAmount} BTC`);
-  }
-  
-  // Check the selected UTXOs
-  for (const utxo of selectedUTXOs) {
-    console.log(`Selecting UTXO: ${utxo.amount} BTC`);
-    await page.locator(utxo.checkboxSelector).check();
-    await page.waitForTimeout(100);
-  }
-  
-  console.log(`Selected ${selectedUTXOs.length} UTXOs totaling ${totalAmount} BTC for target ${targetAmount} BTC`);
-  
-  return { selectedUTXOs, totalAmount };
-}
-
-/**
  * Gets the current fee rate from the send form
  */
 export async function getCurrentFeeRate(page: Page): Promise<number> {
   const feeRateInput = page.locator('input[name="fee_rate"][type=number]');
   const feeRateValue = await feeRateInput.inputValue();
   return parseFloat(feeRateValue) || 1;
-} 
+}
