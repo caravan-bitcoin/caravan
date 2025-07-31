@@ -168,6 +168,15 @@ export const isBinaryPSBT = (arrayBuffer: ArrayBuffer) => {
   );
 };
 
+/**
+ * This is useful when we have an input for which we want to parse
+ * what its sequence number is from a psbt. The identifier is used
+ * to match against the input in the psbt and then we extract the sequence number
+ * from the input.
+ * @param psbt - The PSBT object
+ * @param inputIdentifier - The input identifier to match against from the psbt
+ * @returns The sequence number for the input
+ */
 export const getSequenceForInput = (
   psbt: Psbt,
   inputIdentifier: string,
