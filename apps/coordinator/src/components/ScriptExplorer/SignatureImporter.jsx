@@ -38,12 +38,7 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-  validateMultisigPsbtSignature,
-} from "@caravan/psbt";
+import { validateMultisigPsbtSignature } from "@caravan/psbt";
 
 const TEXT = "text";
 const UNKNOWN = "unknown";
@@ -348,10 +343,8 @@ class SignatureImporter extends React.Component {
       inputs,
       signatureImporters,
       setComplete,
-      network,
-      outputs,
       setSigningKey,
-      enableRBF,
+      unsignedPSBT,
     } = this.props;
     this.setState({ signedPsbt });
     if (!Array.isArray(inputsSignatures)) {
@@ -398,21 +391,8 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
-          const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
-          const args = {
-            network,
-            inputs: inputs.map((input) => {
-              const convertedInput = convertLegacyInput(input);
-              return {
-                ...convertedInput,
-                sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
-              };
-            }),
-            outputs: outputs.map(convertLegacyOutput),
-          };
-          const psbt = getUnsignedMultisigPsbtV0(args);
           publicKey = validateMultisigPsbtSignature(
-            psbt.toBase64(),
+            unsignedPSBT,
             inputIndex,
             inputSignature,
             inputs[inputIndex].amountSats,
@@ -503,21 +483,8 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
-              const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
-              const args = {
-                network,
-                inputs: inputs.map((input) => {
-                  const convertedInput = convertLegacyInput(input);
-                  return {
-                    ...convertedInput,
-                    sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
-                  };
-                }),
-                outputs: outputs.map(convertLegacyOutput),
-              };
-              const psbt = getUnsignedMultisigPsbtV0(args);
               publicKey = validateMultisigPsbtSignature(
-                psbt.toBase64(),
+                unsignedPSBT,
                 inputIndex,
                 inputSignature,
                 inputs[inputIndex].amountSats,

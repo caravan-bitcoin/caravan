@@ -349,6 +349,7 @@ inputs to protect against large fee attack`);
       index: input.index,
       transactionHex: fundingTxHex,
       txid: reverseBuffer(input.hash).toString("hex"),
+      sequence: input.sequence,
       multisig,
     };
   });

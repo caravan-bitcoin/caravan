@@ -87,7 +87,7 @@
     "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
     "test:e2e:install": "npx playwright install",
-    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
+    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` TREZOR_DEV=true vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },
   "husky": {

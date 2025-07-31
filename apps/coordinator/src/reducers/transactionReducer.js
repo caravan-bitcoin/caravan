@@ -472,7 +472,15 @@ export default (state = initialState(), action) => {
     case SET_SPEND_STEP:
       return updateState(state, { spendingStep: action.value });
     case SET_ENABLE_RBF:
-      return updateState(state, { enableRBF: action.value });
+      return updateState(state, {
+        enableRBF: action.value,
+        // if RBF is toggled we need to make sure to update the
+        // sequence of all inputs to reflect this change
+        inputs: state.inputs.map((input) => ({
+          ...input,
+          sequence: action.value ? 0xfffffffd : 0xffffffff,
+        })),
+      });
     default:
       return state;
   }
