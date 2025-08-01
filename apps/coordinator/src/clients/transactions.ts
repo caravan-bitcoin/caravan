@@ -151,12 +151,6 @@ export const usePendingTransactions = () => {
   };
 };
 
-// Base query configuration for transaction history
-const TRANSACTION_QUERY_CONFIG = {
-  staleTime: 30000, // Cache for 30 seconds
-  cacheTime: 5 * 60 * 1000, // Keep cache for 5 minutes
-};
-
 // TanStack Query hook for wallet transaction history (private clients)
 export const useWalletTransactionHistory = (count: number, skip: number) => {
   const blockchainClient = useGetClient();
@@ -170,7 +164,6 @@ export const useWalletTransactionHistory = (count: number, skip: number) => {
       return await blockchainClient.getWalletTransactionHistory(count, skip);
     },
     enabled: !!blockchainClient,
-    ...TRANSACTION_QUERY_CONFIG,
   });
 };
 
@@ -200,7 +193,6 @@ export const useAddressTransactionHistory = (
       );
     },
     enabled: !!blockchainClient && addresses.length > 0,
-    ...TRANSACTION_QUERY_CONFIG,
   });
 };
 
