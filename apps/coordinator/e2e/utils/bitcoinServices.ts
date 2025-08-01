@@ -5,7 +5,6 @@ import {
   rpcConfig,
   walletConfig,
 } from "./types";
-import { decode } from "punycode";
 
 export class BitcoinCoreService {
   private clientConfig: rpcConfig;
