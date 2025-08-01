@@ -86,7 +86,7 @@ export async function selectUTXOs(page: Page, targetAmount: number) {
     const checkbox = row.locator('input[name="spend"][type="checkbox"]')
     // const checkbox = row.locator('[data-testid^="utxo-checkbox-"]')
 
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(500)
 
     console.log("checkBox find: ", checkbox)
     
@@ -94,7 +94,7 @@ export async function selectUTXOs(page: Page, targetAmount: number) {
       await checkbox.check();
       selectedUTXOValue += balance;
     }
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(500)
     console.log("selectedUTXOval: ", selectedUTXOValue)
   }
 

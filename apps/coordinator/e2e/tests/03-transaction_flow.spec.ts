@@ -386,7 +386,7 @@ test.describe("Transaction Creation and Signing", () => {
 
       await broadcastButton.click();
 
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(1000);
 
       // Wait for broadcast success
       const successMessage = page.getByText(
@@ -395,7 +395,7 @@ test.describe("Transaction Creation and Signing", () => {
       );
       await expect(successMessage).toBeVisible();
 
-      await page.waitForTimeout(6000);
+      await page.waitForTimeout(1000);
     } catch (error: any) {
       console.log("error", error);
       throw new Error(error);

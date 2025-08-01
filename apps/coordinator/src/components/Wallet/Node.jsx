@@ -65,7 +65,10 @@ class Node extends React.Component {
     const { indeterminate, checked } = this.state;
     const spending = walletMode === WALLET_MODES.SPEND;
     return (
-      <TableRow key={bip32Path} data-testid={`main-utxo-row-${bip32Path.replace(/[/m]/g,'')}`}>
+      <TableRow
+        key={bip32Path}
+        data-testid={`main-utxo-row-${bip32Path.replace(/[/m]/g, "")}`}
+      >
         {spending && (
           <TableCell>
             <Checkbox
@@ -75,7 +78,7 @@ class Node extends React.Component {
               checked={checked}
               disabled={!fetchedUTXOs || balanceSats.isEqualTo(0)}
               indeterminate={indeterminate}
-              data-testid={`utxo-checkbox-${bip32Path.replace(/[/m]/g, '-')}`}
+              data-testid={`utxo-checkbox-${bip32Path.replace(/[/m]/g, "-")}`}
             />
           </TableCell>
         )}
