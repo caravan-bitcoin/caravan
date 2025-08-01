@@ -1,8 +1,7 @@
 import { Network } from "@caravan/bitcoin";
-import { ExtendedPublicKeyData } from "@caravan/wallets";
 import { mockDeep, MockProxy } from "vitest-mock-extended";
 
-import { BCUR2Decoder } from "../decoder";
+import { ExtendedPublicKeyData, BCUR2Decoder } from "../decoder";
 import { BCUR2Encoder } from "../encoder";
 import {
   BCUR2Interaction,
