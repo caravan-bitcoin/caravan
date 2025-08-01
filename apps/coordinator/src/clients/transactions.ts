@@ -51,9 +51,9 @@ const fetchTransactionDetails = async (
 export const processTransactionsWithWalletData = (
   transactions: WalletTransactionDetails[],
   walletAddresses: string[],
-  filterConfirmed: boolean = false,
+  onlyConfirmed: boolean = false,
 ): TransactionDetails[] => {
-  const filteredTransactions = filterConfirmed
+  const filteredTransactions = onlyConfirmed
     ? transactions.filter((tx) => tx.status?.confirmed === true)
     : transactions;
 
