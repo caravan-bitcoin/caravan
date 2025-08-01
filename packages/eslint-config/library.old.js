@@ -12,11 +12,9 @@ module.exports = {
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:import/recommended",
-    "plugin:import/typescript",
     "prettier",
   ],
-  plugins: ["@typescript-eslint", "import"],
+  plugins: ["@typescript-eslint"],
   parserOptions: {
     sourceType: "module",
     ecmaVersion: 2020,
@@ -26,37 +24,11 @@ module.exports = {
       typescript: {
         project,
       },
-      node: {
-        extensions: [".js", ".jsx", ".ts", ".tsx"],
-      },
     },
   },
   rules: {
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "warn",
-    "import/order": [
-      "error",
-      {
-        groups: [
-          "builtin",
-          "external",
-          "internal",
-          "parent",
-          "sibling",
-          "index",
-        ],
-
-        pathGroups: [
-          {
-            pattern: "@caravan/**",
-            group: "internal",
-            position: "after",
-          },
-        ],
-        "newlines-between": "always",
-        alphabetize: { order: "asc", caseInsensitive: true },
-      },
-    ],
   },
 };
