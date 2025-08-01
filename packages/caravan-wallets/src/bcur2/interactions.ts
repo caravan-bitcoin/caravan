@@ -49,21 +49,18 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
 
   protected network: BitcoinNetwork;
 
-  protected decoderFactory: BCUR2DecoderFactory;
-
   /**
    * Creates a new BCUR2 interaction instance
    * @param {BitcoinNetwork} network - The Bitcoin network to use (mainnet or testnet)
-   * @param {BCUR2DecoderFactory} decoderFactory - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2Decoder} decoder - The BCUR2Decoder instance to use
    */
   constructor(
     network: BitcoinNetwork = Network.MAINNET,
-    decoderFactory: BCUR2DecoderFactory = () => new BCUR2Decoder()
+    decoder: BCUR2Decoder = new BCUR2Decoder()
   ) {
     super();
     this.network = network;
-    this.decoderFactory = decoderFactory;
-    this.decoder = decoderFactory();
+    this.decoder = decoder;
   }
 
   /**
@@ -152,18 +149,18 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
    * @param {Object} params - The constructor parameters
    * @param {BitcoinNetwork} [params.network=Network.MAINNET] - The Bitcoin network to use
    * @param {string} params.bip32Path - The BIP32 derivation path to request
-   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
    */
   constructor({
     network = Network.MAINNET,
     bip32Path,
-    decoderFactory,
+    decoder,
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
-    decoderFactory?: BCUR2DecoderFactory;
+    decoder?: BCUR2Decoder;
   }) {
-    super(network, decoderFactory);
+    super(network, decoder);
     this.bip32Path = bip32Path;
     this.workflow = ["request", "parse"];
   }
@@ -268,23 +265,23 @@ export class BCUR2EncodeTransaction extends BCUR2Interaction {
    * @param {string} params.psbt - Base64 encoded PSBT to encode
    * @param {BitcoinNetwork} params.network - The Bitcoin network
    * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
-   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
    * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
    */
   constructor({
     psbt,
     network = Network.MAINNET,
     maxFragmentLength = 100,
-    decoderFactory,
+    decoder,
     encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
   }: {
     psbt: string;
     network?: BitcoinNetwork;
     maxFragmentLength?: number;
-    decoderFactory?: BCUR2DecoderFactory;
+    decoder?: BCUR2Decoder;
     encoderFactory?: BCUR2EncoderFactory;
   }) {
-    super(network, decoderFactory);
+    super(network, decoder);
     this.psbt = psbt;
     this.maxFragmentLength = maxFragmentLength;
     this.encoderFactory = encoderFactory;
@@ -406,23 +403,23 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
    * @param {string} params.psbt - Base64 encoded PSBT to sign
    * @param {BitcoinNetwork} params.network - The Bitcoin network
    * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
-   * @param {BCUR2DecoderFactory} [params.decoderFactory] - Factory function for creating BCUR2Decoder instances
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
    * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
    */
   constructor({
     psbt,
     network = Network.MAINNET,
     maxFragmentLength = 100,
-    decoderFactory,
+    decoder,
     encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
   }: {
     psbt: string;
     network?: BitcoinNetwork;
     maxFragmentLength?: number;
-    decoderFactory?: BCUR2DecoderFactory;
+    decoder?: BCUR2Decoder;
     encoderFactory?: BCUR2EncoderFactory;
   }) {
-    super(network, decoderFactory);
+    super(network, decoder);
 
     if (!psbt) {
       throw new Error("PSBT is required for signing");

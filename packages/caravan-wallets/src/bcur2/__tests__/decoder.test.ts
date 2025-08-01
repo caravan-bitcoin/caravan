@@ -1,32 +1,46 @@
 import { Network } from "@caravan/bitcoin";
-import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
+import { CryptoPSBT, URRegistryDecoder } from "@keystonehq/bc-ur-registry";
 import { UR } from "@ngraveio/bc-ur";
-import { mockDeep, MockProxy } from 'vitest-mock-extended';
+import { mockDeep, MockProxy } from "vitest-mock-extended";
 
 import { BCUR2Decoder } from "../decoder";
 
 // Mock the bc-ur-registry module for the utils functions
 vi.mock("@keystonehq/bc-ur-registry", () => {
   // Valid compressed public key for testing
-  const testKey = Buffer.from('0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798', 'hex');
-  const testChain = Buffer.from('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f', 'hex');
+  const testKey = Buffer.from(
+    "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+    "hex"
+  );
+  const testChain = Buffer.from(
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "hex"
+  );
 
   // Create HDKey mock class
   class MockCryptoHDKey {
-    getKey() { return testKey; }
+    getKey() {
+      return testKey;
+    }
 
-    getChainCode() { return testChain; }
+    getChainCode() {
+      return testChain;
+    }
 
-    getParentFingerprint() { return Buffer.from('F57EC65D', 'hex'); }
+    getParentFingerprint() {
+      return Buffer.from("F57EC65D", "hex");
+    }
 
     getOrigin() {
       return {
         getPath: () => "m/45'/1'/0'",
-        getSourceFingerprint: () => Buffer.from('F57EC65D', 'hex'),
-        getComponents: () => [{
-          isHardened: () => true,
-          getIndex: () => 0
-        }]
+        getSourceFingerprint: () => Buffer.from("F57EC65D", "hex"),
+        getComponents: () => [
+          {
+            isHardened: () => true,
+            getIndex: () => 0,
+          },
+        ],
       };
     }
   }
@@ -34,13 +48,13 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   // Create mock implementations
   const mockHDKey = new MockCryptoHDKey();
   const mockOutputDescriptor = {
-    getCryptoKey: vi.fn().mockReturnValue(mockHDKey)
+    getCryptoKey: vi.fn().mockReturnValue(mockHDKey),
   };
 
   const mockAccount = {
     getOutputDescriptors: vi.fn().mockReturnValue([mockOutputDescriptor]),
-    masterFingerprint: Buffer.from('F57EC65D', 'hex'),
-    outputDescriptors: [mockOutputDescriptor]
+    masterFingerprint: Buffer.from("F57EC65D", "hex"),
+    outputDescriptors: [mockOutputDescriptor],
   };
 
   // Create proper constructor functions for instanceof checks
@@ -49,16 +63,17 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   } as any;
   MockCryptoHDKeyConstructor.fromCBOR = vi.fn().mockReturnValue(mockHDKey);
   MockCryptoHDKeyConstructor.prototype = MockCryptoHDKey.prototype;
-  
+
   // Make the mockHDKey an instance of the constructor
   Reflect.setPrototypeOf(mockHDKey, MockCryptoHDKeyConstructor.prototype);
 
   return {
     URRegistryDecoder: vi.fn(), // This won't be used since we're injecting our own
     CryptoAccount: {
-      fromCBOR: vi.fn().mockReturnValue(mockAccount)
+      fromCBOR: vi.fn().mockReturnValue(mockAccount),
     },
-    CryptoHDKey: MockCryptoHDKeyConstructor
+    CryptoHDKey: MockCryptoHDKeyConstructor,
+    CryptoPSBT: mockDeep<CryptoPSBT>(),
   };
 });
 
@@ -70,7 +85,7 @@ vi.mock("@caravan/bitcoin", () => {
     },
     ExtendedPublicKey: vi.fn().mockImplementation(({ network }) => ({
       toBase58: () =>
-        (network === "testnet" ? "tpubMockedKey" : "xpubMockedKey"),
+        network === "testnet" ? "tpubMockedKey" : "xpubMockedKey",
     })),
   };
 });
@@ -82,7 +97,7 @@ describe("BCUR2Decoder", () => {
   beforeEach(() => {
     mockDecoder = mockDeep<URRegistryDecoder>();
     decoder = new BCUR2Decoder(mockDecoder);
-    
+
     // Setup default mock behaviors
     mockDecoder.isComplete.mockReturnValue(false);
     mockDecoder.getProgress.mockReturnValue(0);
@@ -118,7 +133,7 @@ describe("BCUR2Decoder", () => {
       mockDecoder.isComplete.mockReturnValue(false);
       mockDecoder.getProgress.mockReturnValue(0.5);
       mockDecoder.receivePart.mockImplementation(() => true);
-      
+
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Processing QR parts: 50%");
     });
@@ -128,7 +143,7 @@ describe("BCUR2Decoder", () => {
       mockDecoder.isComplete.mockReturnValue(true);
       mockDecoder.getProgress.mockReturnValue(1);
       mockDecoder.receivePart.mockImplementation(() => true);
-      
+
       decoder.receivePart(urText);
       expect(decoder.getProgress()).toBe("Complete");
     });
@@ -145,7 +160,7 @@ describe("BCUR2Decoder", () => {
       mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "crypto-account",
-        cbor: Buffer.from([1, 2, 3, 4])
+        cbor: Buffer.from([1, 2, 3, 4]),
       } as unknown as UR;
       mockDecoder.resultUR.mockReturnValue(mockUR);
 
@@ -154,7 +169,7 @@ describe("BCUR2Decoder", () => {
         type: "crypto-account",
         xpub: expect.any(String),
         rootFingerprint: expect.any(String),
-        bip32Path: expect.any(String)
+        bip32Path: expect.any(String),
       });
     });
 
@@ -162,7 +177,7 @@ describe("BCUR2Decoder", () => {
       mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "crypto-hdkey",
-        cbor: Buffer.from([1, 2, 3, 4])
+        cbor: Buffer.from([1, 2, 3, 4]),
       } as unknown as UR;
       mockDecoder.resultUR.mockReturnValue(mockUR);
 
@@ -171,7 +186,7 @@ describe("BCUR2Decoder", () => {
         type: "crypto-hdkey",
         xpub: expect.any(String),
         rootFingerprint: expect.any(String),
-        bip32Path: expect.any(String)
+        bip32Path: expect.any(String),
       });
     });
 
@@ -179,7 +194,7 @@ describe("BCUR2Decoder", () => {
       mockDecoder.isComplete.mockReturnValue(true);
       const mockUR = {
         type: "unsupported-type",
-        cbor: Buffer.from([1, 2, 3, 4])
+        cbor: Buffer.from([1, 2, 3, 4]),
       } as unknown as UR;
       mockDecoder.resultUR.mockReturnValue(mockUR);
 
@@ -204,11 +219,11 @@ describe("BCUR2Decoder", () => {
       // Set some state that should be reset
       decoder.receivePart("INVALID");
       expect(decoder.getError()).not.toBeNull();
-      
+
       // Create a new mock decoder for the reset
       const newMockDecoder = mockDeep<URRegistryDecoder>();
       newMockDecoder.isComplete.mockReturnValue(false);
-      
+
       // Reset with the new mock decoder
       decoder.reset(newMockDecoder);
       expect(decoder.getError()).toBeNull();
@@ -220,11 +235,11 @@ describe("BCUR2Decoder", () => {
       // Set some state that should be reset
       decoder.receivePart("INVALID");
       expect(decoder.getError()).not.toBeNull();
-      
+
       // Create a new mock decoder for injection
       const newMockDecoder = mockDeep<URRegistryDecoder>();
       newMockDecoder.isComplete.mockReturnValue(false);
-      
+
       // Reset with injected decoder
       decoder.reset(newMockDecoder);
       expect(decoder.getError()).toBeNull();
@@ -237,14 +252,14 @@ describe("BCUR2Decoder", () => {
       const newMockDecoder = mockDeep<URRegistryDecoder>();
       newMockDecoder.isComplete.mockReturnValue(false);
       newMockDecoder.getProgress.mockReturnValue(0.75);
-      
+
       // Reset with the new decoder
       decoder.reset(newMockDecoder);
-      
+
       // Test that the new decoder is being used
       const urText = "UR:CRYPTO-ACCOUNT/TEST";
       decoder.receivePart(urText);
-      
+
       // The new mock decoder should have been called, not the original
       expect(newMockDecoder.receivePart).toHaveBeenCalledWith(urText);
       expect(mockDecoder.receivePart).not.toHaveBeenCalled();
@@ -255,10 +270,10 @@ describe("BCUR2Decoder", () => {
       // Note: We can't easily test this with the current mocking setup since
       // we're injecting a mock decoder in beforeEach, but the signature
       // and behavior is tested above with explicit injection
-      
+
       const newMockDecoder = mockDeep<URRegistryDecoder>();
       newMockDecoder.isComplete.mockReturnValue(false);
-      
+
       // Reset without parameters - uses default parameter
       decoder.reset();
       // Since URRegistryDecoder is mocked globally, this will work as expected

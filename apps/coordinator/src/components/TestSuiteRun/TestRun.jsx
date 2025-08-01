@@ -31,8 +31,7 @@ import * as errorNotificationActions from "../../actions/errorNotificationAction
 import InteractionMessages from "../InteractionMessages";
 import { TestRunNote } from "./Note";
 import { HermitReader, HermitDisplayer } from "../Hermit";
-import BCUR2Reader from "../BCUR2/BCUR2Reader"; // Import as default export
-import BCUR2Encoder from "../BCUR2/BCUR2Encoder"; // Import for displaying transaction QR codes
+import { BCUR2Reader, BCUR2Encoder } from "../BCUR2"; // Import for displaying transaction QR codes
 import {
   ColdcardJSONReader,
   ColdcardPSBTReader,

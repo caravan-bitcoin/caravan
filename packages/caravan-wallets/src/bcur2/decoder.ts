@@ -12,7 +12,7 @@ import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
 /**
  * Factory function type for creating CryptoPSBT instances from CBOR
  */
-export type CryptoPSBTFromCBORFactory = (cbor: Buffer) => CryptoPSBT;
+export type CryptoPSBTFromCBORFactory = typeof CryptoPSBT.fromCBOR;
 
 /**
  * Supported UR types for BCUR2 decoding
@@ -67,11 +67,10 @@ export class BCUR2Decoder {
    */
   constructor(
     decoder?: URRegistryDecoder,
-    cryptoPSBTFromCBORFactory: CryptoPSBTFromCBORFactory = (cbor) =>
-      CryptoPSBT.fromCBOR(cbor)
+    cryptoPSBTFromCBOR: CryptoPSBTFromCBORFactory = CryptoPSBT.fromCBOR
   ) {
     this.decoder = decoder || new URRegistryDecoder();
-    this.cryptoPSBTFromCBORFactory = cryptoPSBTFromCBORFactory;
+    this.cryptoPSBTFromCBORFactory = cryptoPSBTFromCBOR;
   }
 
   /**

@@ -56,7 +56,7 @@ class SignMultisigTransactionTest extends Test {
       );
 
       // The unsignedMultisigPSBT returns { data, txn } where data is the actual PSBT
-      psbtHex = unsignedPSBTWrapper.data.toBuffer().toString("hex");
+      psbtHex = unsignedPSBTWrapper.data.toHex();
     } catch (e) {
       return false;
     }
