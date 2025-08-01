@@ -1,5 +1,4 @@
 import { Network } from "@caravan/bitcoin";
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockDeep, MockProxy } from "vitest-mock-extended";
 
 import { ExtendedPublicKeyData } from "@caravan/wallets";

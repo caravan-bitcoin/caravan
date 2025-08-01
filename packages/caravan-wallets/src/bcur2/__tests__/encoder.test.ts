@@ -1,5 +1,3 @@
-import { describe, it, expect } from "vitest";
-
 import { BCUR2Encoder } from "../encoder";
 
 // Simple unit tests focused on dependency injection patterns
