@@ -19,6 +19,8 @@ import { version } from "../package.json";
 import {
   BCUR2,
   BCUR2ExportExtendedPublicKey,
+  BCUR2EncodeTransaction,
+  BCUR2SignMultisigTransaction,
 } from "./bcur2/interactions";
 import {
   BITBOX,
@@ -74,7 +76,7 @@ import {
  */
 export const VERSION: string = version;
 
-export { MULTISIG_ROOT } from './constants';
+export { MULTISIG_ROOT } from "./constants";
 
 /**
  * Keystores which support direct interactions.
@@ -455,6 +457,11 @@ export function SignMultisigTransaction({
         addressType: walletConfig.addressType,
         returnSignatureArray,
       });
+    case BCUR2:
+      return new BCUR2SignMultisigTransaction({
+        psbt,
+        network,
+      });
     default:
       return new UnsupportedInteraction({
         code: "unsupported",
@@ -607,7 +614,48 @@ export function RegisterWalletPolicy({
       });
   }
 }
-
+/**
+ * Return an interaction class for encoding a PSBT transaction into
+ * BCUR2 QR codes for signing by airgapped wallets.
+ *
+ * **Supported keystores:** BCUR2-compatible devices
+ *
+ * @example
+ * import {MAINNET} from "@caravan/bitcoin";
+ * import {EncodeTransactionForSigning, BCUR2} from "@caravan/wallets";
+ * const interaction = EncodeTransactionForSigning({
+ *   keystore: BCUR2,
+ *   psbt: "cHNidP8BAHcCAAAAAe7V...",
+ *   network: MAINNET,
+ *   maxFragmentLength: 100
+ * });
+ * const qrFrames = interaction.getQRCodeFrames();
+ */
+export function EncodeTransactionForSigning({
+  keystore,
+  psbt,
+  network,
+  maxFragmentLength = 100,
+}: {
+  keystore: KEYSTORE_TYPES;
+  psbt: string;
+  network: Network;
+  maxFragmentLength?: number;
+}) {
+  switch (keystore) {
+    case BCUR2:
+      return new BCUR2EncodeTransaction({
+        psbt,
+        network,
+        maxFragmentLength,
+      });
+    default:
+      return new UnsupportedInteraction({
+        code: "unsupported",
+        text: "This keystore is not supported for encoding transactions as QR codes.",
+      });
+  }
+}
 /**
  * Return a class for creating a multisig config file for a
  * given keystore or coordinator.
@@ -658,8 +706,7 @@ export function ConfigAdapter({
 export * from "./interaction";
 export * from "./bitbox";
 export * from "./bcur";
-export * from "./bcur2/interactions";
-export * from "./bcur2/decoder";
+export * from "./bcur2";
 export * from "./coldcard";
 export * from "./custom";
 export * from "./hermit";
