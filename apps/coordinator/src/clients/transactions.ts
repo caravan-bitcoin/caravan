@@ -47,24 +47,38 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
-// Utility function to process transactions with wallet metadata
-export const processTransactionsWithWalletData = (
+/**
+ * Processes raw transaction data by adding wallet-specific context and filtering.
+ *
+ * This function works with transactions from both private clients (wallet history)
+ * and public clients (address history), as both return WalletTransactionDetails[].
+ *
+ * @param transactions - Raw transactions from either wallet or address history
+ * @param walletAddresses - Addresses belonging to this wallet for value calculation
+ * @param onlyConfirmed - Whether to filter out unconfirmed transactions
+ * @returns Processed transactions with wallet context (value, direction, etc.)
+ */
+export const processTransactionsWithWalletContext = (
   transactions: WalletTransactionDetails[],
   walletAddresses: string[],
   onlyConfirmed: boolean = false,
 ): TransactionDetails[] => {
+  // Filter by confirmation status if requested
   const filteredTransactions = onlyConfirmed
     ? transactions.filter((tx) => tx.status?.confirmed === true)
     : transactions;
 
-  return filteredTransactions.map((tx) => ({
-    ...tx,
-    valueToWallet: calculateTransactionValue(tx, walletAddresses),
-    isReceived:
-      tx.isReceived !== undefined
-        ? tx.isReceived
-        : calculateTransactionValue(tx, walletAddresses) > 0,
-  }));
+  // Add wallet-specific context to each transaction
+  return filteredTransactions.map((tx) => {
+    const valueToWallet = calculateTransactionValue(tx, walletAddresses);
+
+    return {
+      ...tx,
+      valueToWallet,
+      isReceived:
+        tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0,
+    };
+  });
 };
 
 export const useFetchTransactionDetails = (txid: string) => {
@@ -117,8 +131,10 @@ export const usePendingTransactions = () => {
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
 
-  // Process transactions with calculated values and filter out confirmed ones
-  const transactions = processTransactionsWithWalletData(
+  // Process transactions with wallet context and filter out confirmed ones
+  // Note: This works for both private and public clients since getTransaction()
+  // is available on both client types
+  const transactions = processTransactionsWithWalletContext(
     transactionQueries
       .filter((query) => query.data && !query.data.status?.confirmed)
       .map((query) => query.data!),

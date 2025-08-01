@@ -13,7 +13,7 @@ import type { MultisigAddressType } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
 import {
   transactionKeys,
-  processTransactionsWithWalletData,
+  processTransactionsWithWalletContext,
 } from "clients/transactions";
 
 export function useTransactionAnalysis() {
@@ -69,7 +69,7 @@ export const usePrivateClientTransactions = (
       const rawTransactions =
         await blockchainClient.getWalletTransactionHistory(count, skip);
 
-      return processTransactionsWithWalletData(
+      return processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
         true, // filter confirmed transactions only
@@ -106,7 +106,7 @@ export const usePrivateClientTransactionsWithLoadMore = (
           currentOffset,
         );
 
-      const processedTransactions = processTransactionsWithWalletData(
+      const processedTransactions = processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
         true, // filter confirmed transactions only
@@ -207,7 +207,7 @@ export const usePublicClientTransactions = (
           skip,
         );
 
-      return processTransactionsWithWalletData(
+      return processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
         true, // filter confirmed transactions only
@@ -263,7 +263,7 @@ export const usePublicClientTransactionsWithLoadMore = (
             currentOffset,
           );
 
-        const processedTransactions = processTransactionsWithWalletData(
+        const processedTransactions = processTransactionsWithWalletContext(
           rawTransactions,
           walletAddresses,
           true, // filter confirmed transactions only
@@ -282,7 +282,7 @@ export const usePublicClientTransactionsWithLoadMore = (
               currentOffset,
             );
 
-          const processedTransactions = processTransactionsWithWalletData(
+          const processedTransactions = processTransactionsWithWalletContext(
             rawTransactions,
             walletAddresses,
             true,
