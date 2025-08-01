@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- [#353](https://github.com/caravan-bitcoin/caravan/pull/353) [`cab05cb`](https://github.com/caravan-bitcoin/caravan/commit/cab05cb229fc871d6991fb48f49aa2f3b889d1f8) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Added BCUR2 encoders in caravan-wallets for supporting psbt-signing.
+
 ## 0.7.1
 
 ### Patch Changes
