@@ -680,86 +680,45 @@ public async getAddressTransactionHistory(
     throw new Error("Skip must be non-negative");
   }
 
+  if (this.type === ClientType.PRIVATE) {
+    throw new Error("Use getWalletTransactionHistory for private clients");
+  }
+
+  if (!this.provider) {
+    throw new Error("Provider must be specified for public clients");
+  }
+
   try {
-    if (this.type === ClientType.PRIVATE) {
-      throw new Error("Use getWalletTransactionHistory for private clients");
-    }
-
-    if (!this.provider) {
-      throw new Error("Provider must be specified for public clients");
-    }
-
     const addresses = Array.isArray(address) ? address : [address];
     const allTransactions: any[] = [];
-    let anyAddressFailed = false;
-    let firstError: Error | null = null;
 
-    // Use allSettled to handle partial failures
-    const results = await Promise.allSettled(
-      addresses.map(async (addr) => {
-        try {
-          const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
-            ? `limit=${count}&offset=${skip}`
-            : `count=${count}&skip=${skip}`;
-          const endpoint = `/address/${addr}/txs?${query}`;
-          const response = await this.Get(endpoint);
-                  
-          // Robust response handling
-          let transactions: any[] = [];
-                  
-          // Case 1: Response is already an array
-          if (Array.isArray(response)) {
-            transactions = response;
-          }
-          // Case 2: Response is an object with nested array
-          else if (response && typeof response === 'object') {
-            const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
-            for (const key of nestedKeys) {
-              if (Array.isArray(response[key])) {
-                transactions = response[key];
-                break;
-              }
-            }
-            // Case 3: Single transaction object (only if it has a txid)
-            if (transactions.length === 0 && response.txid) {
-              transactions = [response];
-            }
-          }
-          // Case 4: Unexpected format - just return empty array
-          else {
-            console.warn('Unexpected transaction response format:', response);
-            transactions = [];
-          }
-                  
-          // Always ensure we return an array
-          return Array.isArray(transactions) ? transactions : [];
-        } catch (error) {
-          anyAddressFailed = true;
-          firstError = error as Error;
-          throw error; // Re-throw to mark promise as rejected
-        }
-      })
-    );
+    // Fetch transactions from all addresses IN PARALLEL (not sequential)
+    const addressPromises = addresses.map(async (addr) => {
+      const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+        ? `limit=${count}&offset=${skip}`
+        : `count=${count}&skip=${skip}`;
+      
+      const endpoint = `/address/${addr}/txs?${query}`;
+      const response = await this.Get(endpoint);
 
-    // Process allSettled results - include empty arrays too
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        const transactions = result.value;
-        if (Array.isArray(transactions)) {
-          allTransactions.push(...transactions);
-        }
+      // Both Mempool and Blockstream APIs return arrays directly for address transactions
+      if (!Array.isArray(response)) {
+        throw new Error(
+          `${this.provider} API returned unexpected format: expected array, got ${typeof response}. ` +
+          `This suggests an API change. Response: ${JSON.stringify(response).slice(0, 200)}...`
+        );
       }
-    }
 
-    // Throw if any address failed AND we got no results at all
-    if (anyAddressFailed && allTransactions.length === 0) {
-      throw firstError || new Error('Failed to fetch transactions for all addresses');
-    }
+      // Filter out null/undefined values and return clean array
+      return response.filter(tx => tx !== null && tx !== undefined);
+    });
 
-    // Defensive: Ensure allTransactions is always an array
-    if (!Array.isArray(allTransactions)) {
-      console.warn('allTransactions is not an array:', allTransactions);
-      return [];
+    // Wait for all address queries to complete in parallel
+    const addressResults = await Promise.all(addressPromises);
+    
+    // Flatten all results into single array
+    for (const transactions of addressResults) {
+      allTransactions.push(...transactions);
     }
 
     // Sort by timestamp (newest first) and apply pagination
@@ -771,43 +730,16 @@ public async getAddressTransactionHistory(
       })
       .slice(0, count);
 
-    // Final safety check
-    if (!Array.isArray(sortedTransactions)) {
-      console.warn('sortedTransactions is not an array:', sortedTransactions);
-      return [];
-    }
-
-    // Map to normalized format with error handling
-    try {
-      return sortedTransactions.map((rawTx: any) => {
-        if (!rawTx || typeof rawTx !== 'object') {
-          console.warn('Invalid transaction object:', rawTx);
-          // Return a minimal valid transaction object
-          return {
-            txid: 'unknown',
-            version: 1,
-            locktime: 0,
-            vin: [],
-            vout: [],
-            size: 0,
-            weight: 0,
-            fee: 0,
-            isReceived: false,
-            status: {
-              confirmed: false,
-              blockHeight: undefined,
-              blockHash: undefined,
-              blockTime: undefined,
-            }
-          } as TransactionDetails;
-        }
-        return normalizeTransactionData(rawTx, ClientType.PUBLIC);
-      });
-    } catch (mapError) {
-      console.error('Error in transaction mapping:', mapError);
-      console.error('sortedTransactions:', sortedTransactions);
-      throw mapError;
-    }
+    // Map to normalized format with strict validation - fail fast on bad data
+    return sortedTransactions.map((rawTx: any, index: number) => {
+      if (!rawTx || typeof rawTx !== 'object' || !rawTx.txid) {
+        throw new Error(
+          `Invalid transaction at index ${index} from ${this.provider}: ` +
+          `Expected object with txid, got: ${JSON.stringify(rawTx)}`
+        );
+      }
+      return normalizeTransactionData(rawTx, ClientType.PUBLIC);
+    });
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);

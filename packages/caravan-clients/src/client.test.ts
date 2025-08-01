@@ -1826,7 +1826,6 @@ describe("BlockchainClient", () => {
     });
   });
 
-
 describe('getAddressTransactionHistory', () => {
   const testAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
   const testAddress2 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
@@ -1990,6 +1989,53 @@ describe('getAddressTransactionHistory', () => {
         });
       });
     });
+
+    describe('multiple addresses', () => {
+      it('should handle multiple addresses', async () => {
+        const client = getPublicClient();
+        
+        const mockResponse1 = [
+          {
+            txid: 'tx1',
+            fee: 1000,
+            time: 1234567890,
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 250,
+            weight: 1000,
+            status: { confirmed: true }
+          }
+        ];
+        
+        const mockResponse2 = [
+          {
+            txid: 'tx2',
+            fee: 1500,
+            time: 1234567800, // Earlier time
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 300,
+            weight: 1200,
+            status: { confirmed: true }
+          }
+        ];
+
+        const mockGet = vi.fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+        client.Get = mockGet;
+
+        const result = await client.getAddressTransactionHistory([testAddress, testAddress2]);
+
+        expect(result).toHaveLength(2);
+        expect(result[0].txid).toBe('tx1'); // Newer transaction first
+        expect(result[1].txid).toBe('tx2'); // Older transaction second
+      });
+    });
   });
 
   describe('error handling', () => {
@@ -2010,329 +2056,212 @@ describe('getAddressTransactionHistory', () => {
         .rejects.toThrow('Failed to get address transaction history: Network error');
     });
 
-    it('should handle invalid response format gracefully', async () => {
+    // NEW: Test that we throw on non-array responses (fail fast)
+    it('should throw error for invalid response format (not array)', async () => {
       const client = getPublicClient();
       const mockGet = vi.fn().mockResolvedValue('invalid response');
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(0);
+      await expect(client.getAddressTransactionHistory(testAddress))
+        .rejects.toThrow('mempool API returned unexpected format: expected array, got string');
     });
-  });
-});
 
-
-describe('getAddressTransactionHistory - Response Transformation', () => {
-  let client: BlockchainClient;
-  const testAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
-
-  // Test fixtures for different response shapes
-  const mockTransactionData = {
-    txid: 'tx123',
-    fee: 1500,
-    time: 1234567890,
-    version: 1,
-    locktime: 0,
-    vin: [{ txid: 'input1', vout: 0, sequence: 4294967295 }],
-    vout: [{ value: 50000, scriptPubkey: 'script1', scriptPubkeyAddress: 'addr1' }],
-    size: 250,
-    weight: 1000,
-    status: { confirmed: true, blockHeight: 800000, blockHash: 'hash123', blockTime: 1234567890 }
-  };
-
-  // Expected data after normalization (what normalizeTransactionData actually returns)
-  const expectedTransformedData = {
-    txid: 'tx123',
-    fee: 1500,
-    version: 1,
-    locktime: 0,
-    vin: [{ txid: 'input1', vout: 0, sequence: 4294967295 }],
-    vout: [{ 
-      value: "0.0005", // normalizeTransactionData converts satoshis to BTC string
-      scriptPubkey: undefined, // These get set to undefined by normalization
-      scriptPubkeyAddress: undefined 
-    }],
-    size: 250,
-    weight: 1000,
-    isReceived: false,
-    status: { 
-      confirmed: true, 
-      blockHeight: undefined, // These get set to undefined by normalization
-      blockHash: undefined, 
-      blockTime: undefined 
-    }
-  };
-
-  beforeEach(() => {
-    client = new BlockchainClient({
-      type: ClientType.PUBLIC,
-      provider: PublicBitcoinProvider.MEMPOOL,
-      network: Network.MAINNET,
-    });
-  });
-
-  describe('Response Shape Handling', () => {
-    it('should handle response as direct array (Case 1)', async () => {
-      const mockResponse = [mockTransactionData];
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+    it('should throw error for object response format', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue({ transactions: [] });
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
+      await expect(client.getAddressTransactionHistory(testAddress))
+        .rejects.toThrow('mempool API returned unexpected format: expected array, got object');
     });
 
-    it('should handle response with transactions key (Case 2)', async () => {
-      const mockResponse = {
-        transactions: [mockTransactionData],
-        total: 1,
-        page: 1
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle response with txs key (Case 2)', async () => {
-      const mockResponse = {
-        txs: [mockTransactionData],
-        metadata: { total: 1 }
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle response with data key (Case 2)', async () => {
-      const mockResponse = {
-        data: [mockTransactionData],
-        success: true
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle response with items key (Case 2)', async () => {
-      const mockResponse = {
-        items: [mockTransactionData],
-        pagination: { page: 1 }
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle response with result key (Case 2)', async () => {
-      const mockResponse = {
-        result: [mockTransactionData],
-        error: null
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle single transaction object as response (Case 3)', async () => {
-      const mockResponse = mockTransactionData;
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
-    });
-
-    it('should handle unexpected response format gracefully (Case 4)', async () => {
-      const mockResponse = "unexpected string response";
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(0);
-    });
-
-    it('should handle null/undefined response', async () => {
+    it('should throw error for null response', async () => {
+      const client = getPublicClient();
       const mockGet = vi.fn().mockResolvedValue(null);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(0);
+      await expect(client.getAddressTransactionHistory(testAddress))
+        .rejects.toThrow('mempool API returned unexpected format: expected array, got object');
     });
 
-    it('should handle empty nested response', async () => {
-      const mockResponse = {
-        transactions: [],
-        total: 0
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+    it('should throw error for invalid transaction data', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue([
+        { txid: 'valid-tx', time: 1234567890, version: 1, locktime: 0, vin: [], vout: [], size: 250, weight: 1000, status: { confirmed: true } },
+        { version: 1, locktime: 0, time: 1234567880, vin: [], vout: [], size: 250, weight: 1000 }, // Missing txid - oldest time, will be index 2 after sorting
+        { txid: 'another-valid-tx', time: 1234567900, version: 1, locktime: 0, vin: [], vout: [], size: 250, weight: 1000, status: { confirmed: true } }
+      ]);
+      client.Get = mockGet;
+
+      // After sorting by time (newest first), the order will be:
+      // index 0: 'another-valid-tx' (time: 1234567900)
+      // index 1: 'valid-tx' (time: 1234567890)  
+      // index 2: object without txid (time: 1234567880) <- This will fail validation
+      await expect(client.getAddressTransactionHistory(testAddress))
+        .rejects.toThrow('Invalid transaction at index 2 from mempool');
+    });
+
+    it('should filter out null values and continue processing', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue([
+        { txid: 'valid-tx-1', time: 1234567890, version: 1, locktime: 0, vin: [], vout: [], size: 250, weight: 1000, status: { confirmed: true } },
+        null, // This should be filtered out silently during the initial filtering step
+        undefined, // This should be filtered out silently during the initial filtering step
+        { txid: 'valid-tx-2', time: 1234567900, version: 1, locktime: 0, vin: [], vout: [], size: 250, weight: 1000, status: { confirmed: true } }
+      ]);
       client.Get = mockGet;
 
       const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(0);
-      expect(Array.isArray(result)).toBe(true);
+      
+      // Should only return the 2 valid transactions, null/undefined filtered out
+      expect(result).toHaveLength(2);
+      expect(result[0].txid).toBe('valid-tx-2'); // Newer transaction first (higher timestamp)
+      expect(result[1].txid).toBe('valid-tx-1'); // Older transaction second
+      
+      // Verify that no null or undefined values made it through
+      expect(result.every(tx => tx && tx.txid)).toBe(true);
     });
 
-    it('should handle completely empty response object', async () => {
-      const mockResponse = {};
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+    it('should throw error for transaction without txid', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue([
+        { version: 1, locktime: 0 } // Missing txid
+      ]);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(0);
-      expect(Array.isArray(result)).toBe(true);
+      await expect(client.getAddressTransactionHistory(testAddress))
+        .rejects.toThrow('Invalid transaction at index 0 from mempool');
     });
   });
 
-  describe('Multiple Address Handling', () => {
-    const testAddress2 = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
-
-    it('should handle multiple addresses with different response shapes', async () => {
-      const mockResponse1 = [mockTransactionData];
-      const mockResponse2 = {
-        transactions: [{
-          ...mockTransactionData,
-          txid: 'tx456',
-          time: 1234567800 // Earlier time
-        }]
-      };
-
-      const mockGet = vi.fn()
-        .mockResolvedValueOnce(mockResponse1)
-        .mockResolvedValueOnce(mockResponse2);
+  describe('data processing', () => {
+    it('should handle empty array response correctly', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue([]);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory([testAddress, testAddress2]);
+      const result = await client.getAddressTransactionHistory(testAddress);
+
+      expect(result).toHaveLength(0);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should sort transactions by time (newest first)', async () => {
+      const client = getPublicClient();
+      const mockResponse = [
+        {
+          txid: 'tx-old',
+          time: 1234567800,
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          status: { confirmed: true }
+        },
+        {
+          txid: 'tx-new',
+          time: 1234567900,
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          status: { confirmed: true }
+        }
+      ];
+
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+      client.Get = mockGet;
+
+      const result = await client.getAddressTransactionHistory(testAddress);
 
       expect(result).toHaveLength(2);
-      expect(result[0].txid).toBe('tx123'); // Newer transaction first
-      expect(result[1].txid).toBe('tx456'); // Older transaction second
+      expect(result[0].txid).toBe('tx-new'); // Newer transaction first
+      expect(result[1].txid).toBe('tx-old'); // Older transaction second
     });
 
-    it('should handle partial failures with mixed response shapes', async () => {
-      const mockResponse1 = [mockTransactionData];
-      
-      const mockGet = vi.fn()
-        .mockResolvedValueOnce(mockResponse1)
-        .mockRejectedValueOnce(new Error('API error'));
+    it('should handle timestamp vs time field variations', async () => {
+      const client = getPublicClient();
+      const mockResponse = [
+        {
+          txid: 'tx-with-timestamp',
+          timestamp: 1234567900, // Using timestamp field
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          status: { confirmed: true }
+        },
+        {
+          txid: 'tx-with-time',
+          time: 1234567800, // Using time field
+          version: 1,
+          locktime: 0,
+          vin: [],
+          vout: [],
+          size: 250,
+          weight: 1000,
+          status: { confirmed: true }
+        }
+      ];
+
+      const mockGet = vi.fn().mockResolvedValue(mockResponse);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory([testAddress, testAddress2]);
+      const result = await client.getAddressTransactionHistory(testAddress);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
+      expect(result).toHaveLength(2);
+      expect(result[0].txid).toBe('tx-with-timestamp'); // Higher timestamp first
+      expect(result[1].txid).toBe('tx-with-time');
     });
-  });
 
-  describe('Data Normalization', () => {
-    it('should properly normalize transaction data through normalizeTransactionData', async () => {
-      const mockResponseWithDifferentFields = {
-        txid: 'tx789',
-        fee: 2000,
-        timestamp: 1234567890, // Different time field
-        version: 2,
-        locktime: 100,
+    it('should apply count limit correctly', async () => {
+      const client = getPublicClient();
+      const mockResponse = Array.from({ length: 20 }, (_, i) => ({
+        txid: `tx-${i}`,
+        time: 1234567000 + i,
+        version: 1,
+        locktime: 0,
         vin: [],
         vout: [],
-        size: 300,
-        weight: 1200,
-        status: { confirmed: false }
-      };
+        size: 250,
+        weight: 1000,
+        status: { confirmed: true }
+      }));
 
-      const mockGet = vi.fn().mockResolvedValue([mockResponseWithDifferentFields]);
-      client.Get = mockGet;
-
-      const result = await client.getAddressTransactionHistory(testAddress);
-
-      expect(result).toHaveLength(1);
-      // Verify that normalizeTransactionData was called and transformed the data
-      expect(result[0].txid).toBe('tx789');
-      expect(result[0].isReceived).toBe(false); // Should be added by normalization
-      expect(result[0]).toHaveProperty('status');
-    });
-  });
-
-  describe('Provider-specific Query Parameters', () => {
-    it('should use correct query params for MEMPOOL provider', async () => {
-      const mockGet = vi.fn().mockResolvedValue([]);
-      client.Get = mockGet;
-
-      await client.getAddressTransactionHistory(testAddress, 20, 40);
-
-      expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=20&skip=40`);
-    });
-
-    it('should use correct query params for BLOCKSTREAM provider', async () => {
-      client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.BLOCKSTREAM,
-        network: Network.MAINNET,
-      });
-
-      const mockGet = vi.fn().mockResolvedValue([]);
-      client.Get = mockGet;
-
-      await client.getAddressTransactionHistory(testAddress, 15, 30);
-
-      expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=15&offset=30`);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle response with nested null values', async () => {
-      const mockResponse = {
-        transactions: null,
-        txs: [mockTransactionData]
-      };
       const mockGet = vi.fn().mockResolvedValue(mockResponse);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
+      const result = await client.getAddressTransactionHistory(testAddress, 5);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
+      expect(result).toHaveLength(5);
     });
+  });
 
-    it('should handle response with mixed valid and invalid nested arrays', async () => {
-      const mockResponse = {
-        transactions: "not an array",
-        txs: [mockTransactionData],
-        data: null
-      };
-      const mockGet = vi.fn().mockResolvedValue(mockResponse);
+  describe('provider-specific behavior', () => {
+    it('should use correct query parameters for MEMPOOL', async () => {
+      const client = getPublicClient();
+      const mockGet = vi.fn().mockResolvedValue([]);
       client.Get = mockGet;
 
-      const result = await client.getAddressTransactionHistory(testAddress);
+      await client.getAddressTransactionHistory(testAddress, 25, 50);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(expectedTransformedData);
+      expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?count=25&skip=50`);
+    });
+
+    it('should use correct query parameters for BLOCKSTREAM', async () => {
+      const client = getPublicClient({ provider: PublicBitcoinProvider.BLOCKSTREAM });
+      const mockGet = vi.fn().mockResolvedValue([]);
+      client.Get = mockGet;
+
+      await client.getAddressTransactionHistory(testAddress, 25, 50);
+
+      expect(mockGet).toHaveBeenCalledWith(`/address/${testAddress}/txs?limit=25&offset=50`);
     });
   });
 });
