@@ -26,6 +26,9 @@ module.exports = {
       typescript: {
         project,
       },
+      node: {
+        extensions: [".js", ".jsx", ".ts", ".tsx"],
+      },
     },
   },
   rules: {
@@ -42,6 +45,14 @@ module.exports = {
           "parent",
           "sibling",
           "index",
+        ],
+
+        pathGroups: [
+          {
+            pattern: "@caravan/**",
+            group: "internal",
+            position: "after",
+          },
         ],
         "newlines-between": "always",
         alphabetize: { order: "asc", caseInsensitive: true },
