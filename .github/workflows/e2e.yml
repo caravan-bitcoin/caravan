@@ -1,4 +1,3 @@
-# .github/workflows/e2e.yml (CLEAN VERSION)
 name: e2e tests
 
 on:
@@ -28,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Cache Playwright browsers (this is still valuable)
+      # Cache Playwright browsers 
       - name: Get Playwright version
         id: playwright-version
         run: echo "version=$(cd apps/coordinator && npm list @playwright/test --depth=0 --json | jq -r '.dependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
@@ -61,7 +60,6 @@ jobs:
           BITCOIN_RPC_PORT=18443
           EOF
 
-      # Let YOUR automation handle everything!
       - name: Run e2e tests (with automated Docker lifecycle)
         run: |
           cd apps/coordinator
@@ -69,7 +67,7 @@ jobs:
         env:
           CI: true
 
-      # Upload results (your automation may handle cleanup, but CI should preserve artifacts)
+      # Upload results
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
