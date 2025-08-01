@@ -1,16 +1,17 @@
+import { Network } from "@caravan/bitcoin";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockDeep, MockProxy } from "vitest-mock-extended";
-import { Network } from "@caravan/bitcoin";
+
 import { ExtendedPublicKeyData } from "@caravan/wallets";
 
+import { BCUR2Decoder } from "../decoder";
+import { BCUR2Encoder } from "../encoder";
 import {
   BCUR2Interaction,
   BCUR2ExportExtendedPublicKey,
   BCUR2EncodeTransaction,
   BCUR2SignMultisigTransaction,
 } from "../interactions";
-import { BCUR2Decoder } from "../decoder";
-import { BCUR2Encoder } from "../encoder";
 
 // Mock parseSignaturesFromPSBT globally to prevent PSBT parsing errors
 vi.mock("@caravan/bitcoin", async () => ({
@@ -776,10 +777,11 @@ describe("BCUR2 Interactions", () => {
         });
 
         expect(() => {
-          new BCUR2EncodeTransaction({
+          const _interaction = new BCUR2EncodeTransaction({
             psbt: mockPSBT,
             encoderFactory: failingEncoderFactory,
           });
+          return _interaction;
         }).toThrow("Encoder factory injection error");
       });
     });

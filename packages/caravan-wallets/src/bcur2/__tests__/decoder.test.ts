@@ -85,7 +85,7 @@ vi.mock("@caravan/bitcoin", () => {
     },
     ExtendedPublicKey: vi.fn().mockImplementation(({ network }) => ({
       toBase58: () =>
-        network === "testnet" ? "tpubMockedKey" : "xpubMockedKey",
+        (network === "testnet" ? "tpubMockedKey" : "xpubMockedKey"),
     })),
   };
 });

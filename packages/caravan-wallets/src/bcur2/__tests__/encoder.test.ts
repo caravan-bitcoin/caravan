@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
+
 import { BCUR2Encoder } from "../encoder";
 
 // Simple unit tests focused on dependency injection patterns
 describe("BCUR2Encoder Dependency Injection", () => {
-  const mockPSBTBase64 = "cHNidP8BAHcCAAAAAe7V..."; // Mock base64 PSBT
-
   describe("Constructor Dependency Injection", () => {
     it("should create encoder with injected data and maxFragmentLength", () => {
       const customData = "custom-psbt-data";
@@ -143,7 +142,11 @@ describe("BCUR2Encoder Dependency Injection", () => {
   describe("Encoder Composition Patterns", () => {
     it("should support encoder composition through dependency injection", () => {
       class EncoderWrapper {
-        constructor(private encoder: BCUR2Encoder) {}
+        private encoder: BCUR2Encoder;
+
+        constructor(encoder: BCUR2Encoder) {
+          this.encoder = encoder;
+        }
 
         getData() {
           return this.encoder.data;
