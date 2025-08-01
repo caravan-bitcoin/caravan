@@ -1,4 +1,3 @@
-import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
@@ -11,6 +10,8 @@ import {
   SignatureInfo,
   SignatureSet,
   SignerIdentity,
+  getSequenceForInput,
+  getInputIdentifiersFromPsbt,
 } from "utils/psbtUtils";
 
 // ====================
@@ -22,12 +23,6 @@ import {
  */
 const createInputIdentifier = (txid: string, index: number): string =>
   `${txid}:${index}`;
-
-/**
- * Converts transaction ID from big-endian to little-endian format
- */
-const convertTxidToLittleEndian = (hash: Buffer): string =>
-  reverseBuffer(hash).toString("hex");
 
 /**
  * Maps extracted signature sets to Caravan's signature importer format.
@@ -138,27 +133,9 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
 // SELECTORS
 // ====================
 
-/**
- * Extract input identifiers from PSBT (txid:index)
- */
 export const selectInputIdentifiersFromPSBT = createSelector(
   [(state: WalletState, psbt: Psbt) => psbt],
-  (psbt: Psbt) => {
-    return new Set(
-      psbt.txInputs.map((input) => {
-        return createInputIdentifier(
-          /*
-           * All input TXIDs are expected to be in **big-endian**
-           * format (human-readable format). Which we get from block explorers, wallets, APIs
-           * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
-           * internal data structures and processing so here we convert the txid to little-endian format
-           */
-          convertTxidToLittleEndian(input.hash),
-          input.index,
-        );
-      }),
-    );
-  },
+  (psbt: Psbt) => getInputIdentifiersFromPsbt(psbt),
 );
 
 /**
@@ -166,8 +143,9 @@ export const selectInputIdentifiersFromPSBT = createSelector(
  * This is the first strategy - normal PSBT case where we get all the inputs we have in our wallet
  */
 export const selectAvailableInputsFromPSBT = createSelector(
-  [getSpendableSlices, selectInputIdentifiersFromPSBT],
-  (slices: any[], inputIdentifiers: Set<string>) => {
+  [getSpendableSlices, (state: WalletState, psbt: Psbt) => psbt],
+  (slices: any[], psbt: Psbt) => {
+    const inputIdentifiers = getInputIdentifiersFromPsbt(psbt);
     const availableInputs: Input[] = [];
     slices.forEach((slice: Slice & { utxos: UTXO }) => {
       Object.entries(slice.utxos || {}).forEach(([, utxo]) => {
@@ -178,6 +156,7 @@ export const selectAvailableInputsFromPSBT = createSelector(
             multisig: slice.multisig,
             bip32Path: slice.bip32Path,
             change: slice.change,
+            sequence: getSequenceForInput(psbt, inputIdentifier),
           };
           availableInputs.push(input);
         }

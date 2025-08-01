@@ -36,7 +36,6 @@ import {
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
 } from "../../actions/transactionActions";
-import { naiveCoinSelection } from "../../utils";
 import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
@@ -50,8 +49,6 @@ import {
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
-
-  coinSelection = naiveCoinSelection;
 
   feeAmount = new BigNumber(0);
 

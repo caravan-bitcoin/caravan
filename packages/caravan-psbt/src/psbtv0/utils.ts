@@ -110,6 +110,7 @@ export interface LegacyInput {
   transactionHex: string;
   amountSats: number | string;
   multisig: LegacyMultisig;
+  sequence?: number;
 }
 
 export interface LegacyOutput {
