@@ -1,13 +1,11 @@
 import {FullConfig} from "@playwright/test"
 import {execSync} from "child_process"
+import path from "path";
+import fs from "fs";
+
 import bitcoinClient from "./bitcoinClient";
 import createTestWallets, {checkDockerAvailability} from "./testFixtures"
-
-
-const globalWalletData ={
-    walletNames: [] as string[],
-    testWallets: [] as any[]
-}
+import { TestState } from "./types";
 
 async function globalSetup(_config: FullConfig){
 
@@ -22,12 +20,43 @@ async function globalSetup(_config: FullConfig){
 
     const {walletNames, testWallets} = await createTestWallets(client!);
 
-    globalWalletData.walletNames = walletNames;
-    globalWalletData.testWallets = testWallets;
+    const senderAddress = await client?.getNewAddress(walletNames[0]);
+    await client?.fundAddress(senderAddress,walletNames[0],300);
 
-    //storing in process.env to access in the test fle
-    process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
-    process.env.TEST_WALLETS = JSON.stringify(testWallets)
+    const receiverAddress = await client?.getNewAddress(walletNames[1]);
+
+
+    let testStateFile = path.join(process.cwd(), "e2e/temp/test-state.json");
+    let tempDir = path.dirname(testStateFile);
+
+    if(!fs.existsSync(tempDir)){
+        fs.mkdirSync(tempDir, {recursive: true})
+    }
+
+    //! think of handling this in better way (this looks so unprof)
+    // Storing initial state
+    const testState: TestState = {
+        downloadDir: path.join(process.cwd(), 'e2e/downloads'),
+        uploadDir: path.join(process.cwd(),'e2e/uploads'),
+        downloadDirFiles: {
+            WalletFile: "",
+            UnsignedPsbt: "",
+        },
+        test_wallet_names: walletNames,
+        test_wallets: testWallets,
+        sender: {
+            address: senderAddress,
+            walletName: walletNames[0]
+        },
+        receiver: {
+            address: receiverAddress,
+            walletName: walletNames[1]
+        },
+        timestamp: Date.now(),
+    }
+
+    fs.writeFileSync(testStateFile, JSON.stringify(testState,null,2))
+    process.env.TEST_STATE_FILE = testStateFile
 
    } catch (error) {
     console.log("Global setup failed:", error)

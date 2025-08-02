@@ -1,0 +1,14 @@
+# optimised compose specefic for e2e testing 
+
+services: 
+  bitcoind: 
+    image: lncm/bitcoind:v27.0
+    container_name: caravan_e2e_bitcoind_ci
+    ports: 
+      - "18443:18443"
+    command: >
+      -server
+      -regtest
+      -rpcuser=${BITCOIN_RPC_USER}
+      -rpcpassword=${BITCOIN_RPC_PASSWORD}
+      -rpcbind=
