@@ -9,9 +9,11 @@ import {
   Grid,
   Switch,
   FormControlLabel,
-  FormHelperText,
   Button,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
+
 import {
   updateDepositSliceAction,
   updateChangeSliceAction,
@@ -29,21 +31,24 @@ import {
   SPEND_STEP_CREATE,
   SPEND_STEP_PREVIEW,
   SPEND_STEP_SIGN,
+  setRBF,
   setSpendStep as setSpendStepAction,
   deleteChangeOutput as deleteChangeOutputAction,
   importPSBT as importPSBTAction,
 } from "../../actions/transactionActions";
-import { naiveCoinSelection } from "../../utils";
 import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
+import { PSBTImportComponent } from "./PSBTImportComponent";
 import { bigNumberPropTypes } from "../../proptypes/utils";
+import {
+  dustAnalysis,
+  privacyAnalysis,
+} from "../../utils/transactionAnalysisUtils";
 
 class WalletSpend extends React.Component {
   outputsAmount = new BigNumber(0);
-
-  coinSelection = naiveCoinSelection;
 
   feeAmount = new BigNumber(0);
 
@@ -52,8 +57,12 @@ class WalletSpend extends React.Component {
     this.state = {
       importPSBTDisabled: false,
       importPSBTError: "",
+      feeEstimate: "",
     };
   }
+  handleFeeEstimate = (feeEstimate) => {
+    this.setState({ feeEstimate });
+  };
 
   componentDidUpdate = (prevProps) => {
     const { finalizedOutputs } = this.props;
@@ -116,12 +125,10 @@ class WalletSpend extends React.Component {
     } = this.props;
     setSpendStep(SPEND_STEP_CREATE);
     finalizeOutputs(false);
-
     // for auto spend view, user doesn't have direct knowledge of
     // input nodes and change. So when going back to edit a transaction
     // we want to clear these from the state, since these are added automatically
     // when going from output form to transaction preview
-
     // for manual spend view, we don't store which utxo is selected right now
     // So when going back to edit a transaction we want to clear everything
     // from the state so that there are no surprises
@@ -134,93 +141,6 @@ class WalletSpend extends React.Component {
     updateAutoSpend(!event.target.checked);
     resetNodesSpend();
     deleteChangeOutput();
-  };
-
-  setPSBTToggleAndError = (importPSBTDisabled, errorMessage) => {
-    this.setState({
-      importPSBTDisabled,
-      importPSBTError: errorMessage,
-    });
-  };
-  // Helper function to detect if content is binary PSBT
-  isBinaryPSBT = (arrayBuffer) => {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    // Check for binary PSBT magic bytes (0x70736274ff)
-    return (
-      uint8Array.length >= 5 &&
-      uint8Array[0] === 0x70 &&
-      uint8Array[1] === 0x73 &&
-      uint8Array[2] === 0x62 &&
-      uint8Array[3] === 0x74 &&
-      uint8Array[4] === 0xff
-    );
-  };
-  handleImportPSBT = ({ target }) => {
-    const { importPSBT } = this.props;
-
-    this.setPSBTToggleAndError(true, "");
-
-    try {
-      if (target.files.length === 0) {
-        this.setPSBTToggleAndError(false, "No PSBT provided.");
-        return;
-      }
-      if (target.files.length > 1) {
-        this.setPSBTToggleAndError(false, "Multiple PSBTs provided.");
-        return;
-      }
-      const file = target.files[0];
-      const fileReader = new FileReader();
-      fileReader.onload = (event) => {
-        try {
-          const arrayBuffer = event.target.result;
-
-          if (this.isBinaryPSBT(arrayBuffer)) {
-            // For binary PSBT, try Uint8Array first, fallback to base64 if needed
-            try {
-              const uint8Array = new Uint8Array(arrayBuffer);
-              importPSBT(uint8Array);
-            } catch (bufferError) {
-              // If direct binary fails, convert to base64
-              console.warn(
-                "Direct binary import failed, trying base64:",
-                bufferError.message,
-              );
-              const uint8Array = new Uint8Array(arrayBuffer);
-              let binaryString = "";
-              for (let i = 0; i < uint8Array.length; i++) {
-                binaryString += String.fromCharCode(uint8Array[i]);
-              }
-              const base64String = btoa(binaryString);
-              importPSBT(base64String);
-            }
-          } else {
-            // Handle text PSBT
-            const textDecoder = new TextDecoder("utf-8");
-            const textContent = textDecoder.decode(arrayBuffer).trim();
-
-            if (!textContent) {
-              this.setPSBTToggleAndError(false, "Invalid or empty PSBT file.");
-              return;
-            }
-
-            importPSBT(textContent);
-          }
-
-          this.setPSBTToggleAndError(false, "");
-        } catch (e) {
-          this.setPSBTToggleAndError(false, e.message);
-        }
-      };
-
-      fileReader.onerror = () => {
-        this.setPSBTToggleAndError(false, "Error reading file.");
-      };
-
-      fileReader.readAsArrayBuffer(file);
-    } catch (e) {
-      this.setPSBTToggleAndError(false, e.message);
-    }
   };
 
   render() {
@@ -236,12 +156,51 @@ class WalletSpend extends React.Component {
       inputs,
       inputsTotalSats,
       outputs,
+      selectedUTXOs,
+      transactionOutputs,
+      addressType,
+      requiredSigners,
+      totalSigners,
     } = this.props;
-    const { importPSBTDisabled, importPSBTError } = this.state;
+
+    const dust = dustAnalysis({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
+    const privacy = privacyAnalysis({
+      inputs: selectedUTXOs || [],
+      outputs: transactionOutputs || [],
+      feeRate: feeRate || 1,
+      addressType,
+      requiredSigners,
+      totalSigners,
+    });
 
     return (
       <Card>
         <CardContent>
+          {/* Alerts for dust and fingerprinting */}
+          {dust.hasDustInputs && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Dust Inputs Detected</AlertTitle>
+              {dust.inputCount} of your selected inputs may be considered dust
+              at {feeRate} sat/vB. This could result in higher fees or
+              uneconomical spending.
+            </Alert>
+          )}
+          {privacy && privacy.hasWalletFingerprinting && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <AlertTitle>Wallet Fingerprinting Detected</AlertTitle>
+              {privacy.reason ||
+                "This transaction leaks privacy: exactly one output matches the wallet's script type, making it easy to identify change and link future transactions."}
+              <br />
+              Output types: {privacy.scriptTypes.join(", ")}
+            </Alert>
+          )}
           <Grid container>
             {spendingStep === SPEND_STEP_SIGN && (
               <Grid item md={12}>
@@ -264,13 +223,30 @@ class WalletSpend extends React.Component {
                         }
                         label="Manual"
                       />
+                      {/* Add RBF Toggle */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={this.props.enableRBF}
+                            onChange={(e) =>
+                              this.props.setRBF(e.target.checked)
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Replace-by-Fee (RBF)"
+                      />
                     </Box>
                   </Box>
                 </Grid>
                 <Box component="div" display={autoSpend ? "none" : "block"}>
-                  <NodeSet addNode={addNode} updateNode={updateNode} />
+                  <NodeSet
+                    addNode={addNode}
+                    updateNode={updateNode}
+                    feeRate={feeRate}
+                  />
                 </Box>
-                <OutputsForm />
+                <OutputsForm onFeeEstimate={this.handleFeeEstimate} />
                 <Box mt={2}>
                   <Button
                     onClick={this.handleShowPreview}
@@ -281,29 +257,7 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <Box mt={2}>
-                  <label htmlFor="import-psbt">
-                    <input
-                      style={{ display: "none" }}
-                      id="import-psbt"
-                      name="import-psbt"
-                      accept=".psbt,*/*"
-                      onChange={this.handleImportPSBT}
-                      type="file"
-                    />
-
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      component="span"
-                      disabled={importPSBTDisabled}
-                      style={{ marginTop: "20px" }}
-                    >
-                      Import PSBT
-                    </Button>
-                    <FormHelperText error>{importPSBTError}</FormHelperText>
-                  </label>
-                </Box>
+                <PSBTImportComponent onImport={this.props.importPSBT} />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
@@ -344,6 +298,8 @@ WalletSpend.propTypes = {
   changeAddress: PropTypes.string.isRequired,
   deleteChangeOutput: PropTypes.func.isRequired,
   depositNodes: PropTypes.shape({}),
+  enableRBF: PropTypes.bool,
+  setRBF: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeError: PropTypes.string,
   feeRate: PropTypes.string.isRequired,
@@ -366,6 +322,11 @@ WalletSpend.propTypes = {
   updateAutoSpend: PropTypes.func.isRequired,
   updateNode: PropTypes.func.isRequired,
   importPSBT: PropTypes.func.isRequired,
+  selectedUTXOs: PropTypes.arrayOf(PropTypes.shape({})),
+  transactionOutputs: PropTypes.arrayOf(PropTypes.shape({})),
+  addressType: PropTypes.string,
+  requiredSigners: PropTypes.number,
+  totalSigners: PropTypes.number,
 };
 
 WalletSpend.defaultProps = {
@@ -373,10 +334,16 @@ WalletSpend.defaultProps = {
   balanceError: null,
   changeNodes: {},
   depositNodes: {},
+  enableRBF: true,
   finalizedOutputs: false,
   feeError: null,
   feeRateError: null,
   spendingStep: 0,
+  selectedUTXOs: [],
+  transactionOutputs: [],
+  addressType: "",
+  requiredSigners: 0,
+  totalSigners: 0,
 };
 
 function mapStateToProps(state) {
@@ -386,6 +353,13 @@ function mapStateToProps(state) {
     changeNode: state.wallet.change.nextNode,
     depositNodes: state.wallet.deposits.nodes,
     autoSpend: state.spend.transaction.autoSpend,
+    enableRBF: state.spend.transaction.enableRBF,
+    network: state.settings.network,
+    selectedUTXOs: state.spend.transaction.selectedUTXOs,
+    transactionOutputs: state.spend.transaction.transactionOutputs,
+    addressType: state.settings?.addressType,
+    requiredSigners: state.settings?.requiredSigners,
+    totalSigners: state.settings?.totalSigners,
   };
 }
 
@@ -400,6 +374,7 @@ const mapDispatchToProps = {
   resetNodesSpend: resetNodesSpendAction,
   setFeeRate: setFeeRateAction,
   addOutput,
+  setRBF,
   finalizeOutputs: finalizeOutputsAction,
   setChangeAddress: setChangeAddressAction,
   setSpendStep: setSpendStepAction,

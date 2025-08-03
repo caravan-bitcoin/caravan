@@ -69,6 +69,7 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
           onSuccess={this.import}
           onClear={this.onClear}
           width="400px"
+          mode="xpub"
         />
         <FormHelperText error>{extendedPublicKeyError}</FormHelperText>
       </FormGroup>

@@ -1,5 +1,20 @@
 # @caravan/psbt
 
+## 2.0.2
+
+### Patch Changes
+
+- [#355](https://github.com/caravan-bitcoin/caravan/pull/355) [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e) Thanks [@bucko13](https://github.com/bucko13)! - add input sequence support for caravan coordinator, psbt transformations, and trezor. Coordinator also gets some cleanup of old patterns that can be circumvented with better psbt tooling
+
+- [#355](https://github.com/caravan-bitcoin/caravan/pull/355) [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e) Thanks [@bucko13](https://github.com/bucko13)! - add sequence property to legacy input type
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`d0d2d1d`](https://github.com/caravan-bitcoin/caravan/commit/d0d2d1df159a6ca6e049634ead1c5b89060f0e2b)]:
+  - @caravan/bitcoin@0.4.1
+
 ## 2.0.0
 
 ### Patch Changes

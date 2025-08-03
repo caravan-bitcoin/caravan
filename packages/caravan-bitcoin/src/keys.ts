@@ -255,6 +255,9 @@ export class ExtendedPublicKey extends Struct {
   }
 
   static decode(data: Buffer, extra?: any): ExtendedPublicKey {
+    if (!Buffer.isBuffer(data)) {
+      data = Buffer.from(data);
+    }
     return super.decode(data, extra);
   }
 }

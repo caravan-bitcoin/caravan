@@ -134,7 +134,7 @@ class NodeSet extends React.Component {
         }
         const amin = Math.min(...a.utxos.map((utxo) => utxo.time));
         const bmin = Math.min(...b.utxos.map((utxo) => utxo.time));
-        if (Number.isNaN(amin) && Number.Number.isNaN(bmin)) return 0;
+        if (Number.isNaN(amin) && Number.isNaN(bmin)) return 0;
         if (Number.isNaN(amin)) return direction;
         if (Number.isNaN(bmin)) return -direction;
         return amin > bmin ? direction : -direction;

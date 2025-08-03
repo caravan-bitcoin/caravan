@@ -5,6 +5,7 @@ import {
   autoLoadPSBT as psbtPackageAutoLoad,
 } from "@caravan/psbt";
 import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt as `autoLoadPSBT` uses this Psbt Object
+import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
@@ -73,6 +74,12 @@ export interface SignatureSet {
 }
 
 /**
+ * Converts transaction ID from big-endian to little-endian format
+ */
+export const convertTxidToLittleEndian = (hash: Buffer): string =>
+  reverseBuffer(hash).toString("hex");
+
+/**
  * Loads a PSBT from a string or buffer, handling both PSBTv0 and PSBTv2 formats.
  * Uses only functionality from the @caravan/psbt package removing dependency on the outdated use of @caravan/bitcoin
  *
@@ -124,3 +131,78 @@ export function isPsbtV2(psbtText: string | Buffer): boolean {
     return false;
   }
 }
+
+/**
+ * Creates a unique identifier for a UTXO input by combining transaction ID and output index.
+ *
+ * This is used throughout the PSBT import process to match UTXOs across different data sources.
+ * The format ensures we can easily compare inputs from PSBTs with UTXOs in our wallet state.
+ *
+ * @param txid - Transaction ID in big-endian (human-readable) format
+ * @param index - Output index (vout) within the transaction
+ * @returns Unique string identifier in format "txid:index"
+ *
+ * @example
+ * ```ts
+ * const id = createInputIdentifier("abc123...", 0); // "abc123...:0"
+ * ```
+ */
+export const createInputIdentifier = (txid: string, index: number): string =>
+  `${txid}:${index}`;
+
+/**
+ * Detects if content is a binary PSBT by checking magic bytes
+ * @param arrayBuffer - The file content as ArrayBuffer
+ * @returns boolean - True if binary PSBT, false otherwise
+ */
+export const isBinaryPSBT = (arrayBuffer: ArrayBuffer) => {
+  const uint8Array = new Uint8Array(arrayBuffer);
+  // Check for binary PSBT magic bytes (0x70736274ff)
+  return (
+    uint8Array.length >= 5 &&
+    uint8Array[0] === 0x70 &&
+    uint8Array[1] === 0x73 &&
+    uint8Array[2] === 0x62 &&
+    uint8Array[3] === 0x74 &&
+    uint8Array[4] === 0xff
+  );
+};
+
+/**
+ * This is useful when we have an input for which we want to parse
+ * what its sequence number is from a psbt. The identifier is used
+ * to match against the input in the psbt and then we extract the sequence number
+ * from the input.
+ * @param psbt - The PSBT object
+ * @param inputIdentifier - The input identifier to match against from the psbt
+ * @returns The sequence number for the input
+ */
+export const getSequenceForInput = (
+  psbt: Psbt,
+  inputIdentifier: string,
+): number | undefined => {
+  return psbt.txInputs.find((input) => {
+    const identifier = createInputIdentifier(
+      convertTxidToLittleEndian(input.hash),
+      input.index,
+    );
+    return identifier === inputIdentifier;
+  })?.sequence;
+};
+
+export const getInputIdentifiersFromPsbt = (psbt: Psbt): Set<string> => {
+  return new Set(
+    psbt.txInputs.map((input) => {
+      return createInputIdentifier(
+        /*
+         * All input TXIDs are expected to be in **big-endian**
+         * format (human-readable format). Which we get from block explorers, wallets, APIs
+         * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
+         * internal data structures and processing so here we convert the txid to little-endian format
+         */
+        convertTxidToLittleEndian(input.hash),
+        input.index,
+      );
+    }),
+  );
+};

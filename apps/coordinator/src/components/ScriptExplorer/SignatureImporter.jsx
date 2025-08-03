@@ -38,12 +38,7 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-  validateMultisigPsbtSignature,
-} from "@caravan/psbt";
+import { validateMultisigPsbtSignature } from "@caravan/psbt";
 
 const TEXT = "text";
 const UNKNOWN = "unknown";
@@ -348,9 +343,8 @@ class SignatureImporter extends React.Component {
       inputs,
       signatureImporters,
       setComplete,
-      network,
-      outputs,
       setSigningKey,
+      unsignedPSBT,
     } = this.props;
     this.setState({ signedPsbt });
     if (!Array.isArray(inputsSignatures)) {
@@ -397,14 +391,8 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
-          const args = {
-            network,
-            inputs: inputs.map(convertLegacyInput),
-            outputs: outputs.map(convertLegacyOutput),
-          };
-          const psbt = getUnsignedMultisigPsbtV0(args);
           publicKey = validateMultisigPsbtSignature(
-            psbt.toBase64(),
+            unsignedPSBT,
             inputIndex,
             inputSignature,
             inputs[inputIndex].amountSats,
@@ -495,14 +483,8 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
-              const args = {
-                network,
-                inputs: inputs.map(convertLegacyInput),
-                outputs: outputs.map(convertLegacyOutput),
-              };
-              const psbt = getUnsignedMultisigPsbtV0(args);
               publicKey = validateMultisigPsbtSignature(
-                psbt.toBase64(),
+                unsignedPSBT,
                 inputIndex,
                 inputSignature,
                 inputs[inputIndex].amountSats,
@@ -627,6 +609,7 @@ SignatureImporter.propTypes = {
   unsignedPSBT: PropTypes.string,
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
+  enableRBF: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   ledgerPolicyHmacs: PropTypes.array.isRequired,
 };

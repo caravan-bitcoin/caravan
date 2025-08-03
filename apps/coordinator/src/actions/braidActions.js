@@ -42,7 +42,8 @@ export const fetchSliceData = async (slices) => {
 
         // for each queried slice, we need to check if there are utxos
         // skip if no updates
-        if (!addressData || !addressData.utxos.length) return;
+        if (!addressData || !addressData.utxos || !addressData.utxos.length)
+          return;
 
         const updater = slice.change
           ? updateChangeSliceAction
