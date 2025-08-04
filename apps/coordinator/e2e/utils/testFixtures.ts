@@ -42,9 +42,7 @@ export async function checkDockerAvailability(){
         execSync("docker info", {stdio: "pipe"});
         console.log("Docker is available, starting containers...");
 
-        const composeFile = process.env.CI ? 'docker-compose.ci.yml' : 'docker-compose.yml'
-        
-        execSync(`docker compose -f ${composeFile} up -d`, {
+        execSync("docker compose up -d", {
             stdio: "inherit",
             cwd: path.join(process.cwd(), "e2e")
         });
