@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- [#341](https://github.com/caravan-bitcoin/caravan/pull/341) [`d0d2d1d`](https://github.com/caravan-bitcoin/caravan/commit/d0d2d1df159a6ca6e049634ead1c5b89060f0e2b) Thanks [@cc-unchained](https://github.com/cc-unchained)! - convert Uint8Array to Buffer
+
 ## 0.4.0
 
 ### Minor Changes

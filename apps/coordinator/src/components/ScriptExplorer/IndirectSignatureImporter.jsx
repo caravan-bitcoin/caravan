@@ -30,20 +30,13 @@ class IndirectSignatureImporter extends React.Component {
   }
 
   interaction = () => {
-    const { signatureImporter, network, inputs, outputs } = this.props;
+    const { signatureImporter, network, psbt } = this.props;
     const keystore = signatureImporter.method;
-    const bip32Paths = inputs.map((input) => {
-      if (typeof input.bip32Path === "undefined")
-        return signatureImporter.bip32Path; // pubkey path
-      return `${signatureImporter.bip32Path}${input.bip32Path.slice(1)}`; // xpub/pubkey slice away the m, keep /
-    });
 
     return SignMultisigTransaction({
       keystore,
       network,
-      inputs,
-      outputs,
-      bip32Paths,
+      psbt,
     });
   };
 
@@ -235,6 +228,7 @@ IndirectSignatureImporter.propTypes = {
   Signer: PropTypes.shape({}).isRequired,
   fee: PropTypes.string,
   inputsTotalSats: PropTypes.shape({}),
+  psbt: PropTypes.string,
 };
 
 IndirectSignatureImporter.defaultProps = {
@@ -246,6 +240,7 @@ IndirectSignatureImporter.defaultProps = {
   extendedPublicKeyImporter: {},
   fee: "",
   inputsTotalSats: {},
+  psbt: "",
 };
 
 export default IndirectSignatureImporter;

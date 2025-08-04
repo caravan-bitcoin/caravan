@@ -6,7 +6,7 @@
     "jest/globals": true
   },
   "extends": [
-    "@caravan/eslint-config/library.new.js"
+    "@caravan/eslint-config/library.js"
   ],
   "globals": {
     "Atomics": "readonly",

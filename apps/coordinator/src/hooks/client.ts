@@ -11,6 +11,7 @@ export const useGetClient = (): BlockchainClient => {
   const blockchainClient = useSelector(
     (state: RootState) => state.client.blockchainClient,
   );
+
   useEffect(() => {
     dispatch(setBlockchainClient());
   }, [

@@ -118,6 +118,7 @@ export interface RawTransactionData {
   hex?: string;
 }
 
+
 export interface TransactionDetails {
   txid: string;
   version: number;
@@ -135,7 +136,7 @@ export interface TransactionDetails {
   size: number;
   vsize?: number;
   weight: number;
-  fee: number;
+  fee: number; 
   status: {
     confirmed: boolean;
     blockHeight?: number;
@@ -143,6 +144,15 @@ export interface TransactionDetails {
     blockTime?: number;
   };
   isReceived?: boolean;
+}
+
+export interface WalletTransactionDetails extends TransactionDetails {
+  amount?: number;
+  confirmations?: number;
+  category?: string;
+  address?: string;
+  abandoned?: boolean;
+  time?: number;
 }
 
 export interface ListTransactionsItem {

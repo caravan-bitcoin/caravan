@@ -1,6 +1,6 @@
 {
   "name": "@caravan/wallets",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "description": "Unchained Capital's HWI Library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -84,7 +84,7 @@
     "@trezor/connect-web": "^9.6.0",
     "axios": "1.8.2",
     "bignumber.js": "^8.1.1",
-    "bitbox-api": "^0.7.0",
+    "bitbox-api": "^0.10.0",
     "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",
     "core-js": "^2.6.10",

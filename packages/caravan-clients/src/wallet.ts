@@ -263,3 +263,66 @@ export async function bitcoindGetWalletTransaction({
     throw e;
   }
 }
+export interface ListTransactionItem {
+  address?: string;
+  parent_descs?: string[];
+  category: "send" | "receive" | "generate" | "immature" | "orphan";
+  amount: number;
+  label?: string;
+  vout?: number;
+  fee?: number;
+  abandoned?: boolean;
+  confirmations: number;
+  generated?: boolean;
+  blockhash?: string;
+  blockheight?: number;
+  blockindex?: number;
+  blocktime?: number;
+  txid: string;
+  wtxid: string;
+  walletconflicts: string[];
+  mempoolconflicts?: string[];
+  time: number;
+  timereceived: number;
+  "bip125-replaceable": "yes" | "no" | "unknown";
+  trusted?: boolean;
+}
+
+export async function bitcoindListSpentTransactions({
+  url,
+  auth,
+  walletName,
+  count = 100,
+  skip = 0,
+  includeWatchOnly = true,
+}: {
+  url: string;
+  auth: { username: string; password: string };
+  walletName?: string;
+  count?: number;
+  skip?: number;
+  includeWatchOnly?: boolean;
+}): Promise<ListTransactionItem[]> {
+  if (!walletName) {
+    throw new Error("Wallet name is required for listtransactions");
+  }
+  
+  const response = await callBitcoindWallet({
+    baseUrl: url,
+    walletName,
+    auth,
+    method: "listtransactions",
+    params: ["*", count, skip, includeWatchOnly],
+  });
+
+  if (!response?.result || !Array.isArray(response.result)) {
+    throw new Error("Failed to retrieve transactions from Bitcoin Core");
+  }
+
+  // Filter only "send" transactions in the helper itself
+  const spentTransactions = response.result.filter(
+    (tx: ListTransactionItem) => tx.category === "send"
+  );
+
+  return spentTransactions as ListTransactionItem[];
+}

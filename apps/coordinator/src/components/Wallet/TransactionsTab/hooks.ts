@@ -145,9 +145,22 @@ export const useTransactionPagination = (totalItems: number) => {
 export const useHandleTransactionExplorerLinkClick = () => {
   const client = useSelector((state: any) => state.client);
   const getExplorerUrl = useSelector(getTransactionExplorerUrl);
+  const network = useSelector((state: any) => state.settings.network);
 
   return useCallback(
     (txid: string) => {
+      const explorerUrl = getExplorerUrl(txid);
+
+      // Handle regtest - no public explorer available
+      if (network === "regtest" || !explorerUrl) {
+        window.alert(
+          `Transaction ID: ${txid}\n\nNo public block explorer is available for regtest networks. ` +
+            `You can view this transaction in your local bitcoind using:\n` +
+            `bitcoin-cli -regtest getrawtransaction ${txid} true`,
+        );
+        return;
+      }
+
       // Check if user is using a private node
       const isPrivateNode = client.type === "private";
 
@@ -159,9 +172,8 @@ export const useHandleTransactionExplorerLinkClick = () => {
         if (!confirmed) return;
       }
 
-      const explorerUrl = getExplorerUrl(txid);
       window.open(explorerUrl, "_blank");
     },
-    [client, getExplorerUrl],
+    [client, network, getExplorerUrl],
   );
 };

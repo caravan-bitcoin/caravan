@@ -41,18 +41,12 @@ class DirectSignatureImporter extends React.Component {
     const {
       signatureImporter,
       network,
-      inputs,
-      outputs,
       walletConfig,
       extendedPublicKeyImporter,
       unsignedPSBT,
     } = this.props;
     const keystore = signatureImporter.method;
-    const bip32Paths = inputs.map((input) => {
-      if (typeof input.bip32Path === "undefined")
-        return signatureImporter.bip32Path; // pubkey path
-      return `${signatureImporter.bip32Path}${input.bip32Path.slice(1)}`; // xpub/pubkey slice away the m, keep /
-    });
+
     const policyHmac = walletConfig.ledgerPolicyHmacs.find(
       (hmac) => hmac.xfp === extendedPublicKeyImporter.rootXfp,
     )?.policyHmac;
@@ -63,9 +57,6 @@ class DirectSignatureImporter extends React.Component {
     return SignMultisigTransaction({
       network,
       keystore,
-      inputs,
-      outputs,
-      bip32Paths,
       walletConfig,
       policyHmac,
       keyDetails,

@@ -6,8 +6,8 @@ import { getWalletConfig } from "../../selectors/wallet";
 
 interface DustChipProps {
   amountSats: number;
-  feeRate: number;
   tooltipText?: string;
+  scriptType?: string;
 }
 /**
  * DustChip component displays the dust status of a UTXO based on its amount and fee rate.
@@ -19,12 +19,15 @@ interface DustChipProps {
 
 const DustChip: React.FC<DustChipProps> = ({
   amountSats,
-  feeRate,
   tooltipText,
+  scriptType,
 }) => {
   // Pull wallet settings from Redux
   const walletConfig = useSelector(getWalletConfig);
-  const { addressType: scriptType, quorum } = walletConfig;
+  const feeRate = useSelector(
+    (state: any) => state.spend?.transaction?.feeRate || 1,
+  );
+  const { addressType: defaultScriptType, quorum } = walletConfig;
 
   // Instantiate metrics and compute dust limits
   const wasteMetrics = new WasteMetrics();
@@ -34,7 +37,7 @@ const DustChip: React.FC<DustChipProps> = ({
   };
   const { lowerLimit, upperLimit } = wasteMetrics.calculateDustLimits(
     feeRate,
-    scriptType,
+    scriptType || defaultScriptType,
     config,
   );
 

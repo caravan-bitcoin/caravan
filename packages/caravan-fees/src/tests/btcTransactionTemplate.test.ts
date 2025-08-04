@@ -1,4 +1,4 @@
-import { Network } from "@caravan/bitcoin";
+import { MultisigAddressType, Network, P2SH, P2WSH } from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 
 import {
@@ -25,7 +25,7 @@ describe("BtcTransactionTemplate", () => {
           ),
           network: fixture.input.network,
           targetFeeRate: fixture.input.targetFeeRate,
-          scriptType: fixture.input.scriptType,
+          scriptType: fixture.input.scriptType as MultisigAddressType,
           requiredSigners: fixture.input.requiredSigners,
           totalSigners: fixture.input.totalSigners,
         });
@@ -228,7 +228,7 @@ describe("BtcTxOutputTemplate", () => {
         outputs: [],
         network: Network.MAINNET,
         targetFeeRate: 1,
-        scriptType: "p2pkh",
+        scriptType: P2WSH,
         requiredSigners: 1,
         totalSigners: 1,
       });
@@ -277,7 +277,7 @@ describe("BtcTxOutputTemplate", () => {
         ],
         network: Network.MAINNET,
         targetFeeRate: 1,
-        scriptType: "p2pkh",
+        scriptType: P2SH,
         requiredSigners: 1,
         totalSigners: 1,
       });
@@ -299,7 +299,7 @@ describe("BtcTxOutputTemplate", () => {
           network: Network.MAINNET,
           targetFeeRate: 10,
           dustThreshold: "546",
-          scriptType: "P2WSH",
+          scriptType: P2WSH as MultisigAddressType,
           requiredSigners: 1,
           totalSigners: 1,
         },

@@ -31,7 +31,7 @@ import * as errorNotificationActions from "../../actions/errorNotificationAction
 import InteractionMessages from "../InteractionMessages";
 import { TestRunNote } from "./Note";
 import { HermitReader, HermitDisplayer } from "../Hermit";
-import BCUR2Reader from "../BCUR2/BCUR2Reader"; // Import as default export
+import { BCUR2Reader, BCUR2Encoder } from "../BCUR2"; // Import for displaying transaction QR codes
 import {
   ColdcardJSONReader,
   ColdcardPSBTReader,
@@ -43,6 +43,13 @@ import { downloadFile } from "../../utils";
 const SPACEBAR_CODE = 32;
 
 class TestRunBase extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      showBCURExport: false,
+    };
+  }
+
   componentDidMount = () => {
     document.addEventListener("keydown", this.handleKeyDown);
   };
@@ -151,6 +158,44 @@ Derivation: ${test.params.derivation}
                 />
               </Box>
             )}
+            {keystore.type === BCUR2 && test.unsignedTransaction && (
+              <Box align="center" style={{ marginTop: "2em" }}>
+                <Box style={{ marginBottom: "1em" }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() =>
+                      this.setState({
+                        showBCURExport: !this.state?.showBCURExport,
+                      })
+                    }
+                    style={{ marginRight: "1em" }}
+                  >
+                    {this.state?.showBCURExport ? "Hide" : "Show"} Transaction
+                    QR for Signing
+                  </Button>
+                </Box>
+                {this.state?.showBCURExport && (
+                  <Box style={{ marginBottom: "2em" }}>
+                    <Typography variant="body1" gutterBottom>
+                      Scan these QR codes with your signing device:
+                    </Typography>
+                    <BCUR2Encoder
+                      qrCodeFrames={
+                        test.interaction().request().qrCodeFrames || [
+                          test.interaction().request(),
+                        ]
+                      }
+                      title="Sign Transaction"
+                      open={true}
+                      onClose={() => this.setState({ showBCURExport: false })}
+                      qrSize={300}
+                      initialInterval={200}
+                    />
+                  </Box>
+                )}
+              </Box>
+            )}
             {this.renderInteractionMessages()}
             {status === PENDING &&
               !Object.values(INDIRECT_KEYSTORES).includes(keystore.type) && (
@@ -176,7 +221,8 @@ Derivation: ${test.params.derivation}
               )}
             {keystore.type === BCUR2 &&
               test.interaction().workflow[0] === "request" &&
-              status === PENDING && (
+              status === PENDING &&
+              !test.unsignedTransaction && (
                 <Box align="center">
                   <Typography variant="body1" gutterBottom>
                     {test.interaction().request().instruction}
@@ -198,10 +244,23 @@ Derivation: ${test.params.derivation}
               <Box>
                 <BCUR2Reader
                   onStart={this.start}
-                  onSuccess={this.resolve}
+                  onSuccess={
+                    test.unsignedTransaction
+                      ? (psbtData) => {
+                          // For signing tests, we need to parse the PSBT through the interaction
+                          const parsedData = test.interaction().parse(psbtData);
+                          this.resolve(parsedData);
+                        }
+                      : this.resolve
+                  }
                   onClear={this.reset}
-                  startText="Scan the BCUR2 QR Code Sequence"
+                  startText={
+                    test.unsignedTransaction
+                      ? "Scan the Signed PSBT QR Code Sequence"
+                      : "Scan the BCUR2 QR Code Sequence"
+                  }
                   network={test.interaction().network}
+                  mode={test.unsignedTransaction ? "psbt" : "xpub"}
                 />
               </Box>
             )}
@@ -309,7 +368,11 @@ Derivation: ${test.params.derivation}
 
   resolve = (actual) => {
     const { test } = this.props;
-    const result = test.resolve(test.postprocess(actual));
+
+    const postprocessed = test.postprocess(actual);
+
+    const result = test.resolve(postprocessed);
+
     this.handleResult(result);
   };
 

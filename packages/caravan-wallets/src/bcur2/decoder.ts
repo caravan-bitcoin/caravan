@@ -4,10 +4,31 @@
  * specifically focused on crypto-account and crypto-hdkey formats used by hardware wallets.
  */
 
-import { BitcoinNetwork } from "@caravan/bitcoin";
-import { URRegistryDecoder } from "@keystonehq/bc-ur-registry";
+import { BitcoinNetwork, Network } from "@caravan/bitcoin";
+import { URRegistryDecoder, CryptoPSBT } from "@keystonehq/bc-ur-registry";
 
 import { processCryptoAccountCBOR, processCryptoHDKeyCBOR } from "./utils";
+
+/**
+ * Factory function type for creating CryptoPSBT instances from CBOR
+ */
+export type CryptoPSBTFromCBORFactory = typeof CryptoPSBT.fromCBOR;
+
+/**
+ * Supported UR types for BCUR2 decoding
+ */
+export type SupportedURType = "crypto-account" | "crypto-hdkey" | "crypto-psbt";
+
+/**
+ * Type guard to check if a string is a supported UR type
+ */
+function isSupportedURType(type: string): type is SupportedURType {
+  return (
+    type === "crypto-account" ||
+    type === "crypto-hdkey" ||
+    type === "crypto-psbt"
+  );
+}
 
 /**
  * Interface representing decoded extended public key data from a BCUR2 QR code
@@ -30,27 +51,43 @@ export interface ExtendedPublicKeyData {
  * - crypto-account: Contains output descriptors with keys
  * - crypto-hdkey: Contains hierarchical deterministic keys
  */
-export class BCURDecoder2 {
+export class BCUR2Decoder {
   private decoder: URRegistryDecoder;
 
   private error: string | null = null;
 
   private progress: string = "Idle";
 
+  private cryptoPSBTFromCBORFactory: CryptoPSBTFromCBORFactory;
+
   /**
    * Creates a new BCUR2 decoder instance
+   * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
+   * @param cryptoPSBTFromCBORFactory - Factory function for creating CryptoPSBT instances from CBOR
    */
-  constructor() {
-    this.decoder = new URRegistryDecoder();
+  constructor(
+    decoder?: URRegistryDecoder,
+    cryptoPSBTFromCBOR: CryptoPSBTFromCBORFactory = CryptoPSBT.fromCBOR
+  ) {
+    this.decoder = decoder || new URRegistryDecoder();
+    this.cryptoPSBTFromCBORFactory = cryptoPSBTFromCBOR;
   }
 
   /**
    * Resets the decoder state to initial values
+   * @param decoder - Optional URRegistryDecoder instance. If not provided, creates a new one.
+   * @param cryptoPSBTFromCBORFactory - Optional factory function for creating CryptoPSBT instances from CBOR
    */
-  reset() {
-    this.decoder = new URRegistryDecoder();
+  reset(
+    decoder: URRegistryDecoder = new URRegistryDecoder(),
+    cryptoPSBTFromCBORFactory?: CryptoPSBTFromCBORFactory
+  ) {
+    this.decoder = decoder;
     this.error = null;
     this.progress = "Idle";
+    if (cryptoPSBTFromCBORFactory) {
+      this.cryptoPSBTFromCBORFactory = cryptoPSBTFromCBORFactory;
+    }
   }
 
   /**
@@ -76,26 +113,69 @@ export class BCURDecoder2 {
   }
 
   /**
+   * Handles decoding of crypto-psbt type BCUR2 data
+   * @private
+   */
+  private handleCryptoPSBT(cbor: Buffer): string {
+    try {
+      const cryptoPSBT = this.cryptoPSBTFromCBORFactory(cbor);
+      const psbtBuffer = cryptoPSBT.getPSBT();
+      return psbtBuffer.toString("base64");
+    } catch (err: any) {
+      throw new Error(`Failed to decode PSBT: ${err.message}`);
+    }
+  }
+
+  /**
    * Processes decoded CBOR data based on the UR type
    * @private
-   * @param {string} type - The UR type (crypto-account or crypto-hdkey)
+   * @param {SupportedURType} type - The UR type (crypto-account, crypto-hdkey, or crypto-psbt)
    * @param {Buffer} cbor - The decoded CBOR data
    * @param {BitcoinNetwork} network - The Bitcoin network to use
-   * @returns {ExtendedPublicKeyData|null} The decoded wallet data or null if error
+   * @returns {ExtendedPublicKeyData|string|null} The decoded wallet data or PSBT string or null if error
    */
   private handleDecodedResult(
-    type: string,
+    type: "crypto-account",
     cbor: Buffer,
     network: BitcoinNetwork
-  ): ExtendedPublicKeyData | null {
+  ): ExtendedPublicKeyData | null;
+
+  private handleDecodedResult(
+    type: "crypto-hdkey",
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | null;
+
+  private handleDecodedResult(
+    type: "crypto-psbt",
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): string | null;
+
+  private handleDecodedResult(
+    type: SupportedURType,
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | string | null;
+
+  private handleDecodedResult(
+    type: SupportedURType,
+    cbor: Buffer,
+    network: BitcoinNetwork
+  ): ExtendedPublicKeyData | string | null {
     try {
       switch (type) {
         case "crypto-account":
           return this.handleCryptoAccount(cbor, network);
         case "crypto-hdkey":
           return this.handleCryptoHDKey(cbor, network);
-        default:
-          throw new Error(`Unsupported UR type: ${type}`);
+        case "crypto-psbt":
+          return this.handleCryptoPSBT(cbor);
+        default: {
+          // This should never happen due to TypeScript's exhaustiveness checking
+          const exhaustiveCheck: never = type;
+          throw new Error(`Unsupported UR type: ${exhaustiveCheck}`);
+        }
       }
     } catch (err: any) {
       console.error("Error decoding UR:", err);
@@ -161,11 +241,58 @@ export class BCURDecoder2 {
 
     try {
       const result = this.decoder.resultUR();
-      return this.handleDecodedResult(
+
+      if (!isSupportedURType(result.type)) {
+        throw new Error(`Unsupported UR type: ${result.type}`);
+      }
+
+      const decodedResult = this.handleDecodedResult(
         result.type,
         Buffer.from(result.cbor.buffer),
         network
       );
+
+      // Only return ExtendedPublicKeyData, not PSBT strings
+      if (typeof decodedResult === "string") {
+        throw new Error("Use getDecodedPSBT() to get PSBT data");
+      }
+
+      return decodedResult;
+    } catch (err: any) {
+      this.error = err.message || String(err);
+      return null;
+    }
+  }
+
+  /**
+   * Gets the decoded PSBT data, if available
+   * @returns {string|null} The PSBT in base64 format or null
+   */
+  getDecodedPSBT(): string | null {
+    if (!this.decoder.isComplete()) return null;
+
+    try {
+      const result = this.decoder.resultUR();
+
+      if (!isSupportedURType(result.type)) {
+        throw new Error(`Unsupported UR type: ${result.type}`);
+      }
+
+      if (result.type !== "crypto-psbt") {
+        throw new Error("QR code does not contain PSBT data");
+      }
+
+      const decodedResult = this.handleDecodedResult(
+        result.type,
+        Buffer.from(result.cbor.buffer),
+        Network.MAINNET // Network doesn't matter for PSBT decoding
+      );
+
+      if (typeof decodedResult !== "string") {
+        throw new Error("Expected PSBT string data");
+      }
+
+      return decodedResult;
     } catch (err: any) {
       this.error = err.message || String(err);
       return null;

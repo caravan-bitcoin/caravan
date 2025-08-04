@@ -40,10 +40,18 @@ class Transaction extends React.Component {
   }
 
   buildSignedTransaction = () => {
-    const { network, inputs, outputs, signatureImporters } = this.props;
+    const { network, inputs, outputs, signatureImporters, enableRBF } =
+      this.props;
+    const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
     const args = {
       network,
-      inputs: inputs.map(convertLegacyInput),
+      inputs: inputs.map((input) => {
+        const convertedInput = convertLegacyInput(input);
+        return {
+          ...convertedInput,
+          sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+        };
+      }),
       outputs: outputs.map(convertLegacyOutput),
     };
     const psbt = getUnsignedMultisigPsbtV0(args);
@@ -148,6 +156,7 @@ Transaction.propTypes = {
   setTxid: PropTypes.func.isRequired,
   signatureImporters: PropTypes.shape({}).isRequired,
   getBlockchainClient: PropTypes.func.isRequired,
+  enableRBF: PropTypes.bool.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -158,6 +167,7 @@ function mapStateToProps(state) {
     signatureImporters: state.spend.signatureImporters,
     inputs: state.spend.transaction.inputs,
     outputs: state.spend.transaction.outputs,
+    enableRBF: state.spend.transaction.enableRBF,
   };
 }
 

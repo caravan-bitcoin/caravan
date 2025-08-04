@@ -103,9 +103,15 @@ describe("translatePsbt", () => {
   const TRANSACTIONS = TEST_FIXTURES.transactions;
 
   const tx = _.cloneDeep(TEST_FIXTURES.transactions[0]);
+  tx.inputs.forEach((input) => {
+    input.sequence = 0xffffffff;
+  });
   const ms = MULTISIGS[0];
   it("handles P2WSH transactions", () => {
     const fixture = TEST_FIXTURES.transactions.find((tx) => tx.segwit);
+    fixture.inputs.forEach((input) => {
+      input.sequence = 0xffffffff;
+    });
     const signingKey = fixture.braidDetails.extendedPublicKeys[0];
     const psbt = fixture.psbt;
     const translated = translatePSBT(tx.network, P2WSH, psbt, {
@@ -126,6 +132,7 @@ describe("translatePsbt", () => {
       );
       expect(match).toBeDefined();
       expect(+input.amountSats).toEqual(+match.amountSats);
+      expect(input.sequence).toEqual(match.sequence);
     }
 
     for (const output of unchainedOutputs) {
@@ -170,6 +177,7 @@ describe("translatePsbt", () => {
           tx.format,
           ms.redeemScriptHex,
         ),
+        sequence: input.sequence,
       }));
       expect(unchainedInputs).toEqual(expectedInputs);
 
