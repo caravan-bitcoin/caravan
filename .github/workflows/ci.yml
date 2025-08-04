@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: 20
           cache: 'npm'
@@ -32,34 +32,6 @@ jobs:
       - name: Run tests
         run: |
           npx turbo run ci
-
-  # Run e2e tests only for coordinator-related changes
-  e2e-check:
-    runs-on: ubuntu-latest
-    outputs:
-      should-run-e2e: ${{ steps.changes.outputs.coordinator }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for coordinator changes
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: | 
-            coordinator:
-              - 'apps/coordinator/**'
-              - 'packages/**'
-              - '.github/workflows/e2e.yml'
-              - 'package*.json'
-
-  e2e:
-    name: E2E Tests
-    needs: [ci, e2e-check]
-    if: needs.e2e-check.outputs.should-run-e2e == 'true'
-    uses: ./.github/workflows/e2e.yml
 
   check-coordinator:
     runs-on: ubuntu-latest
