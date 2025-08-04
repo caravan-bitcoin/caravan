@@ -13,14 +13,9 @@ permissions:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  e2e:
-    name: E2E Tests Before Release
-    uses: ./.github/workflows/e2e.yml
-
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: e2e
     outputs:
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
     # To use Turborepo Remote Caching
@@ -61,7 +56,7 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    needs: [e2e, release]
+    needs: release
     runs-on: ubuntu-latest
     if: contains(needs.release.outputs.publishedPackages, 'caravan-coordinator')
     steps:
