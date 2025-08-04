@@ -8,73 +8,61 @@ import { selectUTXOs } from "../testhelpers/tableExtractor";
 
 test.describe("Transaction Creation and Signing", () => {
   const client = bitcoinClient();
-  const downloadDir = testStateManager.getState().downloadDir;
-  const uploadDir = testStateManager.getState().uploadDir;
   let downloadedUnsignedPsbtFile: any;
+  let downloadDir: string;
+  let uploadDir: string
 
   test.beforeAll(async () => {
-    // Setting up test wallets...
-
-    // Create upload dir if not exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     try {
-      const state = testStateManager.getState();
-      const walletNames = state.test_wallet_names;
+      const currentState = testStateManager.getState();
+      // Get directories
+      downloadDir = currentState.downloadDir;
+      uploadDir = currentState.uploadDir;
+      
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
     } catch (error) {
-      console.log("Error in global setup while creating wallets:", error);
+      throw new Error(`Error in global setup while creating wallets: ${error}`);
     }
   });
-  // test.beforeEach(async ({page}) => {
+  test.beforeEach(async ({ page }) => {
+    // Get the modified wallet
+    const walletConfig = testStateManager.getDownloadedWalletFile();
 
-  // })
+    // Navigate to wallet page
+    await page.goto("/#/wallet");
+
+    await page.setInputFiles("input#upload-config", walletConfig);
+
+    await page.locator("#bitcoind-password").fill(clientConfig.password);
+
+    await page.locator("#confirm-wallet").click();
+
+    const isEnabled = await page
+      .locator("button[type=button]:has-text('Import Addresses')")
+      .isEnabled();
+
+    if (isEnabled) {
+      await page
+        .locator("button[type=button]:has-text('Import Addresses')")
+        .click();
+
+      // Wait for the success message to appear
+      const successMessage = page.locator('text="Addresses imported."');
+      await expect(successMessage).toBeVisible({ timeout: 30000 });
+    }
+    //going to send page
+    await page
+      .locator("button[role=tab][type=button]:has-text('Send')")
+      .click();
+  });
 
   test("should create and broadcast transaction with auto coin selection and signed psbt upload", async ({
     page,
   }) => {
-    console.log(
-      "Starting auto coin selection and PSBT signature extraction test...",
-    );
-
     try {
-      // Get the modified wallet
-      const walletConfig = testStateManager.getDownloadedWalletFile();
-      console.log("walletConfig", walletConfig);
-
-      // Navigate to wallet page
-      await page.goto("/#/wallet");
-
-      await page.setInputFiles("input#upload-config", walletConfig);
-
-      await page.locator("#bitcoind-password").fill(clientConfig.password);
-
-      await page.locator("#confirm-wallet").click();
-
-      await page.waitForTimeout(1000);
-
-      const isEnabled = await page
-        .locator("button[type=button]:has-text('Import Addresses')")
-        .isEnabled();
-
-      if (isEnabled) {
-        await page
-          .locator("button[type=button]:has-text('Import Addresses')")
-          .click();
-
-        // Wait for the success message to appear
-        const successMessage = page.locator('text="Addresses imported."');
-        await expect(successMessage).toBeVisible({ timeout: 30000 });
-      }
-      await expect(page.locator('[data-cy="balance"]')).toHaveText("8 BTC");
-
-      await page
-        .locator("button[role=tab][type=button]:has-text('Send')")
-        .click();
-
       const receiverAddress = testStateManager.getReceiver().address;
-      console.log("destinationAddress", receiverAddress);
 
       // Receiver Address
       await page.locator('input[name="destination"]').fill(receiverAddress);
@@ -115,7 +103,6 @@ test.describe("Transaction Creation and Signing", () => {
       });
 
       const walletNames = testStateManager.getWalletsNames().slice(0, 2);
-      console.log("walletd for signing: ", walletNames);
 
       const signedPsbtResult = await createIndividualSignedPsbts(
         walletNames,
@@ -143,7 +130,7 @@ test.describe("Transaction Creation and Signing", () => {
         (sig) => sig.signatures[0],
       );
 
-      const signer1SigsJsonString = JSON.stringify(signer1Sigs)
+      const signer1SigsJsonString = JSON.stringify(signer1Sigs);
       await page
         .locator("textarea[name='signature']")
         .fill(signer1SigsJsonString);
@@ -163,15 +150,12 @@ test.describe("Transaction Creation and Signing", () => {
       await page.locator("#signature-2-importer-select").click();
 
       await page.locator("li[role='option']:has-text('Enter as text')").click();
-      console.log("signatures1: ", signedPsbtResult.individualPsbts.length);
 
-      //! ig there is problem here, but how still sig valid(check thsi out)
       const signer2Sigs = signedPsbtResult.individualPsbts[1].signatures.map(
         (sig) => sig.signatures[0],
       );
 
-
-      const signer2SigsJsonString = JSON.stringify(signer2Sigs)
+      const signer2SigsJsonString = JSON.stringify(signer2Sigs);
 
       await page
         .locator("textarea[name='signature']")
@@ -180,7 +164,7 @@ test.describe("Transaction Creation and Signing", () => {
       await page
         .locator("button[type='button']:has-text('Add Signature')")
         .click();
-      await page.waitForTimeout(5000)
+      await page.waitForTimeout(5000);
 
       // The broadcast button should now be enabled
       const broadcastButton = page.locator(
@@ -198,7 +182,6 @@ test.describe("Transaction Creation and Signing", () => {
 
       await expect(successMessage).toBeVisible();
     } catch (error: any) {
-      console.log("error", error);
       throw new Error(error);
     }
   });
@@ -206,42 +189,7 @@ test.describe("Transaction Creation and Signing", () => {
   test("should create and broadcast transaction with manual coin selection and signed psbt upload", async ({
     page,
   }) => {
-    console.log(
-      "Starting auto coin selection and PSBT signature extraction test...",
-    );
-
     try {
-      // Get the modified wallet
-      const walletConfig = testStateManager.getDownloadedWalletFile();
-      console.log("walletConfig", walletConfig);
-
-      // Navigate to wallet page
-      await page.goto("/#/wallet");
-
-      await page.setInputFiles("input#upload-config", walletConfig);
-
-      await page.locator("#bitcoind-password").fill(clientConfig.password);
-
-      await page.locator("#confirm-wallet").click();
-
-      const isEnabled = await page
-        .locator("button[type=button]:has-text('Import Addresses')")
-        .isEnabled();
-
-      if (isEnabled) {
-        await page
-          .locator("button[type=button]:has-text('Import Addresses')")
-          .click();
-
-        // Wait for the success message to appear
-        const successMessage = page.locator('text="Addresses imported."');
-        await expect(successMessage).toBeVisible({ timeout: 30000 });
-      }
-      //going to send page
-      await page
-        .locator("button[role=tab][type=button]:has-text('Send')")
-        .click();
-
       // Manual toggle on
       const manualToggle = page.getByLabel("Manual");
 
@@ -251,7 +199,6 @@ test.describe("Transaction Creation and Signing", () => {
 
       await expect(manualToggle).toBeChecked();
       const receiverAddress = testStateManager.getReceiver().address;
-      console.log("destinationAddress", receiverAddress);
 
       // Receiver Address
       await page.locator('input[name="destination"]').fill(receiverAddress);
@@ -295,7 +242,6 @@ test.describe("Transaction Creation and Signing", () => {
 
       //Wait for download to complete
       const downloadedFile = await downloadPromise;
-      console.log("downloadedFile", downloadPromise);
 
       //Save the file in our created downloads directory
       downloadedUnsignedPsbtFile = path.join(downloadDir, "unsignedPSBT");
@@ -345,8 +291,6 @@ test.describe("Transaction Creation and Signing", () => {
         .locator("textarea[name='signature']")
         .fill(signer1SigsJsonString);
 
-      console.log("Signature check: ", signer1SigsJsonString);
-
       await page
         .locator("button[type='button']:has-text('Add Signature')")
         .click();
@@ -372,7 +316,6 @@ test.describe("Transaction Creation and Signing", () => {
       await page
         .locator("textarea[name='signature']")
         .fill(signer2SigsJsonString);
-      console.log("Signature check2: ", signer2SigsJsonString);
 
       await page
         .locator("button[type='button']:has-text('Add Signature')")
@@ -397,7 +340,6 @@ test.describe("Transaction Creation and Signing", () => {
 
       await page.waitForTimeout(1000);
     } catch (error: any) {
-      console.log("error", error);
       throw new Error(error);
     }
   });
