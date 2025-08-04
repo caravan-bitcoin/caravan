@@ -1,0 +1,86 @@
+# optimised compose specefic for e2e testing 
+
+services: 
+  bitcoind: 
+    image: lncm/bitcoind:v27.0
+    container_name: caravan_e2e_bitcoind_ci
+    ports: 
+      - "18443:18443"
+    command: >
+      -server
+      -regtest
+      -rpcuser=${BITCOIN_RPC_USER}
+      -rpcpassword=${BITCOIN_RPC_PASSWORD}
+      -rpcbind=0.0.0.0:18443
+      -rpcallowip=0.0.0.0/0
+      -fallbackfee=0.0002
+      -minrelaytxfee=0.0002
+      -debug=0
+      -printtoconsole=0
+      -disablewallet=0
+      #! might adjust this 
+      -dbcache=64
+      -maxmempool=50
+      -blockmaxweight=750000
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=${BITCOIN_RPC_USER}", "-rpcpassword=${BITCOIN_RPC_PASSWORD}", "getblockchaininfo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - caravan-e2e-ci 
+    tmpfs:
+      - /tmp 
+    shm_size: 64m 
+  
+  nginx:
+    image: nginx:alpine
+    container_name: caravan-e2e-nginx-ci
+    ports: 
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on: 
+      bitcoind:
+        condition: service_healthy
+    networks:
+     - caravan-e2e-ci
+    # Faster startup
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+  caravan:
+    build:
+      context: ../../../
+      dockerfile: apps/coordinator/Dockerfile
+      target: runner
+      # CI build optimizations
+      cache_from:
+        - caravanbitcoin/coordinator:latest
+    container_name: caravan_coordinator_ci
+    ports:
+     - "5173:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      bitcoind:
+        condition: service_healthy
+      nginx: 
+        condition: service_started
+    networks:
+      - caravan-e2e-ci
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    # Don't restart in CI
+    restart: "no"  
+    
+networks:
+  caravan-e2e-ci:
+    driver: bridge

@@ -1,0 +1,87 @@
+name: e2e tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  e2e:
+    name: End to End tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Cache Playwright browsers 
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(cd apps/coordinator && npm list @playwright/test --depth=0 --json | jq -r '.dependencies["@playwright/test"].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: cd apps/coordinator && npx playwright install --with-deps chromium
+
+      # Pre-pull Docker images (optimization, not management)
+      - name: Pre-pull Docker images
+        run: |
+          docker pull lncm/bitcoind:v27.0
+          docker pull nginx:alpine
+
+      # Create .env file for your setup
+      - name: Create .env file for e2e tests
+        run: |
+          cd apps/coordinator/e2e
+          cat << EOF > .env
+          BITCOIN_RPC_USER=testuser
+          BITCOIN_RPC_PASSWORD=testpass123
+          BITCOIN_RPC_HOST=localhost
+          BITCOIN_RPC_PORT=18443
+          EOF
+
+      - name: Run e2e tests (with automated Docker lifecycle)
+        run: |
+          cd apps/coordinator
+          npm run test:e2e
+        env:
+          CI: true
+
+      # Upload results
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results
+          path: |
+            apps/coordinator/playwright-report/
+            apps/coordinator/test-results/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-screenshots
+          path: apps/coordinator/test-results/*/
+          retention-days: 3
