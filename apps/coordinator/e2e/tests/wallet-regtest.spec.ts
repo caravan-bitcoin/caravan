@@ -14,7 +14,6 @@ test.describe("Wallet Regtest Configuration", () => {
   const client = bitcoinClient();
 
   test("should modify wallet configuration for regtest", async ({ page }) => {
-    console.log("Starting wallet config modification for regtest");
 
     try {
       // Get the downloaded wallet file from previous tests
@@ -46,15 +45,13 @@ test.describe("Wallet Regtest Configuration", () => {
       const configToWrite = JSON.stringify(walletConfig, null, 2);
       fs.writeFileSync(downloadedWalletFile, configToWrite);
     } catch (error) {
-      console.log("Error in wallet config modification:", error);
-      throw error;
+      throw new Error(`Error in wallet config modification: ${error}`);
     }
   });
 
   test("should import modified wallet config in Caravan & match the address", async ({
     page,
   }) => {
-    console.log("Starting wallet import test");
 
     try {
       // Get the modified wallet file
@@ -96,7 +93,6 @@ test.describe("Wallet Regtest Configuration", () => {
       for (let i = 0; i < 4; i++) {
         // Extract current address using helper
         const currentAddress = await getCurrentReceiveAddress(page);
-        console.log("current address:", currentAddress);
         walletAddresses.push(currentAddress);
 
         await page
@@ -169,8 +165,7 @@ test.describe("Wallet Regtest Configuration", () => {
       // Confirming the balance after confirming tx
       await expect(page.locator('[data-cy="balance"]')).toHaveText("2 BTC");
     } catch (error) {
-      console.log("Error in wallet import:", error);
-      throw error;
+      throw new Error(`Error in wallet import: ${error}`);
     }
   });
 });

@@ -55,7 +55,7 @@ test.describe("Caravan Wallet Creation", () => {
       walletNames = state.test_wallet_names;
 
     } catch (error) {
-      console.log("Error in global setup while creating wallets:", error);
+      throw new Error(`Error in global setup while creating wallets: ${error}`)
     }
   });
 
