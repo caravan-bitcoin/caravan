@@ -3,7 +3,18 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Button, Typography, LinearProgress, Alert } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  LinearProgress,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import {
   Upload as UploadIcon,
   Refresh as RefreshIcon,
@@ -13,6 +24,7 @@ import { usePsbtInputs } from "hooks/utxos";
 import { isBinaryPSBT, loadPsbt } from "utils/psbtUtils";
 import { useSelector } from "react-redux";
 import { WalletState } from "selectors/wallet";
+import BCUR2Reader from "../BCUR2/BCUR2Reader";
 
 interface PSBTImportComponentProps {
   onImport: (
@@ -20,12 +32,17 @@ interface PSBTImportComponentProps {
     inputs: any[],
     hasPendingInputs: boolean,
   ) => void;
+  showMethodSelector?: boolean; // New prop to control method selector visibility
 }
 
 // Main PSBT Import Component
 export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   onImport,
+  showMethodSelector = true, // Default to showing the method selector
 }) => {
+  const [importMethod, setImportMethod] = useState<string>(
+    showMethodSelector ? "file" : "file",
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string>("");
   const [psbtText, setPsbtText] = useState<string>("");
@@ -196,41 +213,131 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     setIsProcessing(false);
   }, []);
 
+  // Handle import method change
+  const handleMethodChange = useCallback(
+    (event: SelectChangeEvent<string>) => {
+      setImportMethod(event.target.value);
+      clearError(); // Clear any previous errors when switching methods
+    },
+    [clearError],
+  );
+
+  // Handle BCUR2 QR code success
+  const handleBCUR2Success = useCallback(
+    (psbtData: string) => {
+      setIsProcessing(true);
+      setError("");
+      setPsbtText("");
+      setParsedPsbt(null);
+
+      try {
+        // Parse PSBT to trigger input resolution
+        const parsed = loadPsbt(psbtData, network as Network);
+        setPsbtText(psbtData);
+        setParsedPsbt(parsed);
+        // Keep processing state true until inputs are resolved
+      } catch (parseError) {
+        setError(`Failed to parse PSBT from QR code: ${parseError}`);
+        setIsProcessing(false);
+      }
+    },
+    [network],
+  );
+
+  // Handle BCUR2 clear/cancel
+  const handleBCUR2Clear = useCallback(() => {
+    clearError();
+  }, [clearError]);
+
   // Determine current status
   const isLoading = isProcessing || reconstructionLoading;
 
+  // Render import method based on selection
+  const renderImportMethod = () => {
+    switch (importMethod) {
+      case "file":
+        return (
+          <>
+            {/* File input */}
+            <label htmlFor="import-psbt">
+              <input
+                style={{ display: "none" }}
+                id="import-psbt"
+                name="import-psbt"
+                accept=".psbt,*/*"
+                onChange={handleFileSelect}
+                type="file"
+                disabled={isLoading}
+              />
+
+              <Button
+                color="primary"
+                variant="contained"
+                component="span"
+                disabled={isLoading}
+                startIcon={isLoading ? <RefreshIcon /> : <UploadIcon />}
+                sx={{ mt: 2 }}
+              >
+                {isLoading ? "Processing..." : "Import PSBT File"}
+              </Button>
+            </label>
+          </>
+        );
+      case "bcur2":
+        return (
+          <Box mt={2}>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              Scan the PSBT QR code sequence from your hardware wallet or
+              signing device.
+            </Typography>
+            <BCUR2Reader
+              mode="psbt"
+              onSuccess={handleBCUR2Success}
+              onClear={handleBCUR2Clear}
+              startText="Start PSBT Scanning"
+              width="400px"
+            />
+          </Box>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <Box mt={2}>
-      {/* File input */}
-      <label htmlFor="import-psbt">
-        <input
-          style={{ display: "none" }}
-          id="import-psbt"
-          name="import-psbt"
-          accept=".psbt,*/*"
-          onChange={handleFileSelect}
-          type="file"
-          disabled={isLoading}
-        />
+      {/* Import method selection - only show if showMethodSelector is true */}
+      {showMethodSelector && (
+        <FormControl fullWidth sx={{ maxWidth: 300, mb: 2 }}>
+          <InputLabel id="psbt-import-method-label">Import Method</InputLabel>
+          <Select
+            labelId="psbt-import-method-label"
+            value={importMethod}
+            label="Import Method"
+            onChange={handleMethodChange}
+            disabled={isLoading}
+          >
+            <MenuItem value="file">File Upload</MenuItem>
+            <MenuItem value="bcur2">QR Code (BCUR2)</MenuItem>
+          </Select>
+        </FormControl>
+      )}
 
-        <Button
-          color="primary"
-          variant="contained"
-          component="span"
-          disabled={isLoading}
-          startIcon={isLoading ? <RefreshIcon /> : <UploadIcon />}
-          sx={{ mt: 2 }}
-        >
-          {isLoading ? "Processing..." : "Import PSBT"}
-        </Button>
-      </label>
+      {/* Render selected import method */}
+      {(showMethodSelector && importMethod) || !showMethodSelector
+        ? renderImportMethod()
+        : null}
 
       {/* Loading indicator */}
       {isLoading && (
         <Box mt={2}>
           <LinearProgress />
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            {isProcessing && !parsedPsbt && "Reading and parsing PSBT file..."}
+            {isProcessing &&
+              !parsedPsbt &&
+              (importMethod === "file"
+                ? "Reading and parsing PSBT file..."
+                : "Processing PSBT from QR code...")}
             {reconstructionLoading &&
               parsedPsbt &&
               "Resolving transaction inputs..."}

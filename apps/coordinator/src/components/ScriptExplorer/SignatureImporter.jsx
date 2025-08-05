@@ -26,6 +26,7 @@ import TextSignatureImporter from "./TextSignatureImporter";
 import DirectSignatureImporter from "./DirectSignatureImporter";
 import HermitSignatureImporter from "../Hermit/HermitSignatureImporter";
 import ColdcardSignatureImporter from "../Coldcard/ColdcardSignatureImporter";
+import BCUR2SignatureImporter from "../BCUR2/BCUR2SignatureImporter";
 import EditableName from "../EditableName";
 import {
   setSignatureImporterName,
@@ -41,6 +42,7 @@ import { downloadFile } from "../../utils";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
 
 const TEXT = "text";
+const BCUR2 = "bcur2";
 const UNKNOWN = "unknown";
 
 class SignatureImporter extends React.Component {
@@ -83,7 +85,7 @@ class SignatureImporter extends React.Component {
 
   scrollToTitle = () => {
     const { number } = this.props;
-    if (number === this.getCurrent()) {
+    if (number === this.getCurrent() && this.titleRef.current) {
       this.titleRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
@@ -122,6 +124,7 @@ class SignatureImporter extends React.Component {
               Coldcard
             </MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
+            <MenuItem value={BCUR2}>BCUR2</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
@@ -213,6 +216,16 @@ class SignatureImporter extends React.Component {
           inputsTotalSats={inputsTotalSats}
           fee={fee}
           extendedPublicKeyImporter={extendedPublicKeyImporter}
+          validateAndSetSignature={this.validateAndSetSignature}
+        />
+      );
+    }
+    if (method === BCUR2) {
+      return (
+        <BCUR2SignatureImporter
+          signatureImporter={signatureImporter}
+          inputs={inputs}
+          unsignedPSBT={unsignedPSBT}
           validateAndSetSignature={this.validateAndSetSignature}
         />
       );
@@ -578,8 +591,11 @@ SignatureImporter.propTypes = {
     }),
   ).isRequired,
   fee: PropTypes.string.isRequired,
-  inputs: PropTypes.arrayOf(PropTypes.shape({ amountSats: PropTypes.string }))
-    .isRequired,
+  inputs: PropTypes.arrayOf(
+    PropTypes.shape({
+      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    }),
+  ).isRequired,
   inputsTotalSats: PropTypes.shape({}).isRequired,
   isWallet: PropTypes.bool.isRequired,
   network: PropTypes.string.isRequired,

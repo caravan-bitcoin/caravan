@@ -1,7 +1,12 @@
 import { Psbt } from "bitcoinjs-lib-v6";
 import { createSelector } from "reselect";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
-import { multisigPublicKeys } from "@caravan/bitcoin";
+import {
+  multisigPublicKeys,
+  multisigRedeemScript,
+  multisigWitnessScript,
+  generateMultisigFromPublicKeys,
+} from "@caravan/bitcoin";
 import { getSpendableSlices, WalletState } from "./wallet";
 import {
   UTXO,
@@ -39,8 +44,234 @@ export const mapSignaturesToImporters = (signatureSets: SignatureSet[]) => {
   }));
 };
 
+// ====================
+// PSBT SCRIPT UTILITIES
+// ====================
+
 /**
- * Extracts signatures from a PSBT and groups them by signer (not by individual child pubkeys).
+ * Determines if a wallet input has a complete Caravan multisig object
+ */
+const hasCompleteMultisigData = (walletInput: Input): boolean => {
+  return !!(walletInput?.multisig?.redeem && walletInput.multisig.address);
+};
+
+/**
+ * Determines if a wallet input has raw multisig construction data
+ */
+const hasRawMultisigData = (walletInput: Input): boolean => {
+  const { multisig } = walletInput;
+  return !!(
+    multisig?.addressType &&
+    multisig.requiredSigners &&
+    multisig.totalSigners &&
+    multisig.publicKeys
+  );
+};
+
+/**
+ * Determines the address type from multisig name
+ */
+const getAddressTypeInfo = (multisigName: string) => ({
+  isP2WSH: multisigName && multisigName.includes("p2wsh"),
+  isP2SH:
+    multisigName &&
+    multisigName.includes("p2sh") &&
+    !multisigName.includes("p2wsh"),
+  isNestedSegwit:
+    multisigName &&
+    multisigName.includes("p2sh") &&
+    multisigName.includes("p2wsh"),
+});
+
+/**
+ * Adds scripts to a PSBT input using existing Caravan multisig data
+ */
+const addScriptsFromExistingMultisig = (
+  psbtInput: any,
+  multisig: any,
+): void => {
+  const { isP2WSH, isP2SH, isNestedSegwit } = getAddressTypeInfo(multisig.name);
+
+  if (isP2WSH) {
+    // Pure P2WSH: only witness script needed
+    if (!psbtInput.witnessScript && multisig.redeem?.output) {
+      psbtInput.witnessScript = multisig.redeem.output;
+    }
+    // Ensure we don't add redeemScript for pure P2WSH
+    if (psbtInput.redeemScript) {
+      delete psbtInput.redeemScript;
+    }
+    // Add BIP32 derivation data if missing
+    if (
+      (!psbtInput.bip32Derivation || psbtInput.bip32Derivation.length === 0) &&
+      multisig.bip32Derivation?.length > 0
+    ) {
+      psbtInput.bip32Derivation = multisig.bip32Derivation;
+    }
+  } else if (isP2SH) {
+    // Pure P2SH: only redeem script needed
+    if (!psbtInput.redeemScript && multisig.redeem?.output) {
+      psbtInput.redeemScript = multisig.redeem.output;
+    }
+  } else if (isNestedSegwit) {
+    // P2SH-P2WSH: both scripts needed
+    if (!psbtInput.redeemScript && multisig.output) {
+      psbtInput.redeemScript = multisig.output; // The P2WSH output script
+    }
+    if (!psbtInput.witnessScript && multisig.redeem?.output) {
+      psbtInput.witnessScript = multisig.redeem.output; // The actual multisig script
+    }
+  } else {
+    // Fallback: try to determine from existing PSBT structure
+    if (!psbtInput.redeemScript && multisig.redeem?.output) {
+      psbtInput.redeemScript = multisig.redeem.output;
+    }
+    if (!psbtInput.witnessScript && multisig.redeem?.output) {
+      psbtInput.witnessScript = multisig.redeem.output;
+    }
+  }
+};
+
+/**
+ * Adds UTXO data to a PSBT input for signature validation
+ */
+const addUtxoData = (
+  psbtInput: any,
+  multisig: any,
+  walletInput: Input,
+): void => {
+  if (psbtInput.witnessUtxo || psbtInput.nonWitnessUtxo) {
+    return; // Already has UTXO data
+  }
+
+  const { isP2WSH, isNestedSegwit } = getAddressTypeInfo(multisig.name);
+
+  if (isP2WSH || isNestedSegwit) {
+    // For segwit inputs, add witnessUtxo
+    psbtInput.witnessUtxo = {
+      script: multisig.output, // This is the output script
+      value: parseInt(walletInput.amountSats),
+    };
+  }
+};
+
+/**
+ * Generates scripts from raw multisig data when existing scripts aren't available
+ */
+const generateScriptsFromRawData = (
+  psbtInput: any,
+  multisig: any,
+  index: number,
+): void => {
+  try {
+    const network = multisig.network || "testnet";
+    const properMultisig = generateMultisigFromPublicKeys(
+      network,
+      multisig.addressType,
+      multisig.requiredSigners,
+      ...multisig.publicKeys,
+    );
+
+    if (!properMultisig) {
+      return;
+    }
+
+    // Generate and add redeem script if missing
+    if (!psbtInput.redeemScript) {
+      try {
+        const redeemScript = multisigRedeemScript(properMultisig);
+        if (redeemScript?.output) {
+          psbtInput.redeemScript = redeemScript.output;
+        }
+      } catch (redeemError) {
+        console.log(
+          `Input ${index}: Redeem script generation failed:`,
+          redeemError.message,
+        );
+      }
+    }
+
+    // Generate and add witness script if missing
+    if (!psbtInput.witnessScript) {
+      try {
+        const witnessScript = multisigWitnessScript(properMultisig);
+        if (witnessScript?.output) {
+          psbtInput.witnessScript = witnessScript.output;
+        } else {
+          console.log(`Input ${index}: Witness script generation failed`);
+        }
+      } catch (witnessError) {
+        console.log(
+          `Input ${index}: Witness script generation failed:`,
+          witnessError.message,
+        );
+      }
+    }
+  } catch (multisigError) {
+    console.log(
+      `Input ${index}: Multisig generation error:`,
+      multisigError.message,
+    );
+  }
+};
+
+/**
+ * Processes a single PSBT input by adding missing script data
+ */
+const processSinglePsbtInput = (
+  psbtInput: any,
+  walletInput: Input,
+  index: number,
+): void => {
+  if (!walletInput?.multisig) {
+    return;
+  }
+
+  const { multisig } = walletInput;
+
+  // Strategy 1: Use existing complete Caravan multisig data
+  if (hasCompleteMultisigData(walletInput)) {
+    addScriptsFromExistingMultisig(psbtInput, multisig);
+    addUtxoData(psbtInput, multisig, walletInput);
+    return;
+  }
+
+  // Strategy 2: Generate scripts from raw multisig data
+  if (hasRawMultisigData(walletInput)) {
+    generateScriptsFromRawData(psbtInput, multisig, index);
+    return;
+  }
+
+  // If neither strategy works, log and continue
+  console.log(
+    `Input ${index}: Insufficient multisig data for script generation`,
+  );
+};
+
+/**
+ * Adds missing script data and UTXO information to a PSBT using wallet slice data.
+ * This is particularly useful for PSBTs from SeedSigner which may not include
+ * redeem scripts or witness scripts needed for signature validation.
+ *
+ * @param psbt - The PSBT to add script data to
+ * @param inputs - Array of wallet inputs with complete multisig data
+ * @returns A copy of the PSBT with script data and UTXO information added
+ */
+function addMissingScriptDataToPsbt(psbt: Psbt, inputs: Input[]): Psbt {
+  // Create a copy to avoid mutating the original
+  const psbtWithScripts = psbt.clone();
+
+  // Process each input using the modular processing function
+  psbtWithScripts.data.inputs.forEach((psbtInput, index) => {
+    const walletInput = inputs[index];
+    processSinglePsbtInput(psbtInput, walletInput, index);
+  });
+
+  return psbtWithScripts;
+}
+
+/**
+ * Extract signatures from a PSBT using the wallet's UTXO information for context.
  *
  * Instead of grouping by each unique derived pubkey, we now group signatures
  * by the actual signer (i.e., their position in the multisig setup). This fixes the issue where
@@ -59,12 +290,21 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
     throw new Error("No inputs found in PSBT that match wallet UTXOs");
   }
 
-  // Get all partial signatures from the PSBT
+  // **STEP 0: Add missing script data from wallet slices**
+  // This is especially important for PSBTs from SeedSigner which may not include
+  // redeem scripts or witness scripts needed for signature validation.
+  const psbtWithScripts = addMissingScriptDataToPsbt(psbt, inputs);
+
+  // Get all partial signatures from the PSBT with script data
   // Each input in a PSBT can have multiple partial signatures (one per signer)
   const inputSignatures: SignatureInfo[] = [];
 
-  for (let inputIndex = 0; inputIndex < psbt.data.inputs.length; inputIndex++) {
-    const psbtInput = psbt.data.inputs[inputIndex];
+  for (
+    let inputIndex = 0;
+    inputIndex < psbtWithScripts.data.inputs.length;
+    inputIndex++
+  ) {
+    const psbtInput = psbtWithScripts.data.inputs[inputIndex];
     const walletInput = inputs[inputIndex];
 
     // Now we extract partial signatures from this PSBT input
@@ -77,7 +317,7 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
         const validatedPubkey = validateSignatureForInput(
           partialSig.signature,
           inputIndex,
-          psbt,
+          psbtWithScripts,
           inputs,
         );
 

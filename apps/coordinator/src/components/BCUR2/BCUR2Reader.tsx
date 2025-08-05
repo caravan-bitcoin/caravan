@@ -33,6 +33,7 @@ const createDecodeHandler = (mode: ScanMode, network?: BitcoinNetwork) => {
   if (mode === "xpub") {
     return (decoder: BCUR2Decoder) => {
       const data = decoder.getDecodedData(network!);
+
       if (!data) {
         throw new Error("Failed to decode extended public key data.");
       }
@@ -43,16 +44,18 @@ const createDecodeHandler = (mode: ScanMode, network?: BitcoinNetwork) => {
       }
 
       // Ensure the bip32Path starts with "m/"
-      return {
+      const processedData = {
         ...data,
         bip32Path: data.bip32Path.startsWith("m/")
           ? data.bip32Path
           : `m/${data.bip32Path}`,
       };
+      return processedData;
     };
   } else {
     return (decoder: BCUR2Decoder) => {
       const data = decoder.getDecodedPSBT();
+
       if (!data) {
         throw new Error("Failed to decode PSBT data.");
       }
