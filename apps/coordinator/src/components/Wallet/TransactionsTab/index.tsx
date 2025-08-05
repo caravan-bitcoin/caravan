@@ -47,7 +47,7 @@ const TransactionsTab: React.FC = () => {
   const pendingIsLoading = pendingTransactionsResult?.isLoading || false;
   const pendingError = pendingTransactionsResult?.error || null;
 
-  // Use enhanced completed transactions hook with load more functionality
+  // Use completed transactions hook with load more functionality
   const {
     data: completedTransactions,
     isLoading: completedIsLoading,
