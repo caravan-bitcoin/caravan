@@ -9,6 +9,7 @@ import {
   getPendingTransactionIds,
   getWalletAddresses,
   Slice,
+  WalletState,
 } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
@@ -309,4 +310,31 @@ export const useAllTransactions = (count: number, skip: number) => {
     error: walletHistoryQuery.error,
     refetch: walletHistoryQuery.refetch,
   };
+};
+
+export const usePrivateClientTransactions = (
+  count: number = 10,
+  skip: number = 0,
+) => {
+  const blockchainClient = useGetClient();
+  const walletAddresses = useSelector(getWalletAddresses);
+  const clientType = useSelector((state: WalletState) => state.client.type);
+
+  return useQuery({
+    queryKey: transactionKeys.walletHistory(count, skip),
+    queryFn: async (): Promise<TransactionDetails[]> => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+
+      const rawTransactions =
+        await blockchainClient.getWalletTransactionHistory(count, skip);
+
+      return processTransactionsWithWalletContext(
+        rawTransactions,
+        walletAddresses,
+      );
+    },
+    enabled: !!blockchainClient && clientType === "private",
+  });
 };

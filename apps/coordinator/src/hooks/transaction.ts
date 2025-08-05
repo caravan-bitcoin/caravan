@@ -14,6 +14,7 @@ import { useGetClient } from "hooks/client";
 import {
   transactionKeys,
   processTransactionsWithWalletContext,
+  usePrivateClientTransactions,
 } from "clients/transactions";
 
 export function useTransactionAnalysis() {
@@ -49,34 +50,6 @@ export function useTransactionAnalysis() {
     return { dust, privacy };
   }, [inputs, outputs, feeRate, requiredSigners, totalSigners, addressType]);
 }
-
-// PRIVATE CLIENT HOOKS - Only for wallet-based queries
-export const usePrivateClientTransactions = (
-  count: number = 10,
-  skip: number = 0,
-) => {
-  const blockchainClient = useGetClient();
-  const walletAddresses = useSelector(getWalletAddresses);
-  const clientType = useSelector((state: WalletState) => state.client.type);
-
-  return useQuery({
-    queryKey: transactionKeys.walletHistory(count, skip),
-    queryFn: async (): Promise<TransactionDetails[]> => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
-      const rawTransactions =
-        await blockchainClient.getWalletTransactionHistory(count, skip);
-
-      return processTransactionsWithWalletContext(
-        rawTransactions,
-        walletAddresses,
-      );
-    },
-    enabled: !!blockchainClient && clientType === "private",
-  });
-};
 
 export const usePrivateClientTransactionsWithLoadMore = (
   pageSize: number = 100,
