@@ -47,6 +47,9 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
+// Define filtering options for better type safety and clarity
+export type TransactionFilter = "all" | "confirmed" | "unconfirmed";
+
 /**
  * Processes raw transaction data by adding wallet-specific context and filtering.
  *
@@ -55,18 +58,26 @@ const fetchTransactionDetails = async (
  *
  * @param transactions - Raw transactions from either wallet or address history
  * @param walletAddresses - Addresses belonging to this wallet for value calculation
- * @param onlyConfirmed - Whether to filter out unconfirmed transactions
+ * @param filter - Filter transactions by confirmation status
  * @returns Processed transactions with wallet context (value, direction, etc.)
  */
 export const processTransactionsWithWalletContext = (
   transactions: WalletTransactionDetails[],
   walletAddresses: string[],
-  onlyConfirmed: boolean = false,
+  filter: TransactionFilter = "all",
 ): TransactionDetails[] => {
-  // Filter by confirmation status if requested
-  const filteredTransactions = onlyConfirmed
-    ? transactions.filter((tx) => tx.status?.confirmed === true)
-    : transactions;
+  // Filter by confirmation status based on the filter parameter
+  const filteredTransactions = transactions.filter((tx) => {
+    switch (filter) {
+      case "confirmed":
+        return tx.status?.confirmed === true;
+      case "unconfirmed":
+        return tx.status?.confirmed !== true;
+      case "all":
+      default:
+        return true;
+    }
+  });
 
   // Add wallet-specific context to each transaction
   return filteredTransactions.map((tx) => {
@@ -131,14 +142,13 @@ export const usePendingTransactions = () => {
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
 
-  // Process transactions with wallet context and filter out confirmed ones
-  // Note: This works for both private and public clients since getTransaction()
-  // is available on both client types
+  // Process transactions with wallet context and filter to unconfirmed only
   const transactions = processTransactionsWithWalletContext(
     transactionQueries
-      .filter((query) => query.data && !query.data.status?.confirmed)
+      .filter((query) => query.data)
       .map((query) => query.data!),
     walletAddresses,
+    "unconfirmed",
   );
 
   return {
@@ -246,4 +256,57 @@ export const fetchTransactionCoins = async (
     });
   }
   return coins;
+};
+
+// Hook for fetching transaction coins with TanStack Query
+export const useTransactionCoins = (txid: string) => {
+  const blockchainClient = useGetClient();
+
+  return useQuery({
+    queryKey: transactionKeys.coins(txid),
+    queryFn: () => fetchTransactionCoins(txid, blockchainClient),
+    enabled: !!blockchainClient && !!txid,
+  });
+};
+
+// Hook for fetching completed (confirmed) transactions with wallet context
+export const useCompletedTransactions = (count: number, skip: number) => {
+  const walletAddresses = useSelector(getWalletAddresses);
+  const walletHistoryQuery = useWalletTransactionHistory(count, skip);
+
+  const transactions = walletHistoryQuery.data
+    ? processTransactionsWithWalletContext(
+        walletHistoryQuery.data,
+        walletAddresses,
+        "confirmed",
+      )
+    : [];
+
+  return {
+    transactions,
+    isLoading: walletHistoryQuery.isLoading,
+    error: walletHistoryQuery.error,
+    refetch: walletHistoryQuery.refetch,
+  };
+};
+
+// Hook for fetching all transactions (confirmed + unconfirmed) with wallet context
+export const useAllTransactions = (count: number, skip: number) => {
+  const walletAddresses = useSelector(getWalletAddresses);
+  const walletHistoryQuery = useWalletTransactionHistory(count, skip);
+
+  const transactions = walletHistoryQuery.data
+    ? processTransactionsWithWalletContext(
+        walletHistoryQuery.data,
+        walletAddresses,
+        "all",
+      )
+    : [];
+
+  return {
+    transactions,
+    isLoading: walletHistoryQuery.isLoading,
+    error: walletHistoryQuery.error,
+    refetch: walletHistoryQuery.refetch,
+  };
 };

@@ -72,7 +72,6 @@ export const usePrivateClientTransactions = (
       return processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
-        true, // filter confirmed transactions only
       );
     },
     enabled: !!blockchainClient && clientType === "private",
@@ -109,7 +108,6 @@ export const usePrivateClientTransactionsWithLoadMore = (
       const processedTransactions = processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
-        true, // filter confirmed transactions only
       );
 
       setHasMore(processedTransactions.length === pageSize);
@@ -210,7 +208,6 @@ export const usePublicClientTransactions = (
       return processTransactionsWithWalletContext(
         rawTransactions,
         walletAddresses,
-        true, // filter confirmed transactions only
       );
     },
     enabled:
@@ -266,7 +263,6 @@ export const usePublicClientTransactionsWithLoadMore = (
         const processedTransactions = processTransactionsWithWalletContext(
           rawTransactions,
           walletAddresses,
-          true, // filter confirmed transactions only
         );
 
         setHasMore(processedTransactions.length === pageSize);
@@ -285,7 +281,6 @@ export const usePublicClientTransactionsWithLoadMore = (
           const processedTransactions = processTransactionsWithWalletContext(
             rawTransactions,
             walletAddresses,
-            true,
           );
 
           setHasMore(processedTransactions.length === pageSize);
