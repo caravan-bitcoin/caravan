@@ -11,7 +11,7 @@ import {
 export async function extractReceiveTableData(
   page: Page,
 ): Promise<receiveTableData[]> {
-  await page.waitForSelector("table tbody tr td code", {timeout: 10000});
+  await page.waitForSelector("table tbody tr", {timeout: 10000});
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
@@ -36,7 +36,7 @@ export async function extractReceiveTableData(
 export async function extractAddressTableData(
   page: Page,
 ): Promise<AddressTableData[]> {
-  await page.waitForSelector("table tbody tr td code", { timeout: 10000});
+  await page.waitForSelector("table tbody tr", { timeout: 10000});
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
