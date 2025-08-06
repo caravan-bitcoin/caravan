@@ -6,6 +6,10 @@ import {
   getPsbtVersionNumber,
   PsbtV2,
   MultisigAddressType,
+  P2SH,
+  P2SH_P2WSH,
+  P2WSH,
+  bip32PathToSequence,
 } from "@caravan/bitcoin";
 import {
   Jade,
@@ -38,11 +42,11 @@ function variantFromAddressType(
   t: MultisigAddressType,
 ): MultisigDescriptor["variant"] {
   switch (t) {
-    case "P2SH":
+    case P2SH:
       return "sh(multi(k))";
-    case "P2WSH":
+    case P2WSH:
       return "wsh(multi(k))";
-    case "P2SH-P2WSH":
+    case P2SH_P2WSH:
       return "sh(wsh(multi(k)))";
     default:
       throw new Error(`Unsupported addressType ${t}`);
@@ -53,39 +57,11 @@ function fingerprintFromHex(xfp: string): Uint8Array {
   return Uint8Array.from(Buffer.from(xfp, "hex"));
 }
 
-function parseBip32Path(path_i: string): number[] {
-  let path = path_i;
-  if (path.startsWith("m/")) {
-    path = path.substring(2);
-  } else if (path.startsWith("m")) {
-    path = path.substring(1);
-    if (path.startsWith("/")) {
-      path = path.substring(1);
-    }
-  }
-  const segments = path.split("/");
-  const result: number[] = [];
-  for (const segment of segments) {
-    let hardened = false;
-    let numStr = segment;
-    if (segment.endsWith("'") || segment.endsWith("h")) {
-      hardened = true;
-      numStr = segment.slice(0, -1);
-    }
-    const index = parseInt(numStr, 10);
-    if (isNaN(index)) {
-      throw new Error(`Invalid path segment: ${segment}`);
-    }
-    result.push(index + (hardened ? 0x80000000 : 0));
-  }
-  return result;
-}
-
 function extractPathSuffix(
   fullPathStr: string,
   baseDerivation: number[],
 ): number[] {
-  const fullPath = parseBip32Path(fullPathStr);
+  const fullPath = bip32PathToSequence(fullPathStr);
   if (
     fullPath.length < baseDerivation.length ||
     !baseDerivation.every((v, i) => v === fullPath[i])
@@ -102,7 +78,7 @@ function walletConfigToDescriptor(
 ): MultisigDescriptor {
   const signers: SignerDescriptor[] = cfg.extendedPublicKeys.map((ek) => ({
     fingerprint: fingerprintFromHex(ek.xfp),
-    derivation: parseBip32Path(ek.bip32Path),
+    derivation: bip32PathToSequence(ek.bip32Path),
     xpub: ek.xpub,
     path: [],
   }));
@@ -242,7 +218,7 @@ export class JadeExportPublicKey extends JadeInteraction {
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-      const path = parseBip32Path(this.bip32Path);
+      const path = bip32PathToSequence(this.bip32Path);
       const xpub = await jade.getXpub(this.network, path);
       const publicKey = ExtendedPublicKey.fromBase58(xpub).pubkey;
       const rootFingerprint = await jade.getMasterFingerPrint(this.network);
@@ -282,7 +258,7 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-      const path = parseBip32Path(this.bip32Path);
+      const path = bip32PathToSequence(this.bip32Path);
       const xpub = await jade.getXpub(this.network, path);
       const rootFingerprint = await jade.getMasterFingerPrint(this.network);
       if (this.includeXFP) {
@@ -495,7 +471,7 @@ export class JadeSignMessage extends JadeInteraction{
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-	  const path = parseBip32Path(this.bip32Path) 
+	  const path = bip32PathToSequence(this.bip32Path) 
       return await jade.signMessage(path, this.message);
     });
   }
