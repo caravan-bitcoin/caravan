@@ -107,7 +107,6 @@ class HermitSignatureImporter extends React.Component<
       outputs,
       setUnsignedPSBT,
       unsignedPsbtFromState,
-      enableRBF,
     } = this.props;
     let psbtToSign;
 
@@ -116,14 +115,13 @@ class HermitSignatureImporter extends React.Component<
     // be a scaffolded PSBT without any inputs.
 
     if (unsignedPsbtFromState === "" && inputs.length > 0) {
-      const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
       psbtToSign = getUnsignedMultisigPsbtV0({
         network,
         inputs: inputs.map((input) => {
           const convertedInput = convertLegacyInput(input);
           return {
             ...convertedInput,
-            sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+            sequence: input.sequence,
           };
         }),
         outputs: outputs.map(convertLegacyOutput),

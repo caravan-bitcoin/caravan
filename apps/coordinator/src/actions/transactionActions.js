@@ -75,9 +75,16 @@ export function setTotalSigners(number) {
 }
 
 export function setInputs(inputs) {
-  return {
-    type: SET_INPUTS,
-    value: inputs,
+  return (dispatch, getState) => {
+    const { enableRBF } = getState().spend.transaction;
+    const newInputs = inputs.map((input) => ({
+      ...input,
+      sequence: enableRBF ? 0xfffffffd : 0xffffffff,
+    }));
+    dispatch({
+      type: SET_INPUTS,
+      value: newInputs,
+    });
   };
 }
 

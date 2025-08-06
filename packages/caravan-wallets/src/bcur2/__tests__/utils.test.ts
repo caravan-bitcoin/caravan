@@ -61,8 +61,10 @@ vi.mock("@keystonehq/bc-ur-registry", () => {
   const MockCryptoHDKeyConstructor = function MockCryptoHDKeyConstructor() {
     return new MockCryptoHDKey();
   } as any;
-  MockCryptoHDKeyConstructor.fromCBOR = vi.fn().mockReturnValue(new MockCryptoHDKey());
-  
+  MockCryptoHDKeyConstructor.fromCBOR = vi
+    .fn()
+    .mockReturnValue(new MockCryptoHDKey());
+
   // Set the prototype so instanceof works
   MockCryptoHDKeyConstructor.prototype = MockCryptoHDKey.prototype;
 
@@ -109,23 +111,29 @@ describe("BCUR2 Utils", () => {
 
   describe("processCryptoAccountCBOR", () => {
     it("should process valid crypto-account CBOR data for testnet", () => {
-      const result = processCryptoAccountCBOR(Buffer.from("test"), Network.TESTNET);
+      const result = processCryptoAccountCBOR(
+        Buffer.from("test"),
+        Network.TESTNET
+      );
 
       expect(result).toMatchObject({
         type: "crypto-account",
         bip32Path: "m/45'/1'/0'",
-        rootFingerprint: "F57EC65D"
+        rootFingerprint: "F57EC65D",
       });
       expect(result.xpub).toMatch(/^tpub/); // Testnet xpub should start with tpub
     });
 
     it("should process valid crypto-account CBOR data for mainnet", () => {
-      const result = processCryptoAccountCBOR(Buffer.from("test"), Network.MAINNET);
+      const result = processCryptoAccountCBOR(
+        Buffer.from("test"),
+        Network.MAINNET
+      );
 
       expect(result).toMatchObject({
         type: "crypto-account",
         bip32Path: "m/45'/1'/0'",
-        rootFingerprint: "F57EC65D"
+        rootFingerprint: "F57EC65D",
       });
       expect(result.xpub).toMatch(/^xpub/); // Mainnet xpub should start with xpub
     });
@@ -133,11 +141,13 @@ describe("BCUR2 Utils", () => {
     it("should throw error if no output descriptors", () => {
       const mockAccountNoDescriptors = {
         getOutputDescriptors: vi.fn().mockReturnValue([]),
-        masterFingerprint: Buffer.from('F57EC65D', 'hex'),
-        outputDescriptors: []
+        masterFingerprint: Buffer.from("F57EC65D", "hex"),
+        outputDescriptors: [],
       };
-      
-      vi.mocked(CryptoAccount.fromCBOR).mockReturnValueOnce(mockAccountNoDescriptors as any);
+
+      vi.mocked(CryptoAccount.fromCBOR).mockReturnValueOnce(
+        mockAccountNoDescriptors as any
+      );
 
       expect(() => {
         processCryptoAccountCBOR(Buffer.from("test"), Network.TESTNET);
@@ -147,7 +157,10 @@ describe("BCUR2 Utils", () => {
 
   describe("processCryptoHDKeyCBOR", () => {
     it("should process valid crypto-hdkey CBOR data for testnet", () => {
-      const result = processCryptoHDKeyCBOR(Buffer.from("test"), Network.TESTNET);
+      const result = processCryptoHDKeyCBOR(
+        Buffer.from("test"),
+        Network.TESTNET
+      );
 
       expect(result).toMatchObject({
         type: "crypto-hdkey",
@@ -158,7 +171,10 @@ describe("BCUR2 Utils", () => {
     });
 
     it("should process valid crypto-hdkey CBOR data for mainnet", () => {
-      const result = processCryptoHDKeyCBOR(Buffer.from("test"), Network.MAINNET);
+      const result = processCryptoHDKeyCBOR(
+        Buffer.from("test"),
+        Network.MAINNET
+      );
 
       expect(result).toMatchObject({
         type: "crypto-hdkey",
@@ -173,13 +189,17 @@ describe("BCUR2 Utils", () => {
         getKey: () => testKey,
         getChainCode: () => testChain,
         getParentFingerprint: () => Buffer.from("F57EC65D", "hex"),
-        getOrigin: vi.fn().mockReturnValue(null)
+        getOrigin: vi.fn().mockReturnValue(null),
       };
 
-      vi.mocked(CryptoHDKey.fromCBOR).mockReturnValueOnce(mockHDKeyNoOrigin as any);
+      vi.mocked(CryptoHDKey.fromCBOR).mockReturnValueOnce(
+        mockHDKeyNoOrigin as any
+      );
 
-      
-      const result = processCryptoHDKeyCBOR(Buffer.from("test"), Network.TESTNET);
+      const result = processCryptoHDKeyCBOR(
+        Buffer.from("test"),
+        Network.TESTNET
+      );
       expect(result.type).toBe("crypto-hdkey");
       expect(result.bip32Path).toBeUndefined();
       expect(result.rootFingerprint).toBeUndefined();

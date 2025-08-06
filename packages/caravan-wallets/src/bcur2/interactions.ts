@@ -5,7 +5,11 @@
  * useful for airgapped hardware wallets.
  */
 
-import { BitcoinNetwork, Network } from "@caravan/bitcoin";
+import {
+  BitcoinNetwork,
+  Network,
+  parseSignaturesFromPSBT,
+} from "@caravan/bitcoin";
 
 import {
   IndirectKeystoreInteraction,
@@ -14,7 +18,21 @@ import {
   INFO,
 } from "../interaction";
 
-import { BCURDecoder2 } from "./decoder";
+import { BCUR2Decoder } from "./decoder";
+import { BCUR2Encoder } from "./encoder";
+
+/**
+ * Factory function type for creating BCUR2Decoder instances
+ */
+export type BCUR2DecoderFactory = () => BCUR2Decoder;
+
+/**
+ * Factory function type for creating BCUR2Encoder instances
+ */
+export type BCUR2EncoderFactory = (
+  data: string,
+  maxFragmentLength: number
+) => BCUR2Encoder;
 
 /** Constant defining BCUR2 interactions */
 export const BCUR2 = "bcur2";
@@ -27,18 +45,22 @@ export const BCUR2 = "bcur2";
  * @extends IndirectKeystoreInteraction
  */
 export class BCUR2Interaction extends IndirectKeystoreInteraction {
-  protected decoder: BCURDecoder2;
+  protected decoder: BCUR2Decoder;
 
   protected network: BitcoinNetwork;
 
   /**
    * Creates a new BCUR2 interaction instance
    * @param {BitcoinNetwork} network - The Bitcoin network to use (mainnet or testnet)
+   * @param {BCUR2Decoder} decoder - The BCUR2Decoder instance to use
    */
-  constructor(network: BitcoinNetwork = Network.MAINNET) {
+  constructor(
+    network: BitcoinNetwork = Network.MAINNET,
+    decoder: BCUR2Decoder = new BCUR2Decoder()
+  ) {
     super();
     this.network = network;
-    this.decoder = new BCURDecoder2();
+    this.decoder = decoder;
   }
 
   /**
@@ -93,7 +115,7 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
  * Handles the scanning and decoding of multi-part QR codes containing
  * extended public key (xpub) data in the BCUR2 format.
  *
- * This interaction class works with the BCURDecoder2 class to process
+ * This interaction class works with the BCUR2Decoder class to process
  * multi-part QR codes. It expects QR codes to contain:
  * - Extended public key (xpub)
  * - Root fingerprint (xfp)
@@ -127,15 +149,18 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
    * @param {Object} params - The constructor parameters
    * @param {BitcoinNetwork} [params.network=Network.MAINNET] - The Bitcoin network to use
    * @param {string} params.bip32Path - The BIP32 derivation path to request
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
    */
   constructor({
     network = Network.MAINNET,
     bip32Path,
+    decoder,
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
+    decoder?: BCUR2Decoder;
   }) {
-    super(network);
+    super(network, decoder);
     this.bip32Path = bip32Path;
     this.workflow = ["request", "parse"];
   }
@@ -214,5 +239,335 @@ export class BCUR2ExportExtendedPublicKey extends BCUR2Interaction {
       this.decodedData = this.decoder.getDecodedData(this.network);
     }
     return this.decodedData;
+  }
+}
+
+/**
+ * Interaction class for encoding a PSBT transaction into BCUR2 QR codes
+ * for signing by airgapped wallets.
+ *
+ * @extends BCUR2Interaction
+ */
+export class BCUR2EncodeTransaction extends BCUR2Interaction {
+  private encoder: BCUR2Encoder;
+
+  private psbt: string;
+
+  private qrCodeFrames: string[];
+
+  private maxFragmentLength: number;
+
+  private encoderFactory: BCUR2EncoderFactory;
+
+  /**
+   * Creates a new BCUR2 encode transaction interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.psbt - Base64 encoded PSBT to encode
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
+   * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
+   */
+  constructor({
+    psbt,
+    network = Network.MAINNET,
+    maxFragmentLength = 100,
+    decoder,
+    encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
+  }: {
+    psbt: string;
+    network?: BitcoinNetwork;
+    maxFragmentLength?: number;
+    decoder?: BCUR2Decoder;
+    encoderFactory?: BCUR2EncoderFactory;
+  }) {
+    super(network, decoder);
+    this.psbt = psbt;
+    this.maxFragmentLength = maxFragmentLength;
+    this.encoderFactory = encoderFactory;
+    this.encoder = encoderFactory(psbt, maxFragmentLength);
+    this.qrCodeFrames = [];
+  }
+
+  /**
+   * Returns the status messages for the interaction
+   * @returns {Array} Array of message objects describing the current state
+   */
+  messages() {
+    const messages = super.messages();
+    if (this.qrCodeFrames.length > 0) {
+      messages.push({
+        state: ACTIVE,
+        level: INFO,
+        code: "bcur2.transaction_encoded",
+        text: `Transaction encoded into ${this.qrCodeFrames.length} QR code frames`,
+      });
+      messages.push({
+        state: PENDING,
+        level: INFO,
+        code: "bcur2.display_animated_qr",
+        text: "Display animated QR codes to your signing device",
+      });
+    } else {
+      messages.push({
+        state: PENDING,
+        level: INFO,
+        code: "bcur2.encoding_transaction",
+        text: "Encoding transaction into QR codes...",
+      });
+    }
+    return messages;
+  }
+
+  /**
+   * Generates the request data for displaying animated QR codes
+   * @returns {Object} Request data containing QR code frames and metadata
+   */
+  request() {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+
+    return {
+      instruction: "Scan these animated QR codes with your signing device",
+      qrCodeFrames: this.qrCodeFrames,
+      fragmentCount: this.qrCodeFrames.length,
+      maxFragmentLength: this.maxFragmentLength,
+      psbtSize: this.psbt.length,
+    };
+  }
+
+  /**
+   * Gets the encoded QR code frames
+   * @returns {string[]} Array of QR code frame strings
+   */
+  getQRCodeFrames(): string[] {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+    return this.qrCodeFrames;
+  }
+
+  /**
+   * Estimates the number of QR code fragments
+   * @returns {number} Estimated fragment count
+   */
+  estimateFragmentCount(): number {
+    return this.encoder.estimateFragmentCount();
+  }
+
+  /**
+   * Sets a new PSBT to encode
+   * @param {string} psbt - Base64 encoded PSBT
+   */
+  setPSBT(psbt: string): void {
+    this.psbt = psbt;
+    this.encoder.data = psbt;
+    this.qrCodeFrames = []; // Reset frames to force re-encoding
+  }
+
+  /**
+   * Sets the maximum fragment length for QR codes
+   * @param {number} length - Maximum fragment length
+   */
+  setMaxFragmentLength(length: number): void {
+    this.maxFragmentLength = length;
+    this.encoder.maxFragmentLength = length;
+    this.qrCodeFrames = []; // Reset frames to force re-encoding
+  }
+}
+
+/**
+ * Interaction class for signing multisig transactions using BCUR2 QR codes.
+ * This class handles the complete signing workflow:
+ * 1. Encodes the transaction PSBT into QR codes for display
+ * 2. Accepts the signed PSBT back from the device via QR code scanning
+ * 3. Parses and extracts signatures from the signed PSBT
+ *
+ * @extends BCUR2Interaction
+ */
+export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
+  private encoder: BCUR2Encoder;
+
+  private psbt: string;
+
+  private qrCodeFrames: string[];
+
+  private maxFragmentLength: number;
+
+  private encoderFactory: BCUR2EncoderFactory;
+
+  /**
+   * Creates a new BCUR2 sign multisig transaction interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.psbt - Base64 encoded PSBT to sign
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {number} params.maxFragmentLength - Maximum QR code fragment length (default: 100)
+   * @param {BCUR2Decoder} [params.decoder] - The BCUR2Decoder instance to use
+   * @param {BCUR2EncoderFactory} [params.encoderFactory] - Factory function for creating BCUR2Encoder instances
+   */
+  constructor({
+    psbt,
+    network = Network.MAINNET,
+    maxFragmentLength = 100,
+    decoder,
+    encoderFactory = (data, maxLen) => new BCUR2Encoder(data, maxLen),
+  }: {
+    psbt: string;
+    network?: BitcoinNetwork;
+    maxFragmentLength?: number;
+    decoder?: BCUR2Decoder;
+    encoderFactory?: BCUR2EncoderFactory;
+  }) {
+    super(network, decoder);
+
+    if (!psbt) {
+      throw new Error("PSBT is required for signing");
+    }
+
+    this.psbt = psbt;
+    this.maxFragmentLength = maxFragmentLength;
+    this.encoderFactory = encoderFactory;
+    this.encoder = encoderFactory(psbt, maxFragmentLength);
+    this.qrCodeFrames = [];
+
+    // Set workflow for test framework
+    this.workflow = ["request", "parse"];
+  }
+
+  /**
+   * Returns the status messages for the interaction
+   * @returns {Array} Array of message objects describing the current state
+   */
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.display_qr_for_signing",
+      text: "Display the QR codes to your signing device",
+    });
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.scan_signed_psbt",
+      text: "After signing, scan the signed PSBT QR codes from your device",
+    });
+
+    return messages;
+  }
+
+  /**
+   * Generates the request data for the signing process
+   * @returns {Object} Request data containing QR code frames for display
+   */
+  request() {
+    // Generate QR frames if not already done
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+
+    const requestData = {
+      instruction:
+        "Display these QR codes to your signing device, then scan the signed result",
+      qrCodeFrames: this.qrCodeFrames,
+      fragmentCount: this.qrCodeFrames.length,
+      maxFragmentLength: this.maxFragmentLength,
+      psbtSize: this.psbt.length,
+    };
+
+    return requestData;
+  }
+
+  /**
+   * Parses a signed PSBT and extracts signatures
+   * @param {string} signedPSBTData - The signed PSBT data (base64 or UR format)
+   * @returns {Object} Object with signatures property for test framework compatibility
+   */
+  parse(signedPSBTData: string): { signatures: string[] } {
+    try {
+      // Reset decoder for new scan
+      this.decoder.reset();
+
+      // If it's a UR format (multi-part QR), process with decoder
+      if (signedPSBTData.toLowerCase().startsWith("ur:")) {
+        this.decoder.receivePart(signedPSBTData);
+
+        if (!this.decoder.isComplete()) {
+          throw new Error(
+            "Incomplete PSBT data received - scan all QR code parts"
+          );
+        }
+
+        const psbtData = this.decoder.getDecodedPSBT();
+        if (!psbtData) {
+          throw new Error("Failed to decode PSBT data");
+        }
+
+        const signatures = this.extractSignatures(psbtData);
+        // Find the first non-empty signature array (the one that was actually signed)
+        const signatureArrays = Object.values(signatures);
+        const actualSignatures =
+          signatureArrays.find((sigArray) => sigArray && sigArray.length > 0) ||
+          [];
+        const result = { signatures: actualSignatures };
+        return result;
+      } else {
+        // If it's base64 PSBT, process directly
+        const signatures = this.extractSignatures(signedPSBTData);
+        // Find the first non-empty signature array (the one that was actually signed)
+        const signatureArrays = Object.values(signatures);
+        const actualSignatures =
+          signatureArrays.find((sigArray) => sigArray && sigArray.length > 0) ||
+          [];
+        const result = { signatures: actualSignatures };
+        return result;
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Error parsing signed PSBT: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Extracts signatures from a base64 PSBT
+   * @private
+   * @param {string} psbtBase64 - Base64 encoded PSBT
+   * @returns {Object} Object mapping public keys to signature arrays (same format as parseSignaturesFromPSBT)
+   */
+  private extractSignatures(psbtBase64: string): {
+    [publicKey: string]: string[];
+  } {
+    try {
+      if (!psbtBase64 || psbtBase64.length === 0) {
+        throw new Error("No signatures found");
+      }
+
+      // Convert base64 PSBT to hex for parseSignaturesFromPSBT
+      const psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
+      const signatures = parseSignaturesFromPSBT(psbtHex);
+      if (!signatures) {
+        throw new Error("No signatures found in PSBT");
+      }
+
+      // Return the signatures object directly (same format as HERMIT)
+      return signatures;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to extract signatures: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Gets the encoded QR code frames for the transaction
+   * @returns {string[]} Array of QR code frame strings
+   */
+  getQRCodeFrames(): string[] {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.encodePSBT();
+    }
+    return this.qrCodeFrames;
   }
 }
