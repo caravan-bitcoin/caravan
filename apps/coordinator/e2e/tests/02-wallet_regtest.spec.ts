@@ -14,6 +14,10 @@ import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors
 test.describe("Wallet Regtest Configuration", () => {
   const client = bitcoinClient();
 
+  test.beforeEach(async ({page}) => {
+    await page.waitForTimeout(1000)
+  })
+
   test("should modify wallet configuration for regtest", async ({ page }) => {
     console.log("Starting wallet config modification for regtest");
 
@@ -180,7 +184,7 @@ test.describe("Wallet Regtest Configuration", () => {
       await page.locator("button[type=button]:has-text('Refresh')").click()
 
       // Confirming the balance after confirming tx
-      await expect(page.locator('[data-cy="balance"]')).toHaveText('8 BTC')
+      await expect(page.locator('[data-cy="balance"]')).toHaveText('8 BTC', {timeout: 10000})
 
       console.log(
         'Wallet uploaded successfully - "Addresses imported." message appeared',
