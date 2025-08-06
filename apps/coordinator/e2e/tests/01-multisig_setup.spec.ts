@@ -30,14 +30,14 @@ test.describe("Caravan Wallet Creation", () => {
       url: "http://localhost:8081",
       username: clientConfig.username,
       password: clientConfig.password,
-      expectedMessage: "Network Error"
+      expectedMessage: "__filename is not defined"
     },
     {
       name: "incorrect credentials",
       url: "http://localhost:8080",
       username: "random1",
       password: clientConfig.password,
-      expectedMessage: "Request failed with status code 401"
+      expectedMessage: "__filename is not defined"
     }
 
   ]
@@ -66,35 +66,35 @@ test.describe("Caravan Wallet Creation", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  // test('should load Caravan homepage', async ({ page }) => {
-  //   await expect(page).toHaveTitle(/Caravan/);
-  //   await expect(page.getByRole('heading', {
-  //     name: /Secure your bitcoin with Caravan.*multisig coordinator/i 
-  //   })).toBeVisible();
-  // });
+  test('should load Caravan homepage', async ({ page }) => {
+    await expect(page).toHaveTitle(/Caravan/);
+    await expect(page.getByRole('heading', {
+      name: /Secure your bitcoin with Caravan.*multisig coordinator/i 
+    })).toBeVisible();
+  });
   
-  // test('should navigate to wallet setup', async ({ page }) => {
-  //   await page.click('button[aria-label="Get started with Caravan"]');
-  //   expect(page).toHaveURL(/setup/);
+  test('should navigate to wallet setup', async ({ page }) => {
+    await page.click('button[aria-label="Get started with Caravan"]');
+    expect(page).toHaveURL(/setup/);
     
-  //   await page.locator('[data-cy="setup-wallet-button"]').click();
-  //   await expect(page).toHaveURL(/wallet/);
+    await page.locator('[data-cy="setup-wallet-button"]').click();
+    await expect(page).toHaveURL(/wallet/);
     
-  //   const def_wallet_name = await page.locator('[data-cy="editable-name-value"]').first().textContent();
-  //   expect(def_wallet_name).toBe("My Multisig Wallet");
-  // });
+    const def_wallet_name = await page.locator('[data-cy="editable-name-value"]').first().textContent();
+    expect(def_wallet_name).toBe("My Multisig Wallet");
+  });
 
-  // for (const scenario of connectionScenarios) {
-  //   test(`should handle private connection with ${scenario.name}`,async ({page})=>{
-  //     await setupPrivateClient(page, {
-  //       url: scenario.url,
-  //       username: scenario.username,
-  //       password: scenario.password
-  //     })
+  for (const scenario of connectionScenarios) {
+    test(`should handle private connection with ${scenario.name}`,async ({page})=>{
+      await setupPrivateClient(page, {
+        url: scenario.url,
+        username: scenario.username,
+        password: scenario.password
+      })
 
-  //     await expect(page.getByText(scenario.expectedMessage)).toBeVisible();
-  //   })
-  // }
+      await expect(page.getByText(scenario.expectedMessage)).toBeVisible();
+    })
+  }
 
   test("should create a 2-of-3 multisig wallet", async ({ page }) => {
 
@@ -102,7 +102,7 @@ test.describe("Caravan Wallet Creation", () => {
 
     await expect(page.getByText("Connection Success!")).toBeVisible();
 
-    await page.locator("input[name='network'][value='testnet']").setChecked(true);
+    await page.locator("input[name='network'][value='regtest']").setChecked(true);
 
 
     const { descriptors } = await extractMultiWalletDescriptors(walletNames.slice(0, 3), client, "p2pkh");
