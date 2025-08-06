@@ -10,7 +10,11 @@ import {
   P2SH_P2WSH,
   P2WSH,
   bip32PathToSequence,
+  bip32SequenceToPath,
 } from "@caravan/bitcoin";
+
+import { getRelativeBip32Sequence } from "@caravan/bip32";
+
 import {
   Jade,
   JadeInterface,
@@ -31,6 +35,7 @@ import {
   ACTIVE,
   INFO,
 } from "./interaction";
+
 import { MultisigWalletConfig } from "./types";
 
 
@@ -55,22 +60,6 @@ function variantFromAddressType(
 
 function fingerprintFromHex(xfp: string): Uint8Array {
   return Uint8Array.from(Buffer.from(xfp, "hex"));
-}
-
-function extractPathSuffix(
-  fullPathStr: string,
-  baseDerivation: number[],
-): number[] {
-  const fullPath = bip32PathToSequence(fullPathStr);
-  if (
-    fullPath.length < baseDerivation.length ||
-    !baseDerivation.every((v, i) => v === fullPath[i])
-  ) {
-    throw new Error(
-      `Path "${fullPathStr}" does not extend base derivation [${baseDerivation.join(",")}]`,
-    );
-  }
-  return fullPath.slice(baseDerivation.length);
 }
 
 function walletConfigToJadeDescriptor(
@@ -375,9 +364,10 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         multisigName = `jade${randomBytes(4).toString("hex")}`;
         await jade.registerMultisig(this.network, multisigName, descriptor);
       }
-      const relativePath = this.bip32Path;
       const paths = descriptor.signers.map((signer) => {
-        return extractPathSuffix(relativePath, signer.derivation);
+		  let childPath = bip32SequenceToPath(signer.derivation);
+		  return getRelativeBip32Sequence(childPath, this.bip32Path);
+
       });
 
       const opts: ReceiveOptions = {
