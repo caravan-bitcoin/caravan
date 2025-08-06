@@ -43,11 +43,11 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: cd apps/coordinator && npx playwright install --with-deps chromium
 
-      # Pre-pull Docker images (optimization, not management)
-      - name: Pre-pull Docker images
-        run: |
-          docker pull lncm/bitcoind:v27.0
-          docker pull nginx:alpine
+      # Pre-pull Docker images 
+      # - name: Pre-pull Docker images
+      #   run: |
+      #     docker pull lncm/bitcoind:v27.0
+      #     docker pull nginx:alpine
 
       # Create .env file for your setup
       - name: Create .env file for e2e tests
