@@ -1083,17 +1083,20 @@ export class BlockchainClient extends ClientBase {
         "Wallet name is required for wallet transaction lookups",
       );
     }
-
     try {
-      const walletTxData = (await callBitcoindWallet({
+      const rpcResponse = await callBitcoindWallet({
         baseUrl: this.bitcoindParams.url,
         walletName: this.bitcoindParams.walletName,
         auth: this.bitcoindParams.auth,
         method: "getmempoolentry",
         params: [txid],
-      })) as unknown as MempoolEntry;
+      });
+      const mempoolEntry = rpcResponse.result as MempoolEntry;
 
-      return walletTxData.fees.base;
+      if (!mempoolEntry || !mempoolEntry.fees) {
+        throw new Error("Invalid mempool entry response");
+      }
+      return mempoolEntry.fees.base;
     } catch (error: any) {
       throw new Error(`Failed to get wallet transaction: ${error.message}`);
     }
