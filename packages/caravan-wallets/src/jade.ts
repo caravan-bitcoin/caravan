@@ -10,7 +10,6 @@ import {
   P2SH_P2WSH,
   P2WSH,
   bip32PathToSequence,
-  getRelativeBIP32Path,
 } from "@caravan/bitcoin";
 import {
   Jade,
@@ -95,7 +94,6 @@ function walletConfigToJadeDescriptor(
 function getSignatureArray(
   fingerprint: string | null,
   parsedPsbt: any,
-  _b64: string ,
 ): string[] {
   const sigArray: string[] = [];
 
@@ -341,8 +339,7 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
             descriptor,
           );
         }
-        const wallet = await jade.getRegisteredMultisig(multisigName);
-      },
+      }
     );
   }
 }
@@ -378,7 +375,6 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         multisigName = `jade${randomBytes(4).toString("hex")}`;
         await jade.registerMultisig(this.network, multisigName, descriptor);
       }
-      const wallet = await jade.getRegisteredMultisig(multisigName);
       const relativePath = this.bip32Path;
       const paths = descriptor.signers.map((signer) => {
         return extractPathSuffix(relativePath, signer.derivation);
@@ -447,7 +443,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
           const fingerprint = await jade.getMasterFingerPrint(
             this.walletConfig.network,
           );
-          return getSignatureArray(fingerprint, parsedPsbt, b64string);
+          return getSignatureArray(fingerprint, parsedPsbt);
         }
 
         return signedPSBT;
@@ -457,7 +453,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
 }
 
 
-export class JadeSignMessage extends JadeInteraction{
+export class JadeSignMessage extends JadeInteraction {
   bip32Path: string;
 
   message: string;
@@ -468,16 +464,14 @@ export class JadeSignMessage extends JadeInteraction{
     super();
     this.bip32Path = bip32Path;
     this.message = message;
-	this.network = DEFAULT_NETWORK
-
+    this.network = DEFAULT_NETWORK;
   }
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-	  const path = bip32PathToSequence(this.bip32Path) 
+      const path = bip32PathToSequence(this.bip32Path);
       return await jade.signMessage(path, this.message);
     });
   }
-
 }
 
