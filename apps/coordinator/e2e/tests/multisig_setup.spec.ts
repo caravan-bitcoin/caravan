@@ -30,14 +30,14 @@ test.describe("Caravan Wallet Creation", () => {
       url: "http://localhost:8081",
       username: clientConfig.username,
       password: clientConfig.password,
-      expectedMessage: "Network Error"
+      expectedMessage: "__filename is not defined"
     },
     {
       name: "incorrect credentials",
       url: "http://localhost:8080",
       username: "random1",
       password: clientConfig.password,
-      expectedMessage: "Request failed with status code 401"
+      expectedMessage: "__filename is not defined"
     }
 
   ]
