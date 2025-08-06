@@ -10,6 +10,7 @@ import {
   P2SH_P2WSH,
   P2WSH,
   bip32PathToSequence,
+  getRelativeBIP32Path,
 } from "@caravan/bitcoin";
 import {
   Jade,
@@ -73,7 +74,7 @@ function extractPathSuffix(
   return fullPath.slice(baseDerivation.length);
 }
 
-function walletConfigToDescriptor(
+function walletConfigToJadeDescriptor(
   cfg: MultisigWalletConfig,
 ): MultisigDescriptor {
   const signers: SignerDescriptor[] = cfg.extendedPublicKeys.map((ek) => ({
@@ -89,6 +90,51 @@ function walletConfigToDescriptor(
     threshold: cfg.quorum.requiredSigners,
     signers,
   };
+}
+
+function getSignatureArray(
+  fingerprint: string | null,
+  parsedPsbt: any,
+  _b64: string ,
+): string[] {
+  const sigArray: string[] = [];
+
+  for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
+    const derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
+    if (!Array.isArray(derivations)) {
+      throw new Error(
+        `bip32 derivations expected to be an array for input ${i}`,
+      );
+    }
+
+    const myDerivation = derivations.find(
+      (d: any) => d.value!.substr(0, 8) === fingerprint,
+    );
+    if (!myDerivation) {
+      console.warn(`Could not find our pubkey in input ${i}, skipping`);
+      continue;
+    }
+
+    const pubKey = myDerivation.key.substr(2);
+
+    const partialSigs = parsedPsbt.PSBT_IN_PARTIAL_SIG[i];
+    if (!Array.isArray(partialSigs)) {
+      throw new Error(
+        `Partial signatures expected to be an array for input ${i}`,
+      );
+    }
+
+    const mySigEntry = partialSigs.find(
+      (s: any) => s.key.substr(2) === pubKey,
+    );
+    if (!mySigEntry) {
+      throw new Error(`Could not find our signature for input ${i}`);
+    }
+
+    sigArray.push(mySigEntry.value!);
+  }
+
+  return sigArray;
 }
 
 export class JadeInteraction extends DirectKeystoreInteraction {
@@ -281,7 +327,7 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
     return await this.withDevice(
       this.walletConfig.network,
       async (jade: IJade) => {
-        const descriptor = walletConfigToDescriptor(this.walletConfig);
+        const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
         let multisigName = await jade.getMultiSigName(
           this.walletConfig.network,
           descriptor,
@@ -325,7 +371,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
 
   async run() {
     return await this.withDevice(this.network, async (jade: IJade) => {
-      const descriptor = walletConfigToDescriptor(this.walletConfig);
+      const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
       let multisigName = await jade.getMultiSigName(this.network, descriptor);
 
       if (!multisigName) {
@@ -333,9 +379,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         await jade.registerMultisig(this.network, multisigName, descriptor);
       }
       const wallet = await jade.getRegisteredMultisig(multisigName);
-      console.log("registered wallet", wallet);
       const relativePath = this.bip32Path;
-
       const paths = descriptor.signers.map((signer) => {
         return extractPathSuffix(relativePath, signer.derivation);
       });
@@ -403,52 +447,11 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
           const fingerprint = await jade.getMasterFingerPrint(
             this.walletConfig.network,
           );
-
-          let sigArray: string[] = [];
-
-          for (let i = 0; i < parsedPsbt.PSBT_GLOBAL_INPUT_COUNT; i++) {
-            const bip32Derivations = parsedPsbt.PSBT_IN_BIP32_DERIVATION[i];
-
-            if (!Array.isArray(bip32Derivations)) {
-              throw new Error(
-                `bip32 derivations expected to be an array for input ${i}`,
-              );
-            }
-
-            const bip32Derivation = bip32Derivations.find(
-              (entry) => entry.value!.substr(0, 8) === fingerprint,
-            );
-
-            if (!bip32Derivation) {
-              console.warn(`Could not find our pubkey in input ${i}, skipping`);
-              continue;
-            }
-
-            const pubKey = bip32Derivation.key.substr(2);
-
-            const partialSigs = parsedPsbt.PSBT_IN_PARTIAL_SIG[i];
-            if (!Array.isArray(partialSigs)) {
-              throw new Error(
-                `Partial signatures expected to be an array for input ${i}`,
-              );
-            }
-
-            const partialSig = partialSigs.find(
-              (e) => e.key.substr(2) === pubKey,
-            );
-
-            if (!partialSig) {
-              throw new Error(`Could not find our signature for input ${i}`);
-            }
-
-            sigArray.push(partialSig.value!);
-          }
-
-          return sigArray;
+          return getSignatureArray(fingerprint, parsedPsbt, b64string);
         }
 
         return signedPSBT;
-      },
+      }
     );
   }
 }
