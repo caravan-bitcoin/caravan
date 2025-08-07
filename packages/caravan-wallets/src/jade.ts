@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 
+import { getRelativeBip32Sequence } from "@caravan/bip32";
 import {
   BitcoinNetwork,
   ExtendedPublicKey,
@@ -12,9 +13,6 @@ import {
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
-
-import { getRelativeBip32Sequence } from "@caravan/bip32";
-
 import {
   Jade,
   JadeInterface,
@@ -35,7 +33,6 @@ import {
   ACTIVE,
   INFO,
 } from "./interaction";
-
 import { MultisigWalletConfig } from "./types";
 
 
@@ -158,46 +155,51 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     return messages;
   }
 
+
   async withDevice<T>(
-    network: string,
-    f: (jade: IJade) => Promise<T>,
-  ): Promise<T> {
-    try {
-      await this.jade.connect();
+  network: string,
+  fn: (jade: IJade) => Promise<T>,
+): Promise<T> {
+  let connected = false;
 
-      const httpRequestFn = async (params: any): Promise<{ body: any }> => {
-        const url = params.urls[0];
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params.data),
-        });
-        if (!response.ok) {
-          throw new Error("HTTP request failed in authUser");
-        }
-        const body = await response.json();
-        return { body };
-      };
+  try {
+    await this.jade.connect();
+    connected = true;
 
-      const unlockResult = await this.jade.authUser(network, httpRequestFn);
-      if (unlockResult !== true) {
-        throw new Error("Failed to unlock Jade device");
-      }
+    // Perform user handshake
+    const httpRequestFn = async (params: any): Promise<{ body: any }> => {
+      const url = params.urls[0];
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params.data),
+      });
+      if (!res.ok) throw new Error("HTTP request failed in authUser");
+      return { body: await res.json() };
+    };
 
+    const unlocked = await this.jade.authUser(network, httpRequestFn);
+    if (unlocked !== true) throw new Error("Failed to unlock Jade device");
+
+    //run jade action
+    return await fn(this.jade);
+  } finally {
+    if (connected) {
       try {
-        return await f(this.jade);
-      } finally {
         await this.jade.disconnect();
+      } catch (e: any) {
+        // preserve original error (if any) but log disconnect issue
+        console.warn("Jade disconnect failed:", e.message ?? e);
       }
-    } catch (err: any) {
-      throw new Error(err.message);
     }
   }
+}
 
   async run(): Promise<any> {
     return null;
   }
 }
+
 
 export class JadeGetMetadata extends JadeInteraction {
   async run(): Promise<{
@@ -365,9 +367,8 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         await jade.registerMultisig(this.network, multisigName, descriptor);
       }
       const paths = descriptor.signers.map((signer) => {
-		  let childPath = bip32SequenceToPath(signer.derivation);
-		  return getRelativeBip32Sequence(childPath, this.bip32Path);
-
+        let childPath = bip32SequenceToPath(signer.derivation);
+        return getRelativeBip32Sequence(childPath, this.bip32Path);
       });
 
       const opts: ReceiveOptions = {
