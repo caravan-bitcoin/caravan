@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.6.0
+
+### Minor Changes
+
+- [#340](https://github.com/caravan-bitcoin/caravan/pull/340) [`d068e4e`](https://github.com/caravan-bitcoin/caravan/commit/d068e4e7c0203abe2ceafc079588c1ce37251d2a) Thanks [@ice-009](https://github.com/ice-009)! - Added the Address Transaction History function to the package
+
 ## 0.5.1
 
 ### Patch Changes

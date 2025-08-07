@@ -22,6 +22,7 @@ import {
   RawTransactionData,
   ListTransactionsItem,
   WalletTransactionResponse,
+  WalletTransactionDetails
 } from "./types";
 import {
   bitcoindGetAddressStatus,
@@ -30,6 +31,7 @@ import {
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
   callBitcoindWallet,
+  bitcoindListSpentTransactions,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -252,8 +254,8 @@ export class BlockchainClient extends ClientBase {
       type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
-      network !== Network.SIGNET
-    ) {
+      network !== Network.SIGNET 
+      ) {
       throw new Error("Invalid network");
     }
 
@@ -637,6 +639,283 @@ export class BlockchainClient extends ClientBase {
     }
   }
 
+/**
+ * Retrieves transaction history for one or more addresses (public clients only)
+ * 
+ * This method is designed for public blockchain explorers (Mempool/Blockstream) that
+ * maintain address indexes, allowing efficient address-specific queries.
+ * 
+ * Why this method is PUBLIC CLIENT ONLY:
+ * - Public APIs maintain address indexes for efficient lookups
+ * - Bitcoin Core doesn't support address-specific queries (see getWalletTransactionHistory)
+ * - Allows querying multiple addresses with Promise.all for efficiency
+ * 
+ * For PRIVATE clients: Use getWalletTransactionHistory() which returns all wallet transactions
+ * 
+ * @param address - Single address or array of addresses to query
+ * @param count - Number of transactions to return per address (1-100)
+ * @param skip - Number of transactions to skip for pagination
+ * @returns Combined array of transactions sorted by time (newest first)
+ * @throws Error if called on private client
+ * 
+ * @example
+ * // Single address
+ * const txs = await client.getAddressTransactionHistory("bc1q...");
+ * 
+ * // Multiple addresses
+ * const txs = await client.getAddressTransactionHistory(["bc1q...", "bc1p..."]);
+ * 
+ * @see getWalletTransactionHistory - For private clients
+ */
+
+public async getAddressTransactionHistory(
+  address: string | string[],
+  count: number = 10,
+  skip: number = 0
+): Promise<TransactionDetails[]> {
+  if (count < 1 || count > 100000) {
+    throw new Error("Count must be between 1 and 100000");
+  }
+  if (skip < 0) {
+    throw new Error("Skip must be non-negative");
+  }
+
+  try {
+    if (this.type === ClientType.PRIVATE) {
+      throw new Error("Use getWalletTransactionHistory for private clients");
+    }
+
+    if (!this.provider) {
+      throw new Error("Provider must be specified for public clients");
+    }
+
+    const addresses = Array.isArray(address) ? address : [address];
+    const allTransactions: any[] = [];
+    let anyAddressFailed = false;
+    let firstError: Error | null = null;
+
+    // Use allSettled to handle partial failures
+    const results = await Promise.allSettled(
+      addresses.map(async (addr) => {
+        try {
+          const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+            ? `limit=${count}&offset=${skip}`
+            : `count=${count}&skip=${skip}`;
+          const endpoint = `/address/${addr}/txs?${query}`;
+          const response = await this.Get(endpoint);
+                  
+          // Robust response handling
+          let transactions: any[] = [];
+                  
+          // Case 1: Response is already an array
+          if (Array.isArray(response)) {
+            transactions = response;
+          }
+          // Case 2: Response is an object with nested array
+          else if (response && typeof response === 'object') {
+            const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
+            for (const key of nestedKeys) {
+              if (Array.isArray(response[key])) {
+                transactions = response[key];
+                break;
+              }
+            }
+            // Case 3: Single transaction object (only if it has a txid)
+            if (transactions.length === 0 && response.txid) {
+              transactions = [response];
+            }
+          }
+          // Case 4: Unexpected format - just return empty array
+          else {
+            console.warn('Unexpected transaction response format:', response);
+            transactions = [];
+          }
+                  
+          // Always ensure we return an array
+          return Array.isArray(transactions) ? transactions : [];
+        } catch (error) {
+          anyAddressFailed = true;
+          firstError = error as Error;
+          throw error; // Re-throw to mark promise as rejected
+        }
+      })
+    );
+
+    // Process allSettled results - include empty arrays too
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const transactions = result.value;
+        if (Array.isArray(transactions)) {
+          allTransactions.push(...transactions);
+        }
+      }
+    }
+
+    // Throw if any address failed AND we got no results at all
+    if (anyAddressFailed && allTransactions.length === 0) {
+      throw firstError || new Error('Failed to fetch transactions for all addresses');
+    }
+
+    // Defensive: Ensure allTransactions is always an array
+    if (!Array.isArray(allTransactions)) {
+      console.warn('allTransactions is not an array:', allTransactions);
+      return [];
+    }
+
+    // Sort by timestamp (newest first) and apply pagination
+    const sortedTransactions = allTransactions
+      .sort((a, b) => {
+        const timeA = a?.time || a?.timestamp || 0;
+        const timeB = b?.time || b?.timestamp || 0;
+        return timeB - timeA;
+      })
+      .slice(0, count);
+
+    // Final safety check
+    if (!Array.isArray(sortedTransactions)) {
+      console.warn('sortedTransactions is not an array:', sortedTransactions);
+      return [];
+    }
+
+    // Map to normalized format with error handling
+    try {
+      return sortedTransactions.map((rawTx: any) => {
+        if (!rawTx || typeof rawTx !== 'object') {
+          console.warn('Invalid transaction object:', rawTx);
+          // Return a minimal valid transaction object
+          return {
+            txid: 'unknown',
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 0,
+            weight: 0,
+            fee: 0,
+            isReceived: false,
+            status: {
+              confirmed: false,
+              blockHeight: undefined,
+              blockHash: undefined,
+              blockTime: undefined,
+            }
+          } as TransactionDetails;
+        }
+        return normalizeTransactionData(rawTx, ClientType.PUBLIC);
+      });
+    } catch (mapError) {
+      console.error('Error in transaction mapping:', mapError);
+      console.error('sortedTransactions:', sortedTransactions);
+      throw mapError;
+    }
+
+  } catch (error: any) {
+    throw new Error(`Failed to get address transaction history: ${error.message}`);
+  }
+}
+
+/**
+ * Retrieves transaction history for a Bitcoin Core wallet (private client only)
+ * 
+ * This method returns only "send" (spent) transactions from the wallet. This design
+ * decision was made after extensive discussion about Bitcoin Core's limitations:
+ * 
+ * 1. Bitcoin Core doesn't maintain an address index for performance/privacy reasons
+ * 2. The `listtransactions` RPC returns ALL wallet transactions with no address filtering
+ * 3. Filtering by address after fetching would be O(n*m) complexity for multiple addresses
+ * 
+ * Why this method is PRIVATE CLIENT ONLY:
+ * - Public APIs (Mempool/Blockstream) support direct address querying
+ * - Bitcoin Core requires different approach due to lack of address indexing
+ * - This inconsistency is intentional to optimize for each client type's capabilities
+ * 
+ * Why only "send" transactions:
+ * - Unspent "receive" transactions are already available via fetchAddressUtxos()
+ * - Avoids duplication of data that's accessible through UTXO methods
+ * - Focuses on spent transactions which are needed for transaction history
+ * - Coordinator can combine this with UTXO data for complete history
+ * 
+ * For PUBLIC clients: Use getAddressTransactionHistory() which supports address filtering
+ * 
+ * @param count - Number of transactions to return (1-1000)
+ * @param skip - Number of transactions to skip for pagination
+ * @param includeWatchOnly - Include watch-only addresses in results
+ * @returns Array of spent transactions from the wallet
+ * @throws Error if called on public client or if wallet name is missing
+ * 
+ * @example
+ * // For private client - get last 100 spent transactions
+ * const spentTxs = await client.getWalletTransactionHistory(100);
+ * 
+ * // For public client - use getAddressTransactionHistory instead
+ * const addressTxs = await client.getAddressTransactionHistory(address);
+ * 
+ * @see getAddressTransactionHistory - For public clients
+ * @see fetchAddressUtxos - For unspent transactions
+ */
+
+public async getWalletTransactionHistory(
+  count: number = 100,
+  skip: number = 0,
+  includeWatchOnly: boolean = true
+): Promise<WalletTransactionDetails[]> {
+  if (count < 1 || count > 100000) {
+    throw new Error("Count must be between 1 and 100000");
+  }
+  if (skip < 0) {
+    throw new Error("Skip must be non-negative");
+  }
+
+  if (this.type !== ClientType.PRIVATE) {
+    throw new Error("This method is only supported for private clients. Use getAddressTransactionHistory for public clients");
+  }
+
+  if (!this.bitcoindParams.walletName) {
+    throw new Error("Wallet name is required for private client transaction listings");
+  }
+
+  const spentTransactions = await bitcoindListSpentTransactions({
+    url: this.bitcoindParams.url,
+    auth: this.bitcoindParams.auth,
+    walletName: this.bitcoindParams.walletName,
+    count,
+    skip,
+    includeWatchOnly,
+  });
+
+  return spentTransactions.map((tx) => {
+    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : 0;
+    
+    const transformedTx: WalletTransactionDetails = {
+      txid: tx.txid,
+      version: 1,
+      locktime: 0,
+      vin: [],
+      vout: [],
+      size: 0,
+      weight: 0,
+      fee: feeSats,
+      isReceived: false,
+      status: {
+        confirmed: tx.confirmations > 0,
+        blockHeight: tx.blockheight,
+        blockHash: tx.blockhash,
+        blockTime: tx.blocktime,
+      },
+      // Required wallet-specific properties
+      amount: tx.amount,
+      confirmations: tx.confirmations,
+      category: tx.category,
+      address: tx.address,
+      abandoned: tx.abandoned,
+      time: tx.time,
+    };
+    
+    return transformedTx;
+  });
+}
+  
+
   /**
    * Gets detailed information about a wallet transaction including fee information
    *
@@ -650,6 +929,7 @@ export class BlockchainClient extends ClientBase {
    * @param txid - Transaction ID to retrieve
    * @returns Normalized transaction details with fee information
    */
+  
   public async getWalletTransaction(txid: string): Promise<TransactionDetails> {
     if (this.type !== ClientType.PRIVATE) {
       throw new BlockchainClientError(
