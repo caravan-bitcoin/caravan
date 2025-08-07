@@ -332,7 +332,7 @@ export const useCompletedTransactions = (
 ) => {
   const clientType = useSelector((state: WalletState) => state.client.type);
 
-  const privateQuery = usePrivateClientTransactions(count, skip);
+  const privateQuery = usePrivateClientTransactions(count, "all");
   const publicQuery = usePublicClientTransactions(count, skip);
 
   // Return the appropriate query based on client type

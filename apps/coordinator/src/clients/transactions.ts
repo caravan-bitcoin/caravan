@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
 import {
@@ -193,9 +193,10 @@ export interface Coin {
 export const fetchTransactionCoins = async (
   txid: string,
   client: BlockchainClient,
-) => {
+): Promise<Map<string, Coin>> => {
   const transaction = await client.getTransaction(txid);
   const coins = new Map<string, Coin>();
+
   for (const input of transaction.vin) {
     const { txid, vout } = input;
 
@@ -287,26 +288,75 @@ export const useAllTransactions = (count: number, skip: number) => {
   };
 };
 
-// Private client transactions hook - uses selector
+// UNIFIED PRIVATE CLIENT HOOK - Uses native TanStack Query infinite functionality
 export const usePrivateClientTransactions = (
-  count: number = 10,
-  skip: number = 0,
+  pageSize: number = 100,
   filter: "all" | "confirmed" | "unconfirmed" = "all",
+  infinite: boolean = false,
 ) => {
+  const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = useSelector((state: WalletState) => state.client.type);
-  const rawQuery = useWalletTransactionHistory(count, skip);
 
-  const data = useMemo(() => {
-    if (!rawQuery.data) return [];
-    return selectProcessedTransactions(rawQuery.data, walletAddresses, filter);
-  }, [rawQuery.data, walletAddresses, filter]);
+  // SIMPLE QUERY - For non-infinite loading
+  const simpleQuery = useWalletTransactionHistory(pageSize, 0);
+
+  // INFINITE QUERY - Using TanStack Query's native useInfiniteQuery
+  const infiniteQuery = useInfiniteQuery(
+    [...transactionKeys.all, "infinite", "private", pageSize, filter],
+    async ({ pageParam = 0 }) => {
+      if (!blockchainClient) {
+        throw new Error("No blockchain client available");
+      }
+
+      const rawTransactions =
+        await blockchainClient.getWalletTransactionHistory(pageSize, pageParam);
+
+      return selectProcessedTransactions(
+        rawTransactions,
+        walletAddresses,
+        filter,
+      );
+    },
+    {
+      enabled: !!blockchainClient && clientType === "private" && infinite,
+      getNextPageParam: (lastPage, allPages) => {
+        if (lastPage.length < pageSize) return undefined;
+        return allPages.length * pageSize;
+      },
+    },
+  );
+
+  // Process simple query data with selector
+  const processedSimpleData = useMemo(() => {
+    if (!simpleQuery.data) return [];
+    return selectProcessedTransactions(
+      simpleQuery.data,
+      walletAddresses,
+      filter,
+    );
+  }, [simpleQuery.data, walletAddresses, filter]);
+
+  // Return appropriate data based on mode
+  if (infinite) {
+    return {
+      data: infiniteQuery.data?.pages.flat() || [],
+      isLoading: infiniteQuery.isLoading,
+      isLoadingMore: infiniteQuery.isFetchingNextPage,
+      error: infiniteQuery.error,
+      hasMore: infiniteQuery.hasNextPage,
+      loadMore: infiniteQuery.fetchNextPage, // Native TanStack Query function
+      reset: () => infiniteQuery.refetch(),
+      refetch: infiniteQuery.refetch,
+      totalLoaded: infiniteQuery.data?.pages.flat().length || 0,
+    };
+  }
 
   return {
-    data,
-    isLoading: rawQuery.isLoading,
-    error: rawQuery.error,
-    refetch: rawQuery.refetch,
+    data: processedSimpleData,
+    isLoading: simpleQuery.isLoading,
+    error: simpleQuery.error,
+    refetch: simpleQuery.refetch,
     enabled: clientType === "private",
   };
 };
