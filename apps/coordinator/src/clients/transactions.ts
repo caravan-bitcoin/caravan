@@ -48,9 +48,6 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
-// Define filtering options for better type safety and clarity
-export type TransactionFilter = "all" | "confirmed" | "unconfirmed";
-
 /**
  * Processes raw transaction data by adding wallet-specific context and filtering.
  *
@@ -65,7 +62,7 @@ export type TransactionFilter = "all" | "confirmed" | "unconfirmed";
 export const processTransactionsWithWalletContext = (
   transactions: WalletTransactionDetails[],
   walletAddresses: string[],
-  filter: TransactionFilter = "all",
+  filter: "all" | "confirmed" | "unconfirmed" = "all",
 ): TransactionDetails[] => {
   // Filter by confirmation status based on the filter parameter
   const filteredTransactions = transactions.filter((tx) => {
