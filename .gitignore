@@ -50,6 +50,8 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 playwright-report
+/apps/coordinator/test-results
+/apps/coordinator/e2e/test-results
 
 #e2e
 /apps/coordinator/e2e/downloads
