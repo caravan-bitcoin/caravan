@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { useMemo } from "react";
 import {
   BlockchainClient,
   TransactionDetails,
@@ -10,8 +11,8 @@ import {
   getWalletAddresses,
   Slice,
   WalletState,
+  selectProcessedTransactions,
 } from "selectors/wallet";
-import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
@@ -48,48 +49,7 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
-/**
- * Processes raw transaction data by adding wallet-specific context and filtering.
- *
- * This function works with transactions from both private clients (wallet history)
- * and public clients (address history), as both return WalletTransactionDetails[].
- *
- * @param transactions - Raw transactions from either wallet or address history
- * @param walletAddresses - Addresses belonging to this wallet for value calculation
- * @param filter - Filter transactions by confirmation status
- * @returns Processed transactions with wallet context (value, direction, etc.)
- */
-export const processTransactionsWithWalletContext = (
-  transactions: WalletTransactionDetails[],
-  walletAddresses: string[],
-  filter: "all" | "confirmed" | "unconfirmed" = "all",
-): TransactionDetails[] => {
-  // Filter by confirmation status based on the filter parameter
-  const filteredTransactions = transactions.filter((tx) => {
-    switch (filter) {
-      case "confirmed":
-        return tx.status?.confirmed === true;
-      case "unconfirmed":
-        return tx.status?.confirmed !== true;
-      case "all":
-      default:
-        return true;
-    }
-  });
-
-  // Add wallet-specific context to each transaction
-  return filteredTransactions.map((tx) => {
-    const valueToWallet = calculateTransactionValue(tx, walletAddresses);
-
-    return {
-      ...tx,
-      valueToWallet,
-      isReceived:
-        tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0,
-    };
-  });
-};
-
+// Basic hook for fetching single transaction details
 export const useFetchTransactionDetails = (txid: string) => {
   const blockchainClient = useGetClient();
   return useQuery({
@@ -99,7 +59,7 @@ export const useFetchTransactionDetails = (txid: string) => {
   });
 };
 
-// Hook for fetching all pending transactions
+// Hook for fetching pending transaction IDs and their details
 const useFetchPendingTransactions = () => {
   const pendingTransactionIds = useSelector(getPendingTransactionIds);
   const blockchainClient = useGetClient();
@@ -113,6 +73,7 @@ const useFetchPendingTransactions = () => {
   });
 };
 
+// Hook for fetching transactions with their hex data
 export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
   return useQueries({
@@ -131,23 +92,16 @@ export const useTransactionsWithHex = (txids: string[]) => {
   });
 };
 
-// Hook for processed pending transactions with calculated values
-export const usePendingTransactions = () => {
-  const walletAddresses = useSelector(getWalletAddresses);
+// Basic hook for raw pending transactions (no processing)
+export const useRawPendingTransactions = () => {
   const transactionQueries = useFetchPendingTransactions();
 
-  // Calculate loading and error states
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
 
-  // Process transactions with wallet context and filter to unconfirmed only
-  const transactions = processTransactionsWithWalletContext(
-    transactionQueries
-      .filter((query) => query.data)
-      .map((query) => query.data!),
-    walletAddresses,
-    "unconfirmed",
-  );
+  const transactions = transactionQueries
+    .filter((query) => query.data)
+    .map((query) => query.data!);
 
   return {
     transactions,
@@ -156,6 +110,28 @@ export const usePendingTransactions = () => {
     refetch: () => {
       transactionQueries.forEach((query) => query.refetch());
     },
+  };
+};
+
+// Hook for processed pending transactions - uses selector
+export const usePendingTransactions = () => {
+  const walletAddresses = useSelector(getWalletAddresses);
+  const rawPendingQuery = useRawPendingTransactions();
+
+  const transactions = useMemo(() => {
+    if (!rawPendingQuery.transactions) return [];
+    return selectProcessedTransactions(
+      rawPendingQuery.transactions,
+      walletAddresses,
+      "unconfirmed",
+    );
+  }, [rawPendingQuery.transactions, walletAddresses]);
+
+  return {
+    transactions,
+    isLoading: rawPendingQuery.isLoading,
+    error: rawPendingQuery.error,
+    refetch: rawPendingQuery.refetch,
   };
 };
 
@@ -256,7 +232,7 @@ export const fetchTransactionCoins = async (
   return coins;
 };
 
-// Hook for fetching transaction coins with TanStack Query
+// Basic hook for fetching transaction coins
 export const useTransactionCoins = (txid: string) => {
   const blockchainClient = useGetClient();
 
@@ -267,18 +243,19 @@ export const useTransactionCoins = (txid: string) => {
   });
 };
 
-// Hook for fetching completed (confirmed) transactions with wallet context
+// Hook for fetching completed (confirmed) transactions - uses selector
 export const useCompletedTransactions = (count: number, skip: number) => {
   const walletAddresses = useSelector(getWalletAddresses);
   const walletHistoryQuery = useWalletTransactionHistory(count, skip);
 
-  const transactions = walletHistoryQuery.data
-    ? processTransactionsWithWalletContext(
-        walletHistoryQuery.data,
-        walletAddresses,
-        "confirmed",
-      )
-    : [];
+  const transactions = useMemo(() => {
+    if (!walletHistoryQuery.data) return [];
+    return selectProcessedTransactions(
+      walletHistoryQuery.data,
+      walletAddresses,
+      "confirmed",
+    );
+  }, [walletHistoryQuery.data, walletAddresses]);
 
   return {
     transactions,
@@ -288,18 +265,19 @@ export const useCompletedTransactions = (count: number, skip: number) => {
   };
 };
 
-// Hook for fetching all transactions (confirmed + unconfirmed) with wallet context
+// Hook for fetching all transactions - uses selector
 export const useAllTransactions = (count: number, skip: number) => {
   const walletAddresses = useSelector(getWalletAddresses);
   const walletHistoryQuery = useWalletTransactionHistory(count, skip);
 
-  const transactions = walletHistoryQuery.data
-    ? processTransactionsWithWalletContext(
-        walletHistoryQuery.data,
-        walletAddresses,
-        "all",
-      )
-    : [];
+  const transactions = useMemo(() => {
+    if (!walletHistoryQuery.data) return [];
+    return selectProcessedTransactions(
+      walletHistoryQuery.data,
+      walletAddresses,
+      "all",
+    );
+  }, [walletHistoryQuery.data, walletAddresses]);
 
   return {
     transactions,
@@ -309,29 +287,26 @@ export const useAllTransactions = (count: number, skip: number) => {
   };
 };
 
+// Private client transactions hook - uses selector
 export const usePrivateClientTransactions = (
   count: number = 10,
   skip: number = 0,
+  filter: "all" | "confirmed" | "unconfirmed" = "all",
 ) => {
-  const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = useSelector((state: WalletState) => state.client.type);
+  const rawQuery = useWalletTransactionHistory(count, skip);
 
-  return useQuery({
-    queryKey: transactionKeys.walletHistory(count, skip),
-    queryFn: async (): Promise<TransactionDetails[]> => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
+  const data = useMemo(() => {
+    if (!rawQuery.data) return [];
+    return selectProcessedTransactions(rawQuery.data, walletAddresses, filter);
+  }, [rawQuery.data, walletAddresses, filter]);
 
-      const rawTransactions =
-        await blockchainClient.getWalletTransactionHistory(count, skip);
-
-      return processTransactionsWithWalletContext(
-        rawTransactions,
-        walletAddresses,
-      );
-    },
-    enabled: !!blockchainClient && clientType === "private",
-  });
+  return {
+    data,
+    isLoading: rawQuery.isLoading,
+    error: rawQuery.error,
+    refetch: rawQuery.refetch,
+    enabled: clientType === "private",
+  };
 };

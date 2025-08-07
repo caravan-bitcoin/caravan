@@ -7,13 +7,13 @@ import {
   getSpentSlices,
   SliceWithLastUsed,
   WalletState,
+  selectProcessedTransactions,
 } from "selectors/wallet";
 import { dustAnalysis, privacyAnalysis } from "utils/transactionAnalysisUtils";
 import type { MultisigAddressType } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
 import {
   transactionKeys,
-  processTransactionsWithWalletContext,
   usePrivateClientTransactions,
 } from "clients/transactions";
 
@@ -78,9 +78,10 @@ export const usePrivateClientTransactionsWithLoadMore = (
           currentOffset,
         );
 
-      const processedTransactions = processTransactionsWithWalletContext(
+      const processedTransactions = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
+        "all",
       );
 
       setHasMore(processedTransactions.length === pageSize);
@@ -178,9 +179,10 @@ export const usePublicClientTransactions = (
           skip,
         );
 
-      return processTransactionsWithWalletContext(
+      return selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
+        "all",
       );
     },
     enabled:
@@ -233,9 +235,10 @@ export const usePublicClientTransactionsWithLoadMore = (
             currentOffset,
           );
 
-        const processedTransactions = processTransactionsWithWalletContext(
+        const processedTransactions = selectProcessedTransactions(
           rawTransactions,
           walletAddresses,
+          "all",
         );
 
         setHasMore(processedTransactions.length === pageSize);
@@ -251,9 +254,10 @@ export const usePublicClientTransactionsWithLoadMore = (
               currentOffset,
             );
 
-          const processedTransactions = processTransactionsWithWalletContext(
+          const processedTransactions = selectProcessedTransactions(
             rawTransactions,
             walletAddresses,
+            "all",
           );
 
           setHasMore(processedTransactions.length === pageSize);
