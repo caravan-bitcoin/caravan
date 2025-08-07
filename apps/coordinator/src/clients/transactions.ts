@@ -55,18 +55,21 @@ const useFetchPendingTransactions = () => {
   });
 };
 
-export const useTransactionWithHex = (txid: string) => {
+export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
-  return useQuery({
-    queryKey: transactionKeys.txWithHex(txid),
-    queryFn: async () => {
-      const [transaction, transactionHex] = await Promise.all([
-        blockchainClient.getTransaction(txid),
-        blockchainClient.getTransactionHex(txid),
-      ]);
-      return { txid, transaction, transactionHex };
-    },
-    enabled: !!blockchainClient && !!txid,
+  return useQueries({
+    queries: txids.map((txid) => ({
+      queryKey: transactionKeys.txWithHex(txid),
+      queryFn: async () => {
+        const [transaction, transactionHex] = await Promise.all([
+          blockchainClient.getTransaction(txid),
+          blockchainClient.getTransactionHex(txid),
+        ]);
+
+        return { txid, transaction, transactionHex };
+      },
+      enabled: !!txid,
+    })),
   });
 };
 
@@ -115,10 +118,11 @@ export interface Coin {
 }
 
 // Service function for fetching transaction coins (spendable outputs from prev txs)
-const fetchTransactionCoins = async (
-  transaction: TransactionDetails,
+export const fetchTransactionCoins = async (
+  txid: string,
   client: BlockchainClient,
 ) => {
+  const transaction = await client.getTransaction(txid);
   const coins = new Map<string, Coin>();
   for (const input of transaction.vin) {
     const { txid, vout } = input;
@@ -154,29 +158,4 @@ const fetchTransactionCoins = async (
     });
   }
   return coins;
-};
-
-/**
- * @description Fetches all the coins for a given transaction.
- * @param txid - The transaction ID to fetch coins from
- * @returns The coins from the transaction
- */
-export const useTransactionCoins = (txid: string) => {
-  const client = useGetClient();
-  const { data: transaction } = useFetchTransactionDetails(txid);
-
-  return useQuery({
-    queryKey: transactionKeys.coins(txid),
-    queryFn: async () => {
-      if (!transaction) {
-        throw new Error("Transaction not found");
-      }
-      const coins = await fetchTransactionCoins(transaction, client);
-      return {
-        transaction,
-        coins,
-      };
-    },
-    enabled: !!transaction && !!client,
-  });
 };

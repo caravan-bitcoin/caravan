@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.11.2
+
+### Patch Changes
+
+- [#345](https://github.com/caravan-bitcoin/caravan/pull/345) [`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679) Thanks [@benma](https://github.com/benma)! - bump bitbox dependency to support bitbox02 nova devices
+
+- Updated dependencies [[`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679)]:
+  - @caravan/wallets@0.8.1
+
+## 1.11.1
+
+### Patch Changes
+
+- [#355](https://github.com/caravan-bitcoin/caravan/pull/355) [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e) Thanks [@bucko13](https://github.com/bucko13)! - add input sequence support for caravan coordinator, psbt transformations, and trezor. Coordinator also gets some cleanup of old patterns that can be circumvented with better psbt tooling
+
+- Updated dependencies [[`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e), [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e)]:
+  - @caravan/wallets@0.7.1
+  - @caravan/psbt@2.0.2
+
+## 1.11.0
+
+### Minor Changes
+
+- [#338](https://github.com/caravan-bitcoin/caravan/pull/338) [`0c66ab1`](https://github.com/caravan-bitcoin/caravan/commit/0c66ab1b9c8c6bc6362bdaf57b595c4deed8dcd2) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - This PR introduces foundational Replace-By-Fee (RBF) support, enabling users to accelerate or cancel unconfirmed transactions directly from the Pending Transactions tab.
+
+- [#348](https://github.com/caravan-bitcoin/caravan/pull/348) [`ef7bc63`](https://github.com/caravan-bitcoin/caravan/commit/ef7bc635c5bc2066169862ebc1552da014fb7d8e) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - add support to read RBFed PSBT's
+
+### Patch Changes
+
+- [#344](https://github.com/caravan-bitcoin/caravan/pull/344) [`ccc05d3`](https://github.com/caravan-bitcoin/caravan/commit/ccc05d3cbed69c50e6df2ded3145813340d8de90) Thanks [@abbi4code](https://github.com/abbi4code)! - Add regtest network selection to ui for private clients
+
+- Updated dependencies [[`d068e4e`](https://github.com/caravan-bitcoin/caravan/commit/d068e4e7c0203abe2ceafc079588c1ce37251d2a)]:
+  - @caravan/clients@0.6.0
+
 ## 1.10.0
 
 ### Minor Changes
