@@ -31,7 +31,7 @@ import {
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
   callBitcoindWallet,
-  bitcoindListSpentTransactions,
+  EnhancedTransactionItem,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -680,86 +680,45 @@ public async getAddressTransactionHistory(
     throw new Error("Skip must be non-negative");
   }
 
+  if (this.type === ClientType.PRIVATE) {
+    throw new Error("Use getWalletTransactionHistory for private clients");
+  }
+
+  if (!this.provider) {
+    throw new Error("Provider must be specified for public clients");
+  }
+
   try {
-    if (this.type === ClientType.PRIVATE) {
-      throw new Error("Use getWalletTransactionHistory for private clients");
-    }
-
-    if (!this.provider) {
-      throw new Error("Provider must be specified for public clients");
-    }
-
     const addresses = Array.isArray(address) ? address : [address];
     const allTransactions: any[] = [];
-    let anyAddressFailed = false;
-    let firstError: Error | null = null;
 
-    // Use allSettled to handle partial failures
-    const results = await Promise.allSettled(
-      addresses.map(async (addr) => {
-        try {
-          const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
-            ? `limit=${count}&offset=${skip}`
-            : `count=${count}&skip=${skip}`;
-          const endpoint = `/address/${addr}/txs?${query}`;
-          const response = await this.Get(endpoint);
-                  
-          // Robust response handling
-          let transactions: any[] = [];
-                  
-          // Case 1: Response is already an array
-          if (Array.isArray(response)) {
-            transactions = response;
-          }
-          // Case 2: Response is an object with nested array
-          else if (response && typeof response === 'object') {
-            const nestedKeys = ['transactions', 'txs', 'data', 'items', 'result'];
-            for (const key of nestedKeys) {
-              if (Array.isArray(response[key])) {
-                transactions = response[key];
-                break;
-              }
-            }
-            // Case 3: Single transaction object (only if it has a txid)
-            if (transactions.length === 0 && response.txid) {
-              transactions = [response];
-            }
-          }
-          // Case 4: Unexpected format - just return empty array
-          else {
-            console.warn('Unexpected transaction response format:', response);
-            transactions = [];
-          }
-                  
-          // Always ensure we return an array
-          return Array.isArray(transactions) ? transactions : [];
-        } catch (error) {
-          anyAddressFailed = true;
-          firstError = error as Error;
-          throw error; // Re-throw to mark promise as rejected
-        }
-      })
-    );
+    // Fetch transactions from all addresses IN PARALLEL (not sequential)
+    const addressPromises = addresses.map(async (addr) => {
+      const query = this.provider === PublicBitcoinProvider.BLOCKSTREAM
+        ? `limit=${count}&offset=${skip}`
+        : `count=${count}&skip=${skip}`;
+      
+      const endpoint = `/address/${addr}/txs?${query}`;
+      const response = await this.Get(endpoint);
 
-    // Process allSettled results - include empty arrays too
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        const transactions = result.value;
-        if (Array.isArray(transactions)) {
-          allTransactions.push(...transactions);
-        }
+      // Both Mempool and Blockstream APIs return arrays directly for address transactions
+      if (!Array.isArray(response)) {
+        throw new Error(
+          `${this.provider} API returned unexpected format: expected array, got ${typeof response}. ` +
+          `This suggests an API change. Response: ${JSON.stringify(response).slice(0, 200)}...`
+        );
       }
-    }
 
-    // Throw if any address failed AND we got no results at all
-    if (anyAddressFailed && allTransactions.length === 0) {
-      throw firstError || new Error('Failed to fetch transactions for all addresses');
-    }
+      // Filter out null/undefined values and return clean array
+      return response.filter(tx => tx !== null && tx !== undefined);
+    });
 
-    // Defensive: Ensure allTransactions is always an array
-    if (!Array.isArray(allTransactions)) {
-      console.warn('allTransactions is not an array:', allTransactions);
-      return [];
+    // Wait for all address queries to complete in parallel
+    const addressResults = await Promise.all(addressPromises);
+    
+    // Flatten all results into single array
+    for (const transactions of addressResults) {
+      allTransactions.push(...transactions);
     }
 
     // Sort by timestamp (newest first) and apply pagination
@@ -771,43 +730,16 @@ public async getAddressTransactionHistory(
       })
       .slice(0, count);
 
-    // Final safety check
-    if (!Array.isArray(sortedTransactions)) {
-      console.warn('sortedTransactions is not an array:', sortedTransactions);
-      return [];
-    }
-
-    // Map to normalized format with error handling
-    try {
-      return sortedTransactions.map((rawTx: any) => {
-        if (!rawTx || typeof rawTx !== 'object') {
-          console.warn('Invalid transaction object:', rawTx);
-          // Return a minimal valid transaction object
-          return {
-            txid: 'unknown',
-            version: 1,
-            locktime: 0,
-            vin: [],
-            vout: [],
-            size: 0,
-            weight: 0,
-            fee: 0,
-            isReceived: false,
-            status: {
-              confirmed: false,
-              blockHeight: undefined,
-              blockHash: undefined,
-              blockTime: undefined,
-            }
-          } as TransactionDetails;
-        }
-        return normalizeTransactionData(rawTx, ClientType.PUBLIC);
-      });
-    } catch (mapError) {
-      console.error('Error in transaction mapping:', mapError);
-      console.error('sortedTransactions:', sortedTransactions);
-      throw mapError;
-    }
+    // Map to normalized format with strict validation - fail fast on bad data
+    return sortedTransactions.map((rawTx: any, index: number) => {
+      if (!rawTx || typeof rawTx !== 'object' || !rawTx.txid) {
+        throw new Error(
+          `Invalid transaction at index ${index} from ${this.provider}: ` +
+          `Expected object with txid, got: ${JSON.stringify(rawTx)}`
+        );
+      }
+      return normalizeTransactionData(rawTx, ClientType.PUBLIC);
+    });
 
   } catch (error: any) {
     throw new Error(`Failed to get address transaction history: ${error.message}`);
@@ -874,41 +806,107 @@ public async getWalletTransactionHistory(
     throw new Error("Wallet name is required for private client transaction listings");
   }
 
-  const spentTransactions = await bitcoindListSpentTransactions({
-    url: this.bitcoindParams.url,
-    auth: this.bitcoindParams.auth,
+  // Call Bitcoin Core's listtransactions directly to get ALL transactions (not just spent ones)
+  const response = await callBitcoindWallet({
+    baseUrl: this.bitcoindParams.url,
     walletName: this.bitcoindParams.walletName,
-    count,
-    skip,
-    includeWatchOnly,
+    auth: this.bitcoindParams.auth,
+    method: "listtransactions",
+    params: ["*", count, skip, includeWatchOnly],
   });
 
-  return spentTransactions.map((tx) => {
-    const feeSats = tx.fee ? Math.abs(tx.fee * 100000000) : 0;
+  if (!response?.result || !Array.isArray(response.result)) {
+    throw new Error("Failed to retrieve transactions from Bitcoin Core");
+  }
+
+  // Include both send AND receive transactions (and other categories)
+  const allTransactions = response.result.filter(
+    (tx: ListTransactionsItem) => 
+      tx.category === "send" || 
+      tx.category === "receive" || 
+      tx.category === "generate" ||
+      tx.category === "immature"
+  );
+
+  // Fetch detailed transaction info in parallel to get size/weight data
+  const detailedTransactions = await Promise.allSettled(
+    allTransactions.map(async (tx): Promise<EnhancedTransactionItem> => {
+      try {
+        // Get full transaction details which includes size/vsize/weight
+        const fullTx = await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "gettransaction",
+          params: [tx.txid, false, true], // [txid, include_watchonly, verbose]
+        }) as { result?: WalletTransactionResponse };
+
+        // Extract size data with proper fallbacks
+        const decoded = fullTx.result?.decoded;
+        const size = decoded?.size ?? 0;
+        const vsize = decoded?.vsize ?? decoded?.size ?? 0; // Use size as fallback for vsize
+        const weight = decoded?.weight ?? (decoded?.size ? decoded.size * 4 : 0); // Estimate weight as size * 4
+
+        return {
+          ...tx,
+          size,
+          vsize,
+          weight,
+        };
+      } catch (error) {
+        console.warn(`Failed to fetch details for transaction ${tx.txid}:`, error);
+        // Fallback to original transaction data with 0 size
+        return {
+          ...tx,
+          size: 0,
+          vsize: 0,
+          weight: 0,
+        };
+      }
+    })
+  );
+
+  return detailedTransactions.map((result, index) => {
+    const enhancedTx: EnhancedTransactionItem = result.status === 'fulfilled' 
+      ? result.value 
+      : {
+          ...allTransactions[index],
+          size: 0,
+          vsize: 0,
+          weight: 0,
+        };
+    
+    const feeSats = enhancedTx.fee ? Math.abs(enhancedTx.fee * 100000000) : 0;
+    
+    // Determine if this is a received transaction
+    const isReceived = enhancedTx.category === "receive" || 
+                      enhancedTx.category === "generate" || 
+                      enhancedTx.category === "immature";
     
     const transformedTx: WalletTransactionDetails = {
-      txid: tx.txid,
+      txid: enhancedTx.txid,
       version: 1,
       locktime: 0,
       vin: [],
       vout: [],
-      size: 0,
-      weight: 0,
+      size: enhancedTx.size || 0,        // ✅ Ensure it's always a number
+      vsize: enhancedTx.vsize || 0,      // ✅ Ensure it's always a number
+      weight: enhancedTx.weight || 0,    // ✅ Ensure it's always a number
       fee: feeSats,
-      isReceived: false,
+      isReceived: isReceived,            // ✅ Now properly detects receive transactions
       status: {
-        confirmed: tx.confirmations > 0,
-        blockHeight: tx.blockheight,
-        blockHash: tx.blockhash,
-        blockTime: tx.blocktime,
+        confirmed: enhancedTx.confirmations > 0,
+        blockHeight: enhancedTx.blockheight,
+        blockHash: enhancedTx.blockhash,
+        blockTime: enhancedTx.blocktime,
       },
       // Required wallet-specific properties
-      amount: tx.amount,
-      confirmations: tx.confirmations,
-      category: tx.category,
-      address: tx.address,
-      abandoned: tx.abandoned,
-      time: tx.time,
+      amount: enhancedTx.amount,
+      confirmations: enhancedTx.confirmations,
+      category: enhancedTx.category,
+      address: enhancedTx.address,
+      abandoned: enhancedTx.abandoned,
+      time: enhancedTx.time,
     };
     
     return transformedTx;

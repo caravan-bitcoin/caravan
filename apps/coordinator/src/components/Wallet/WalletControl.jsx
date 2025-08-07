@@ -43,7 +43,7 @@ class WalletControl extends React.Component {
             <Tab label="Receive" value={WALLET_MODES.DEPOSIT} key={1} />,
             <Tab label="Send" value={WALLET_MODES.SPEND} key={2} />,
             <Tab
-              label="Pending Transactions"
+              label="Transactions"
               value={WALLET_MODES.TRANSACTIONS}
               key={3}
             />,

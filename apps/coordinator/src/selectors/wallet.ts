@@ -1,4 +1,6 @@
 import { createSelector } from "reselect";
+import { TransactionDetails, WalletTransactionDetails } from "@caravan/clients";
+import { calculateTransactionValue } from "utils/transactionCalculations";
 
 // Type definitions for the Redux state
 export interface UTXO {
@@ -528,4 +530,85 @@ export const selectWalletConfig = createSelector(
     requiredSigners: settings.requiredSigners,
     totalSigners: settings.totalSigners,
   }),
+);
+
+/**
+ * Pure function that derives processed transactions from raw transaction data.
+ * Adds wallet-specific calculations and filtering.
+ *
+ * @param transactions - Raw transactions from blockchain client
+ * @param walletAddresses - Wallet addresses for value calculations
+ * @param filter - Filter by confirmation status
+ * @returns Processed transactions with wallet-specific data (value, direction, etc.)
+ */
+export const selectProcessedTransactions = (
+  transactions: WalletTransactionDetails[],
+  walletAddresses: string[],
+  filter: "all" | "confirmed" | "unconfirmed" = "all",
+): TransactionDetails[] => {
+  // Filter by confirmation status
+  const filteredTransactions = transactions.filter((tx) => {
+    switch (filter) {
+      case "confirmed":
+        return tx.status?.confirmed === true;
+      case "unconfirmed":
+        return tx.status?.confirmed !== true;
+      case "all":
+      default:
+        return true;
+    }
+  });
+
+  // Add wallet-specific calculations to each transaction
+  return filteredTransactions.map((tx) => {
+    const valueToWallet = calculateTransactionValue(tx, walletAddresses);
+    return {
+      ...tx,
+      valueToWallet,
+      isReceived:
+        tx.isReceived !== undefined ? tx.isReceived : valueToWallet > 0,
+    };
+  });
+};
+
+/**
+ * Memoized selector for confirmed transactions
+ * Usage: selectConfirmedTransactions(rawTransactions, walletAddresses)
+ */
+export const selectConfirmedTransactions = createSelector(
+  [
+    (transactions: WalletTransactionDetails[]) => transactions,
+    (transactions: WalletTransactionDetails[], walletAddresses: string[]) =>
+      walletAddresses,
+  ],
+  (transactions, walletAddresses) =>
+    selectProcessedTransactions(transactions, walletAddresses, "confirmed"),
+);
+
+/**
+ * Memoized selector for unconfirmed transactions
+ * Usage: selectUnconfirmedTransactions(rawTransactions, walletAddresses)
+ */
+export const selectUnconfirmedTransactions = createSelector(
+  [
+    (transactions: WalletTransactionDetails[]) => transactions,
+    (transactions: WalletTransactionDetails[], walletAddresses: string[]) =>
+      walletAddresses,
+  ],
+  (transactions, walletAddresses) =>
+    selectProcessedTransactions(transactions, walletAddresses, "unconfirmed"),
+);
+
+/**
+ * Memoized selector for all transactions
+ * Usage: selectAllProcessedTransactions(rawTransactions, walletAddresses)
+ */
+export const selectAllProcessedTransactions = createSelector(
+  [
+    (transactions: WalletTransactionDetails[]) => transactions,
+    (transactions: WalletTransactionDetails[], walletAddresses: string[]) =>
+      walletAddresses,
+  ],
+  (transactions, walletAddresses) =>
+    selectProcessedTransactions(transactions, walletAddresses, "all"),
 );
