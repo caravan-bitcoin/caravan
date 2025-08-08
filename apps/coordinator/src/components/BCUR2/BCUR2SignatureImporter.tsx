@@ -1,186 +1,126 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Box, Alert, Button } from "@mui/material";
-import BCUR2Reader from "./BCUR2Reader";
-import { loadPsbt } from "../../utils/psbtUtils";
+import React from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
+import IndirectSignatureImporter from "../ScriptExplorer/IndirectSignatureImporter";
+import BCUR2Signer from "./BCUR2Signer";
 
 interface SignatureImporter {
-  // Add specific properties if known, otherwise use a generic object
+  bip32Path?: string | null;
+  [key: string]: any;
+}
+
+interface ExtendedPublicKeyImporter {
   [key: string]: any;
 }
 
 interface BCUR2SignatureImporterProps {
   signatureImporter: SignatureImporter;
+  extendedPublicKeyImporter: ExtendedPublicKeyImporter;
+  inputs: any[];
+  outputs: any[];
+  inputsTotalSats: any;
+  fee: string;
   validateAndSetSignature: (
-    signatures: string[],
-    onError: (error: string) => void,
+    signatures: any,
+    callback: (error?: string) => void,
   ) => void;
-  inputs: any[]; // Pass inputs from the transaction state
-  unsignedPSBT: string; // Enhanced PSBT with witness scripts and UTXOs
+  network: string;
 }
 
+/**
+ * BCUR2 Signature Importer using the IndirectSignatureImporter pattern.
+ * This follows the same architecture as ColdcardSignatureImporter.
+ */
 const BCUR2SignatureImporter: React.FC<BCUR2SignatureImporterProps> = ({
-  validateAndSetSignature,
+  signatureImporter,
+  extendedPublicKeyImporter,
   inputs,
-  unsignedPSBT,
+  outputs,
+  inputsTotalSats,
+  fee,
+  validateAndSetSignature,
+  network,
 }) => {
-  const [error, setError] = useState<string>("");
-  const [showScanner, setShowScanner] = useState<boolean>(false);
-  const network = useSelector((state: any) => state.settings.network);
-  const isMountedRef = useRef(true);
+  let unsignedPSBT;
+  try {
+    const transactionState = useSelector(
+      (state: any) => state.spend.transaction,
+    );
+    unsignedPSBT = transactionState?.unsignedPSBT;
+  } catch (error) {
+    return (
+      <div style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}>
+        <p>Error accessing transaction state.</p>
+        <p>Please refresh the page and try again.</p>
+      </div>
+    );
+  }
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  // Early validation - if no inputs, show helpful message
+  if (!inputs || inputs.length === 0) {
+    return (
+      <div style={{ padding: "16px", textAlign: "center", color: "#666" }}>
+        <p>No transaction inputs available.</p>
+        <p>
+          Please set up your transaction inputs before importing signatures.
+        </p>
+      </div>
+    );
+  }
 
-  const handleShowScanner = useCallback((): void => {
-    if (!isMountedRef.current) return;
-    setShowScanner(true);
-    setError("");
-  }, []);
+  // Early validation - if no PSBT, show helpful message
+  if (!unsignedPSBT) {
+    return (
+      <div style={{ padding: "16px", textAlign: "center", color: "#666" }}>
+        <p>No base transaction available.</p>
+        <p>
+          Please ensure the transaction is properly set up before importing
+          signatures.
+        </p>
+      </div>
+    );
+  }
 
-  const handleSetError = useCallback((value: string): void => {
-    if (!isMountedRef.current) return;
-    setError(value);
-  }, []);
+  try {
+    return (
+      <IndirectSignatureImporter
+        network={network}
+        signatureImporter={signatureImporter}
+        inputs={inputs}
+        outputs={outputs}
+        inputsTotalSats={inputsTotalSats}
+        fee={fee}
+        psbt={unsignedPSBT}
+        extendedPublicKeyImporter={extendedPublicKeyImporter}
+        validateAndSetSignature={validateAndSetSignature}
+        Signer={BCUR2Signer}
+      />
+    );
+  } catch (error) {
+    return (
+      <div style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}>
+        <p>Error initializing signature importer.</p>
+        <p>
+          Error details:{" "}
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+        <p>Please try refreshing the page.</p>
+      </div>
+    );
+  }
+};
 
-  const handleClearError = useCallback((): void => {
-    if (!isMountedRef.current) return;
-    setError("");
-    setShowScanner(false);
-  }, []);
-
-  const handlePSBTSuccess = useCallback(
-    (psbtData: string): void => {
-      // Early exit if component is unmounted
-      if (!isMountedRef.current) return;
-
-      try {
-        // Check if inputs are available
-        if (!inputs || inputs.length === 0) {
-          handleSetError(
-            "No transaction inputs available. Please ensure the transaction is properly set up before importing signatures.",
-          );
-          return;
-        }
-
-        // Check if we have an enhanced PSBT to work with
-        if (!unsignedPSBT) {
-          handleSetError(
-            "No base transaction available. Please ensure the transaction is properly set up before importing signatures.",
-          );
-          return;
-        }
-
-        // Parse the PSBT from QR code to get signatures
-        const signedPsbt = loadPsbt(psbtData, network);
-        if (!signedPsbt) {
-          handleSetError("Failed to parse PSBT data from QR code");
-          return;
-        }
-
-        // Extract signatures from the signed PSBT
-        const extractedSignatures: string[] = [];
-
-        // We need to extract signatures for ALL inputs, matching the expected format
-        for (let i = 0; i < inputs.length; i++) {
-          let signatureFound = false;
-
-          // Check if this input has a signature in the signed PSBT
-          if (i < signedPsbt.data.inputs.length) {
-            const signedInput = signedPsbt.data.inputs[i];
-
-            if (signedInput.partialSig && signedInput.partialSig.length > 0) {
-              // Extract the first signature for this input
-              const signature =
-                signedInput.partialSig[0].signature.toString("hex");
-              extractedSignatures.push(signature);
-              signatureFound = true;
-            }
-          }
-
-          if (!signatureFound) {
-            handleSetError(`No signature found for input ${i + 1}`);
-            return;
-          }
-        }
-
-        if (extractedSignatures.length === 0) {
-          handleSetError("No signatures found in the PSBT");
-          return;
-        }
-
-        if (extractedSignatures.length !== inputs.length) {
-          handleSetError(
-            `Expected ${inputs.length} signatures, but found ${extractedSignatures.length}`,
-          );
-          return;
-        }
-
-        // Check once more before calling validation
-        if (!isMountedRef.current) return;
-
-        // Use the standard validation mechanism with proper error handling
-        try {
-          validateAndSetSignature(extractedSignatures, (error: string) => {
-            if (isMountedRef.current) {
-              handleSetError(error);
-            }
-          });
-
-          // Clear scanner on success (only if still mounted)
-          if (isMountedRef.current) {
-            setShowScanner(false);
-          }
-        } catch (validationError) {
-          if (isMountedRef.current) {
-            handleSetError(
-              `Validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
-            );
-          }
-        }
-      } catch (e) {
-        if (isMountedRef.current) {
-          handleSetError(
-            `Failed to extract signatures: ${e instanceof Error ? e.message : String(e)}`,
-          );
-        }
-      }
-    },
-    [validateAndSetSignature, handleSetError, inputs, network, unsignedPSBT],
-  );
-
-  return (
-    <Box mt={2}>
-      {!showScanner ? (
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          onClick={handleShowScanner}
-        >
-          Scan Signed PSBT QR Code
-        </Button>
-      ) : (
-        <>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <BCUR2Reader
-            mode="psbt"
-            onSuccess={handlePSBTSuccess}
-            onClear={handleClearError}
-          />
-        </>
-      )}
-    </Box>
-  );
+BCUR2SignatureImporter.propTypes = {
+  network: PropTypes.string.isRequired,
+  inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  outputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
+  signatureImporter: PropTypes.shape({
+    bip32Path: PropTypes.string,
+  }).isRequired,
+  validateAndSetSignature: PropTypes.func.isRequired,
+  extendedPublicKeyImporter: PropTypes.shape({}).isRequired,
+  inputsTotalSats: PropTypes.shape({}).isRequired,
+  fee: PropTypes.string.isRequired,
 };
 
 export default BCUR2SignatureImporter;

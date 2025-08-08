@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   Box,
   FormControl,
@@ -28,10 +28,36 @@ const PSBTImportDropdown: React.FC<PSBTImportDropdownProps> = ({
   const [error, setError] = useState<string>("");
   const network = useSelector((state: any) => state.settings.network);
 
-  const handleMethodChange = useCallback((event: SelectChangeEvent<string>) => {
-    setImportMethod(event.target.value);
-    setError(""); // Clear any previous errors
+  // Track if component is mounted to prevent memory leaks
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
+
+  // Safe setError that checks if component is still mounted
+  const safeSetError = useCallback((errorMessage: string) => {
+    if (isMountedRef.current) {
+      setError(errorMessage);
+    }
+  }, []);
+
+  // Safe setImportMethod that checks if component is still mounted
+  const safeSetImportMethod = useCallback((method: string) => {
+    if (isMountedRef.current) {
+      setImportMethod(method);
+    }
+  }, []);
+
+  const handleMethodChange = useCallback(
+    (event: SelectChangeEvent<string>) => {
+      safeSetImportMethod(event.target.value);
+      safeSetError(""); // Clear any previous errors
+    },
+    [safeSetImportMethod, safeSetError],
+  );
 
   const handleBCUR2Success = useCallback(
     (psbtData: string) => {
@@ -39,7 +65,7 @@ const PSBTImportDropdown: React.FC<PSBTImportDropdownProps> = ({
         // Parse the PSBT to validate it
         const parsedPsbt = loadPsbt(psbtData, network);
         if (!parsedPsbt) {
-          setError("Failed to parse PSBT from QR code");
+          safeSetError("Failed to parse PSBT from QR code");
           return;
         }
 
@@ -48,20 +74,20 @@ const PSBTImportDropdown: React.FC<PSBTImportDropdownProps> = ({
         onImport(psbtData, [], false);
 
         // Reset selection after successful import
-        setImportMethod("");
+        safeSetImportMethod("");
       } catch (e) {
-        setError(
+        safeSetError(
           `Failed to import PSBT: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     },
-    [onImport, network],
+    [onImport, network, safeSetError, safeSetImportMethod],
   );
 
   const handleBCUR2Clear = useCallback(() => {
-    setError("");
-    setImportMethod("");
-  }, []);
+    safeSetError("");
+    safeSetImportMethod("");
+  }, [safeSetError, safeSetImportMethod]);
 
   const renderImportComponent = () => {
     switch (importMethod) {

@@ -223,9 +223,13 @@ class SignatureImporter extends React.Component {
     if (method === BCUR2) {
       return (
         <BCUR2SignatureImporter
+          network={network}
           signatureImporter={signatureImporter}
           inputs={inputs}
-          unsignedPSBT={unsignedPSBT}
+          outputs={outputs}
+          inputsTotalSats={inputsTotalSats}
+          fee={fee}
+          extendedPublicKeyImporter={extendedPublicKeyImporter}
           validateAndSetSignature={this.validateAndSetSignature}
         />
       );
