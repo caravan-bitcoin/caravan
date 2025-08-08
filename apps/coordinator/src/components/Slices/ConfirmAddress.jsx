@@ -238,7 +238,7 @@ const ConfirmAddress = ({ slice, network }) => {
               {addressType != P2SH && (
                 <MenuItem value={BITBOX}>BitBox</MenuItem>
               )}
-              <MenuItem value={JADE}>Trezor</MenuItem>
+              <MenuItem value={JADE}>Jade</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD} disabled>
