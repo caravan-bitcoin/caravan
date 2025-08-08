@@ -1668,7 +1668,7 @@ describe("BlockchainClient", () => {
       });
 
       await expect(client.getWalletTransaction("txid123")).rejects.toThrow(
-        "Wallet name is required for wallet transaction lookups",
+        "Failed to get wallet transaction: Wallet name is required for calling wallet specific methods",
       );
     });
 
@@ -2389,7 +2389,7 @@ describe("BlockchainClient", () => {
     });
   });
 
-  describe("getFeesForPendingTransactions", () => {
+  describe("getFeesForPendingTransaction", () => {
     let mockCallBitcoindWallet: MockInstance;
     const mockTxid =
       "3cf4982ba3b441fafc3d78938728e7d9134f122b919804ee0c4e3abe8ddacc84";
@@ -2402,89 +2402,269 @@ describe("BlockchainClient", () => {
       vi.resetAllMocks();
     });
 
-    it("should throw an error if not a private client", async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PUBLIC,
-        provider: PublicBitcoinProvider.MEMPOOL,
-        network: Network.MAINNET,
+    describe("Private client", () => {
+      it("should throw an error if wallet name is not set", async () => {
+        const client = new BlockchainClient({
+          type: ClientType.PRIVATE,
+          network: Network.MAINNET,
+          client: {
+            url: "http://localhost:8332",
+            username: "user",
+            password: "password",
+            // no walletName
+          },
+        });
+
+        await expect(
+          client.getFeesForPendingTransaction(mockTxid),
+        ).rejects.toThrow(
+          "Failed to get wallet transaction: Wallet name is required for calling wallet specific methods",
+        );
       });
 
-      await expect(
-        client.getFeesForPendingTransactions(mockTxid),
-      ).rejects.toThrow(
-        "Wallet transactions are only available for private Bitcoin nodes",
-      );
+      it("should return the fee for a pending transaction", async () => {
+        const mockFee = 0.000123; // in BTC
+        const mockResponse = {
+          result: {
+            fees: {
+              base: mockFee,
+            },
+          },
+        };
+        mockCallBitcoindWallet.mockResolvedValue(mockResponse);
+
+        const client = new BlockchainClient({
+          type: ClientType.PRIVATE,
+          network: Network.MAINNET,
+          client: {
+            url: "http://localhost:8332",
+            username: "user",
+            password: "password",
+            walletName: "test-wallet",
+          },
+        });
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+
+        expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
+          baseUrl: client.bitcoindParams.url,
+          walletName: client.bitcoindParams.walletName,
+          auth: client.bitcoindParams.auth,
+          method: "getmempoolentry",
+          params: [mockTxid],
+        });
+        expect(fee).toBe(mockFee.toString());
+      });
+
+      it("should return null if mempool entry has no fees", async () => {
+        const mockResponse = {
+          result: {
+            // no fees property
+          },
+        };
+        mockCallBitcoindWallet.mockResolvedValue(mockResponse);
+
+        const client = new BlockchainClient({
+          type: ClientType.PRIVATE,
+          network: Network.MAINNET,
+          client: {
+            url: "http://localhost:8332",
+            username: "user",
+            password: "password",
+            walletName: "test-wallet",
+          },
+        });
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+        expect(fee).toBeNull();
+      });
+
+      it("should return null if mempool entry is null", async () => {
+        const mockResponse = {
+          result: null,
+        };
+        mockCallBitcoindWallet.mockResolvedValue(mockResponse);
+
+        const client = new BlockchainClient({
+          type: ClientType.PRIVATE,
+          network: Network.MAINNET,
+          client: {
+            url: "http://localhost:8332",
+            username: "user",
+            password: "password",
+            walletName: "test-wallet",
+          },
+        });
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+        expect(fee).toBeNull();
+      });
+
+      it("should throw an error if the bitcoind call fails", async () => {
+        const mockError = new Error("Mempool entry not found");
+        mockCallBitcoindWallet.mockRejectedValue(mockError);
+
+        const client = new BlockchainClient({
+          type: ClientType.PRIVATE,
+          network: Network.MAINNET,
+          client: {
+            url: "http://localhost:8332",
+            username: "user",
+            password: "password",
+            walletName: "test-wallet",
+          },
+        });
+
+        await expect(
+          client.getFeesForPendingTransaction(mockTxid),
+        ).rejects.toThrow(
+          `Failed to get wallet transaction: ${mockError.message}`,
+        );
+      });
     });
 
-    it("should throw an error if wallet name is not set", async () => {
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: "http://localhost:8332",
-          username: "user",
-          password: "password",
-          // no walletName
-        },
-      });
-      await expect(
-        client.getFeesForPendingTransactions(mockTxid),
-      ).rejects.toThrow(
-        "Wallet name is required for wallet transaction lookups",
-      );
-    });
+    describe("Public client", () => {
+      it("should return the fee for an unconfirmed transaction (MEMPOOL client)", async () => {
+        const mockFee = 12300; // in satoshis
+        const mockTxData = {
+          fee: mockFee,
+          status: {
+            confirmed: false,
+          },
+        };
+        const mockGet = vi.fn().mockResolvedValue(mockTxData);
 
-    it("should return the fee for a pending transaction for a private client", async () => {
-      const mockFee = 0.000123; // in BTC
-      const mockResponse = {
-        fees: {
-          base: mockFee,
-        },
-      };
-      mockCallBitcoindWallet.mockResolvedValue(mockResponse);
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: "http://localhost:8332",
-          username: "user",
-          password: "password",
-          walletName: "test-wallet",
-        },
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+
+        expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+        expect(fee).toBe(satoshisToBitcoins(mockFee));
       });
 
-      const fee = await client.getFeesForPendingTransactions(mockTxid);
+      it("should return the fee for a transaction without status (MEMPOOL client)", async () => {
+        const mockFee = 12300; // in satoshis
+        const mockTxData = {
+          fee: mockFee,
+          // no status property (treated as unconfirmed)
+        };
+        const mockGet = vi.fn().mockResolvedValue(mockTxData);
 
-      expect(mockCallBitcoindWallet).toHaveBeenCalledWith({
-        baseUrl: client.bitcoindParams.url,
-        walletName: client.bitcoindParams.walletName,
-        auth: client.bitcoindParams.auth,
-        method: "getmempoolentry",
-        params: [mockTxid],
-      });
-      expect(fee).toBe(mockFee);
-    });
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
 
-    it("should throw an error if the bitcoind call fails", async () => {
-      const mockError = new Error("Mempool entry not found");
-      mockCallBitcoindWallet.mockRejectedValue(mockError);
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
 
-      const client = new BlockchainClient({
-        type: ClientType.PRIVATE,
-        network: Network.MAINNET,
-        client: {
-          url: "http://localhost:8332",
-          username: "user",
-          password: "password",
-          walletName: "test-wallet",
-        },
+        expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+        expect(fee).toBe(satoshisToBitcoins(mockFee));
       });
 
-      await expect(
-        client.getFeesForPendingTransactions(mockTxid),
-      ).rejects.toThrow(
-        `Failed to get wallet transaction: ${mockError.message}`,
-      );
+      it("should return null for a confirmed transaction (MEMPOOL client)", async () => {
+        const mockFee = 12300; // in satoshis
+        const mockTxData = {
+          fee: mockFee,
+          status: {
+            confirmed: true,
+          },
+        };
+        const mockGet = vi.fn().mockResolvedValue(mockTxData);
+
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+
+        expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+        expect(fee).toBeNull();
+      });
+
+      it("should return null if transaction has no fee (MEMPOOL client)", async () => {
+        const mockTxData = {
+          // no fee property
+          status: {
+            confirmed: false,
+          },
+        };
+        const mockGet = vi.fn().mockResolvedValue(mockTxData);
+
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+        expect(fee).toBeNull();
+      });
+
+      it("should return null if transaction data is null (MEMPOOL client)", async () => {
+        const mockGet = vi.fn().mockResolvedValue(null);
+
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+        expect(fee).toBeNull();
+      });
+
+      it("should work with BLOCKSTREAM provider", async () => {
+        const mockFee = 12300; // in satoshis
+        const mockTxData = {
+          fee: mockFee,
+          status: {
+            confirmed: false,
+          },
+        };
+        const mockGet = vi.fn().mockResolvedValue(mockTxData);
+
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.BLOCKSTREAM,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        const fee = await client.getFeesForPendingTransaction(mockTxid);
+
+        expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
+        expect(fee).toBe(satoshisToBitcoins(mockFee));
+      });
+
+      it("should throw an error if the API call fails (MEMPOOL client)", async () => {
+        const mockError = new Error("Network error");
+        const mockGet = vi.fn().mockRejectedValue(mockError);
+
+        const client = new BlockchainClient({
+          type: ClientType.PUBLIC,
+          provider: PublicBitcoinProvider.MEMPOOL,
+          network: Network.MAINNET,
+        });
+        client.Get = mockGet;
+
+        await expect(
+          client.getFeesForPendingTransaction(mockTxid),
+        ).rejects.toThrow(
+          `Failed to get wallet transaction: ${mockError.message}`,
+        );
+      });
     });
   });
 
@@ -2662,7 +2842,7 @@ describe("BlockchainClient", () => {
         const client = getPrivateClient({ walletName: undefined });
 
         await expect(client.getWalletTransactionHistory()).rejects.toThrow(
-          "Wallet name is required for private client transaction listings",
+          "Wallet name is required for listtransactions",
         );
       });
 
