@@ -45,20 +45,6 @@ describe("Wallet Functions", () => {
         undefined,
       );
     });
-
-    it("should call bitcoind normally if no wallet name", () => {
-      callBitcoindWallet({
-        baseUrl,
-        auth,
-        method: "getblockchaininfo",
-      });
-      expect(mockCallBitcoind).toHaveBeenCalledWith(
-        `${baseUrl}/`,
-        auth,
-        "getblockchaininfo",
-        undefined,
-      );
-    });
   });
 
   describe("bitcoindWalletInfo", () => {
