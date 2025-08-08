@@ -155,6 +155,9 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     return messages;
   }
 
+  protected normalizeNetworkName(n: string): string {
+    return n === "regtest" ? "localtest" : n;
+  }
 
   async withDevice<T>(
   network: string,
@@ -165,12 +168,14 @@ export class JadeInteraction extends DirectKeystoreInteraction {
   try {
     await this.jade.connect();
     connected = true;
+    const net = this.normalizeNetworkName(network);
 
     // Perform user handshake. The params for the http request is filled by the jade device
-	// this function will then call to the Blockstream pin server @ https://jadepin.blockstream.com/get_pin
-	// in order to authorize the user from the device.
-	// for more information on how this works you can read the docs @ 
-	// https://github.com/Blockstream/Jade/blob/master/docs/index.rst#welcome-to-jades-rpc-documentation
+    // this function will then call to the Blockstream pin server @ https://jadepin.blockstream.com/get_pin
+    // in order to authorize the user from the device.
+    // for more information on how this works you can read the docs @ 
+    // https://github.com/Blockstream/Jade/blob/master/docs/index.rst#welcome-to-jades-rpc-documentation
+
     const httpRequestFn = async (params: any): Promise<{ body: any }> => {
       const url = params.urls[0];
       const res = await fetch(url, {
@@ -182,7 +187,7 @@ export class JadeInteraction extends DirectKeystoreInteraction {
       return { body: await res.json() };
     };
 
-    const unlocked = await this.jade.authUser(network, httpRequestFn);
+    const unlocked = await this.jade.authUser(net, httpRequestFn);
     if (unlocked !== true) throw new Error("Failed to unlock Jade device");
 
     //run jade action
