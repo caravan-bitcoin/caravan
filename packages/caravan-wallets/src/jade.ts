@@ -128,11 +128,14 @@ export class JadeInteraction extends DirectKeystoreInteraction {
 
   protected jade: IJade;
 
-  constructor() {
+  protected network: BitcoinNetwork;
+
+  constructor(network?: BitcoinNetwork) {
     super();
     this.transport = new SerialTransport({});
     this.ijade = new JadeInterface(this.transport);
     this.jade = new Jade(this.ijade);
+    this.network = this.normalizeNetwork(network ?? (DEFAULT_NETWORK as BitcoinNetwork));
   }
 
   /**
@@ -155,12 +158,15 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     return messages;
   }
 
-  protected normalizeNetworkName(n: string): string {
-    return n === "regtest" ? "localtest" : n;
+  protected setNetwork(network?: BitcoinNetwork) {
+    this.network = this.normalizeNetwork(network ?? (DEFAULT_NETWORK as BitcoinNetwork));
+  }
+
+  private normalizeNetwork(n: string): BitcoinNetwork {
+    return (n === "regtest" ? "localtest" : n) as BitcoinNetwork;
   }
 
   async withDevice<T>(
-  network: string,
   fn: (jade: IJade) => Promise<T>,
 ): Promise<T> {
   let connected = false;
@@ -168,14 +174,12 @@ export class JadeInteraction extends DirectKeystoreInteraction {
   try {
     await this.jade.connect();
     connected = true;
-    const net = this.normalizeNetworkName(network);
 
     // Perform user handshake. The params for the http request is filled by the jade device
     // this function will then call to the Blockstream pin server @ https://jadepin.blockstream.com/get_pin
     // in order to authorize the user from the device.
     // for more information on how this works you can read the docs @ 
     // https://github.com/Blockstream/Jade/blob/master/docs/index.rst#welcome-to-jades-rpc-documentation
-
     const httpRequestFn = async (params: any): Promise<{ body: any }> => {
       const url = params.urls[0];
       const res = await fetch(url, {
@@ -187,7 +191,7 @@ export class JadeInteraction extends DirectKeystoreInteraction {
       return { body: await res.json() };
     };
 
-    const unlocked = await this.jade.authUser(net, httpRequestFn);
+    const unlocked = await this.jade.authUser(this.network, httpRequestFn);
     if (unlocked !== true) throw new Error("Failed to unlock Jade device");
 
     //run jade action
@@ -216,7 +220,7 @@ export class JadeGetMetadata extends JadeInteraction {
     version: { major: string; minor: string; patch: string; string: string };
     model: string;
   }> {
-    return this.withDevice("mainnet", async (jade: IJade) => {
+    return this.withDevice(async (jade: IJade) => {
       const versionInfo = await jade.getVersionInfo();
       const version = versionInfo.JADE_VERSION || "";
       const [major, minor, patch] = version.split(".");
@@ -235,8 +239,6 @@ export class JadeGetMetadata extends JadeInteraction {
 }
 
 export class JadeExportPublicKey extends JadeInteraction {
-  network: BitcoinNetwork;
-
   bip32Path: string;
 
   includeXFP: boolean;
@@ -246,12 +248,11 @@ export class JadeExportPublicKey extends JadeInteraction {
     bip32Path,
     includeXFP,
   }: {
-    network: BitcoinNetwork;
+    network?: BitcoinNetwork;
     bip32Path: string;
     includeXFP: boolean;
   }) {
-    super();
-    this.network = network;
+    super(network);
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
@@ -261,7 +262,7 @@ export class JadeExportPublicKey extends JadeInteraction {
   }
 
   async run() {
-    return await this.withDevice(this.network, async (jade: IJade) => {
+    return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
       const xpub = await jade.getXpub(this.network, path);
       const publicKey = ExtendedPublicKey.fromBase58(xpub).pubkey;
@@ -275,7 +276,6 @@ export class JadeExportPublicKey extends JadeInteraction {
 }
 
 export class JadeExportExtendedPublicKey extends JadeInteraction {
-  network: BitcoinNetwork;
 
   bip32Path: string;
 
@@ -286,12 +286,11 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
     bip32Path,
     includeXFP,
   }: {
-    network: BitcoinNetwork;
+    network?: BitcoinNetwork;
     bip32Path: string;
     includeXFP: boolean;
   }) {
-    super();
-    this.network = network;
+    super(network);
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
@@ -301,7 +300,7 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
   }
 
   async run() {
-    return await this.withDevice(this.network, async (jade: IJade) => {
+    return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
       const xpub = await jade.getXpub(this.network, path);
       const rootFingerprint = await jade.getMasterFingerPrint(this.network);
@@ -317,24 +316,23 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
   walletConfig: MultisigWalletConfig;
 
   constructor({ walletConfig }: { walletConfig: MultisigWalletConfig }) {
-    super();
+    super(walletConfig.network);
     this.walletConfig = walletConfig;
   }
 
   async run() {
     return await this.withDevice(
-      this.walletConfig.network,
       async (jade: IJade) => {
         const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
         let multisigName = await jade.getMultiSigName(
-          this.walletConfig.network,
+          this.network,
           descriptor,
         );
 
         if (!multisigName) {
           multisigName = `jade${randomBytes(4).toString("hex")}`;
           await jade.registerMultisig(
-            this.walletConfig.network,
+            this.network,
             multisigName,
             descriptor,
           );
@@ -345,7 +343,6 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
 }
 
 export class JadeConfirmMultisigAddress extends JadeInteraction {
-  network: BitcoinNetwork;
 
   bip32Path: string;
 
@@ -356,18 +353,17 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
     bip32Path,
     walletConfig,
   }: {
-    network: BitcoinNetwork;
+    network?: BitcoinNetwork;
     bip32Path: string;
     walletConfig: MultisigWalletConfig;
   }) {
-    super();
-    this.network = network;
+    super(network);
     this.bip32Path = bip32Path;
     this.walletConfig = walletConfig;
   }
 
   async run() {
-    return await this.withDevice(this.network, async (jade: IJade) => {
+    return await this.withDevice(async (jade: IJade) => {
       const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
       let multisigName = await jade.getMultiSigName(this.network, descriptor);
 
@@ -421,7 +417,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     psbt: string;
     returnSignatureArray: boolean;
   }) {
-    super();
+    super(walletConfig.network);
     this.walletConfig = walletConfig;
     this.returnSignatureArray = returnSignatureArray;
     this.unsignedPsbt = base64ToBytes(psbt);
@@ -430,10 +426,9 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
 
   async run() {
     return await this.withDevice(
-      this.walletConfig.network,
       async (jade: IJade) => {
         const signedPSBT = await jade.signPSBT(
-          this.walletConfig.network,
+          this.network,
           this.unsignedPsbt,
         );
 
@@ -441,7 +436,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
           const b64string = bytesToBase64(signedPSBT);
           const parsedPsbt = parsePsbt(b64string);
           const fingerprint = await jade.getMasterFingerPrint(
-            this.walletConfig.network,
+            this.network,
           );
           return getSignatureArray(fingerprint, parsedPsbt);
         }
@@ -458,17 +453,14 @@ export class JadeSignMessage extends JadeInteraction {
 
   message: string;
 
-  network: string;
-
   constructor({ bip32Path, message }: { bip32Path: string; message: string }) {
     super();
     this.bip32Path = bip32Path;
     this.message = message;
-    this.network = DEFAULT_NETWORK;
   }
 
   async run() {
-    return await this.withDevice(this.network, async (jade: IJade) => {
+    return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
       return await jade.signMessage(path, this.message);
     });
