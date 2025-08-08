@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback } from "react";
 import PropTypes from "prop-types";
-import { Box, Alert, Button } from "@mui/material";
+import { Box, Alert } from "@mui/material";
 import BCUR2Reader from "./BCUR2Reader";
 import { extractSignaturesFromPSBTData } from "../../utils/psbtSignatureUtils";
 import { useSelector } from "react-redux";
@@ -9,9 +9,7 @@ import { useSelector } from "react-redux";
  * BCUR2 Signer component that follows the same pattern as ColdcardSigner.
  * This component handles QR code scanning and PSBT processing for BCUR2 format.
  */
-const BCUR2Signer = ({ onReceivePSBT, setError, onReceive }) => {
-  const [showScanner, setShowScanner] = useState(false);
-
+const BCUR2Signer = ({ setError, onReceive }) => {
   // Wrap selectors in try-catch to handle any Redux state issues
   let network, inputs;
   try {
@@ -27,7 +25,6 @@ const BCUR2Signer = ({ onReceivePSBT, setError, onReceive }) => {
       if (setError) {
         setError("");
       }
-      setShowScanner(false);
     } catch (error) {
       // Error in handleClearError - silent fallback
     }
@@ -73,39 +70,21 @@ const BCUR2Signer = ({ onReceivePSBT, setError, onReceive }) => {
         }
       }
     },
-    [inputs, network, onReceivePSBT, setError],
+    [inputs, network, onReceive, setError],
   );
-
-  if (!showScanner) {
-    return (
-      <div>
-        <Box mt={2}>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            When you are ready, scan the signed PSBT QR code from your signing
-            device.
-          </Alert>
-          <Box display="flex" justifyContent="center">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setShowScanner(true)}
-            >
-              Start QR Scanner
-            </Button>
-          </Box>
-        </Box>
-      </div>
-    );
-  }
 
   return (
     <div>
       <Box mt={2}>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          When you are ready, scan the signed PSBT QR code from your signing
+          device.
+        </Alert>
         <BCUR2Reader
           mode="psbt"
           onSuccess={handlePSBTSuccess}
           onClear={handleClearError}
-          startText="Import Signed PSBT"
+          startText="Start QR Scanner"
         />
       </Box>
     </div>

@@ -6,11 +6,22 @@ import BCUR2Signer from "./BCUR2Signer";
 
 interface SignatureImporter {
   bip32Path?: string | null;
-  [key: string]: any;
+  method?: string;
+  finalized?: boolean;
+  name?: string;
+  signature?: string | string[];
+  publicKeys?: string[];
 }
 
 interface ExtendedPublicKeyImporter {
-  [key: string]: any;
+  method?: string;
+  name?: string;
+  bip32Path?: string;
+  extendedPublicKey?: string;
+  finalized?: boolean;
+  conflict?: boolean;
+  rootXfp?: string;
+  bip32PathModified?: boolean;
 }
 
 interface BCUR2SignatureImporterProps {

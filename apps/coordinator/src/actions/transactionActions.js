@@ -545,12 +545,7 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
     //
     // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
     if (!hasPendingInputs) {
-      try {
-        dispatch(setSignaturesFromPsbt(psbt));
-      } catch (sigError) {
-        console.error("Signature extraction failed:", sigError.message);
-        // Continue without signature import
-      }
+      dispatch(setSignaturesFromPsbt(psbt));
     }
 
     // Finalize the transaction

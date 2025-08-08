@@ -185,23 +185,54 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
       )}
 
       {isScanning && (
-        <Box>
-          <Box mb={2}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          width="100%"
+        >
+          <Box
+            mb={2}
+            textAlign="center"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+          >
             <Typography variant="body1" gutterBottom align="center">
               {getInfoText()}
             </Typography>
-            <Paper elevation={3} sx={{ width, aspectRatio: "1" }}>
+            <Paper
+              elevation={3}
+              sx={{
+                width,
+                aspectRatio: "1",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "hidden",
+              }}
+            >
               <QrReader
                 onResult={handleScan}
                 constraints={{ facingMode: "environment" }}
-                containerStyle={{ width: "100%", height: "100%" }}
+                containerStyle={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
                 scanDelay={200}
               />
             </Paper>
           </Box>
 
           <Box display="flex" justifyContent="center" mb={2}>
-            <Button variant="outlined" color="secondary" onClick={stopScanning}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={stopScanning}
+            >
               Stop Scanning
             </Button>
           </Box>
@@ -234,7 +265,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
             {error}
           </Typography>
           <Box display="flex" justifyContent="center" mt={1}>
-            <Button variant="outlined" color="primary" onClick={stopScanning}>
+            <Button variant="contained" color="primary" onClick={stopScanning}>
               Clear Error & Restart
             </Button>
           </Box>
