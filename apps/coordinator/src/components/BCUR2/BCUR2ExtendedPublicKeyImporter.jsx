@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { FormGroup, FormHelperText } from "@mui/material";
+import { FormGroup, FormHelperText, Box } from "@mui/material";
 import BCUR2Reader from "./BCUR2Reader";
 
 class BCUR2ExtendedPublicKeyImporter extends React.Component {
@@ -34,7 +34,7 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
         fingerprint = data.xfp || data.rootFingerprint || data.fingerprint;
         path = data.path || data.bip32Path || data.derivationPath;
       } else {
-        this.setError("Invalid QR code data format");
+        this.setError("Invalid BCUR2 data format from QR code scan");
         return;
       }
 
@@ -62,17 +62,9 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
       validateAndSetBIP32Path(
         path,
         () => {
-          validateAndSetExtendedPublicKey(xpub, (error) => {
-            if (error) {
-              this.setError(error);
-            } else {
-              this.setError(""); // Clear any previous errors
-            }
-          });
+          validateAndSetExtendedPublicKey(xpub, this.setError);
         },
-        (error) => {
-          this.setError(error);
-        },
+        this.setError,
       );
     } catch (e) {
       this.setError(e.message);
@@ -90,13 +82,15 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
 
     return (
       <FormGroup>
-        <BCUR2Reader
-          startText="Import Extended Public Key"
-          onSuccess={this.import}
-          onClear={this.onClear}
-          width="400px"
-          mode="xpub"
-        />
+        <Box mt={2}>
+          <BCUR2Reader
+            startText="Import Extended Public Key"
+            onSuccess={this.import}
+            onClear={this.onClear}
+            width="400px"
+            mode="xpub"
+          />
+        </Box>
         <FormHelperText error>{extendedPublicKeyError}</FormHelperText>
       </FormGroup>
     );

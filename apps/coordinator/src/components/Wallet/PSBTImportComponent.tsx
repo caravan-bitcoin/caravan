@@ -35,6 +35,87 @@ interface PSBTImportComponentProps {
   showMethodSelector?: boolean; // New prop to control method selector visibility
 }
 
+// File Import Component
+interface FileImportProps {
+  onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isLoading: boolean;
+}
+
+const FileImport: React.FC<FileImportProps> = ({ onFileSelect, isLoading }) => (
+  <>
+    <label htmlFor="import-psbt">
+      <input
+        style={{ display: "none" }}
+        id="import-psbt"
+        name="import-psbt"
+        accept=".psbt,*/*"
+        onChange={onFileSelect}
+        type="file"
+        disabled={isLoading}
+      />
+      <Button
+        color="primary"
+        variant="contained"
+        component="span"
+        disabled={isLoading}
+        startIcon={isLoading ? <RefreshIcon /> : <UploadIcon />}
+        sx={{ mt: 2 }}
+      >
+        {isLoading ? "Processing..." : "Import PSBT File"}
+      </Button>
+    </label>
+  </>
+);
+
+// QR Code Import Component
+interface QRImportProps {
+  onSuccess: (psbtData: string) => void;
+  onClear: () => void;
+}
+
+const QRImport: React.FC<QRImportProps> = ({ onSuccess, onClear }) => (
+  <Box mt={2}>
+    <Typography variant="body2" color="textSecondary" gutterBottom>
+      Scan the PSBT QR code sequence from your hardware wallet or signing
+      device.
+    </Typography>
+    <BCUR2Reader
+      mode="psbt"
+      onSuccess={onSuccess}
+      onClear={onClear}
+      startText="Start PSBT Scanning"
+      width="400px"
+    />
+  </Box>
+);
+
+// Import Method Selector Component
+interface ImportMethodSelectorProps {
+  importMethod: string;
+  onMethodChange: (event: SelectChangeEvent<string>) => void;
+  isLoading: boolean;
+}
+
+const ImportMethodSelector: React.FC<ImportMethodSelectorProps> = ({
+  importMethod,
+  onMethodChange,
+  isLoading,
+}) => (
+  <FormControl fullWidth sx={{ maxWidth: 300, mb: 2 }}>
+    <InputLabel id="psbt-import-method-label">Import Method</InputLabel>
+    <Select
+      labelId="psbt-import-method-label"
+      value={importMethod}
+      label="Import Method"
+      onChange={onMethodChange}
+      disabled={isLoading}
+    >
+      <MenuItem value="file">File Upload</MenuItem>
+      <MenuItem value="bcur2">QR Code (BCUR2)</MenuItem>
+    </Select>
+  </FormControl>
+);
+
 // Main PSBT Import Component
 export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   onImport,
@@ -252,52 +333,16 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
   // Determine current status
   const isLoading = isProcessing || reconstructionLoading;
 
-  // Render import method based on selection
-  const renderImportMethod = () => {
+  // Render the appropriate import component
+  const renderImportComponent = () => {
     switch (importMethod) {
       case "file":
         return (
-          <>
-            {/* File input */}
-            <label htmlFor="import-psbt">
-              <input
-                style={{ display: "none" }}
-                id="import-psbt"
-                name="import-psbt"
-                accept=".psbt,*/*"
-                onChange={handleFileSelect}
-                type="file"
-                disabled={isLoading}
-              />
-
-              <Button
-                color="primary"
-                variant="contained"
-                component="span"
-                disabled={isLoading}
-                startIcon={isLoading ? <RefreshIcon /> : <UploadIcon />}
-                sx={{ mt: 2 }}
-              >
-                {isLoading ? "Processing..." : "Import PSBT File"}
-              </Button>
-            </label>
-          </>
+          <FileImport onFileSelect={handleFileSelect} isLoading={isLoading} />
         );
       case "bcur2":
         return (
-          <Box mt={2}>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              Scan the PSBT QR code sequence from your hardware wallet or
-              signing device.
-            </Typography>
-            <BCUR2Reader
-              mode="psbt"
-              onSuccess={handleBCUR2Success}
-              onClear={handleBCUR2Clear}
-              startText="Start PSBT Scanning"
-              width="400px"
-            />
-          </Box>
+          <QRImport onSuccess={handleBCUR2Success} onClear={handleBCUR2Clear} />
         );
       default:
         return null;
@@ -308,24 +353,16 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     <Box mt={2}>
       {/* Import method selection - only show if showMethodSelector is true */}
       {showMethodSelector && (
-        <FormControl fullWidth sx={{ maxWidth: 300, mb: 2 }}>
-          <InputLabel id="psbt-import-method-label">Import Method</InputLabel>
-          <Select
-            labelId="psbt-import-method-label"
-            value={importMethod}
-            label="Import Method"
-            onChange={handleMethodChange}
-            disabled={isLoading}
-          >
-            <MenuItem value="file">File Upload</MenuItem>
-            <MenuItem value="bcur2">QR Code (BCUR2)</MenuItem>
-          </Select>
-        </FormControl>
+        <ImportMethodSelector
+          importMethod={importMethod}
+          onMethodChange={handleMethodChange}
+          isLoading={isLoading}
+        />
       )}
 
       {/* Render selected import method */}
       {(showMethodSelector && importMethod) || !showMethodSelector
-        ? renderImportMethod()
+        ? renderImportComponent()
         : null}
 
       {/* Loading indicator */}
