@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 0.6.1
+
+### Patch Changes
+
+- [#364](https://github.com/caravan-bitcoin/caravan/pull/364) [`625191d`](https://github.com/caravan-bitcoin/caravan/commit/625191ddc8e1ddb1292c033448fee4fd77007aa6) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add getFeesForPendingTransaction to retrieve the fee information for a pending (incoming) transaction .
+
 ## 0.6.0
 
 ### Minor Changes
