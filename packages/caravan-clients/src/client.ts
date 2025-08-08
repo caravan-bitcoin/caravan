@@ -613,13 +613,6 @@ export class BlockchainClient extends ClientBase {
   public async getTransactionHex(txid: string): Promise<any> {
     try {
       if (this.type === ClientType.PRIVATE) {
-        // Check if wallet name is provided for private clients
-        if (!this.bitcoindParams.walletName) {
-          throw new Error(
-            "Wallet name is required for private client transaction lookups",
-          );
-        }
-
         const response = (await callBitcoindWallet({
           baseUrl: this.bitcoindParams.url,
           walletName: this.bitcoindParams.walletName,
@@ -884,12 +877,6 @@ export class BlockchainClient extends ClientBase {
       );
     }
 
-    if (!this.bitcoindParams.walletName) {
-      throw new Error(
-        "Wallet name is required for private client transaction listings",
-      );
-    }
-
     const spentTransactions = await bitcoindListSpentTransactions({
       url: this.bitcoindParams.url,
       auth: this.bitcoindParams.auth,
@@ -949,12 +936,6 @@ export class BlockchainClient extends ClientBase {
     if (this.type !== ClientType.PRIVATE) {
       throw new BlockchainClientError(
         "Wallet transactions are only available for private Bitcoin nodes",
-      );
-    }
-
-    if (!this.bitcoindParams.walletName) {
-      throw new BlockchainClientError(
-        "Wallet name is required for wallet transaction lookups",
       );
     }
 
@@ -1058,45 +1039,48 @@ export class BlockchainClient extends ClientBase {
   }
 
   /**
-   * Retrieves the fee information for a pending (incoming) transaction from a private node.
+   * Retrieves the fee information for a pending (incoming) transaction .
    *
    * Standard methods like `getTransaction` do not provide fee details for transactions
    * where the user is the recipient. However, this information is required for
    * fee bumping strategies like CPFP (Child Pays For Parent).
    *
-   * This method uses `getmempoolentry` to fetch fee data from the node’s mempool.
+   * This method :
+   * - For private nodes: Uses `getmempoolentry` to fetch fee data from the node's mempool
+   * - For public APIs: Uses mempool.space transaction endpoint to get fee information
+   * - Returns null if the transaction is not pending (not in mempool)
    *
    * @see https://developer.bitcoin.org/reference/rpc/getmempoolentry.html?highlight=getmempoolentry
+   * @see https://mempool.space/docs/api/rest#get-transaction
    *
    * @param txid - Transaction ID to get fees
-   * @returns Tx fees in BTC
+   * @returns Tx fees in BTC, or null if transaction is not pending
    */
-  public async getFeesForPendingTransactions(txid: string): Promise<number> {
-    if (this.type !== ClientType.PRIVATE) {
-      throw new BlockchainClientError(
-        "Wallet transactions are only available for private Bitcoin nodes",
-      );
-    }
-
-    if (!this.bitcoindParams.walletName) {
-      throw new BlockchainClientError(
-        "Wallet name is required for wallet transaction lookups",
-      );
-    }
+  public async getFeesForPendingTransaction(
+    txid: string,
+  ): Promise<string | null> {
     try {
-      const rpcResponse = await callBitcoindWallet({
-        baseUrl: this.bitcoindParams.url,
-        walletName: this.bitcoindParams.walletName,
-        auth: this.bitcoindParams.auth,
-        method: "getmempoolentry",
-        params: [txid],
-      });
-      const mempoolEntry = rpcResponse.result as MempoolEntry;
+      if (this.type === ClientType.PRIVATE) {
+        const rpcResponse = await callBitcoindWallet({
+          baseUrl: this.bitcoindParams.url,
+          walletName: this.bitcoindParams.walletName,
+          auth: this.bitcoindParams.auth,
+          method: "getmempoolentry",
+          params: [txid],
+        });
+        const mempoolEntry = rpcResponse.result as MempoolEntry;
 
-      if (!mempoolEntry || !mempoolEntry.fees) {
-        throw new Error("Invalid mempool entry response");
+        if (!mempoolEntry || !mempoolEntry.fees) {
+          return null;
+        }
+        return mempoolEntry.fees.base.toString();
       }
-      return mempoolEntry.fees.base;
+      const txData: RawTransactionData = await this.Get(`/tx/${txid}`);
+      if (txData && txData.fee && !txData.status?.confirmed) {
+        return satoshisToBitcoins(txData.fee);
+      }
+
+      return null;
     } catch (error: any) {
       throw new Error(`Failed to get wallet transaction: ${error.message}`);
     }
