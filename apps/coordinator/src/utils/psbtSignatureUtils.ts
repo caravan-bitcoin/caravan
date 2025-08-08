@@ -1,5 +1,4 @@
-import { loadPsbt } from "./psbtUtils";
-import { extractSignaturesFromPSBT } from "../selectors/transaction";
+import { loadPsbt, extractSignaturesFromPSBT } from "./psbtUtils";
 import { Network } from "@caravan/bitcoin";
 import type { Input } from "./psbtUtils";
 
