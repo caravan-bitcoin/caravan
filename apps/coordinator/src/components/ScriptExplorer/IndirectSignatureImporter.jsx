@@ -22,11 +22,26 @@ import InteractionMessages from "../InteractionMessages";
 class IndirectSignatureImporter extends React.Component {
   constructor(props) {
     super(props);
+    let initialStatus = PENDING;
+    try {
+      const interaction = this.interaction();
+      initialStatus = interaction.isSupported() ? PENDING : UNSUPPORTED;
+    } catch (error) {
+      initialStatus = PENDING; // Safe fallback
+    }
+
     this.state = {
       bip32PathError: "",
       signatureError: "",
-      status: this.interaction().isSupported() ? PENDING : UNSUPPORTED,
+      status: initialStatus,
     };
+  }
+
+  componentDidCatch(error) {
+    this.setState({
+      signatureError: `Component error: ${error.message || "Unknown error"}`,
+      status: UNSUPPORTED,
+    });
   }
 
   interaction = () => {
@@ -83,43 +98,78 @@ class IndirectSignatureImporter extends React.Component {
   };
 
   render = () => {
-    const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
-      this.props;
-    const { signatureError, status } = this.state;
-    const interaction = this.interaction();
-    if (status === UNSUPPORTED) {
+    try {
+      const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
+        this.props;
+      const { signatureError, status } = this.state;
+
+      if (!Signer) {
+        return (
+          <div
+            style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}
+          >
+            <p>Configuration error: No signature component available.</p>
+          </div>
+        );
+      }
+
+      let interaction;
+      try {
+        interaction = this.interaction();
+      } catch (error) {
+        return (
+          <div
+            style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}
+          >
+            <p>Error initializing signature interaction.</p>
+            <p>Please try refreshing the page.</p>
+          </div>
+        );
+      }
+
+      if (status === UNSUPPORTED) {
+        return (
+          <InteractionMessages
+            messages={interaction.messagesFor({ state: status })}
+            excludeCodes={["hermit.signature_request", "hermit.command"]}
+          />
+        );
+      }
+
       return (
-        <InteractionMessages
-          messages={interaction.messagesFor({ state: status })}
-          excludeCodes={["hermit.signature_request", "hermit.command"]}
-        />
+        <Box mt={2}>
+          <Box mt={2}>
+            {this.renderDeviceConfirmInfo()}
+            <FormGroup>
+              <Signer
+                setError={this.setError}
+                hasError={this.hasBIP32PathError()}
+                onReceive={this.onReceive}
+                onReceivePSBT={this.onReceivePSBT}
+                interaction={interaction}
+                setActive={this.setActive}
+                disableChangeMethod={disableChangeMethod}
+                extendedPublicKeyImporter={extendedPublicKeyImporter}
+              />
+
+              <FormHelperText error>{signatureError}</FormHelperText>
+
+              <InteractionMessages
+                messages={interaction.messagesFor({ state: status })}
+              />
+            </FormGroup>
+          </Box>
+        </Box>
+      );
+    } catch (error) {
+      return (
+        <div style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}>
+          <p>Error rendering signature importer.</p>
+          <p>Error details: {error.message || "Unknown error"}</p>
+          <p>Please try refreshing the page.</p>
+        </div>
       );
     }
-    return (
-      <Box mt={2}>
-        <Box mt={2}>
-          {this.renderDeviceConfirmInfo()}
-          <FormGroup>
-            <Signer
-              setError={this.setError}
-              hasError={this.hasBIP32PathError()}
-              onReceive={this.onReceive}
-              onReceivePSBT={this.onReceivePSBT}
-              interaction={this.interaction()}
-              setActive={this.setActive}
-              disableChangeMethod={disableChangeMethod}
-              extendedPublicKeyImporter={extendedPublicKeyImporter}
-            />
-
-            <FormHelperText error>{signatureError}</FormHelperText>
-
-            <InteractionMessages
-              messages={interaction.messagesFor({ state: status })}
-            />
-          </FormGroup>
-        </Box>
-      </Box>
-    );
   };
 
   setActive = () => {
@@ -225,7 +275,7 @@ IndirectSignatureImporter.propTypes = {
   extendedPublicKeyImporter: PropTypes.shape({
     method: PropTypes.string,
   }),
-  Signer: PropTypes.shape({}).isRequired,
+  Signer: PropTypes.elementType.isRequired, // React component type
   fee: PropTypes.string,
   inputsTotalSats: PropTypes.shape({}),
   psbt: PropTypes.string,
