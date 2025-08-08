@@ -166,7 +166,11 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     await this.jade.connect();
     connected = true;
 
-    // Perform user handshake
+    // Perform user handshake. The params for the http request is filled by the jade device
+	// this function will then call to the Blockstream pin server @ https://jadepin.blockstream.com/get_pin
+	// in order to authorize the user from the device.
+	// for more information on how this works you can read the docs @ 
+	// https://github.com/Blockstream/Jade/blob/master/docs/index.rst#welcome-to-jades-rpc-documentation
     const httpRequestFn = async (params: any): Promise<{ body: any }> => {
       const url = params.urls[0];
       const res = await fetch(url, {
