@@ -35,7 +35,6 @@ import {
 } from "./interaction";
 import { MultisigWalletConfig } from "./types";
 
-
 export const JADE = "jade";
 
 const DEFAULT_NETWORK = "mainnet";
@@ -135,7 +134,7 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     this.transport = new SerialTransport({});
     this.ijade = new JadeInterface(this.transport);
     this.jade = new Jade(this.ijade);
-    this.network = this.normalizeNetwork(network ?? (DEFAULT_NETWORK as BitcoinNetwork));
+    this.network = network ?? (DEFAULT_NETWORK as BitcoinNetwork);
   }
 
   /**
@@ -158,12 +157,8 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     return messages;
   }
 
-  protected setNetwork(network?: BitcoinNetwork) {
-    this.network = this.normalizeNetwork(network ?? (DEFAULT_NETWORK as BitcoinNetwork));
-  }
-
-  private normalizeNetwork(n: string): BitcoinNetwork {
-    return (n === "regtest" ? "localtest" : n) as BitcoinNetwork;
+  protected get rpcNetwork(): string {
+    return this.network === "regtest" ? "localtest" : this.network;
   }
 
   async withDevice<T>(
@@ -191,7 +186,7 @@ export class JadeInteraction extends DirectKeystoreInteraction {
       return { body: await res.json() };
     };
 
-    const unlocked = await this.jade.authUser(this.network, httpRequestFn);
+    const unlocked = await this.jade.authUser(this.rpcNetwork, httpRequestFn);
     if (unlocked !== true) throw new Error("Failed to unlock Jade device");
 
     //run jade action
@@ -264,9 +259,9 @@ export class JadeExportPublicKey extends JadeInteraction {
   async run() {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      const xpub = await jade.getXpub(this.network, path);
+      const xpub = await jade.getXpub(this.rpcNetwork, path);
       const publicKey = ExtendedPublicKey.fromBase58(xpub).pubkey;
-      const rootFingerprint = await jade.getMasterFingerPrint(this.network);
+      const rootFingerprint = await jade.getMasterFingerPrint(this.rpcNetwork);
       if (this.includeXFP) {
         return { publicKey, rootFingerprint };
       }
@@ -302,8 +297,8 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
   async run() {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      const xpub = await jade.getXpub(this.network, path);
-      const rootFingerprint = await jade.getMasterFingerPrint(this.network);
+      const xpub = await jade.getXpub(this.rpcNetwork, path);
+      const rootFingerprint = await jade.getMasterFingerPrint(this.rpcNetwork);
       if (this.includeXFP) {
         return { xpub, rootFingerprint };
       }
@@ -325,14 +320,14 @@ export class JadeRegisterWalletPolicy extends JadeInteraction {
       async (jade: IJade) => {
         const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
         let multisigName = await jade.getMultiSigName(
-          this.network,
+          this.rpcNetwork,
           descriptor,
         );
 
         if (!multisigName) {
           multisigName = `jade${randomBytes(4).toString("hex")}`;
           await jade.registerMultisig(
-            this.network,
+            this.rpcNetwork,
             multisigName,
             descriptor,
           );
@@ -365,11 +360,11 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
   async run() {
     return await this.withDevice(async (jade: IJade) => {
       const descriptor = walletConfigToJadeDescriptor(this.walletConfig);
-      let multisigName = await jade.getMultiSigName(this.network, descriptor);
+      let multisigName = await jade.getMultiSigName(this.rpcNetwork, descriptor);
 
       if (!multisigName) {
         multisigName = `jade${randomBytes(4).toString("hex")}`;
-        await jade.registerMultisig(this.network, multisigName, descriptor);
+        await jade.registerMultisig(this.rpcNetwork, multisigName, descriptor);
       }
       const paths = descriptor.signers.map((signer) => {
         let childPath = bip32SequenceToPath(signer.derivation);
@@ -381,7 +376,7 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         multisigName,
       };
 
-      const multisigAddress = await jade.getReceiveAddress(this.network, opts);
+      const multisigAddress = await jade.getReceiveAddress(this.rpcNetwork, opts);
       return multisigAddress;
     });
   }
@@ -428,7 +423,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     return await this.withDevice(
       async (jade: IJade) => {
         const signedPSBT = await jade.signPSBT(
-          this.network,
+          this.rpcNetwork,
           this.unsignedPsbt,
         );
 
@@ -436,7 +431,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
           const b64string = bytesToBase64(signedPSBT);
           const parsedPsbt = parsePsbt(b64string);
           const fingerprint = await jade.getMasterFingerPrint(
-            this.network,
+            this.rpcNetwork,
           );
           return getSignatureArray(fingerprint, parsedPsbt);
         }
