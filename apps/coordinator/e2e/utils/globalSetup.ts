@@ -33,7 +33,6 @@ async function globalSetup(_config: FullConfig){
         fs.mkdirSync(tempDir, {recursive: true})
     }
 
-    //! think of handling this in better way (this looks so unprof)
     // Storing initial state
     const testState: TestState = {
         downloadDir: path.join(process.cwd(), 'e2e/downloads'),
@@ -59,8 +58,6 @@ async function globalSetup(_config: FullConfig){
     process.env.TEST_STATE_FILE = testStateFile
 
    } catch (error) {
-    console.log("Global setup failed:", error)
-    
     // Only attempt Docker cleanup if Docker is actually available
     if (error instanceof Error && !error.message.includes("Docker is required")) {
         try {
@@ -70,12 +67,11 @@ async function globalSetup(_config: FullConfig){
             })
             
         } catch (clearupError) {
-            console.log("Error while cleaning up",clearupError)
+            console.log("Error while cleaning up", clearupError)
         }
     }
-    throw error;
-   }
+    throw new Error(`Global setup failed: ${error}`);
+   } 
 }
-
 
 export default globalSetup

@@ -41,8 +41,6 @@ export async function extractMultiWalletDescriptors(walletNames: string[], clien
   
   const descriptors = await Promise.all(descriptorPromises);
 
-  console.log("descriptors",descriptors)
-  
   const xfps = descriptors.map(d => d.xfp);
   const paths = descriptors.map(d => d.path);
   const formattedPaths = descriptors.map(d => d.formattedPath);

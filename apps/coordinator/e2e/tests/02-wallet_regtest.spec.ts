@@ -15,8 +15,6 @@ test.describe("Wallet Regtest Configuration", () => {
   const client = bitcoinClient();
 
   test("should modify wallet configuration for regtest", async ({ page }) => {
-    console.log("Starting wallet config modification for regtest");
-
     try {
       // Get the downloaded wallet file from previous tests
       const downloadedWalletFile = testStateManager.getDownloadedWalletFile();
@@ -49,16 +47,13 @@ test.describe("Wallet Regtest Configuration", () => {
       fs.writeFileSync(downloadedWalletFile, configToWrite);
 
     } catch (error) {
-      console.log("Error in wallet config modification:", error);
-      throw error;
+      throw new Error(`Error in wallet config modification: ${error}`)
     }
   });
 
   test("should import modified wallet config in Caravan & match the address", async ({
     page,
   }) => {
-    console.log("Starting wallet import test");
-
     try {
       // Get the modified wallet file
       const modifiedWalletFile = testStateManager.getDownloadedWalletFile();
@@ -101,7 +96,6 @@ test.describe("Wallet Regtest Configuration", () => {
       for (let i = 0; i < 4; i++) {
         // Extract current address using helper
         const currentAddress = await getCurrentReceiveAddress(page);
-        console.log("current address:", currentAddress);
         walletAddresses.push(currentAddress);
         
         // Only click next if not last iteration
@@ -122,17 +116,13 @@ test.describe("Wallet Regtest Configuration", () => {
       }
 
       const senderWallet = testStateManager.getState().test_wallet_names[0];
-      console.log("senderWallet", senderWallet);
 
       const txids: string[] = [];
 
       for (const address of walletAddresses) {
-        console.log("address check in walletAddressses", address);
         const txid = await client?.sendToAddress(senderWallet, address, 2);
         txids.push(txid);
       }
-
-      console.log("txids", txids);
 
       //Should update to the next index when a deposit is received
       const currentPathSuffix = await getCurrentPathSuffix(page);
@@ -159,17 +149,17 @@ test.describe("Wallet Regtest Configuration", () => {
 
       // Extract address table data using helper
       const addressTable = await extractAddressTableData(page);
-      console.log("addressTable", addressTable);
 
       // This includes both pending and confirmed tx
       let totalBalance= 0;
 
       addressTable.forEach((row, index) => {
         expect(row.address).toMatch(/^2[MN]/);
+        console.log(`address ${index + 1}: ${row.address}`)
         totalBalance += parseFloat(row.balance);
       });
       
-      //Sending 0.5btc each to 4 addresses
+      //Sending 2btc each to 4 addresses
       expect(totalBalance).toBe(8)
 
       const senderRef = testStateManager.getSender()
@@ -180,14 +170,12 @@ test.describe("Wallet Regtest Configuration", () => {
       await page.locator("button[type=button]:has-text('Refresh')").click()
 
       // Confirming the balance after confirming tx
-      await expect(page.locator('[data-cy="balance"]')).toHaveText('8 BTC')
+      const confirmBalance = page.locator('[data-cy="balance"]');
+      await confirmBalance.waitFor({ state: 'visible' });
+      await expect(confirmBalance).toHaveText('8 BTC');
 
-      console.log(
-        'Wallet uploaded successfully - "Addresses imported." message appeared',
-      );
     } catch (error) {
-      console.log("Error in wallet import:", error);
-      throw error;
+      throw new Error(`Error in wallet import: ${error}`)
     }
   });
 });

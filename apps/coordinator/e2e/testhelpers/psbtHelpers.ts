@@ -12,7 +12,6 @@ import { testStateManager } from "../utils/testState"
  */
 export async function createIndividualSignedPsbts(walletNames: string[], client: any): Promise<IndividualSignedPsbtsResult> {
   try {
-    console.log(`Creating individual signed PSBTs with wallets: ${walletNames.join(', ')}`);
 
     const unsignedPsbtPath = testStateManager.getDownloadedUnsignedPsbtFile();
     if(!unsignedPsbtPath || !fs.existsSync(unsignedPsbtPath)) {
@@ -21,14 +20,10 @@ export async function createIndividualSignedPsbts(walletNames: string[], client:
 
     const unsignedPsbtBase64 = fs.readFileSync(unsignedPsbtPath, 'utf8').trim();
 
-    console.log("unsignedpsbtbase64",unsignedPsbtBase64);
-
     const individualPsbts: IndividualPsbtResult[] = [];
 
     // Sign with each wallet individually
     for (const walletName of walletNames) {
-        console.log(`Creating partially signed psbt with wallet ${walletName}`);
-
         const signResult = await client.signPsbt(walletName, unsignedPsbtBase64);
 
         const hasSignature = signResult.psbt != unsignedPsbtBase64;
@@ -41,16 +36,12 @@ export async function createIndividualSignedPsbts(walletNames: string[], client:
         if(!extractSignature || extractSignature.length === 0){
             throw new Error(`No signatures extracted from ${walletName} PSBT`);
         }
-        
-        //! create partially signed PSBT file
+
         const partialPsbtFileName = `partial-psbt-${walletName}.psbt`;
         const uploadDir = testStateManager.getState().uploadDir;
 
         const partialSignPsbtPath = path.join(uploadDir,partialPsbtFileName);
 
-
-        //! check here for both the case 
-        //! 1. only the base64partialsign psbt or the complete file need to send
         fs.writeFileSync(partialSignPsbtPath, signResult.psbt);
 
         individualPsbts.push({
