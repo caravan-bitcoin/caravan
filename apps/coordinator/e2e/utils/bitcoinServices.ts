@@ -35,7 +35,9 @@ export class BitcoinCoreService {
       }
       return this.walletClient.get(walletName);
     } catch (error) {
-      console.log("error", error);
+      throw new Error(
+        `Failed to get wallet client for '${walletName}': ${error}`,
+      );
     }
   }
 
@@ -51,7 +53,9 @@ export class BitcoinCoreService {
       } catch (error) {
         console.log(`Attempt: ${i}/${maxRetries} & error: ${error} `);
         if (i == maxRetries) {
-          console.log("Failed to connect to Bitcoin Core RPC");
+          throw new Error(
+            `Failed to connect to Bitcoin Core RPC after ${maxRetries} attempts: ${error}`,
+          );
         }
         //waiting for retry
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -64,7 +68,7 @@ export class BitcoinCoreService {
       const blockchainInfo = await this.client.command("getblockchaininfo");
       return blockchainInfo;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(`Failed to fetch blockchain info: ${error}`);
     }
   }
 
@@ -83,7 +87,9 @@ export class BitcoinCoreService {
       );
       return wallet;
     } catch (error) {
-      console.log("Error while create wallet: ", error);
+      throw new Error(
+        `Failed to create wallet '${walletConfig.wallet_name}': ${error}`,
+      );
     }
   }
 
@@ -92,7 +98,7 @@ export class BitcoinCoreService {
       const loadWallet = this.client.command("loadwallet", walletName);
       return loadWallet;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(`Failed to load wallet '${walletName}': ${error}`);
     }
   }
 
@@ -104,8 +110,7 @@ export class BitcoinCoreService {
       );
       return unloadWallet;
     } catch (error) {
-      console.log("Error unloading wallet:", error);
-      throw error;
+      throw new Error(`Failed to unload wallet '${walletName}': ${error}`);
     }
   }
 
@@ -118,8 +123,9 @@ export class BitcoinCoreService {
       }
       return false;
     } catch (error) {
-      console.log("error", error);
-      return false;
+      throw new Error(
+        `Failed to check if wallet '${walletName}' exists: ${error}`,
+      );
     }
   }
 
@@ -128,7 +134,7 @@ export class BitcoinCoreService {
       const allWallets = await this.client.command("listwallets");
       return allWallets;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(`Failed to list wallets: ${error}`);
     }
   }
 
@@ -139,64 +145,72 @@ export class BitcoinCoreService {
       const descriptors = await walletClient?.command("listdescriptors");
       return descriptors;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(
+        `Failed to list descriptors for wallet '${walletName}': ${error}`,
+      );
     }
   }
 
   async extractAddressDescriptors(
     walletName: string,
   ): Promise<Record<SingleSigAddressType, descStructure>> {
-    const walletClient = this.getWalletClient(walletName);
-    const allDesc = await walletClient?.command("listdescriptors");
+    try {
+      const walletClient = this.getWalletClient(walletName);
+      const allDesc = await walletClient?.command("listdescriptors");
 
-    const standardDescRegex = /^\w+\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\#(.+)$/;
-    const shWpkhDescRegex =
-      /^sh\(wpkh\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\)\#(.+)$/;
+      const standardDescRegex = /^\w+\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\#(.+)$/;
+      const shWpkhDescRegex =
+        /^sh\(wpkh\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\)\#(.+)$/;
 
-    const parsedAddressDescriptors: Record<
-      SingleSigAddressType,
-      descStructure
-    > = {
-      p2pkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
-      p2sh_p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
-      p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
-    };
+      const parsedAddressDescriptors: Record<
+        SingleSigAddressType,
+        descStructure
+      > = {
+        p2pkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+        p2sh_p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+        p2wpkh: { checksum: "", fingerPrint: "", path: "", xpub: "" },
+      };
 
-    for (let desc of allDesc.descriptors) {
-      const descriptor = desc.desc;
+      for (let desc of allDesc.descriptors) {
+        const descriptor = desc.desc;
 
-      if (descriptor.startsWith("sh(wpkh(")) {
-        const match = descriptor.match(shWpkhDescRegex);
-        if (match) {
-          parsedAddressDescriptors["p2sh_p2wpkh"] = {
-            fingerPrint: match[1],
-            path: match[2],
-            xpub: match[3],
-            checksum: match[5],
-          };
-        }
-      } else {
-        const match = descriptor.match(standardDescRegex);
-        if (match) {
-          if (descriptor.startsWith("pkh")) {
-            parsedAddressDescriptors.p2pkh = {
-              fingerPrint: match[1],
-              path: match[2],
-              xpub: match[3],
-              checksum: match[5],
-            };
-          } else if (descriptor.startsWith("wpkh")) {
-            parsedAddressDescriptors.p2wpkh = {
+        if (descriptor.startsWith("sh(wpkh(")) {
+          const match = descriptor.match(shWpkhDescRegex);
+          if (match) {
+            parsedAddressDescriptors["p2sh_p2wpkh"] = {
               fingerPrint: match[1],
               path: match[2],
               xpub: match[3],
               checksum: match[5],
             };
           }
+        } else {
+          const match = descriptor.match(standardDescRegex);
+          if (match) {
+            if (descriptor.startsWith("pkh")) {
+              parsedAddressDescriptors.p2pkh = {
+                fingerPrint: match[1],
+                path: match[2],
+                xpub: match[3],
+                checksum: match[5],
+              };
+            } else if (descriptor.startsWith("wpkh")) {
+              parsedAddressDescriptors.p2wpkh = {
+                fingerPrint: match[1],
+                path: match[2],
+                xpub: match[3],
+                checksum: match[5],
+              };
+            }
+          }
         }
       }
+      return parsedAddressDescriptors;
+    } catch (error) {
+      throw new Error(
+        `Failed to extract address descriptors for wallet '${walletName}': ${error}`,
+      );
     }
-    return parsedAddressDescriptors;
   }
   async checkBalance(walletName: string) {
     try {
@@ -205,7 +219,9 @@ export class BitcoinCoreService {
       const balance = await walletClient?.command("getbalance");
       return balance;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(
+        `Failed to check balance for wallet '${walletName}': ${error}`,
+      );
     }
   }
 
@@ -216,7 +232,9 @@ export class BitcoinCoreService {
       const address = await client?.command("getnewaddress");
       return address;
     } catch (error) {
-      console.log("error", error);
+      throw new Error(
+        `Failed to get new address from wallet '${walletName}': ${error}`,
+      );
     }
   }
 
@@ -234,8 +252,9 @@ export class BitcoinCoreService {
 
       return false;
     } catch (error) {
-      console.log("error", error);
-      return false;
+      throw new Error(
+        `Failed to fund address '${address}' from wallet '${walletName}': ${error}`,
+      );
     }
   }
 
@@ -248,14 +267,15 @@ export class BitcoinCoreService {
       );
       return balance;
     } catch (error) {
-      console.log("error", error);
-      return 0;
+      throw new Error(
+        `Failed to check balance for address '${address}' in wallet '${walletName}': ${error}`,
+      );
     }
   }
 
-  async sendToAddress(WalletName: string, toAddress: string, amount: number) {
+  async sendToAddress(walletName: string, toAddress: string, amount: number) {
     try {
-      const walletClient = this.getWalletClient(WalletName);
+      const walletClient = this.getWalletClient(walletName);
 
       let txid = await walletClient?.command(
         "sendtoaddress",
@@ -265,21 +285,22 @@ export class BitcoinCoreService {
 
       return txid;
     } catch (error) {
-      console.log("error", error);
-      return null;
+      throw new Error(
+        `Failed to send ${amount} BTC from wallet '${walletName}' to address '${toAddress}': ${error}`,
+      );
     }
   }
 
   /**
- * Signs a PSBT with a specific wallet 
- * 
- * @param walletName - Name of the wallet to sign with
- * @param psbtBase64 - Base64 encoded unsigned/partially signed PSBT string
- * @param signInputs - Whether to sign the inputs (def: true)
- * @param sighashtype - Signature hash type (def: "ALL")
- * @param bip32derivs - whether to include the BIP32 derivation info (def: true)
- * @returns Object containing the signed PSBT and completion status
- */
+   * Signs a PSBT with a specific wallet
+   *
+   * @param walletName - Name of the wallet to sign with
+   * @param psbtBase64 - Base64 encoded unsigned/partially signed PSBT string
+   * @param signInputs - Whether to sign the inputs (def: true)
+   * @param sighashtype - Signature hash type (def: "ALL")
+   * @param bip32derivs - whether to include the BIP32 derivation info (def: true)
+   * @returns Object containing the signed PSBT and completion status
+   */
 
   async signPsbt(
     walletName: string,
@@ -291,143 +312,76 @@ export class BitcoinCoreService {
     try {
       const walletClient = this.getWalletClient(walletName);
 
-      const result = await walletClient?.command("walletprocesspsbt", psbtBase64, signInputs, sighashtype, bip32derivs );
-
-      console.log(`psbt signed with wallet ${walletName}:`, {
-        complete: result.complete,
-        // checking if psbt changed
-        hasSignatures: result.psbt !== psbtBase64
-      })
+      const result = await walletClient?.command(
+        "walletprocesspsbt",
+        psbtBase64,
+        signInputs,
+        sighashtype,
+        bip32derivs,
+      );
 
       return {
         psbt: result.psbt,
-        complete: result.complete
-      }
+        complete: result.complete,
+      };
     } catch (error) {
-      throw new Error(`Failed to sign PSBT with wallet ${walletName}: ${error}`)
-      
+      throw new Error(
+        `Failed to sign PSBT with wallet ${walletName}: ${error}`,
+      );
     }
   }
 
   /**
- * Extracts individual signatures from a signed PSBT for manual input testing
- * 
- * @param psbtBase64 - Base64 encoded signed PSBT
- * @returns Array of signature objects with hex signatures and public keys
- */
-
-  async extractSignaturesFromPsbt(psbtBase64: string): Promise<{
-    signatures: string[],
-    publicKeys: string[],
-    inputIndex: number
-  }[]>{
-
-   try {
-    const decodedPbst = await this.client.command("decodepsbt", psbtBase64);
-    console.log("decoded Psbt:",decodedPbst)
-
-    //! define its type as well after testings
-    const extractedSignatures: any = [];
-    
-    // Iterate through each input to extract signatures
-    for(let inputIndex = 0; inputIndex < decodedPbst.inputs.length; inputIndex++){
-      const input = decodedPbst.inputs[inputIndex];
-
-      // Check if this input has partial signatures
-      if(input.partial_signatures){
-        const signatures: string[] = [];
-        const publicKeys: string[] = [];
-
-        // Extract each signature and its corresponding public key
-        for(const [pubkey, signature] of Object.entries(input.partial_signatures)){
-          publicKeys.push(pubkey);
-          signatures.push(signature as string);
-        }
-
-        if(signatures.length > 0){
-          extractedSignatures.push({
-            signatures,
-            publicKeys,
-            inputIndex
-          });
-        }
-      }
-    }
-    console.log(`extracted ${extractedSignatures.length} signs from psbt`);
-    return extractedSignatures;
-
-    
-   } catch (error) {
-    throw new Error(`Failed to extract signatures from PSBT: ${error}`)
-   }
-
-  }
-
-  /**
- * Combines multiple PSBTs into a single PSBT with all signatures
- * Useful when we have separate PSBTs signed by different wallets
- * 
- * @param psbtArray - Array of base64 encoded PSBTs to combine
- * @returns Combined PSBT with all signatures
- */
-
-  async combinePsbt(psbtArray: string[]): Promise<string>{
-    try {
-      if(psbtArray.length < 2){
-        throw new Error("Need at least 2 PSBTs to combine")
-      }
-      
-      // So, combinepsbt will take this array of PSBTs and will merge their signatures
-      const combinePsbt = await this.client.command("combinepsbt", psbtArray)
-
-      console.log(`successfully combined ${psbtArray.length} psbts: ${combinePsbt}`)
-
-      return combinePsbt;
-      
-    } catch (error) {
-      console.log("error",error)
-      throw new Error(`Failed to combine PSBTs: ${error}`)
-    }
-  }
-  
-  /**
-   * Decodes a PSBT and returns detailed information about its structure and signatures
-   * 
-   * @param psbtBase64 - Base64 encoded PSBT string
-   * @returns Decoded PSBT information including inputs, outputs, and signature data
-   */
-  async decodePsbt(psbtBase64: string): Promise<any> {
-    try {
-      const decodedPsbt = await this.client.command("decodepsbt", psbtBase64);
-      return decodedPsbt;
-    } catch (error) {
-      throw new Error(`Failed to decode PSBT: ${error}`);
-    }
-  }
-
-  /**
-   * Finalize a PSBT and extracts the raw transaction hex
-   * This will convert a fully signed PSBT into a broadcastable transaction
-   * 
-   * @param fullySignedPsbt - Base64 encoded fully signed PSBT
-   * @param extract - Whether to extract the final transaction (def: true)
-   * @returns Object with finalized PSBT and transaction hex (if extracted)
+   * Extracts individual signatures from a signed PSBT for manual input testing
+   *
+   * @param psbtBase64 - Base64 encoded signed PSBT
+   * @returns Array of signature objects with hex signatures and public keys
    */
 
-  async finalizePsbt(fullySignedPsbt: string, extract: boolean = true): Promise<{psbt?: string, hex?: string, complete: boolean}> {
-      try {
-        // finalizepsbt completes the PSBT by adding final scriptsig/scriptwitness 
-        const result = await this.client.command("finalizepsbt", fullySignedPsbt, extract);
-        
-        console.log("final PSBT result: ", {complete: result.complete, txhex: result?.hex})
+  async extractSignaturesFromPsbt(psbtBase64: string): Promise<
+    {
+      signatures: string[];
+      publicKeys: string[];
+      inputIndex: number;
+    }[]
+  > {
+    try {
+      const decodedPbst = await this.client.command("decodepsbt", psbtBase64);
+      const extractedSignatures: any = [];
 
-        return {
-          psbt: result.psbt,
-          hex: result.hex,
-          complete: result.complete
-        };
-      } catch (error) {
-        throw new Error(`Failed to finalize PSBT: ${error}`)
+      // Iterate through each input to extract signatures
+      for (
+        let inputIndex = 0;
+        inputIndex < decodedPbst.inputs.length;
+        inputIndex++
+      ) {
+        const input = decodedPbst.inputs[inputIndex];
+
+        // Check if this input has partial signatures
+        if (input.partial_signatures) {
+          const signatures: string[] = [];
+          const publicKeys: string[] = [];
+
+          // Extract each signature and its corresponding public key
+          for (const [pubkey, signature] of Object.entries(
+            input.partial_signatures,
+          )) {
+            publicKeys.push(pubkey);
+            signatures.push(signature as string);
+          }
+
+          if (signatures.length > 0) {
+            extractedSignatures.push({
+              signatures,
+              publicKeys,
+              inputIndex,
+            });
+          }
+        }
       }
+      return extractedSignatures;
+    } catch (error) {
+      throw new Error(`Failed to extract signatures from PSBT: ${error}`);
+    }
   }
 }

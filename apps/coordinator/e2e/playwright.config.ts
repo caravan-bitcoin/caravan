@@ -74,6 +74,6 @@ export default defineConfig({
 
 
   globalSetup: "./utils/globalSetup.ts",
-  globalTeardown: "./utils/globalTeardown.ts",
+  // globalTeardown: "./utils/globalTeardown.ts",
 
 });

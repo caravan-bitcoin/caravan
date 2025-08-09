@@ -15,7 +15,6 @@ export async function extractReceiveTableData(
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
-    console.log("Extracting receive table rows:", rows.length);
 
     return rows.map((row) => {
       const cells = Array.from(row.querySelectorAll("td"));
@@ -40,7 +39,6 @@ export async function extractAddressTableData(
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
-    console.log("Extracting address table rows:", rows.length);
 
     return rows.map((row) => {
       const cells = Array.from(row.querySelectorAll("td"));
@@ -80,7 +78,6 @@ export async function selectUTXOs(page: Page, targetAmount: number) {
     const balanceText = await row.locator("td").nth(3).textContent();
     const balance = parseFloat(balanceText?.trim()!);
 
-    console.log("balance Check", balance);
 
     // Find and Check the checkbox to select this 
     const checkbox = row.locator('input[name="spend"][type="checkbox"]')
@@ -88,14 +85,12 @@ export async function selectUTXOs(page: Page, targetAmount: number) {
 
     await page.waitForTimeout(500)
 
-    console.log("checkBox find: ", checkbox)
     
     if (await checkbox.isVisible() && !await checkbox.isDisabled()) {
       await checkbox.check();
       selectedUTXOValue += balance;
     }
     await page.waitForTimeout(500)
-    console.log("selectedUTXOval: ", selectedUTXOValue)
   }
 
   return { selectedUTXOValue };
