@@ -13,6 +13,7 @@ import {
   validateMultisigPsbtSignature,
 } from "@caravan/psbt";
 import { Psbt } from "bitcoinjs-lib-v6"; // Used this instead from caravan/psbt as `autoLoadPSBT` uses this Psbt Object
+import { PsbtInput } from "bip174/src/lib/interfaces.js"; // Import the official PSBT input type
 import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 
 /**
@@ -79,28 +80,6 @@ export interface SignerIdentity {
 export interface SignatureSet {
   signatures: Buffer[] | string[];
   publicKeys: string[];
-}
-
-/**
- * Represents a bitcoinjs-lib PSBT input with the properties we use
- */
-export interface BitcoinjsPsbtInput {
-  redeemScript?: Buffer;
-  witnessScript?: Buffer;
-  bip32Derivation?: Array<{
-    masterFingerprint: Buffer;
-    path: string;
-    pubkey: Buffer;
-  }>;
-  witnessUtxo?: {
-    script: Buffer;
-    value: number;
-  };
-  nonWitnessUtxo?: Buffer;
-  partialSig?: Array<{
-    pubkey: Buffer;
-    signature: Buffer;
-  }>;
 }
 
 /**
@@ -317,7 +296,7 @@ const getAddressTypeInfo = (multisigName: string) => ({
  * Adds scripts to a PSBT input using existing Caravan multisig data
  */
 const addScriptsFromExistingMultisig = (
-  psbtInput: BitcoinjsPsbtInput,
+  psbtInput: PsbtInput,
   multisig: CaravanMultisig,
 ): void => {
   const { isP2WSH, isP2SH, isNestedSegwit } = getAddressTypeInfo(
@@ -378,7 +357,7 @@ const addScriptsFromExistingMultisig = (
  * Adds UTXO data to a PSBT input for signature validation
  */
 const addUtxoData = (
-  psbtInput: BitcoinjsPsbtInput,
+  psbtInput: PsbtInput,
   multisig: CaravanMultisig,
   walletInput: Input,
 ): void => {
@@ -401,7 +380,7 @@ const addUtxoData = (
  * Generates scripts from raw multisig data when existing scripts aren't available
  */
 const generateScriptsFromRawData = (
-  psbtInput: BitcoinjsPsbtInput,
+  psbtInput: PsbtInput,
   multisig: CaravanMultisig,
   index: number,
 ): void => {
@@ -459,7 +438,7 @@ const generateScriptsFromRawData = (
  * Processes a single PSBT input by adding missing script data
  */
 const processSinglePsbtInput = (
-  psbtInput: BitcoinjsPsbtInput,
+  psbtInput: PsbtInput,
   walletInput: Input,
   index: number,
 ): void => {

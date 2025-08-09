@@ -98,78 +98,46 @@ class IndirectSignatureImporter extends React.Component {
   };
 
   render = () => {
-    try {
-      const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
-        this.props;
-      const { signatureError, status } = this.state;
+    const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
+      this.props;
+    const { signatureError, status } = this.state;
 
-      if (!Signer) {
-        return (
-          <div
-            style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}
-          >
-            <p>Configuration error: No signature component available.</p>
-          </div>
-        );
-      }
+    const interaction = this.interaction();
 
-      let interaction;
-      try {
-        interaction = this.interaction();
-      } catch (error) {
-        return (
-          <div
-            style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}
-          >
-            <p>Error initializing signature interaction.</p>
-            <p>Please try refreshing the page.</p>
-          </div>
-        );
-      }
-
-      if (status === UNSUPPORTED) {
-        return (
-          <InteractionMessages
-            messages={interaction.messagesFor({ state: status })}
-            excludeCodes={["hermit.signature_request", "hermit.command"]}
-          />
-        );
-      }
-
+    if (status === UNSUPPORTED) {
       return (
-        <Box mt={2}>
-          <Box mt={2}>
-            {this.renderDeviceConfirmInfo()}
-            <FormGroup>
-              <Signer
-                setError={this.setError}
-                hasError={this.hasBIP32PathError()}
-                onReceive={this.onReceive}
-                onReceivePSBT={this.onReceivePSBT}
-                interaction={interaction}
-                setActive={this.setActive}
-                disableChangeMethod={disableChangeMethod}
-                extendedPublicKeyImporter={extendedPublicKeyImporter}
-              />
-
-              <FormHelperText error>{signatureError}</FormHelperText>
-
-              <InteractionMessages
-                messages={interaction.messagesFor({ state: status })}
-              />
-            </FormGroup>
-          </Box>
-        </Box>
-      );
-    } catch (error) {
-      return (
-        <div style={{ padding: "16px", textAlign: "center", color: "#d32f2f" }}>
-          <p>Error rendering signature importer.</p>
-          <p>Error details: {error.message || "Unknown error"}</p>
-          <p>Please try refreshing the page.</p>
-        </div>
+        <InteractionMessages
+          messages={interaction.messagesFor({ state: status })}
+          excludeCodes={["hermit.signature_request", "hermit.command"]}
+        />
       );
     }
+
+    return (
+      <Box mt={2}>
+        <Box mt={2}>
+          {this.renderDeviceConfirmInfo()}
+          <FormGroup>
+            <Signer
+              setError={this.setError}
+              hasError={this.hasBIP32PathError()}
+              onReceive={this.onReceive}
+              onReceivePSBT={this.onReceivePSBT}
+              interaction={interaction}
+              setActive={this.setActive}
+              disableChangeMethod={disableChangeMethod}
+              extendedPublicKeyImporter={extendedPublicKeyImporter}
+            />
+
+            <FormHelperText error>{signatureError}</FormHelperText>
+
+            <InteractionMessages
+              messages={interaction.messagesFor({ state: status })}
+            />
+          </FormGroup>
+        </Box>
+      </Box>
+    );
   };
 
   setActive = () => {
