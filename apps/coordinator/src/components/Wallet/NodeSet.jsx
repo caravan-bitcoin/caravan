@@ -202,7 +202,7 @@ class NodeSet extends React.Component {
     const spending = walletMode === WALLET_MODES.SPEND;
     return (
       <Grid item md={12}>
-        <Table style={{ tableLayout: "fixed" }}>
+        <Table style={{ tableLayout: "fixed" }} data-testid="main-utxo-table">
           <TableHead>
             <TableRow>
               {spending && <TableCell width={62}>Select</TableCell>}

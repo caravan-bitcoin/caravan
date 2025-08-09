@@ -20,7 +20,10 @@ function bitcoinClient(){
         return client;
         
     } catch (error) {
-        console.log("error",error)      
+        if (error instanceof Error) {
+            throw new Error(`Failed to initialize BitcoinCoreService: ${error.message}`, { cause: error });
+        }
+        throw new Error("Failed to initialize BitcoinCoreService: Unknown error", { cause: error });  
     }
 }
 

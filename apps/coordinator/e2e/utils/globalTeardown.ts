@@ -8,7 +8,6 @@ async function globalTeardown(_config: FullConfig) {
     const client = bitcoinClient();
 
     // Cleaning up test wallets...
-
     if (process.env.TEST_WALLET_NAMES) {
       const walletNames = JSON.parse(process.env.TEST_WALLET_NAMES);
 
@@ -19,20 +18,17 @@ async function globalTeardown(_config: FullConfig) {
             await client?.unloadWallet(walletName);
           }
         } catch (error) {
-            console.log("error",error)
+            throw new Error(`Failed to unload wallet ${walletName}: ${error}`)
         }
       }
     }
-
-    //removing docker containers after use
-    execSync("docker compose stop", {
+    
+    execSync("docker compose down", {
       cwd: path.join(process.cwd(),"e2e"),
       stdio: "inherit",
     });
-
-    console.log("Global Teardown completes");
   } catch (error) {
-    console.log("Global Teardown failed:", error);
+    throw new Error(`Global Teardown failed: ${error}`);
   }
 }
 
