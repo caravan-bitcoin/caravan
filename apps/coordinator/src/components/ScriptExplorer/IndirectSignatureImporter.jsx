@@ -22,11 +22,26 @@ import InteractionMessages from "../InteractionMessages";
 class IndirectSignatureImporter extends React.Component {
   constructor(props) {
     super(props);
+    let initialStatus = PENDING;
+    try {
+      const interaction = this.interaction();
+      initialStatus = interaction.isSupported() ? PENDING : UNSUPPORTED;
+    } catch (error) {
+      initialStatus = PENDING; // Safe fallback
+    }
+
     this.state = {
       bip32PathError: "",
       signatureError: "",
-      status: this.interaction().isSupported() ? PENDING : UNSUPPORTED,
+      status: initialStatus,
     };
+  }
+
+  componentDidCatch(error) {
+    this.setState({
+      signatureError: `Component error: ${error.message || "Unknown error"}`,
+      status: UNSUPPORTED,
+    });
   }
 
   interaction = () => {
@@ -86,7 +101,9 @@ class IndirectSignatureImporter extends React.Component {
     const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
       this.props;
     const { signatureError, status } = this.state;
+
     const interaction = this.interaction();
+
     if (status === UNSUPPORTED) {
       return (
         <InteractionMessages
@@ -95,6 +112,7 @@ class IndirectSignatureImporter extends React.Component {
         />
       );
     }
+
     return (
       <Box mt={2}>
         <Box mt={2}>
@@ -105,7 +123,7 @@ class IndirectSignatureImporter extends React.Component {
               hasError={this.hasBIP32PathError()}
               onReceive={this.onReceive}
               onReceivePSBT={this.onReceivePSBT}
-              interaction={this.interaction()}
+              interaction={interaction}
               setActive={this.setActive}
               disableChangeMethod={disableChangeMethod}
               extendedPublicKeyImporter={extendedPublicKeyImporter}
@@ -225,7 +243,7 @@ IndirectSignatureImporter.propTypes = {
   extendedPublicKeyImporter: PropTypes.shape({
     method: PropTypes.string,
   }),
-  Signer: PropTypes.shape({}).isRequired,
+  Signer: PropTypes.elementType.isRequired, // React component type
   fee: PropTypes.string,
   inputsTotalSats: PropTypes.shape({}),
   psbt: PropTypes.string,
