@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
 import bitcoinClient from "../utils/bitcoinClient";
-import { clientConfig } from "../utils/bitcoinClient";
+import { getClientConfig } from "../utils/bitcoinClient";
 import setupPrivateClient from "../testhelpers/clientHelpers"
 
 import { testStateManager } from "../utils/testState";
@@ -11,6 +11,7 @@ import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors
 test.describe("Caravan Wallet Creation", () => {
   let walletNames: string[] = []
   let client = bitcoinClient();
+  let clientConfig = getClientConfig()
   
   
   const downloadDir = path.join(process.cwd(),'e2e/downloads');

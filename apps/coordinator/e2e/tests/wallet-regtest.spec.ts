@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { testStateManager } from "../utils/testState";
 
 import fs from "fs";
-import bitcoinClient, { clientConfig } from "../utils/bitcoinClient";
+import bitcoinClient, { getClientConfig } from "../utils/bitcoinClient";
 import {
   extractAddressTableData,
   getCurrentReceiveAddress,
@@ -12,6 +12,7 @@ import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors
 
 test.describe("Wallet Regtest Configuration", () => {
   const client = bitcoinClient();
+  const clientConfig = getClientConfig()
 
   test("should modify wallet configuration for regtest", async ({ page }) => {
 

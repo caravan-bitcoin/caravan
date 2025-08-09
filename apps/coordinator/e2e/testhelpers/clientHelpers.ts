@@ -1,10 +1,11 @@
 import { Page } from "@playwright/test";
-import { clientConfig } from "../utils/bitcoinClient";
+import { getClientConfig } from "../utils/bitcoinClient";
 import { ClientSetupOptions } from "../utils/types";
 import { testStateManager } from "../utils/testState";
 
 
 export default async function setupPrivateClient(page: Page, options: ClientSetupOptions ){
+  const clientConfig = getClientConfig();
 
   const {
       url = 'http://localhost:8080',

@@ -4,13 +4,14 @@ import path from "path";
 import fs from "fs";
 
 import bitcoinClient from "./bitcoinClient";
-import createTestWallets, {checkDockerAvailability} from "./testFixtures"
+import createTestWallets, {checkDockerAvailability, ensureEnvFile} from "./testFixtures"
 import { TestState } from "./types";
 
 async function globalSetup(_config: FullConfig){
 
    try {
-
+    
+    ensureEnvFile()
     await checkDockerAvailability();
     
     const client = bitcoinClient();

@@ -3,20 +3,29 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { rpcConfig } from "./types";
 
-// Load env variables from .env file in the e2e directory
-dotenv.config({ path: path.join(process.cwd(), 'e2e', '.env') });
+let clientConfig: rpcConfig | null = null;
 
+export function getClientConfig(): rpcConfig {
+    if(!clientConfig){
 
-export const clientConfig: rpcConfig = {
-    username: process.env.BITCOIN_RPC_USER!,
-    password: process.env.BITCOIN_RPC_PASSWORD!,
-    port: parseInt(process.env.BITCOIN_RPC_PORT!),
-    host: `http://localhost:${process.env.BITCOIN_RPC_PORT}`
+        // Load env variables from .env file in the e2e directory  
+        dotenv.config({path: path.join(process.cwd(), 'e2e', '.env')});
+
+        clientConfig = {
+            username: process.env.BITCOIN_RPC_USER!,
+            password: process.env.BITCOIN_RPC_PASSWORD!,
+            port: parseInt(process.env.BITCOIN_RPC_PORT!),
+            host: `http://localhost:${process.env.BITCOIN_RPC_PORT}`
+        }
+    }
+
+    return clientConfig
 }
 
 function bitcoinClient(){
     try {
-        const client = new BitcoinCoreService(clientConfig)
+        const config = getClientConfig();
+        const client = new BitcoinCoreService(config)
         return client;
         
     } catch (error) {
