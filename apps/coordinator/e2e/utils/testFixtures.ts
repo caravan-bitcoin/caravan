@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import path from "path";
+import fs from "fs"
 import { BitcoinCoreService } from "./bitcoinServices";
 
 
@@ -50,4 +51,19 @@ export async function checkDockerAvailability(){
         console.error("Docker not available on your system:", error);
         throw new Error("Docker is required for running e2e tests");
     }
+}
+
+
+export function ensureEnvFile(): void {
+    const e2eDir = path.join(process.cwd(), 'e2e');
+    const envPath = path.join(e2eDir, '.env');
+    const envExamplePath = path.join(e2eDir, '.env.example');
+
+    // Return if .env already exists
+    if(fs.existsSync(envPath)){
+        return;
+    }
+
+    fs.copyFileSync(envExamplePath,envPath);
+    console.log("[e2e] No .env found. Copied .env.example --> .env")
 }
