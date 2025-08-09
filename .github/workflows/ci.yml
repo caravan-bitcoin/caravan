@@ -7,32 +7,32 @@ permissions:
   checks: write
 
 jobs:
-  # ci:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       node-version: ["20.x"]
-  #   # To use Turborepo Remote Caching, set the following environment variables for the job.
-  #   env:
-  #     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  #     TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20.x"]
+    # To use Turborepo Remote Caching, set the following environment variables for the job.
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
-  #   steps:
-  #     - name: Checkout Repo
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
 
-  #     - name: Setup Node.js 20
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: 'npm'
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-  #     - name: Install Dependencies
-  #       run: npm ci
+      - name: Install Dependencies
+        run: npm ci
 
-  #     - name: Run tests
-  #       run: |
-  #         npx turbo run ci
+      - name: Run tests
+        run: |
+          npx turbo run ci
 
   # Run e2e tests only for coordinator-related changes
   e2e-check:
