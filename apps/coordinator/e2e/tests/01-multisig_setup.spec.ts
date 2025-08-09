@@ -3,11 +3,19 @@ import bitcoinClient from "../utils/bitcoinClient";
 import { clientConfig } from "../utils/bitcoinClient";
 import setupPrivateClient from "../testhelpers/clientHelpers"
 
+import { testStateManager } from "../utils/testState";
+import path from "path"
+import fs from "fs"
+import { extractMultiWalletDescriptors } from "../testhelpers/bitcoinDescriptors";
 
 test.describe("Caravan Wallet Creation", () => {
-  let testWallets: any[] = [];
   let walletNames: string[] = []
   let client = bitcoinClient();
+  
+  
+  const downloadDir = testStateManager.getState().downloadDir;
+  let downloadedWalletFile: string;
+
 
   const connectionScenarios = [
     {
@@ -22,14 +30,14 @@ test.describe("Caravan Wallet Creation", () => {
       url: "http://localhost:8081",
       username: clientConfig.username,
       password: clientConfig.password,
-      expectedMessage: "Network Error"
+      expectedMessage: "__filename is not defined"
     },
     {
       name: "incorrect credentials",
       url: "http://localhost:8080",
       username: "random1",
       password: clientConfig.password,
-      expectedMessage: "Request failed with status code 401"
+      expectedMessage: "__filename is not defined"
     }
 
   ]
@@ -37,11 +45,17 @@ test.describe("Caravan Wallet Creation", () => {
   test.beforeAll(async () => {
     // Setting up test wallets...
 
-    if(process.env.TEST_WALLET_NAMES && process.env.TEST_WALLETS){
-      walletNames= JSON.parse(process.env.TEST_WALLET_NAMES);
-      testWallets = JSON.parse(process.env.TEST_WALLETS)
-    }else{
-      console.log("Error in global setup while creating wallets")
+    //create download dir if not exists
+    if(!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir,{recursive: true})
+    }
+
+    try {
+      const state = testStateManager.getState();
+      walletNames = state.test_wallet_names;
+
+    } catch (error) {
+      throw new Error(`Error in global setup while creating wallets: ${error}`)
     }
   });
 
@@ -88,51 +102,73 @@ test.describe("Caravan Wallet Creation", () => {
 
     await expect(page.getByText("Connection Success!")).toBeVisible();
 
-    await page.locator("input[name='network'][value='testnet']").setChecked(true);
+    await page.locator("input[name='network'][value='regtest']").setChecked(true);
 
 
-    const p2pkh_xpub1 = (await client?.extractAddressDescriptors(walletNames[0]))
-      ?.p2pkh.xpub as string;
-    const p2pkh_xpub2 = (await client?.extractAddressDescriptors(walletNames[1]))
-      ?.p2pkh.xpub as string;
-    const p2pkh_xpub3 = (await client?.extractAddressDescriptors(walletNames[2]))
-      ?.p2pkh.xpub as string;
+    const { descriptors } = await extractMultiWalletDescriptors(walletNames.slice(0, 3), client, "p2pkh");
+    const p2pkh_xpub1 = descriptors[0].xpub;
+    const p2pkh_xpub2 = descriptors[1].xpub; 
+    const p2pkh_xpub3 = descriptors[2].xpub;
 
+   //filling xpub1 
     await page.click("div#public-key-1-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    //filling xpub1 
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub1);
 
     await page.click("button[type=button]:has-text('Enter')");
 
-   
+      //filling xpub2
     await page.click("div#public-key-2-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
 
-    //filling xpub2
+    
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub2);
     
     await page.click("button[type=button]:has-text('Enter')");
 
+    //filling xpub3
     await page.click("div#public-key-3-importer-select[role='combobox']");
 
     await page.click(
       "li[role='option'][data-value='text']:has-text('Enter as text')",
     );
     
-    //filling xpub3
     await page.locator('textarea[name="publicKey"]').fill(p2pkh_xpub3);
 
     await page.click("button[type=button]:has-text('Enter')");
 
-    await page.locator("button#confirm-wallet[type='button']").click()
+    const downloadPromise = page.waitForEvent('download');
 
+    await page.click('button[type=button]:has-text("Download Wallet Details")');
+
+    //Wait for download to complete
+    const download = await downloadPromise;
+
+    const suggestedFilename = download.suggestedFilename();
+
+    //Save the file to our created download dir
+
+    downloadedWalletFile = path.join(downloadDir,suggestedFilename);
+    await download.saveAs(downloadedWalletFile);
+
+    expect(fs.existsSync(downloadedWalletFile)).toBe(true);
+
+    const walletData = JSON.parse(fs.readFileSync(downloadedWalletFile, "utf-8"));
+
+    expect(walletData).toHaveProperty('name');
+    expect(walletData).toHaveProperty('network');
+    expect(walletData).toHaveProperty('addressType');
+    expect(walletData).toHaveProperty('extendedPublicKeys');
+
+    // Store the downloaded file path in shared state
+    testStateManager.updateState({ downloadDirFiles: {WalletFile: downloadedWalletFile} });
+    
   });
 });

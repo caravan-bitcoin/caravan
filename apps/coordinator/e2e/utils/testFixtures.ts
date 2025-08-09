@@ -41,7 +41,7 @@ export async function checkDockerAvailability(){
     try {
         execSync("docker info", {stdio: "pipe"});
         console.log("Docker is available, starting containers...");
-        
+
         execSync("docker compose up -d", {
             stdio: "inherit",
             cwd: path.join(process.cwd(), "e2e")

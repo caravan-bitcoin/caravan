@@ -219,6 +219,7 @@ class WalletSpend extends React.Component {
                           <Switch
                             checked={!autoSpend}
                             onChange={this.handleSpendMode}
+                            data-testid="manual-toggle"
                           />
                         }
                         label="Manual"
@@ -231,6 +232,7 @@ class WalletSpend extends React.Component {
                             onChange={(e) =>
                               this.props.setRBF(e.target.checked)
                             }
+                            data-testid="rbf-toggle"
                             color="primary"
                           />
                         }
