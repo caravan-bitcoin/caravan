@@ -73,13 +73,24 @@ jobs:
           name: playwright-results
           path: |
             apps/coordinator/playwright-report/
-            apps/coordinator/test-results/
+            apps/coordinator/e2e/test-results/
+            apps/coordinator/e2e/test-results/junit.xml
           retention-days: 3
+
+      - name: Publish Test Results to PR
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          files: "apps/coordinator/e2e/test-results/junit.xml"
+          comment_mode: "always"
+          comment_title: "🧪 E2E Test Results"
+          check_name: "E2E Tests"
+          fail_on: 'errors'
 
       - name: Upload screenshots on failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-screenshots
-          path: apps/coordinator/test-results/*/
+          path: apps/coordinator/e2e/test-results/*/
           retention-days: 3
