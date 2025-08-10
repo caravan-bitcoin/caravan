@@ -1,7 +1,7 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
-import { TransactionDetails } from "@caravan/clients";
+// import { TransactionDetails } from "@caravan/clients";
 import {
   getWalletAddresses,
   getSpentSlices,
@@ -170,54 +170,54 @@ export const usePrivateClientTransactionsWithLoadMore = (
  * @param {number} [skip=0] - Number of transactions to skip (offset)
  * @returns {Object} Query result from TanStack Query
  */
-export const usePublicClientTransactions = (
-  count: number = 10,
-  skip: number = 0,
-) => {
-  const blockchainClient = useGetClient();
-  const walletAddresses = useSelector(getWalletAddresses);
-  const clientType = useSelector((state: WalletState) => state.client.type);
+// export const usePublicClientTransactions = (
+//   count: number = 10,
+//   skip: number = 0,
+// ) => {
+//   const blockchainClient = useGetClient();
+//   const walletAddresses = useSelector(getWalletAddresses);
+//   const clientType = useSelector((state: WalletState) => state.client.type);
 
-  // Fallback to spent addresses if no wallet addresses are available
-  // This ensures we can still show transaction history for imported wallets
-  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
-  const spentAddresses = spentSlices.map(
-    (slice: SliceWithLastUsed) => slice.multisig.address,
-  );
+//   // Fallback to spent addresses if no wallet addresses are available
+//   // This ensures we can still show transaction history for imported wallets
+//   const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
+//   const spentAddresses = spentSlices.map(
+//     (slice: SliceWithLastUsed) => slice.multisig.address,
+//   );
 
-  const addressesToQuery =
-    walletAddresses.length > 0 ? walletAddresses : spentAddresses;
+//   const addressesToQuery =
+//     walletAddresses.length > 0 ? walletAddresses : spentAddresses;
 
-  return useQuery({
-    queryKey: transactionKeys.addressHistory(addressesToQuery, count, skip),
-    queryFn: async (): Promise<TransactionDetails[]> => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
+//   return useQuery({
+//     queryKey: transactionKeys.addressHistory(addressesToQuery, count, skip),
+//     queryFn: async (): Promise<TransactionDetails[]> => {
+//       if (!blockchainClient) {
+//         throw new Error("No blockchain client available");
+//       }
 
-      if (addressesToQuery.length === 0) {
-        return [];
-      }
+//       if (addressesToQuery.length === 0) {
+//         return [];
+//       }
 
-      const rawTransactions =
-        await blockchainClient.getAddressTransactionHistory(
-          addressesToQuery,
-          count,
-          skip,
-        );
+//       const rawTransactions =
+//         await blockchainClient.getAddressTransactionHistory(
+//           addressesToQuery,
+//           count,
+//           skip,
+//         );
 
-      return selectProcessedTransactions(
-        rawTransactions,
-        walletAddresses,
-        "all",
-      );
-    },
-    enabled:
-      !!blockchainClient &&
-      clientType === "public" &&
-      addressesToQuery.length > 0,
-  });
-};
+//       return selectProcessedTransactions(
+//         rawTransactions,
+//         walletAddresses,
+//         "all",
+//       );
+//     },
+//     enabled:
+//       !!blockchainClient &&
+//       clientType === "public" &&
+//       addressesToQuery.length > 0,
+//   });
+// };
 
 /**
  * Hook for fetching transaction history from public blockchain clients with pagination
@@ -353,20 +353,6 @@ export const usePublicClientTransactionsWithLoadMore = (
  * @param {number} [skip=0] - Number of transactions to skip
  * @returns {Object} Query result appropriate for the current client type
  */
-export const useCompletedTransactions = (
-  count: number = 10,
-  skip: number = 0,
-) => {
-  // const clientType = useSelector((state: WalletState) => state.client.type);
-
-  // Note: Import usePrivateClientTransactions from clients/transactions if needed
-  // const privateQuery = usePrivateClientTransactions(count, "all");
-  const publicQuery = usePublicClientTransactions(count, skip);
-
-  // Return appropriate query based on client type
-  // Add privateQuery logic based on your implementation
-  return publicQuery;
-};
 
 /**
  * Smart hook for fetching completed transactions with pagination support

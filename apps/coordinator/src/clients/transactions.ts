@@ -244,28 +244,6 @@ export const useTransactionCoins = (txid: string) => {
   });
 };
 
-// Hook for fetching completed (confirmed) transactions - uses selector
-export const useCompletedTransactions = (count: number, skip: number) => {
-  const walletAddresses = useSelector(getWalletAddresses);
-  const walletHistoryQuery = useWalletTransactionHistory(count, skip);
-
-  const transactions = useMemo(() => {
-    if (!walletHistoryQuery.data) return [];
-    return selectProcessedTransactions(
-      walletHistoryQuery.data,
-      walletAddresses,
-      "confirmed",
-    );
-  }, [walletHistoryQuery.data, walletAddresses]);
-
-  return {
-    transactions,
-    isLoading: walletHistoryQuery.isLoading,
-    error: walletHistoryQuery.error,
-    refetch: walletHistoryQuery.refetch,
-  };
-};
-
 // Hook for fetching all transactions - uses selector
 export const useAllTransactions = (count: number, skip: number) => {
   const walletAddresses = useSelector(getWalletAddresses);
