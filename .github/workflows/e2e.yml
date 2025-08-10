@@ -74,11 +74,15 @@ jobs:
         if: always()
         run: |
           echo "## ⚡ Performance Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "**Test Execution Time:** ${{ steps.run-tests.outputs.duration }} seconds" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.run-tests.outputs.duration }}" -gt 1800 ]; then
-            echo "⚠️ **Warning:** Tests took longer than 30 minutes" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.run-tests.outputs.duration }}" ]; then
+            echo "**Test Execution Time:** ${{ steps.run-tests.outputs.duration }} seconds" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.run-tests.outputs.duration }}" -gt 1800 ]; then
+              echo "⚠️ **Warning:** Tests took longer than 30 minutes" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "**Test Execution Time:** Not available" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup Docker resources
         if: always()
@@ -92,18 +96,15 @@ jobs:
       - name: Generate test summary
         if: always()
         run: |
-          cd apps/coordinator
-          if [ -f "test-results/.last-run.json" ]; then
-            echo "## 📊 E2E Test Results" >> $GITHUB_STEP_SUMMARY
-            echo "**Test Run:** $(date)" >> $GITHUB_STEP_SUMMARY
-            echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📁 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
-            echo "- Playwright Report: Available in artifacts" >> $GITHUB_STEP_SUMMARY
-            echo "- Test Results: Available in artifacts" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ job.status }}" == "failure" ]; then
-              echo "- Screenshots: Available in artifacts (failure mode)" >> $GITHUB_STEP_SUMMARY
-            fi
+          echo "## 📊 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Run:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
+          echo "- Playwright Report: Available in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Results: Available in artifacts" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "failure" ]; then
+            echo "- Screenshots: Available in artifacts (failure mode)" >> $GITHUB_STEP_SUMMARY
           fi
 
       # Upload results
