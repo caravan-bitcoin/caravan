@@ -12,7 +12,7 @@ jobs:
   e2e:
     name: End to End tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Increased for complex E2E tests
+    timeout-minutes: 30
     env:
       CI: true
       NODE_ENV: test
@@ -115,7 +115,7 @@ jobs:
           path: |
             apps/coordinator/playwright-report/
             apps/coordinator/test-results/
-          retention-days: 3  # Reduced from 7 to 3 days for CI
+          retention-days: 3
 
       - name: Upload screenshots on failure
         uses: actions/upload-artifact@v4
