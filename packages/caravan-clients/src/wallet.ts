@@ -30,8 +30,13 @@ export function callBitcoindWallet({
 }: BitcoindWalletParams) {
   const url = new URL(baseUrl);
 
-  if (walletName)
-    url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
+  if (!walletName) {
+    throw new Error(
+      "Wallet name is required for calling wallet specific methods",
+    );
+  }
+
+  url.pathname = url.pathname.replace(/\/$/, "") + `/wallet/${walletName}`;
   //@ts-expect-error Will Fix this
   return callBitcoind(url.toString(), auth, method, params);
 }
@@ -311,7 +316,7 @@ export async function bitcoindListSpentTransactions({
   if (!walletName) {
     throw new Error("Wallet name is required for listtransactions");
   }
-  
+
   const response = await callBitcoindWallet({
     baseUrl: url,
     walletName,
@@ -326,7 +331,7 @@ export async function bitcoindListSpentTransactions({
 
   // Filter only "send" transactions in the helper itself
   const spentTransactions = response.result.filter(
-    (tx: ListTransactionItem) => tx.category === "send"
+    (tx: ListTransactionItem) => tx.category === "send",
   );
 
   return spentTransactions as ListTransactionItem[];

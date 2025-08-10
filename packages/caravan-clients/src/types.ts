@@ -118,7 +118,6 @@ export interface RawTransactionData {
   hex?: string;
 }
 
-
 export interface TransactionDetails {
   txid: string;
   version: number;
@@ -136,7 +135,7 @@ export interface TransactionDetails {
   size: number;
   vsize?: number;
   weight: number;
-  fee: number; 
+  fee: number;
   status: {
     confirmed: boolean;
     blockHeight?: number;
@@ -428,4 +427,28 @@ export interface WalletTransactionResponse {
     hash: string;
     height: number;
   };
+}
+
+export interface MempoolEntry {
+  vsize: number;
+  weight: number;
+  fee?: number;
+  modifiedfee?: number;
+  time: number;
+  height: number;
+  descendantcount: number;
+  descendantsize: number;
+  ancestorcount: number;
+  ancestorsize: number;
+  wtxid: string;
+  fees: {
+    base: number;
+    modified: number;
+    ancestor: number;
+    descendant: number;
+  };
+  depends: string[];
+  spentby: string[];
+  "bip125-replaceable": boolean;
+  unbroadcast: boolean;
 }
