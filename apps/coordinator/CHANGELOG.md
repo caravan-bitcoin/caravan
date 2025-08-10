@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.2
+
+### Patch Changes
+
+- [#345](https://github.com/caravan-bitcoin/caravan/pull/345) [`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679) Thanks [@benma](https://github.com/benma)! - bump bitbox dependency to support bitbox02 nova devices
+
+- Updated dependencies [[`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679)]:
+  - @caravan/wallets@0.8.1
+
 ## 1.11.1
 
 ### Patch Changes

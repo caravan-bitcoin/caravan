@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- [#345](https://github.com/caravan-bitcoin/caravan/pull/345) [`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679) Thanks [@benma](https://github.com/benma)! - bump bitbox dependency to support bitbox02 nova devices
+
+## 0.8.0
+
+### Minor Changes
+
+- [#353](https://github.com/caravan-bitcoin/caravan/pull/353) [`cab05cb`](https://github.com/caravan-bitcoin/caravan/commit/cab05cb229fc871d6991fb48f49aa2f3b889d1f8) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Added BCUR2 encoders in caravan-wallets for supporting psbt-signing.
+
 ## 0.7.1
 
 ### Patch Changes
