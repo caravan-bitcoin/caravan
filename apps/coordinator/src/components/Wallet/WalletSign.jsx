@@ -17,6 +17,10 @@ import {
   resetPSBT as resetPSBTAction,
   SPEND_STEP_CREATE,
 } from "../../actions/transactionActions";
+
+// Utils and Selectors
+import { downloadFile } from "../../utils";
+import { getWalletDetailsText } from "../../selectors/wallet";
 import {
   updateTxSlices as updateTxSlicesAction,
   resetWalletView as resetWalletViewAction,
@@ -140,6 +144,22 @@ class WalletSign extends React.Component {
     });
   };
 
+  handleWalletConfigDownload = () => {
+    const { walletDetailsText, walletName } = this.props;
+
+    if (!walletDetailsText) {
+      console.error("No wallet configuration available");
+      return;
+    }
+
+    try {
+      const filename = `${walletName}-config.json`;
+      downloadFile(walletDetailsText, filename);
+    } catch (error) {
+      console.error("Failed to download wallet configuration:", error);
+    }
+  };
+
   render = () => {
     const { spent } = this.state;
     const { showBCUR2Encoder, qrCodeFrames } = this.state;
@@ -170,9 +190,9 @@ class WalletSign extends React.Component {
             <Button
               variant="outlined"
               color="primary"
-              onClick={this.handleExportForSigning}
+              onClick={this.handleWalletConfigDownload}
             >
-              Export for Signing
+              Download Wallet Config
             </Button>
           )}
         </Box>
@@ -228,6 +248,8 @@ WalletSign.propTypes = {
   txid: PropTypes.string.isRequired,
   unsignedPSBT: PropTypes.string,
   network: PropTypes.string,
+  walletName: PropTypes.string.isRequired,
+  walletDetailsText: PropTypes.string.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -241,6 +263,8 @@ function mapStateToProps(state) {
     changeSlice: state.wallet.change.nextNode,
     unsignedPSBT: state.spend.transaction.unsignedPSBT,
     network: state.settings.network,
+    walletName: state.wallet.common.walletName,
+    walletDetailsText: getWalletDetailsText(state),
   };
 }
 
