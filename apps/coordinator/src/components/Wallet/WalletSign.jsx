@@ -20,10 +20,6 @@ import {
 // Utils and Selectors
 import { downloadFile } from "../../utils";
 import { getWalletDetailsText } from "../../selectors/wallet";
-
-// Utils and Selectors
-import { downloadFile } from "../../utils";
-import { getWalletDetailsText } from "../../selectors/wallet";
 import {
   updateTxSlices as updateTxSlicesAction,
   resetWalletView as resetWalletViewAction,
