@@ -31,6 +31,7 @@
     "test": "vitest run src",
     "test:coverage": "vitest run src --coverage",
     "test:watch": "vitest src watch",
+    "test:ui": "vitest --watch --ui",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix src/",
     "ci": "npm run lint && npm run test",
