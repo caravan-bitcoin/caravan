@@ -118,22 +118,6 @@ class WalletSign extends React.Component {
     }
   };
 
-  handleWalletConfigDownload = () => {
-    const { walletDetailsText, walletName } = this.props;
-
-    if (!walletDetailsText) {
-      console.error("No wallet configuration available");
-      return;
-    }
-
-    try {
-      const filename = `${walletName}-config.json`;
-      downloadFile(walletDetailsText, filename);
-    } catch (error) {
-      console.error("Failed to download wallet configuration:", error);
-    }
-  };
-
   render = () => {
     const { spent } = this.state;
     const { unsignedPSBT } = this.props;
