@@ -20,6 +20,10 @@ import {
 // Utils and Selectors
 import { downloadFile } from "../../utils";
 import { getWalletDetailsText } from "../../selectors/wallet";
+
+// Utils and Selectors
+import { downloadFile } from "../../utils";
+import { getWalletDetailsText } from "../../selectors/wallet";
 import {
   updateTxSlices as updateTxSlicesAction,
   resetWalletView as resetWalletViewAction,
@@ -100,6 +104,22 @@ class WalletSign extends React.Component {
     setRequiredSigners(requiredSigners); // this will generate signature importers
     finalizeOutputs(false);
     setSpendStep(SPEND_STEP_CREATE);
+  };
+
+  handleWalletConfigDownload = () => {
+    const { walletDetailsText, walletName } = this.props;
+
+    if (!walletDetailsText) {
+      console.error("No wallet configuration available");
+      return;
+    }
+
+    try {
+      const filename = `${walletName}-config.json`;
+      downloadFile(walletDetailsText, filename);
+    } catch (error) {
+      console.error("Failed to download wallet configuration:", error);
+    }
   };
 
   handleWalletConfigDownload = () => {
