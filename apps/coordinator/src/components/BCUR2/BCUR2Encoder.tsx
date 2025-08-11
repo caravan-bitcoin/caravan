@@ -7,13 +7,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Paper,
   Grid,
   LinearProgress,
   Slider,
   FormControl,
   FormLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 // @ts-expect-error - qrcode.react doesn't have TypeScript declarations
 import QRCode from "qrcode.react";
 
@@ -159,147 +162,168 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
           sx={{ gap: 3 }}
         >
           {/* QR Code Display */}
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: qrSize + 32,
-              minHeight: qrSize + 32,
-            }}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            minWidth={qrSize}
+            minHeight={qrSize}
           >
             {currentFrame ? (
               <QRCode
                 value={currentFrame}
                 size={qrSize}
                 level="M"
-                includeMargin={true}
+                includeMargin={false}
               />
             ) : (
               <Typography variant="body1" color="textSecondary">
                 No QR code data available
               </Typography>
             )}
-          </Paper>
+          </Box>
 
-          {/* Progress Bar */}
-          {frameCount > 1 && (
-            <Box width="100%" maxWidth={400} textAlign="center">
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                Frame {currentFrameIndex + 1} of {frameCount}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={((currentFrameIndex + 1) / frameCount) * 100}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: "rgba(76, 175, 80, 0.2)",
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: "#4caf50",
-                    borderRadius: 4,
-                  },
-                }}
-              />
-              <Typography
-                variant="caption"
-                color="textSecondary"
-                sx={{ mt: 1, display: "block" }}
-              >
-                {Math.round(((currentFrameIndex + 1) / frameCount) * 100)}%
-                complete
-              </Typography>
-            </Box>
-          )}
-
-          {/* Speed Control for multi-frame QR codes */}
-          {frameCount > 1 && (
-            <Box width="100%" maxWidth={400} sx={{ px: 2 }}>
-              <FormControl fullWidth>
-                <FormLabel component="legend" sx={{ mb: 1 }}>
-                  <Typography
-                    variant="body2"
-                    color="textPrimary"
-                    fontWeight="medium"
-                  >
-                    Animation Speed: {getSpeedLabel(animationInterval)} (
-                    {animationInterval}ms)
-                  </Typography>
-                </FormLabel>
-                <Slider
-                  value={animationInterval}
-                  onChange={handleSpeedChange}
-                  min={200}
-                  max={3000}
-                  step={100}
-                  marks={[
-                    { value: 200, label: "Fastest" },
-                    { value: 800, label: "Normal" },
-                    { value: 1500, label: "Slow" },
-                    { value: 3000, label: "Slowest" },
-                  ]}
-                  sx={{
-                    "& .MuiSlider-markLabel": {
-                      fontSize: "0.75rem",
-                    },
-                    "& .MuiSlider-thumb": {
-                      width: 20,
-                      height: 20,
-                    },
-                    "& .MuiSlider-track": {
-                      height: 4,
-                    },
-                    "& .MuiSlider-rail": {
-                      height: 4,
-                    },
-                  }}
-                />
-              </FormControl>
-            </Box>
-          )}
-
-          {/* Controls for multi-frame QR codes */}
+          {/* Progress Bar and Controls in Accordion */}
           {frameCount > 1 && (
             <Box width="100%" maxWidth={400}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12}>
-                  <Box display="flex" justifyContent="center" gap={1}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handlePrevious}
-                    >
-                      Previous
-                    </Button>
-                    {isPlaying ? (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handlePause}
+              <Accordion>
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-controls="qr-controls-content"
+                  id="qr-controls-header"
+                >
+                  <Typography variant="subtitle1">
+                    QR Display Controls
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    sx={{ gap: 3 }}
+                  >
+                    {/* Progress Bar */}
+                    <Box width="100%" textAlign="center">
+                      <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        gutterBottom
                       >
-                        Pause
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handlePlay}
+                        Frame {currentFrameIndex + 1} of {frameCount}
+                      </Typography>
+                      <LinearProgress
+                        variant="determinate"
+                        value={((currentFrameIndex + 1) / frameCount) * 100}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: "rgba(76, 175, 80, 0.2)",
+                          "& .MuiLinearProgress-bar": {
+                            backgroundColor: "#4caf50",
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        sx={{ mt: 1, display: "block" }}
                       >
-                        Play
-                      </Button>
-                    )}
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handleNext}
-                    >
-                      Next
-                    </Button>
+                        {Math.round(
+                          ((currentFrameIndex + 1) / frameCount) * 100,
+                        )}
+                        % complete
+                      </Typography>
+                    </Box>
+
+                    {/* Speed Control */}
+                    <Box width="100%" sx={{ px: 2 }}>
+                      <FormControl fullWidth>
+                        <FormLabel component="legend" sx={{ mb: 1 }}>
+                          <Typography
+                            variant="body2"
+                            color="textPrimary"
+                            fontWeight="medium"
+                          >
+                            Animation Speed: {getSpeedLabel(animationInterval)}{" "}
+                            ({animationInterval}ms)
+                          </Typography>
+                        </FormLabel>
+                        <Slider
+                          value={animationInterval}
+                          onChange={handleSpeedChange}
+                          min={200}
+                          max={3000}
+                          step={100}
+                          marks={[
+                            { value: 200, label: "Fastest" },
+                            { value: 800, label: "Normal" },
+                            { value: 1500, label: "Slow" },
+                            { value: 3000, label: "Slowest" },
+                          ]}
+                          sx={{
+                            "& .MuiSlider-markLabel": {
+                              fontSize: "0.75rem",
+                            },
+                            "& .MuiSlider-thumb": {
+                              width: 20,
+                              height: 20,
+                            },
+                            "& .MuiSlider-track": {
+                              height: 4,
+                            },
+                            "& .MuiSlider-rail": {
+                              height: 4,
+                            },
+                          }}
+                        />
+                      </FormControl>
+                    </Box>
+
+                    {/* Navigation Controls */}
+                    <Box width="100%">
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12}>
+                          <Box display="flex" justifyContent="center" gap={1}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={handlePrevious}
+                            >
+                              Previous
+                            </Button>
+                            {isPlaying ? (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handlePause}
+                              >
+                                Pause
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handlePlay}
+                              >
+                                Play
+                              </Button>
+                            )}
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={handleNext}
+                            >
+                              Next
+                            </Button>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Box>
                   </Box>
-                </Grid>
-              </Grid>
+                </AccordionDetails>
+              </Accordion>
             </Box>
           )}
 
