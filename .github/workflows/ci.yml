@@ -52,7 +52,9 @@ jobs:
           filters: | 
             coordinator:
               - 'apps/coordinator/**'
-              - 'packages/**'
+              - 'packages/caravan-*/**'
+              - 'packages/bip32/**'
+              - 'packages/multisig/**'
               - '.github/workflows/e2e.yml'
               - 'package*.json'
 
