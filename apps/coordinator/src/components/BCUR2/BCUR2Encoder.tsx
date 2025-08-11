@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -10,6 +10,9 @@ import {
   Paper,
   Grid,
   LinearProgress,
+  Slider,
+  FormControl,
+  FormLabel,
 } from "@mui/material";
 // @ts-expect-error - qrcode.react doesn't have TypeScript declarations
 import QRCode from "qrcode.react";
@@ -108,6 +111,22 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
     setCurrentFrameIndex((prev) => (prev + 1) % qrCodeFrames.length);
   };
 
+  const handleSpeedChange = useCallback(
+    (event: Event, newValue: number | number[]) => {
+      const speed = Array.isArray(newValue) ? newValue[0] : newValue;
+      setAnimationInterval(speed);
+    },
+    [],
+  );
+
+  const getSpeedLabel = (interval: number): string => {
+    if (interval <= 300) return "Very Fast";
+    if (interval <= 600) return "Fast";
+    if (interval <= 1000) return "Normal";
+    if (interval <= 1500) return "Slow";
+    return "Very Slow";
+  };
+
   const currentFrame: string = qrCodeFrames[currentFrameIndex] || "";
   const frameCount: number = qrCodeFrames.length;
 
@@ -192,6 +211,52 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
                 {Math.round(((currentFrameIndex + 1) / frameCount) * 100)}%
                 complete
               </Typography>
+            </Box>
+          )}
+
+          {/* Speed Control for multi-frame QR codes */}
+          {frameCount > 1 && (
+            <Box width="100%" maxWidth={400} sx={{ px: 2 }}>
+              <FormControl fullWidth>
+                <FormLabel component="legend" sx={{ mb: 1 }}>
+                  <Typography
+                    variant="body2"
+                    color="textPrimary"
+                    fontWeight="medium"
+                  >
+                    Animation Speed: {getSpeedLabel(animationInterval)} (
+                    {animationInterval}ms)
+                  </Typography>
+                </FormLabel>
+                <Slider
+                  value={animationInterval}
+                  onChange={handleSpeedChange}
+                  min={200}
+                  max={3000}
+                  step={100}
+                  marks={[
+                    { value: 200, label: "Fastest" },
+                    { value: 800, label: "Normal" },
+                    { value: 1500, label: "Slow" },
+                    { value: 3000, label: "Slowest" },
+                  ]}
+                  sx={{
+                    "& .MuiSlider-markLabel": {
+                      fontSize: "0.75rem",
+                    },
+                    "& .MuiSlider-thumb": {
+                      width: 20,
+                      height: 20,
+                    },
+                    "& .MuiSlider-track": {
+                      height: 4,
+                    },
+                    "& .MuiSlider-rail": {
+                      height: 4,
+                    },
+                  }}
+                />
+              </FormControl>
             </Box>
           )}
 
