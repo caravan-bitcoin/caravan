@@ -35,7 +35,8 @@ jobs:
           npx turbo run ci
 
   # Run e2e tests only for coordinator-related changes
-  e2e-check:
+  check-e2e:
+    name: Run E2E Check
     runs-on: ubuntu-latest
     outputs:
       should-run-e2e: ${{ steps.changes.outputs.coordinator }}
@@ -49,7 +50,7 @@ jobs:
         uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters: | 
+          filters: |
             coordinator:
               - 'apps/coordinator/**'
               - 'packages/caravan-*/**'
@@ -60,8 +61,8 @@ jobs:
 
   e2e:
     name: E2E Tests
-    needs: e2e-check
-    if: needs.e2e-check.outputs.should-run-e2e == 'true'
+    needs: check-e2e
+    if: needs.check-e2e.outputs.should-run-e2e == 'true'
     uses: ./.github/workflows/e2e.yml
 
   check-coordinator:
@@ -84,19 +85,19 @@ jobs:
             echo "will-test=false" >> $GITHUB_OUTPUT
             echo "❌ caravan-coordinator will not be tested"
           fi
-    
+
   docker:
-    name: Test Docker image build
+    name: Verify Docker Image Builds
     needs: check-coordinator
     runs-on: ubuntu-latest
     if: needs.check-coordinator.outputs.will-test == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Test Docker image build
         uses: docker/build-push-action@v5
         with:

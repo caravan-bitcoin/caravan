@@ -10,7 +10,7 @@ test.describe("Transaction Creation and Signing", () => {
   const client = bitcoinClient();
   let downloadedUnsignedPsbtFile: any;
   let downloadDir: string;
-  let uploadDir: string
+  let uploadDir: string;
 
   test.beforeAll(async () => {
     try {
@@ -18,7 +18,7 @@ test.describe("Transaction Creation and Signing", () => {
       // Get directories
       downloadDir = currentState.downloadDir;
       uploadDir = currentState.uploadDir;
-      
+
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -78,14 +78,17 @@ test.describe("Transaction Creation and Signing", () => {
       await page.locator('button:has-text("Preview Transaction")').click();
 
       const downloadPromise = page.waitForEvent("download");
-      
+
       // Wait for button to be enabled and visible
-      await page.waitForSelector('button[type=button]:has-text("Download Unsigned PSBT")', {
-        state: "visible",
-        timeout: 10000
-      })
+      await page.waitForSelector(
+        'button[type=button]:has-text("Download Unsigned PSBT")',
+        {
+          state: "visible",
+          timeout: 10000,
+        },
+      );
       await page.click(
-        'button[type=button]:has-text("Download Unsigned PSBT")'
+        'button[type=button]:has-text("Download Unsigned PSBT")',
       );
 
       //Wait for download to complete

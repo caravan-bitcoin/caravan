@@ -1,8 +1,5 @@
 import { Page, expect } from "@playwright/test";
-import {
-  AddressTableData,
-  receiveTableData,
-} from "../utils/types";
+import { AddressTableData, receiveTableData } from "../utils/types";
 
 /**
  * Extracts receive table data from the current page
@@ -11,7 +8,7 @@ import {
 export async function extractReceiveTableData(
   page: Page,
 ): Promise<receiveTableData[]> {
-  await page.waitForSelector("table tbody tr", {timeout: 10000});
+  await page.waitForSelector("table tbody tr", { timeout: 10000 });
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
@@ -35,7 +32,7 @@ export async function extractReceiveTableData(
 export async function extractAddressTableData(
   page: Page,
 ): Promise<AddressTableData[]> {
-  await page.waitForSelector("table tbody tr", { timeout: 10000});
+  await page.waitForSelector("table tbody tr", { timeout: 10000 });
 
   return await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
@@ -69,28 +66,26 @@ export async function selectUTXOs(page: Page, targetAmount: number) {
   let selectedUTXOValue = 0;
 
   for (const row of await rows.all()) {
-    if(selectedUTXOValue >= targetAmount){
+    if (selectedUTXOValue >= targetAmount) {
       // stop once the target is met
       break;
     }
 
-    // Get balance 
+    // Get balance
     const balanceText = await row.locator("td").nth(3).textContent();
-    const balance = parseFloat(balanceText?.trim()!);
+    const balance = parseFloat((balanceText ?? "").trim());
 
-
-    // Find and Check the checkbox to select this 
-    const checkbox = row.locator('input[name="spend"][type="checkbox"]')
+    // Find and Check the checkbox to select this
+    const checkbox = row.locator('input[name="spend"][type="checkbox"]');
     // const checkbox = row.locator('[data-testid^="utxo-checkbox-"]')
 
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(500);
 
-    
-    if (await checkbox.isVisible() && !await checkbox.isDisabled()) {
+    if ((await checkbox.isVisible()) && !(await checkbox.isDisabled())) {
       await checkbox.check();
       selectedUTXOValue += balance;
     }
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(500);
   }
 
   return { selectedUTXOValue };
