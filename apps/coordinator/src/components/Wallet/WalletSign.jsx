@@ -6,7 +6,6 @@ import { connect } from "react-redux";
 import { Box, Button } from "@mui/material";
 import Transaction from "../ScriptExplorer/Transaction";
 import ExtendedPublicKeySelector from "./ExtendedPublicKeySelector";
-import BCUR2Encoder from "../BCUR2/BCUR2Encoder";
 
 // Actions
 import {
@@ -26,16 +25,12 @@ import {
   resetWalletView as resetWalletViewAction,
 } from "../../actions/walletActions";
 import UnsignedTransaction from "../UnsignedTransaction";
-import { EncodeTransactionForSigning, BCUR2 } from "@caravan/wallets";
-import { Network } from "@caravan/bitcoin";
 
 class WalletSign extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       spent: false,
-      showBCUR2Encoder: false,
-      qrCodeFrames: [],
     };
   }
 
@@ -107,43 +102,6 @@ class WalletSign extends React.Component {
     setSpendStep(SPEND_STEP_CREATE);
   };
 
-  handleExportForSigning = () => {
-    const { unsignedPSBT, network } = this.props;
-
-    if (!unsignedPSBT) {
-      console.error("No unsigned PSBT available for export");
-      return;
-    }
-
-    try {
-      // Create the BCUR2 encoder interaction
-      const interaction = EncodeTransactionForSigning({
-        keystore: BCUR2,
-        psbt: unsignedPSBT,
-        network: network || Network.MAINNET,
-        maxFragmentLength: 100,
-      });
-
-      // Get the QR code frames
-      const qrCodeFrames = interaction.getQRCodeFrames();
-
-      this.setState({
-        showBCUR2Encoder: true,
-        qrCodeFrames,
-      });
-    } catch (error) {
-      console.error("Error encoding transaction for signing:", error);
-      // You might want to show an error dialog here
-    }
-  };
-
-  handleCloseBCUR2Encoder = () => {
-    this.setState({
-      showBCUR2Encoder: false,
-      qrCodeFrames: [],
-    });
-  };
-
   handleWalletConfigDownload = () => {
     const { walletDetailsText, walletName } = this.props;
 
@@ -162,7 +120,6 @@ class WalletSign extends React.Component {
 
   render = () => {
     const { spent } = this.state;
-    const { showBCUR2Encoder, qrCodeFrames } = this.state;
     const { unsignedPSBT } = this.props;
 
     return (
@@ -214,16 +171,6 @@ class WalletSign extends React.Component {
             </Button>
           </Box>
         )}
-
-        {/* BCUR2 Encoder Dialog */}
-        <BCUR2Encoder
-          open={showBCUR2Encoder}
-          onClose={this.handleCloseBCUR2Encoder}
-          qrCodeFrames={qrCodeFrames}
-          title="Export Transaction for Signing"
-          autoPlay={true}
-          initialInterval={800}
-        />
       </Box>
     );
   };
