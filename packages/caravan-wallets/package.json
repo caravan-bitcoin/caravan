@@ -80,7 +80,7 @@
     "@keystonehq/bc-ur-registry": "^0.7.0",
     "@ledgerhq/hw-app-btc": "^5.34.1",
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
-    "@ledgerhq/hw-transport-webusb": "6.27.12",
+    "@ledgerhq/hw-transport-webusb": "6.29.8",
     "@trezor/connect-web": "^9.6.0",
     "axios": "1.8.2",
     "bignumber.js": "^8.1.1",
