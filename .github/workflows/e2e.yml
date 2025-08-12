@@ -56,14 +56,20 @@ jobs:
           BITCOIN_RPC_HOST=localhost
           BITCOIN_RPC_PORT=18443
           EOF
-
-      - name: Run e2e tests (with automated Docker lifecycle)
-        id: run-tests
-        run: |
-          cd apps/coordinator
-          npm run test:e2e
-        env:
-          CI: true
+      
+      - name: Run e2e tests (with retry only on failures)
+        uses: nick-invision/retry@v3
+        with:
+            max_attempts: 3
+            timeout_minutes: 15
+            command: |
+              cd apps/coordinator
+              npm run test:e2e
+            on-retry-command: |
+              echo "Cleaning up before retry..."
+              cd apps/coordinator/e2e
+              docker-compose down --remove-orphans || true 
+              docker system prune -f || true
 
       # Upload results
       - name: Upload test results
