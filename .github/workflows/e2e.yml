@@ -65,7 +65,7 @@ jobs:
             command: |
               cd apps/coordinator
               npm run test:e2e
-            on-retry-command: |
+            on_retry_command: |
               echo "Cleaning up before retry..."
               cd apps/coordinator/e2e
               docker-compose down --remove-orphans || true 
