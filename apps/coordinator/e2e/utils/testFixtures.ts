@@ -3,7 +3,7 @@ import path from "path";
 import { BitcoinCoreService } from "./bitcoinServices";
 
 
-export default async function createTestWallets(client: BitcoinCoreService){
+export default async function createTestWalletsAndFund(client: BitcoinCoreService){
 
     const timestamp = Date.now();
     
@@ -29,12 +29,16 @@ export default async function createTestWallets(client: BitcoinCoreService){
     const wallet1 = await client?.createWallet({wallet_name: walletNames[0]});
     const wallet2 = await client?.createWallet({wallet_name: walletNames[1]});
     const wallet3 = await client?.createWallet({wallet_name: walletNames[2]});
-
     const watcher_wallet = await client?.createWallet({wallet_name: walletNames[3], disable_private_keys: true})
 
     const testWallets = [wallet1, wallet2,wallet3,watcher_wallet];
 
-    return {walletNames,testWallets}
+    const senderAddress = await client?.getNewAddress(walletNames[0]);
+    await client?.fundAddress(senderAddress, walletNames[0],300);
+
+    const receiverAddress = await client?.getNewAddress(walletNames[1]);
+
+    return {walletNames,testWallets,senderAddress,receiverAddress}
 }
 
 export async function checkDockerAvailability(){
@@ -51,3 +55,5 @@ export async function checkDockerAvailability(){
         throw new Error("Docker is required for running e2e tests");
     }
 }
+
+
