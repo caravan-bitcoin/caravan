@@ -12,7 +12,9 @@ services:
       -rpcuser=${BITCOIN_RPC_USER}
       -rpcpassword=${BITCOIN_RPC_PASSWORD}
       -rpcbind=0.0.0.0:18443
-      -rpcallowip=127.0.0.1,172.16.0.0/12,192.168.0.0/16
+      -rpcallowip=127.0.0.1
+      -rpcallowip=172.16.0.0/12
+      -rpcallowip=192.168.0.0/16
       -fallbackfee=0.0002
       -minrelaytxfee=0.00000001
       -debug=0
