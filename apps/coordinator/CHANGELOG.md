@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.11.3
+
+### Patch Changes
+
+- [#369](https://github.com/caravan-bitcoin/caravan/pull/369) [`66c44d2`](https://github.com/caravan-bitcoin/caravan/commit/66c44d2f09a22a49b1faf5e84ac50315a120b279) Thanks [@bucko13](https://github.com/bucko13)! - Include bip32 derivation for change output in unsignedPsbt
+
+- [#370](https://github.com/caravan-bitcoin/caravan/pull/370) [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b) Thanks [@sambradbury](https://github.com/sambradbury)! - Updated @ledgerhq/hw-app-btc from ^5.34.1 to 10.10.0, updated @ledgerhq/hw-transport-webusb from 6.27.12 to 6.29.8
+
+- Updated dependencies [[`625191d`](https://github.com/caravan-bitcoin/caravan/commit/625191ddc8e1ddb1292c033448fee4fd77007aa6), [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b)]:
+  - @caravan/clients@0.6.1
+  - @caravan/wallets@0.8.2
+
 ## 1.11.2
 
 ### Patch Changes
