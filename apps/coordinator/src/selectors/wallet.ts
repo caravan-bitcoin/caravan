@@ -572,20 +572,6 @@ export const selectProcessedTransactions = (
 };
 
 /**
- * Memoized selector for confirmed transactions
- * Usage: selectConfirmedTransactions(rawTransactions, walletAddresses)
- */
-export const selectConfirmedTransactions = createSelector(
-  [
-    (transactions: WalletTransactionDetails[]) => transactions,
-    (transactions: WalletTransactionDetails[], walletAddresses: string[]) =>
-      walletAddresses,
-  ],
-  (transactions, walletAddresses) =>
-    selectProcessedTransactions(transactions, walletAddresses, "confirmed"),
-);
-
-/**
  * Memoized selector for unconfirmed transactions
  * Usage: selectUnconfirmedTransactions(rawTransactions, walletAddresses)
  */
