@@ -1,52 +1,49 @@
-import {FullConfig} from "@playwright/test"
-import {execSync} from "child_process"
+import { FullConfig } from "@playwright/test";
+import { execSync } from "child_process";
+
 import bitcoinClient from "./bitcoinClient";
-import createTestWallets, {checkDockerAvailability} from "./testFixtures"
+import createTestWalletsAndFund, {
+  checkDockerAvailability,
+} from "./testFixtures";
+import { createAndSaveTestState } from "./testStateSetup";
 
-
-const globalWalletData ={
-    walletNames: [] as string[],
-    testWallets: [] as any[]
-}
-
-async function globalSetup(_config: FullConfig){
-
-   try {
-
+async function globalSetup(_config: FullConfig) {
+  try {
     await checkDockerAvailability();
-    
+
     const client = bitcoinClient();
-    
-    await new Promise(resolve => setTimeout(resolve,2000));
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     await client?.waitForBitcoinCore();
 
-    const {walletNames, testWallets} = await createTestWallets(client!);
+    const { walletNames, testWallets, senderAddress, receiverAddress } =
+      await createTestWalletsAndFund(client!);
 
-    globalWalletData.walletNames = walletNames;
-    globalWalletData.testWallets = testWallets;
+    const testStateFile = createAndSaveTestState(
+      walletNames,
+      testWallets,
+      senderAddress,
+      receiverAddress,
+    );
 
-    //storing in process.env to access in the test fle
-    process.env.TEST_WALLET_NAMES = JSON.stringify(walletNames)
-    process.env.TEST_WALLETS = JSON.stringify(testWallets)
-
-   } catch (error) {
-    console.log("Global setup failed:", error)
-    
+    process.env.TEST_STATE_FILE = testStateFile;
+  } catch (error) {
     // Only attempt Docker cleanup if Docker is actually available
-    if (error instanceof Error && !error.message.includes("Docker is required")) {
-        try {
-            execSync("docker compose down",{
-                stdio: "inherit",
-                cwd: process.cwd()
-            })
-            
-        } catch (clearupError) {
-            console.log("Error while cleaning up",clearupError)
-        }
+    if (
+      error instanceof Error &&
+      !error.message.includes("Docker is required")
+    ) {
+      try {
+        execSync("docker compose down", {
+          stdio: "inherit",
+          cwd: process.cwd(),
+        });
+      } catch (clearupError) {
+        console.log("Error while cleaning up", clearupError);
+      }
     }
-    throw error;
-   }
+    throw new Error(`Global setup failed: ${error}`);
+  }
 }
 
-
-export default globalSetup
+export default globalSetup;
