@@ -68,8 +68,8 @@ jobs:
             on_retry_command: |
               echo "Cleaning up before retry..."
               cd apps/coordinator/e2e
-              docker-compose down --remove-orphans || true 
-              docker system prune -f || true
+              docker compose -f docker-compose.ci.yml down --remove-orphans --volumes
+              docker system prune -af || true
 
       # Upload results
       - name: Upload test results

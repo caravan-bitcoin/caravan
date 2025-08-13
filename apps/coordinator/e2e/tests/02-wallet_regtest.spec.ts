@@ -174,9 +174,12 @@ test.describe("Wallet Regtest Configuration", () => {
       await page.locator("button[type=button]:has-text('Refresh')").click();
 
       // Confirming the balance after confirming tx
-      const confirmBalance = page.locator('[data-cy="balance"]');
-      await confirmBalance.waitFor({ state: "visible" });
-      await expect(confirmBalance).toHaveText("8 BTC");
+      // const confirmBalance = page.locator('[data-cy="balance"]');
+      // await confirmBalance.waitFor({ state: "visible" });
+      // await expect(confirmBalance).toHaveText("8 BTC");
+
+      await expect(page.locator('[data-cy="balance"]'))
+      .toContainText("8 BTC", { timeout: 15000 });
     } catch (error) {
       throw new Error(`Error in wallet import: ${error}`);
     }

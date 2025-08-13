@@ -23,10 +23,11 @@ async function globalTeardown(_config: FullConfig) {
       }
     }
     
-    execSync("docker compose down", {
-      cwd: path.join(process.cwd(),"e2e"),
-      stdio: "inherit",
-    });
+    const composeFile = process.env.CI ? 'docker-compose.ci.yml' : 'docker-compose.yml' ;
+    execSync(`docker compose -f ${composeFile} down --remove-orphans --volumes`, {
+      cwd: path.join(process.cwd(), "e2e"),
+      stdio: "inherit"
+    })
   } catch (error) {
     throw new Error(`Global Teardown failed: ${error}`);
   }
