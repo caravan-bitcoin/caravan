@@ -67,8 +67,8 @@
     "tsx": "^4.19.4"
   },
   "scripts": {
-    "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
-    "build:ci": "npm run ci && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
+    "build": "tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
+    "build:ci": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
     "ci": "npm run lint && npm run test:ci",
     "deploy": "GH_PAGES=true gh-pages -d build",

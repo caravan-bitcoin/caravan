@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 permissions:
   contents: read
+  checks: write
 
 jobs:
   ci:
@@ -18,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js 20
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
@@ -32,6 +33,37 @@ jobs:
       - name: Run tests
         run: |
           npx turbo run ci
+
+  # Run e2e tests only for coordinator-related changes
+  check-e2e:
+    name: Run E2E Check
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-e2e: ${{ steps.changes.outputs.coordinator }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for coordinator changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            coordinator:
+              - 'apps/coordinator/**'
+              - 'packages/caravan-*/**'
+              - 'packages/bip32/**'
+              - 'packages/multisig/**'
+              - '.github/workflows/e2e.yml'
+              - 'package*.json'
+
+  e2e:
+    name: E2E Tests
+    needs: check-e2e
+    if: needs.check-e2e.outputs.should-run-e2e == 'true'
+    uses: ./.github/workflows/e2e.yml
 
   check-coordinator:
     runs-on: ubuntu-latest
@@ -53,19 +85,19 @@ jobs:
             echo "will-test=false" >> $GITHUB_OUTPUT
             echo "❌ caravan-coordinator will not be tested"
           fi
-    
+
   docker:
-    name: Test Docker image build
+    name: Verify Docker Image Builds
     needs: check-coordinator
     runs-on: ubuntu-latest
     if: needs.check-coordinator.outputs.will-test == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Test Docker image build
         uses: docker/build-push-action@v5
         with:
