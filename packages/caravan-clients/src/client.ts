@@ -32,7 +32,7 @@ import {
   bitcoindWalletInfo,
   bitcoindGetWalletTransaction,
   callBitcoindWallet,
-  EnhancedTransactionItem,
+  FullTransactionItem,
 } from "./wallet";
 
 export class BlockchainClientError extends Error {
@@ -901,7 +901,7 @@ export class BlockchainClient extends ClientBase {
 
   // Fetch detailed transaction info in parallel to get size/weight data
     const detailedTransactions = await Promise.allSettled(
-      allTransactions.map(async (tx): Promise<EnhancedTransactionItem> => {
+      allTransactions.map(async (tx): Promise<FullTransactionItem> => {
         try {
         // Get full transaction details which includes size/vsize/weight
           const fullTx = await callBitcoindWallet({
@@ -938,7 +938,7 @@ export class BlockchainClient extends ClientBase {
     );
 
     return detailedTransactions.map((result, index) => {
-      const enhancedTx: EnhancedTransactionItem = result.status === 'fulfilled' 
+      const enhancedTx: FullTransactionItem = result.status === 'fulfilled' 
         ? result.value 
         : {
             ...allTransactions[index],

@@ -292,7 +292,7 @@ export interface ListTransactionItem {
   "bip125-replaceable": "yes" | "no" | "unknown";
   trusted?: boolean;
 }
-export interface EnhancedTransactionItem extends ListTransactionItem {
+export interface FullTransactionItem extends ListTransactionItem {
     size?: number;
     vsize?: number;
     weight?: number;
