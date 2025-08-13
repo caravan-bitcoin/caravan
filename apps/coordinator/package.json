@@ -20,11 +20,7 @@
     "npm": ">=10.5.0 <11.0.0"
   },
   "overrides": {
-    "jspdf": "2.5.1",
-    "@ledgerhq/hw-transport-webusb": {
-      "@ledgerhq/hw-transport": "6.28.1",
-      "@ledgerhq/devices": "8.0.0"
-    }
+    "jspdf": "2.5.1"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.21.0",
