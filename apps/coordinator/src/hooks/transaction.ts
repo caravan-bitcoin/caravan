@@ -161,16 +161,6 @@ export const usePrivateClientTransactionsWithLoadMore = (
     totalLoaded: allTransactions.length,
   };
 };
-
-/**
- * Hook for fetching basic transaction history from public blockchain clients
- * Used for simple queries with count/skip pagination
- *
- * @param {number} [count=10] - Number of transactions to fetch
- * @param {number} [skip=0] - Number of transactions to skip (offset)
- * @returns {Object} Query result from TanStack Query
- */
-// export const usePublicClientTransactions = (
 //   count: number = 10,
 //   skip: number = 0,
 // ) => {
@@ -346,31 +336,24 @@ export const usePublicClientTransactionsWithLoadMore = (
 };
 
 /**
- * Smart hook for fetching completed transactions
- * Automatically selects the appropriate implementation based on client type
+ * Smart hook for fetching completed transactions with pagination support.
  *
- * @param {number} [count=10] - Number of transactions to fetch
- * @param {number} [skip=0] - Number of transactions to skip
- * @returns {Object} Query result appropriate for the current client type
- */
-
-/**
- * Smart hook for fetching completed transactions with pagination support
- * Automatically selects between private and public client implementations
- *
+ * Automatically selects between private and public client implementations.
  * This is the primary hook for loading transaction history in the UI,
- * providing a consistent interface regardless of the underlying client type
+ * providing a consistent interface regardless of the underlying client type.
  *
- * @param {number} [pageSize=100] - Number of transactions to load per page
- * @returns {Object} Unified transaction query result with pagination
+ * @param pageSize - Number of transactions to load per page (default: 100)
+ * @returns Unified transaction query result with pagination
  *
  * @example
+ * ```ts
  * const {
  *   data,
  *   isLoading,
  *   loadMore,
  *   hasMore
  * } = useCompletedTransactionsWithLoadMore(100);
+ * ```
  */
 
 export const useCompletedTransactionsWithLoadMore = (
