@@ -8,6 +8,7 @@ import {
   TEST_FIXTURES,
 } from "@caravan/bitcoin";
 import {
+  JADE,
   BITBOX,
   COLDCARD,
   HERMIT,
@@ -234,7 +235,7 @@ class SignMultisigTransactionTest extends Test {
   }
 
   expected() {
-    if (this.params.keystore === COLDCARD) {
+    if (this.params.keystore === COLDCARD || this.params.keystore === JADE) {
       return this.params.byteCeilingSignature;
     }
     return this.params.signature;
@@ -256,6 +257,17 @@ export function signingTests(keystore) {
         }
       });
       return transactions;
+    case JADE:
+      return TEST_FIXTURES.transactions
+        .filter((fixture) => fixture.braidDetails)
+        .map(
+          (fixture) =>
+            new SignMultisigTransactionTest({
+              ...fixture,
+              ...{ keystore },
+              returnSignatureArray: true,
+            }),
+        );
     case BITBOX:
       return TEST_FIXTURES.transactions
         .filter((fixture) => fixture.braidDetails)
