@@ -205,25 +205,60 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
               elevation={3}
               sx={{
                 width,
-                aspectRatio: "1",
                 display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
+                flexDirection: "column",
                 overflow: "hidden",
               }}
             >
-              <QrReader
-                onResult={handleScan}
-                constraints={{ facingMode: "environment" }}
-                containerStyle={{
+              <Box
+                sx={{
                   width: "100%",
-                  height: "100%",
+                  aspectRatio: "1",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                 }}
-                scanDelay={200}
-              />
+              >
+                <QrReader
+                  onResult={handleScan}
+                  constraints={{ facingMode: "environment" }}
+                  containerStyle={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                  scanDelay={200}
+                />
+              </Box>
+
+              {/* Progress bar integrated within the camera box */}
+              {progress && (
+                <Box p={2}>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    gutterBottom
+                    align="center"
+                  >
+                    {progress}
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progressValue}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: "rgba(76, 175, 80, 0.2)",
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: "#4caf50",
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                </Box>
+              )}
             </Paper>
           </Box>
 
@@ -236,26 +271,6 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
               Stop Scanning
             </Button>
           </Box>
-        </Box>
-      )}
-
-      {progress && (
-        <Box mb={2} width="100%">
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            {progress}
-          </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={progressValue}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              "& .MuiLinearProgress-bar": {
-                backgroundColor: "#4caf50", // Green progress bar
-                borderRadius: 4,
-              },
-            }}
-          />
         </Box>
       )}
 
