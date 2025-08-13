@@ -1,11 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
-import {
-  BlockchainClient,
-  TransactionDetails,
-  WalletTransactionDetails,
-} from "@caravan/clients";
+import { BlockchainClient, TransactionDetails } from "@caravan/clients";
 import {
   getPendingTransactionIds,
   getWalletAddresses,
@@ -134,51 +130,6 @@ export const usePendingTransactions = () => {
   };
 };
 
-// TanStack Query hook for wallet transaction history (private clients)
-export const useWalletTransactionHistory = (count: number, skip: number) => {
-  const blockchainClient = useGetClient();
-
-  return useQuery({
-    queryKey: transactionKeys.walletHistory(count, skip),
-    queryFn: async (): Promise<WalletTransactionDetails[]> => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-      return await blockchainClient.getWalletTransactionHistory(count, skip);
-    },
-    enabled: !!blockchainClient,
-  });
-};
-
-// TanStack Query hook for address transaction history (public clients)
-export const useAddressTransactionHistory = (
-  addresses: string[],
-  count: number,
-  skip: number,
-) => {
-  const blockchainClient = useGetClient();
-
-  return useQuery({
-    queryKey: transactionKeys.addressHistory(addresses, count, skip),
-    queryFn: async (): Promise<WalletTransactionDetails[]> => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
-      if (addresses.length === 0) {
-        return [];
-      }
-
-      return await blockchainClient.getAddressTransactionHistory(
-        addresses,
-        count,
-        skip,
-      );
-    },
-    enabled: !!blockchainClient && addresses.length > 0,
-  });
-};
-
 export interface Coin {
   prevTxId: string;
   vout: number;
@@ -241,26 +192,4 @@ export const useTransactionCoins = (txid: string) => {
     queryFn: () => fetchTransactionCoins(txid, blockchainClient),
     enabled: !!blockchainClient && !!txid,
   });
-};
-
-// Hook for fetching all transactions - uses selector
-export const useAllTransactions = (count: number, skip: number) => {
-  const walletAddresses = useSelector(getWalletAddresses);
-  const walletHistoryQuery = useWalletTransactionHistory(count, skip);
-
-  const transactions = useMemo(() => {
-    if (!walletHistoryQuery.data) return [];
-    return selectProcessedTransactions(
-      walletHistoryQuery.data,
-      walletAddresses,
-      "all",
-    );
-  }, [walletHistoryQuery.data, walletAddresses]);
-
-  return {
-    transactions,
-    isLoading: walletHistoryQuery.isLoading,
-    error: walletHistoryQuery.error,
-    refetch: walletHistoryQuery.refetch,
-  };
 };
