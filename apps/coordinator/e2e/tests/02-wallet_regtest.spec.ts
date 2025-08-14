@@ -130,18 +130,20 @@ test.describe("Wallet Regtest Configuration", () => {
       }
 
       //Should update to the next index when a deposit is received
-      const currentPathSuffix = await getCurrentPathSuffix(page);
+      await expect.poll(async () => {
+        const currentPathSuffix = await getCurrentPathSuffix(page);
+        const pathIndex = currentPathSuffix.split("/")[2];
+        return pathIndex;
+      }, {
+        message: 'Path index should be 4',
+        timeout: 30000,
+        intervals: [2000, 2000, 2000],
+      }).toBe("4");
 
-      const pathIndex = currentPathSuffix.split("/")[2];
-
-      //Should end with 4 (as starting index = 0), as we have send 4 times
-      expect(pathIndex).toBe("4");
-
-      await page
-        .locator(
-          "button[role=tab][type=button]:has-text('Pending Transactions')",
-        )
-        .click();
+      // Wait for pending transactions button to be stable
+      const pendingTxButton = page.locator("button[role=tab][type=button]:has-text('Pending Transactions')");
+      await expect(pendingTxButton).toBeVisible({ timeout: 15000 });
+      await pendingTxButton.click({ timeout: 15000 });
 
       await page.locator("button[type=button]:has-text('Refresh')").click();
 
@@ -149,7 +151,7 @@ test.describe("Wallet Regtest Configuration", () => {
         .locator("button[role=tab][type=button]:has-text('Addresses')")
         .click();
 
-      await page.waitForTimeout(4000);
+      await page.waitForTimeout(2000);
 
       // Extract address table data using helper
       const addressTable = await extractAddressTableData(page);
@@ -172,11 +174,6 @@ test.describe("Wallet Regtest Configuration", () => {
       await client?.fundAddress(senderRef.address, senderRef.walletName, 4);
 
       await page.locator("button[type=button]:has-text('Refresh')").click();
-
-      // Confirming the balance after confirming tx
-      // const confirmBalance = page.locator('[data-cy="balance"]');
-      // await confirmBalance.waitFor({ state: "visible" });
-      // await expect(confirmBalance).toHaveText("8 BTC");
 
       await expect(page.locator('[data-cy="balance"]'))
       .toContainText("8 BTC", { timeout: 15000 });
