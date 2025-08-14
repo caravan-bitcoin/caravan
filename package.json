@@ -21,7 +21,7 @@
     "test:watch": "turbo test:watch",
     "test:debug": "turbo test:debug",
     "test:e2e": "turbo run test:e2e --filter=caravan-coordinator",
-    "test:e2e:ui": "turbo run test:e2e:ui --filter=caravan-coordinator", 
+    "test:e2e:ui": "turbo run test:e2e:ui --filter=caravan-coordinator",
     "test:e2e:headed": "turbo run test:e2e:headed --filter=caravan-coordinator",
     "version": "turbo run build lint test && changeset version && npm install --package-lock-only",
     "release": "turbo run build lint test && changeset publish",
@@ -45,16 +45,9 @@
     "vitest": "^3.2.4",
     "vitest-mock-extended": "^3.1.0"
   },
-  "dependencies": {
-    "@ledgerhq/hw-transport-webusb": "6.27.12"
-  },
   "overrides": {
     "material-table": {
       "jspdf": "2.5.1"
-    },
-    "@ledgerhq/hw-transport-webusb": {
-      "@ledgerhq/hw-transport": "6.28.1",
-      "@ledgerhq/devices": "8.0.0"
     }
   },
   "packageManager": "npm@10.5.0",

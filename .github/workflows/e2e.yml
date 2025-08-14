@@ -4,10 +4,6 @@ on:
   workflow_dispatch:
   workflow_call:
 
-permissions:
-  contents: read
-  checks: write
-
 jobs:
   e2e:
     name: End to End tests
@@ -56,7 +52,7 @@ jobs:
           BITCOIN_RPC_HOST=localhost
           BITCOIN_RPC_PORT=18443
           EOF
-      
+
       - name: Run e2e tests (with retry only on failures)
         uses: nick-invision/retry@v3
         with:

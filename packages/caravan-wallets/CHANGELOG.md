@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.2
+
+### Patch Changes
+
+- [#370](https://github.com/caravan-bitcoin/caravan/pull/370) [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b) Thanks [@sambradbury](https://github.com/sambradbury)! - Updated @ledgerhq/hw-app-btc from ^5.34.1 to 10.10.0, updated @ledgerhq/hw-transport-webusb from 6.27.12 to 6.29.8
+
 ## 0.8.1
 
 ### Patch Changes
