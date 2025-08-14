@@ -165,7 +165,7 @@ $ npm install turbo --global
 $ git clone https://github.com/caravan-bitcoin/caravan.git
 $ cd caravan
 $ npm install
-$ turbo run dev # or `npm run dev`
+$ turbo run dev --concurrency 11 # or `npm run dev`
 ```
 
 #### What's happening?
