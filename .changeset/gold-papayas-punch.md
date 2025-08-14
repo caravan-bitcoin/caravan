@@ -1,5 +1,5 @@
 ---
-"@caravan/clients": minor
+"@caravan/clients": patch
 "caravan-coordinator": minor
 ---
 
