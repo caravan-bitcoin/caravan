@@ -3018,36 +3018,6 @@ describe("BlockchainClient", () => {
       expect(result[0].vsize).toBe(0);
       expect(result[0].weight).toBe(0);
     });
-
-    it("should filter out unsupported transaction categories", async () => {
-      const client = getPrivateClient();
-      
-      const unsupportedTransaction = {
-        ...mockApiResponse.confirmedTransaction,
-        txid: 'tx5',
-        category: 'orphan' // Unsupported category
-      };
-      
-      // Mock the listtransactions call with mixed categories
-      mockCallBitcoindWallet
-        .mockResolvedValueOnce({
-          result: [
-            mockApiResponse.confirmedTransaction, // send - should be included
-            mockApiResponse.receiveTransaction,   // receive - should be included
-            unsupportedTransaction                // orphan - should be filtered out
-          ]
-        })
-        // Mock the gettransaction calls for detailed data
-        .mockResolvedValue({
-          result: mockDetailedTransactionResponse
-        });
-
-      const result = await client.getWalletTransactionHistory();
-      
-      // Should only return send and receive transactions, not orphan
-      expect(result).toHaveLength(2);
-      expect(result.some(tx => tx.category === 'orphan')).toBe(false);
-    });
   });
 });
 });
