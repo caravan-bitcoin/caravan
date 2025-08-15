@@ -17,7 +17,7 @@ import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
 import { useCompletedTransactionsWithLoadMore } from "clients/txHistory";
-import { CompletedTransactionsView } from "./CompletedTransactionsView";
+import { CompletedTransactionsView } from "./ConfirmedTransactionsView";
 import {
   useSortedTransactions,
   useTransactionPagination,

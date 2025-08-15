@@ -62,10 +62,6 @@ export const usePrivateClientTransactionsWithLoadMore = (
      * @param {number} pageParam - Offset for pagination (managed by TanStack Query)
      */
     queryFn: async ({ pageParam = 0 }) => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
       // Fetch raw transactions from the blockchain client
       const rawTransactions =
         await blockchainClient.getWalletTransactionHistory(pageSize, pageParam);
@@ -129,8 +125,7 @@ export const usePublicClientTransactionsWithLoadMore = (
 ) => {
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
-  const clientType = useSelector((state: WalletState) => state.client.type);
-
+  const clientType = blockchainClient?.type;
   /**
    * Fallback address strategy:
    * 1. Use wallet addresses if available (normal operation)

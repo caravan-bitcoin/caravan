@@ -877,7 +877,7 @@ export class BlockchainClient extends ClientBase {
       );
     }
 
-  // Call Bitcoin Core's listtransactions directly to get ALL transactions (not just spent ones)
+    // Call Bitcoin Core's listtransactions directly to get ALL transactions
     const response = await callBitcoindWallet({
       baseUrl: this.bitcoindParams.url,
       walletName: this.bitcoindParams.walletName,
@@ -890,48 +890,45 @@ export class BlockchainClient extends ClientBase {
       throw new Error("Failed to retrieve transactions from Bitcoin Core");
     }
 
-  // Include both send AND receive transactions (and other categories)
-    const allTransactions = response.result.filter(
-      (tx: ListTransactionsItem) => 
-        tx.category === "send" || 
-        tx.category === "receive" || 
-        tx.category === "generate" ||
-        tx.category === "immature"
-    );
+    // Remove the filter - if we want all transactions, return all transactions
+    // If specific filtering is needed, it should be done at a higher level
+    const allTransactions = response.result as ListTransactionsItem[];
 
-  // Fetch detailed transaction info in parallel to get size/weight data
+    // Fetch detailed transaction info in parallel to get size/weight data
     const detailedTransactions = await Promise.allSettled(
       allTransactions.map(async (tx): Promise<FullTransactionItem> => {
         try {
-        // Get full transaction details which includes size/vsize/weight
+          // Get full transaction details which includes size/vsize/weight
           const fullTx = await callBitcoindWallet({
             baseUrl: this.bitcoindParams.url,
             walletName: this.bitcoindParams.walletName,
             auth: this.bitcoindParams.auth,
             method: "gettransaction",
-          params: [tx.txid, false, true], // [txid, include_watchonly, verbose]
+            params: [tx.txid, false, true], // [txid, include_watchonly, verbose]
           }) as { result?: WalletTransactionResponse };
 
-        // Extract size data with proper fallbacks
+          // Extract size data with proper fallbacks
           const decoded = fullTx.result?.decoded;
           const size = decoded?.size ?? 0;
-        const vsize = decoded?.vsize ?? decoded?.size ?? 0; // Use size as fallback for vsize
-        const weight = decoded?.weight ?? (decoded?.size ? decoded.size * 4 : 0); // Estimate weight as size * 4
+          const vsize = decoded?.vsize ?? decoded?.size ?? 0; // Use size as fallback for vsize
+          const weight = decoded?.weight ?? (decoded?.size ? decoded.size * 4 : 0); // Estimate weight as size * 4
 
           return {
             ...tx,
             size,
             vsize,
             weight,
+            wtxid: fullTx.result?.wtxid || tx.txid, // Get wtxid from gettransaction response
           };
         } catch (error) {
           console.warn(`Failed to fetch details for transaction ${tx.txid}:`, error);
-        // Fallback to original transaction data with 0 size
+          // Fallback to original transaction data with 0 size
           return {
             ...tx,
             size: 0,
             vsize: 0,
             weight: 0,
+            wtxid: tx.txid, // Fallback to txid since ListTransactionsItem doesn't have wtxid
           };
         }
       })
@@ -945,33 +942,34 @@ export class BlockchainClient extends ClientBase {
             size: 0,
             vsize: 0,
             weight: 0,
+            wtxid: allTransactions[index].txid, // Use txid since ListTransactionsItem doesn't have wtxid
           };
       
       const feeSats = enhancedTx.fee ? Math.abs(enhancedTx.fee * 100000000) : 0;
     
-    // Determine if this is a received transaction
+      // Determine if this is a received transaction
       const isReceived = enhancedTx.category === "receive" || 
                         enhancedTx.category === "generate" || 
                         enhancedTx.category === "immature";
       
-    const transformedTx: WalletTransactionDetails = {
+      const transformedTx: WalletTransactionDetails = {
         txid: enhancedTx.txid,
         version: 1,
         locktime: 0,
         vin: [],
         vout: [],
-      size: enhancedTx.size || 0,       
-      vsize: enhancedTx.vsize || 0,      
-      weight: enhancedTx.weight || 0,  
+        size: enhancedTx.size || 0,       
+        vsize: enhancedTx.vsize || 0,      
+        weight: enhancedTx.weight || 0,  
         fee: feeSats,
-      isReceived: isReceived,
+        isReceived: isReceived,
         status: {
           confirmed: enhancedTx.confirmations > 0,
           blockHeight: enhancedTx.blockheight,
           blockHash: enhancedTx.blockhash,
           blockTime: enhancedTx.blocktime,
         },
-      // Required wallet-specific properties
+        // Required wallet-specific properties
         amount: enhancedTx.amount,
         confirmations: enhancedTx.confirmations,
         category: enhancedTx.category,
@@ -980,7 +978,7 @@ export class BlockchainClient extends ClientBase {
         time: enhancedTx.time,
       };
     
-    return transformedTx;
+      return transformedTx;
     });
   }
   
