@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.0
+
+### Minor Changes
+
+- [#363](https://github.com/caravan-bitcoin/caravan/pull/363) [`ab19b86`](https://github.com/caravan-bitcoin/caravan/commit/ab19b86a38ec72ec1f4c8998b9390aa5adc312a0) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Added support of BCUR2 xpub import and psbt signing in coordinator wallet.
+
 ## 1.11.3
 
 ### Patch Changes
