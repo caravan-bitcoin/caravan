@@ -71,7 +71,7 @@ export const usePrivateClientTransactionsWithLoadMore = (
       return selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
-        "all", // Include both confirmed and unconfirmed transactions
+        "confirmed",
       );
     },
 
