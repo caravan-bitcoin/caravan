@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
 import {
@@ -109,6 +109,23 @@ const TransactionsTab: React.FC = () => {
       alert("Error fetching transaction details. Please try again.");
     }
   };
+  // Auto-switch to confirmed tab when there are no pending but some confirmed
+
+  useEffect(() => {
+    // Only switch if:
+    // 1. Currently on pending tab (0)
+    // 2. Pending transactions are loaded (not loading)
+    // 3. No pending transactions exist
+    // 4. At least one confirmed transaction exists
+    if (
+      tabValue === 0 &&
+      !pendingIsLoading &&
+      pendingTransactions.length === 0 &&
+      completedTransactions.length > 0
+    ) {
+      setTabValue(1); // Switch to confirmed tab
+    }
+  }, [tabValue, pendingTransactions, pendingIsLoading, completedTransactions]);
 
   // Handle acceleration modal close
   const handleAccelerationModalClose = () => {
@@ -133,7 +150,7 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`COnfirmed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
+              label={`Confirmed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
               id="completed-tab"
               aria-controls="completed-tabpanel"
             />
@@ -218,7 +235,10 @@ const TransactionsTab: React.FC = () => {
                           color="textSecondary"
                           mr={2}
                         >
-                          {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
+                          {`${(page - 1) * rowsPerPage + 1}-${Math.min(
+                            page * rowsPerPage,
+                            sortedTransactions.length,
+                          )} of ${sortedTransactions.length}`}
                         </Typography>
                         <Pagination
                           count={totalPages}
