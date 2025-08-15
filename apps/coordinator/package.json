@@ -1,7 +1,7 @@
 {
   "name": "caravan-coordinator",
   "private": true,
-  "version": "1.10.0",
+  "version": "1.11.3",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
   "type": "module",
@@ -20,11 +20,7 @@
     "npm": ">=10.5.0 <11.0.0"
   },
   "overrides": {
-    "jspdf": "2.5.1",
-    "@ledgerhq/hw-transport-webusb": {
-      "@ledgerhq/hw-transport": "6.28.1",
-      "@ledgerhq/devices": "8.0.0"
-    }
+    "jspdf": "2.5.1"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.21.0",
@@ -71,8 +67,8 @@
     "tsx": "^4.19.4"
   },
   "scripts": {
-    "build": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
-    "build:ci": "npm run ci && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
+    "build": "tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
+    "build:ci": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
     "ci": "npm run lint && npm run test:ci",
     "deploy": "GH_PAGES=true gh-pages -d build",
@@ -87,7 +83,7 @@
     "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
     "test:e2e:install": "npx playwright install",
-    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` vite",
+    "dev": "__GIT_SHA__=`git rev-parse --short HEAD` TREZOR_DEV=true vite",
     "preview": "__GIT_SHA__=`git rev-parse --short HEAD` vite preview"
   },
   "husky": {

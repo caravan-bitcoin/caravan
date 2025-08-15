@@ -28,7 +28,10 @@ import {
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
-import { setChangeOutputMultisig as setChangeOutputMultisigAction } from "../../actions/transactionActions";
+import {
+  finalizeOutputs as finalizeOutputsAction,
+  setChangeOutputMultisig as setChangeOutputMultisigAction,
+} from "../../actions/transactionActions";
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
 import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
@@ -174,12 +177,14 @@ class TransactionPreview extends React.Component {
       changeAddress,
       changeOutputIndex,
       changeNode,
+      finalizeOutputs,
       setChangeOutputMultisig,
     } = this.props;
 
     outputs.forEach((output) => {
       if (output.address === changeAddress) {
         setChangeOutputMultisig(changeOutputIndex, changeNode.multisig);
+        finalizeOutputs(true);
       }
     });
   }
@@ -353,12 +358,14 @@ TransactionPreview.propTypes = {
   editTransaction: PropTypes.func.isRequired,
   fee: PropTypes.string.isRequired,
   feeRate: PropTypes.string.isRequired,
+  finalizeOutputs: PropTypes.func.isRequired,
   inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   inputsTotalSats: PropTypes.shape({}).isRequired,
   outputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   handleSignTransaction: PropTypes.func.isRequired,
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
+  signatureImporters: PropTypes.shape({}),
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,
@@ -381,6 +388,7 @@ function mapStateToProps(state) {
 
 const mapDispatchToProps = {
   setChangeOutputMultisig: setChangeOutputMultisigAction,
+  finalizeOutputs: finalizeOutputsAction,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(TransactionPreview);
