@@ -33,6 +33,7 @@ const createDecodeHandler = (mode: ScanMode, network?: BitcoinNetwork) => {
   if (mode === "xpub") {
     return (decoder: BCUR2Decoder) => {
       const data = decoder.getDecodedData(network!);
+
       if (!data) {
         throw new Error("Failed to decode extended public key data.");
       }
@@ -43,16 +44,18 @@ const createDecodeHandler = (mode: ScanMode, network?: BitcoinNetwork) => {
       }
 
       // Ensure the bip32Path starts with "m/"
-      return {
+      const processedData = {
         ...data,
         bip32Path: data.bip32Path.startsWith("m/")
           ? data.bip32Path
           : `m/${data.bip32Path}`,
       };
+      return processedData;
     };
   } else {
     return (decoder: BCUR2Decoder) => {
       const data = decoder.getDecodedPSBT();
+
       if (!data) {
         throw new Error("Failed to decode PSBT data.");
       }
@@ -182,46 +185,92 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
       )}
 
       {isScanning && (
-        <Box>
-          <Box mb={2}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          width="100%"
+        >
+          <Box
+            mb={2}
+            textAlign="center"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+          >
             <Typography variant="body1" gutterBottom align="center">
               {getInfoText()}
             </Typography>
-            <Paper elevation={3} sx={{ width, aspectRatio: "1" }}>
-              <QrReader
-                onResult={handleScan}
-                constraints={{ facingMode: "environment" }}
-                containerStyle={{ width: "100%", height: "100%" }}
-                scanDelay={200}
-              />
+            <Paper
+              elevation={3}
+              sx={{
+                width,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  width: "100%",
+                  aspectRatio: "1",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <QrReader
+                  onResult={handleScan}
+                  constraints={{ facingMode: "environment" }}
+                  containerStyle={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                  scanDelay={200}
+                />
+              </Box>
+
+              {/* Progress bar integrated within the camera box */}
+              {progress && (
+                <Box p={2}>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    gutterBottom
+                    align="center"
+                  >
+                    {progress}
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progressValue}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: "rgba(76, 175, 80, 0.2)",
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: "#4caf50",
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                </Box>
+              )}
             </Paper>
           </Box>
 
           <Box display="flex" justifyContent="center" mb={2}>
-            <Button variant="outlined" color="secondary" onClick={stopScanning}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={stopScanning}
+            >
               Stop Scanning
             </Button>
           </Box>
-        </Box>
-      )}
-
-      {progress && (
-        <Box mb={2} width="100%">
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            {progress}
-          </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={progressValue}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              "& .MuiLinearProgress-bar": {
-                backgroundColor: "#4caf50", // Green progress bar
-                borderRadius: 4,
-              },
-            }}
-          />
         </Box>
       )}
 
@@ -231,7 +280,7 @@ const BCUR2Reader: React.FC<BCUR2ReaderProps> = (props) => {
             {error}
           </Typography>
           <Box display="flex" justifyContent="center" mt={1}>
-            <Button variant="outlined" color="primary" onClick={stopScanning}>
+            <Button variant="contained" color="primary" onClick={stopScanning}>
               Clear Error & Restart
             </Button>
           </Box>
