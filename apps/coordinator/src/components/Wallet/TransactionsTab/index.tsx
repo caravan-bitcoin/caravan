@@ -133,7 +133,7 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`Completed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
+              label={`COnfirmed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
               id="completed-tab"
               aria-controls="completed-tabpanel"
             />
