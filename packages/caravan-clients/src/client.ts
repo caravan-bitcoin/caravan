@@ -809,17 +809,10 @@ export class BlockchainClient extends ClientBase {
           } as TransactionDetails;
         }
         
-        // FIXED: Better logic to determine if transaction is truly received
+        // Determine if transaction is truly received
         let isReceived = false;
         let hasInputFromOurAddresses = false;
         let hasOutputToOurAddresses = false;
-        
-        // Debug logging to see the transaction structure (remove this in production)
-        console.log("Processing transaction:", rawTx.txid, {
-          vinLength: rawTx.vin?.length,
-          voutLength: rawTx.vout?.length,
-          fee: rawTx.fee
-        });
         
         // Check if any inputs are from our addresses
         if (rawTx.vin && Array.isArray(rawTx.vin)) {
@@ -831,11 +824,6 @@ export class BlockchainClient extends ClientBase {
                                input.address ||
                                input.prevout?.addr ||
                                input.prevout?.address;
-                               
-            console.log("Checking input:", {
-              inputAddress,
-              match: inputAddress && addresses.includes(inputAddress)
-            });
             
             if (inputAddress && addresses.includes(inputAddress)) {
               hasInputFromOurAddresses = true;

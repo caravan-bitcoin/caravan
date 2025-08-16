@@ -30,6 +30,9 @@ const TransactionsTab: React.FC = () => {
   // Tab state for switching between pending and completed
   const [tabValue, setTabValue] = useState(0);
 
+  // State to track if user has manually interacted with tabs
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
   // State for the selected transaction for acceleration
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
     null,
@@ -82,9 +85,10 @@ const TransactionsTab: React.FC = () => {
     ? getCurrentPageItems(sortedTransactions)
     : [];
 
-  // Handle tab change
+  // Handle tab change - single function with user interaction tracking
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    setHasUserInteracted(true); // Mark that user has manually interacted
   };
 
   // Handle acceleration button click
@@ -109,15 +113,12 @@ const TransactionsTab: React.FC = () => {
       alert("Error fetching transaction details. Please try again.");
     }
   };
-  // Auto-switch to confirmed tab when there are no pending but some confirmed
 
+  // Auto-switch to confirmed tab when there are no pending but some confirmed
+  // Only auto-switch if user hasn't manually interacted
   useEffect(() => {
-    // Only switch if:
-    // 1. Currently on pending tab (0)
-    // 2. Pending transactions are loaded (not loading)
-    // 3. No pending transactions exist
-    // 4. At least one confirmed transaction exists
     if (
+      !hasUserInteracted && // Only auto-switch if user hasn't manually clicked
       tabValue === 0 &&
       !pendingIsLoading &&
       pendingTransactions.length === 0 &&
@@ -125,7 +126,13 @@ const TransactionsTab: React.FC = () => {
     ) {
       setTabValue(1); // Switch to confirmed tab
     }
-  }, [tabValue, pendingTransactions, pendingIsLoading, completedTransactions]);
+  }, [
+    hasUserInteracted,
+    tabValue,
+    pendingTransactions.length, // Use .length instead of the whole array
+    pendingIsLoading,
+    completedTransactions.length, // Use .length instead of the whole array
+  ]);
 
   // Handle acceleration modal close
   const handleAccelerationModalClose = () => {
