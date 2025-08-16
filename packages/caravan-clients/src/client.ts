@@ -129,6 +129,13 @@ export function normalizeTransactionData(
   txData: RawTransactionData,
   clientType: ClientType,
 ): TransactionDetails {
+  // Convert amount to BTC for public clients
+  const normalizedAmount = txData.amount !== undefined
+    ? (clientType === ClientType.PRIVATE
+        ? txData.amount
+        : satoshisToBitcoins(txData.amount))
+    : undefined;
+
   // Determine if this is a received transaction
   const isReceived = txData.category === "receive" || false;
   return {
@@ -149,13 +156,9 @@ export function normalizeTransactionData(
       scriptPubkeyAddress: output.scriptpubkey_address,
     })),
     size: txData.size,
-        // add the amount property to the returned object if txData.amount is defined
-    ...(txData.amount !== undefined && { amount: txData.amount }),
-        // add the vsize property to the returned object if txData.vsize is defined
     ...(txData.vsize !== undefined && { vsize: txData.vsize }),
-        // add the category property to the returned object if txData.category is defined ( For Private clients)
+    ...(normalizedAmount !== undefined && { amount: normalizedAmount }),
     ...(isReceived !== undefined && { isReceived }),
-        // add the details property to the returned object if txData.details is defined ( For Private clients)
     ...(txData.details !== undefined && { details: txData.details }),
     weight: txData.weight,
     fee: clientType === ClientType.PRIVATE ? txData.fee || 0 : txData.fee,
@@ -663,161 +666,227 @@ export class BlockchainClient extends ClientBase {
    */
 
   public async getAddressTransactionHistory(
-    address: string | string[],
-    count: number = 10,
-    skip: number = 0,
-  ): Promise<TransactionDetails[]> {
-    if (count < 1 || count > 100000) {
-      throw new Error("Count must be between 1 and 100000");
+  address: string | string[],
+  count: number = 10,
+  skip: number = 0,
+): Promise<TransactionDetails[]> {
+  if (count < 1 || count > 100000) {
+    throw new Error("Count must be between 1 and 100000");
+  }
+  if (skip < 0) {
+    throw new Error("Skip must be non-negative");
+  }
+
+  try {
+    if (this.type === ClientType.PRIVATE) {
+      throw new Error("Use getWalletTransactionHistory for private clients");
     }
-    if (skip < 0) {
-      throw new Error("Skip must be non-negative");
+
+    if (!this.provider) {
+      throw new Error("Provider must be specified for public clients");
     }
 
-    try {
-      if (this.type === ClientType.PRIVATE) {
-        throw new Error("Use getWalletTransactionHistory for private clients");
-      }
+    const addresses = Array.isArray(address) ? address : [address];
+    const allTransactions: any[] = [];
+    let anyAddressFailed = false;
+    let firstError: Error | null = null;
 
-      if (!this.provider) {
-        throw new Error("Provider must be specified for public clients");
-      }
+    // Use allSettled to handle partial failures
+    const results = await Promise.allSettled(
+      addresses.map(async (addr) => {
+        try {
+          const query =
+            this.provider === PublicBitcoinProvider.BLOCKSTREAM
+              ? `limit=${count}&offset=${skip}`
+              : `count=${count}&skip=${skip}`;
+          const endpoint = `/address/${addr}/txs?${query}`;
+          const response = await this.Get(endpoint);
 
-      const addresses = Array.isArray(address) ? address : [address];
-      const allTransactions: any[] = [];
-      let anyAddressFailed = false;
-      let firstError: Error | null = null;
+          // Robust response handling
+          let transactions: any[] = [];
 
-            // Use allSettled to handle partial failures
-      const results = await Promise.allSettled(
-        addresses.map(async (addr) => {
-          try {
-            const query =
-              this.provider === PublicBitcoinProvider.BLOCKSTREAM
-                ? `limit=${count}&offset=${skip}`
-                : `count=${count}&skip=${skip}`;
-            const endpoint = `/address/${addr}/txs?${query}`;
-            const response = await this.Get(endpoint);
-
-            // Robust response handling
-            let transactions: any[] = [];
-
-                        // Case 1: Response is already an array
-            if (Array.isArray(response)) {
-              transactions = response;
-            }
-            // Case 2: Response is an object with nested array
-            else if (response && typeof response === "object") {
-              const nestedKeys = [
-                "transactions",
-                "txs",
-                "data",
-                "items",
-                "result",
-              ];
-              for (const key of nestedKeys) {
-                if (Array.isArray(response[key])) {
-                  transactions = response[key];
-                  break;
-                }
-              }
-              // Case 3: Single transaction object (only if it has a txid)
-              if (transactions.length === 0 && response.txid) {
-                transactions = [response];
-              }
-            } 
-            // Case 4: Unexpected format - just return empty array
-            else {
-              console.warn("Unexpected transaction response format:", response);
-              transactions = [];
-            }
-
-                        // Always ensure we return an array
-            return Array.isArray(transactions) ? transactions : [];
-          } catch (error) {
-            anyAddressFailed = true;
-            firstError = error as Error;
-            throw error; // Re-throw to mark promise as rejected
+          // Case 1: Response is already an array
+          if (Array.isArray(response)) {
+            transactions = response;
           }
-        }),
-      );
-
-            // Process allSettled results - include empty arrays too
-      for (const result of results) {
-        if (result.status === "fulfilled") {
-          const transactions = result.value;
-          if (Array.isArray(transactions)) {
-            allTransactions.push(...transactions);
+          // Case 2: Response is an object with nested array
+          else if (response && typeof response === "object") {
+            const nestedKeys = [
+              "transactions",
+              "txs",
+              "data",
+              "items",
+              "result",
+            ];
+            for (const key of nestedKeys) {
+              if (Array.isArray(response[key])) {
+                transactions = response[key];
+                break;
+              }
+            }
+            // Case 3: Single transaction object (only if it has a txid)
+            if (transactions.length === 0 && response.txid) {
+              transactions = [response];
+            }
+          } 
+          // Case 4: Unexpected format - just return empty array
+          else {
+            console.warn("Unexpected transaction response format:", response);
+            transactions = [];
           }
+
+          // Always ensure we return an array
+          return Array.isArray(transactions) ? transactions : [];
+        } catch (error) {
+          anyAddressFailed = true;
+          firstError = error as Error;
+          throw error; // Re-throw to mark promise as rejected
+        }
+      }),
+    );
+
+    // Process allSettled results - include empty arrays too
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        const transactions = result.value;
+        if (Array.isArray(transactions)) {
+          allTransactions.push(...transactions);
         }
       }
+    }
 
-            // Throw if any address failed AND we got no results at all
-      if (anyAddressFailed && allTransactions.length === 0) {
-        throw (
-          firstError ||
-          new Error("Failed to fetch transactions for all addresses")
-        );
-      }
-
-            // Defensive: Ensure allTransactions is always an array
-      if (!Array.isArray(allTransactions)) {
-        console.warn("allTransactions is not an array:", allTransactions);
-        return [];
-      }
-
-            // Sort by timestamp (newest first) and apply pagination
-      const sortedTransactions = allTransactions
-        .sort((a, b) => {
-          const timeA = a?.time || a?.timestamp || 0;
-          const timeB = b?.time || b?.timestamp || 0;
-          return timeB - timeA;
-        })
-        .slice(0, count);
-
-       // Final safety check
-      if (!Array.isArray(sortedTransactions)) {
-        console.warn("sortedTransactions is not an array:", sortedTransactions);
-        return [];
-      }
-
-            // Map to normalized format with error handling
-      try {
-        return sortedTransactions.map((rawTx: any) => {
-          if (!rawTx || typeof rawTx !== "object") {
-            console.warn("Invalid transaction object:", rawTx);
-                        // Return a minimal valid transaction object
-            return {
-              txid: "unknown",
-              version: 1,
-              locktime: 0,
-              vin: [],
-              vout: [],
-              size: 0,
-              weight: 0,
-              fee: 0,
-              isReceived: false,
-              status: {
-                confirmed: false,
-                blockHeight: undefined,
-                blockHash: undefined,
-                blockTime: undefined,
-              },
-            } as TransactionDetails;
-          }
-          return normalizeTransactionData(rawTx, ClientType.PUBLIC);
-        });
-      } catch (mapError) {
-        console.error("Error in transaction mapping:", mapError);
-        console.error("sortedTransactions:", sortedTransactions);
-        throw mapError;
-      }
-    } catch (error: any) {
-      throw new Error(
-        `Failed to get address transaction history: ${error.message}`,
+    // Throw if any address failed AND we got no results at all
+    if (anyAddressFailed && allTransactions.length === 0) {
+      throw (
+        firstError ||
+        new Error("Failed to fetch transactions for all addresses")
       );
     }
+
+    // Defensive: Ensure allTransactions is always an array
+    if (!Array.isArray(allTransactions)) {
+      console.warn("allTransactions is not an array:", allTransactions);
+      return [];
+    }
+
+    // Sort by timestamp (newest first) and apply pagination
+    const sortedTransactions = allTransactions
+      .sort((a, b) => {
+        const timeA = a?.time || a?.timestamp || 0;
+        const timeB = b?.time || b?.timestamp || 0;
+        return timeB - timeA;
+      })
+      .slice(0, count);
+
+    // Final safety check
+    if (!Array.isArray(sortedTransactions)) {
+      console.warn("sortedTransactions is not an array:", sortedTransactions);
+      return [];
+    }
+
+    // Map to normalized format with error handling
+    try {
+      return sortedTransactions.map((rawTx: any) => {
+        if (!rawTx || typeof rawTx !== "object") {
+          console.warn("Invalid transaction object:", rawTx);
+          // Return a minimal valid transaction object
+          return {
+            txid: "unknown",
+            version: 1,
+            locktime: 0,
+            vin: [],
+            vout: [],
+            size: 0,
+            weight: 0,
+            fee: 0,
+            isReceived: false,
+            status: {
+              confirmed: false,
+              blockHeight: undefined,
+              blockHash: undefined,
+              blockTime: undefined,
+            },
+          } as TransactionDetails;
+        }
+        
+        // FIXED: Better logic to determine if transaction is truly received
+        let isReceived = false;
+        let hasInputFromOurAddresses = false;
+        let hasOutputToOurAddresses = false;
+        
+        // Debug logging to see the transaction structure (remove this in production)
+        console.log("Processing transaction:", rawTx.txid, {
+          vinLength: rawTx.vin?.length,
+          voutLength: rawTx.vout?.length,
+          fee: rawTx.fee
+        });
+        
+        // Check if any inputs are from our addresses
+        if (rawTx.vin && Array.isArray(rawTx.vin)) {
+          for (const input of rawTx.vin) {
+            // Check various possible input address fields
+            const inputAddress = input.prevout?.scriptpubkey_address || 
+                               input.scriptpubkey_address ||
+                               input.addr ||
+                               input.address ||
+                               input.prevout?.addr ||
+                               input.prevout?.address;
+                               
+            console.log("Checking input:", {
+              inputAddress,
+              match: inputAddress && addresses.includes(inputAddress)
+            });
+            
+            if (inputAddress && addresses.includes(inputAddress)) {
+              hasInputFromOurAddresses = true;
+              break;
+            }
+          }
+        }
+        
+        // Check if any outputs go to our addresses
+        if (rawTx.vout && Array.isArray(rawTx.vout)) {
+          for (const output of rawTx.vout) {
+            const outputAddress = output.scriptpubkey_address || 
+                                output.addr ||
+                                output.address;
+            if (outputAddress && addresses.includes(outputAddress)) {
+              hasOutputToOurAddresses = true;
+              break;
+            }
+          }
+        }
+        
+        // A transaction is "received" if:
+        // 1. We have outputs to our addresses AND
+        // 2. We have NO inputs from our addresses
+        // This means it's a pure incoming transaction, not a send-to-self or change
+        isReceived = hasOutputToOurAddresses && !hasInputFromOurAddresses;
+        
+        // Convert amount from satoshis to BTC for public clients
+        if (typeof rawTx.amount === "number") {
+          rawTx.amount = satoshisToBitcoins(rawTx.amount);
+        }
+        
+        // Normalize the transaction data
+        const normalizedTx = normalizeTransactionData(rawTx, ClientType.PUBLIC);
+        
+        // Override isReceived with our improved logic
+        normalizedTx.isReceived = isReceived;
+        
+        return normalizedTx;
+      });
+    } catch (mapError) {
+      console.error("Error in transaction mapping:", mapError);
+      console.error("sortedTransactions:", sortedTransactions);
+      throw mapError;
+    }
+  } catch (error: any) {
+    throw new Error(
+      `Failed to get address transaction history: ${error.message}`,
+    );
   }
+}
 
   /**
    * Retrieves transaction history for a Bitcoin Core wallet (private client only)
