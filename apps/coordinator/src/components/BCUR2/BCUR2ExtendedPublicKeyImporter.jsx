@@ -1,7 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { BCUR2ExportExtendedPublicKey } from "@caravan/wallets";
-import { FormGroup, FormHelperText } from "@mui/material";
+import { FormGroup, FormHelperText, Box } from "@mui/material";
 import BCUR2Reader from "./BCUR2Reader";
 
 class BCUR2ExtendedPublicKeyImporter extends React.Component {
@@ -11,14 +10,6 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
       extendedPublicKeyError: "",
     };
   }
-
-  interaction = () => {
-    const { network, extendedPublicKeyImporter } = this.props;
-    return new BCUR2ExportExtendedPublicKey({
-      network,
-      bip32Path: extendedPublicKeyImporter.bip32Path,
-    });
-  };
 
   setError = (value) => {
     this.setState({ extendedPublicKeyError: value });
@@ -34,13 +25,40 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
 
     enableChangeMethod();
     try {
-      // The data is already parsed as an object with the correct structure
-      const { xpub, xfp: fingerprint, path } = data;
+      // Handle different possible data formats
+      let xpub, fingerprint, path;
 
+      if (data && typeof data === "object") {
+        // Try multiple possible property names for the data
+        xpub = data.xpub || data.extendedPublicKey || data.key;
+        fingerprint = data.xfp || data.rootFingerprint || data.fingerprint;
+        path = data.path || data.bip32Path || data.derivationPath;
+      } else {
+        this.setError("Invalid BCUR2 data format from QR code scan");
+        return;
+      }
+
+      // Validate required fields
+      if (!xpub) {
+        this.setError("QR code does not contain extended public key");
+        return;
+      }
+
+      if (!fingerprint) {
+        fingerprint = "00000000"; // Default fingerprint
+      }
+
+      if (!path) {
+        path = this.props.extendedPublicKeyImporter.bip32Path || "m/0'/0'";
+      } // Set root fingerprint first
       validateAndSetRootFingerprint(fingerprint, (error) => {
-        this.setError(error);
+        if (error) {
+          this.setError(error);
+          return;
+        }
       });
 
+      // Set BIP32 path
       validateAndSetBIP32Path(
         path,
         () => {
@@ -64,13 +82,15 @@ class BCUR2ExtendedPublicKeyImporter extends React.Component {
 
     return (
       <FormGroup>
-        <BCUR2Reader
-          startText="Import Extended Public Key"
-          onSuccess={this.import}
-          onClear={this.onClear}
-          width="400px"
-          mode="xpub"
-        />
+        <Box mt={2}>
+          <BCUR2Reader
+            startText="Import Extended Public Key"
+            onSuccess={this.import}
+            onClear={this.onClear}
+            width="400px"
+            mode="xpub"
+          />
+        </Box>
         <FormHelperText error>{extendedPublicKeyError}</FormHelperText>
       </FormGroup>
     );
@@ -82,7 +102,6 @@ BCUR2ExtendedPublicKeyImporter.propTypes = {
   extendedPublicKeyImporter: PropTypes.shape({
     bip32Path: PropTypes.string,
   }).isRequired,
-  network: PropTypes.string.isRequired,
   validateAndSetBIP32Path: PropTypes.func.isRequired,
   validateAndSetExtendedPublicKey: PropTypes.func.isRequired,
   validateAndSetRootFingerprint: PropTypes.func.isRequired,

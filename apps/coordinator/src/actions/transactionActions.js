@@ -6,6 +6,7 @@ import {
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
 import {
+  selectAvailableInputsFromPSBT,
   selectSignaturesFromPSBT,
   selectSignaturesForImporters,
 } from "../selectors/transaction";
@@ -504,9 +505,24 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
 
     // ==== PROCESS INPUTS ====
 
-    dispatch(setInputs(inputs));
+    // If inputs are not provided (empty array), resolve them from the PSBT
+    let resolvedInputs = inputs;
+    if (inputs.length === 0) {
+      resolvedInputs = selectAvailableInputsFromPSBT(getState(), psbt);
+    }
 
-    // ==== PROCESS INPUTS ====
+    if (resolvedInputs.length === 0) {
+      throw new Error("PSBT does not contain any UTXOs from this wallet.");
+    }
+    if (resolvedInputs.length !== psbt.txInputs.length) {
+      throw new Error(
+        `Only ${resolvedInputs.length} of ${psbt.txInputs.length} PSBT inputs are UTXOs in this wallet.`,
+      );
+    }
+
+    dispatch(setInputs(resolvedInputs));
+
+    // ==== PROCESS OUTPUTS ====
     const { outputsTotalSats } = dispatch(setOutputsFromPSBT(psbt));
 
     // Calculate and set fee and feeRate

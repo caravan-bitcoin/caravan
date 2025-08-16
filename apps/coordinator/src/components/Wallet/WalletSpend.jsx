@@ -40,7 +40,7 @@ import NodeSet from "./NodeSet";
 import OutputsForm from "../ScriptExplorer/OutputsForm";
 import WalletSign from "./WalletSign";
 import TransactionPreview from "./TransactionPreview";
-import { PSBTImportComponent } from "./PSBTImportComponent";
+import PSBTImportDropdown from "./PSBTImportDropdown";
 import { bigNumberPropTypes } from "../../proptypes/utils";
 import {
   dustAnalysis,
@@ -259,7 +259,7 @@ class WalletSpend extends React.Component {
                     Preview Transaction
                   </Button>
                 </Box>
-                <PSBTImportComponent onImport={this.props.importPSBT} />
+                <PSBTImportDropdown onImport={this.props.importPSBT} />
               </Grid>
             )}
             {spendingStep === SPEND_STEP_PREVIEW && (
