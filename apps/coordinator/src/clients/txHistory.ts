@@ -39,17 +39,6 @@ export const usePublicClientTransactionsWithLoadMore = (
     return currentAddresses.slice().sort().join(",");
   }, [currentAddresses]);
 
-  const queryKey = useMemo(
-    () => [
-      ...transactionKeys.all,
-      "infinite",
-      "public",
-      addressesKey,
-      pageSize,
-    ],
-    [addressesKey, pageSize],
-  );
-
   // Effect to invalidate queries when addresses change significantly
   const prevAddressesRef = useRef<string>("");
   useEffect(() => {
@@ -67,7 +56,7 @@ export const usePublicClientTransactionsWithLoadMore = (
   }, [addressesKey, queryClient]);
 
   const infiniteQuery = useInfiniteQuery({
-    queryKey,
+    queryKey: transactionKeys.confirmedHistory(pageSize),
     queryFn: async ({ pageParam = 0 }) => {
       if (!blockchainClient) {
         throw new Error("No blockchain client available");
@@ -140,13 +129,8 @@ export const usePrivateClientTransactionsWithLoadMore = (
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = useSelector((state: WalletState) => state.client.type);
 
-  const queryKey = useMemo(
-    () => [...transactionKeys.all, "infinite", "private", pageSize],
-    [pageSize],
-  );
-
   const infiniteQuery = useInfiniteQuery({
-    queryKey,
+    queryKey: transactionKeys.confirmedHistory(pageSize),
     queryFn: async ({ pageParam = 0 }) => {
       const rawTransactions =
         await blockchainClient.getWalletTransactionHistory(pageSize, pageParam);

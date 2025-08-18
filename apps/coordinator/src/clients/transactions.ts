@@ -19,18 +19,8 @@ export const transactionKeys = {
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  walletHistory: (count: number, skip: number) =>
-    [...transactionKeys.all, "walletHistory", count, skip] as const,
-  addressHistory: (addresses: string[], count: number, skip: number) =>
-    [
-      ...transactionKeys.all,
-      "addressHistory",
-      addresses.sort().join(","),
-      count,
-      skip,
-    ] as const,
-  completed: (count: number, skip: number) =>
-    [...transactionKeys.all, "completed", count, skip] as const,
+  confirmedHistory: (pageSize: number) =>
+    [...transactionKeys.all, "infinite", pageSize] as const,
 };
 
 // Service function for fetching transaction details
