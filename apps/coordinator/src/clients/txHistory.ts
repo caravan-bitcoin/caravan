@@ -1,6 +1,6 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import {
   getWalletAddresses,
   getSpentSlices,
@@ -12,21 +12,18 @@ import { useGetClient } from "hooks/client";
 import { transactionKeys } from "clients/transactions";
 
 const DEFAULT_PAGE_SIZE = 100;
-const TRANSACTION_STALE_TIME = 5 * 60 * 1000;
+const TRANSACTION_STALE_TIME = 30 * 1000; // Reduced to 30 seconds for more responsive updates
 
 export const usePublicClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
 ) => {
+  const queryClient = useQueryClient();
   const blockchainClient = useGetClient();
   const clientType = blockchainClient?.type;
 
   // Get current addresses
   const walletAddresses = useSelector(getWalletAddresses);
   const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
-
-  // Create a stable snapshot of addresses for the query
-  const addressesSnapshotRef = useRef<string[] | null>(null);
-  const isInitialLoadRef = useRef(true);
 
   // Determine addresses to query
   const currentAddresses = useMemo(() => {
@@ -37,43 +34,10 @@ export const usePublicClientTransactionsWithLoadMore = (
     return walletAddresses.length > 0 ? walletAddresses : spentAddresses;
   }, [walletAddresses, spentSlices]);
 
-  // SOLUTION: Use a stable address snapshot for queries
-  // Only update the snapshot when addresses change significantly OR on initial load
-  const stableAddresses = useMemo(() => {
-    // On initial load, always use current addresses
-    if (isInitialLoadRef.current && currentAddresses.length > 0) {
-      addressesSnapshotRef.current = [...currentAddresses];
-      isInitialLoadRef.current = false;
-      return addressesSnapshotRef.current;
-    }
-
-    // For subsequent updates, only change if addresses changed significantly
-    // This prevents incremental address generation from triggering new queries
-    if (addressesSnapshotRef.current) {
-      const currentCount = currentAddresses.length;
-      const snapshotCount = addressesSnapshotRef.current.length;
-
-      // Only update if:
-      // 1. Address count changed by more than 10 (significant change)
-      // 2. OR if we have significantly fewer addresses (wallet changed)
-      const significantIncrease = currentCount > snapshotCount + 10;
-      const significantDecrease = currentCount < snapshotCount * 0.5;
-
-      if (significantIncrease || significantDecrease) {
-        addressesSnapshotRef.current = [...currentAddresses];
-        return addressesSnapshotRef.current;
-      }
-      return addressesSnapshotRef.current;
-    }
-
-    // Fallback: use current addresses
-    return currentAddresses;
-  }, [currentAddresses]);
-
-  // Stable query key based on stable addresses
+  // Create stable query key based on sorted addresses
   const addressesKey = useMemo(() => {
-    return stableAddresses.slice().sort().join(",");
-  }, [stableAddresses]);
+    return currentAddresses.slice().sort().join(",");
+  }, [currentAddresses]);
 
   const queryKey = useMemo(
     () => [
@@ -86,6 +50,22 @@ export const usePublicClientTransactionsWithLoadMore = (
     [addressesKey, pageSize],
   );
 
+  // Effect to invalidate queries when addresses change significantly
+  const prevAddressesRef = useRef<string>("");
+  useEffect(() => {
+    const currentKey = addressesKey;
+    const prevKey = prevAddressesRef.current;
+
+    if (prevKey && prevKey !== currentKey) {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.all,
+        exact: false,
+      });
+    }
+
+    prevAddressesRef.current = currentKey;
+  }, [addressesKey, queryClient]);
+
   const infiniteQuery = useInfiniteQuery({
     queryKey,
     queryFn: async ({ pageParam = 0 }) => {
@@ -93,36 +73,37 @@ export const usePublicClientTransactionsWithLoadMore = (
         throw new Error("No blockchain client available");
       }
 
-      if (stableAddresses.length === 0) {
+      if (currentAddresses.length === 0) {
         return [];
       }
 
       const rawTransactions =
         await blockchainClient.getAddressTransactionHistory(
-          stableAddresses,
+          currentAddresses,
           pageSize,
           pageParam,
         );
 
-      // Use current wallet addresses for processing (not the stable snapshot)
-      // This ensures proper transaction categorization with the latest addresses
       return selectProcessedTransactions(
         rawTransactions,
-        walletAddresses, // Use current addresses for processing
+        walletAddresses,
         "all",
       );
     },
     enabled:
       !!blockchainClient &&
       clientType === "public" &&
-      stableAddresses.length > 0,
+      currentAddresses.length > 0,
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length >= pageSize
         ? allPages.length * pageSize
         : undefined;
     },
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Enable refetch on window focus
     staleTime: TRANSACTION_STALE_TIME,
+    // Add refetch interval for automatic updates
+    refetchInterval: 60000, // Refetch every minute
+    refetchIntervalInBackground: false,
   });
 
   const allTransactions = useMemo(
@@ -137,26 +118,24 @@ export const usePublicClientTransactionsWithLoadMore = (
     error: infiniteQuery.error,
     hasMore: infiniteQuery.hasNextPage ?? false,
     loadMore: () => infiniteQuery.fetchNextPage(),
-    reset: () => {
-      // Reset the address snapshot on manual reset
-      addressesSnapshotRef.current = null;
-      isInitialLoadRef.current = true;
-      return infiniteQuery.refetch();
-    },
+    reset: () => infiniteQuery.refetch(),
     refetch: infiniteQuery.refetch,
     totalLoaded: allTransactions.length,
-    // Expose method to force address refresh when needed
-    refreshAddresses: () => {
-      addressesSnapshotRef.current = [...currentAddresses];
-      infiniteQuery.refetch();
+    // Method to force refresh all transaction data
+    forceRefresh: () => {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.all,
+        exact: false,
+      });
     },
   };
 };
 
-// Private client version (unchanged)
+// Enhanced private client version
 export const usePrivateClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
 ) => {
+  const queryClient = useQueryClient();
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = useSelector((state: WalletState) => state.client.type);
@@ -183,8 +162,10 @@ export const usePrivateClientTransactionsWithLoadMore = (
         ? allPages.length * pageSize
         : undefined;
     },
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     staleTime: TRANSACTION_STALE_TIME,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const allTransactions = useMemo(
@@ -202,10 +183,16 @@ export const usePrivateClientTransactionsWithLoadMore = (
     reset: () => infiniteQuery.refetch(),
     refetch: infiniteQuery.refetch,
     totalLoaded: allTransactions.length,
+    forceRefresh: () => {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.all,
+        exact: false,
+      });
+    },
   };
 };
 
-// Main hook
+// Main hook with enhanced refresh capabilities
 export const useCompletedTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
 ) => {
@@ -215,4 +202,38 @@ export const useCompletedTransactionsWithLoadMore = (
   const publicQuery = usePublicClientTransactionsWithLoadMore(pageSize);
 
   return clientType === "private" ? privateQuery : publicQuery;
+};
+
+// Hook for transaction state change events
+export const useTransactionStateSync = () => {
+  const queryClient = useQueryClient();
+
+  // Function to call when a transaction changes state (pending -> confirmed)
+  const onTransactionStateChange = (txid?: string) => {
+    // Invalidate all transaction queries to pick up state changes
+    queryClient.invalidateQueries({
+      queryKey: transactionKeys.all,
+      exact: false,
+    });
+
+    // If specific transaction, also invalidate its individual query
+    if (txid) {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.tx(txid),
+      });
+    }
+  };
+
+  // Function to call when wallet balance changes (indicates new transactions)
+  const onBalanceChange = () => {
+    queryClient.invalidateQueries({
+      queryKey: transactionKeys.all,
+      exact: false,
+    });
+  };
+
+  return {
+    onTransactionStateChange,
+    onBalanceChange,
+  };
 };
