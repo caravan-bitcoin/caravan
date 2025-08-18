@@ -14,6 +14,16 @@ import { transactionKeys } from "clients/transactions";
 const DEFAULT_PAGE_SIZE = 100;
 const TRANSACTION_STALE_TIME = 30 * 1000; // Reduced to 30 seconds for more responsive updates
 
+// Common query options shared between public and private hooks
+const getCommonQueryOptions = (pageSize: number) => ({
+  getNextPageParam: (lastPage: any[], allPages: any[][]) =>
+    lastPage.length >= pageSize ? allPages.length * pageSize : undefined,
+  refetchOnWindowFocus: true,
+  staleTime: TRANSACTION_STALE_TIME,
+  refetchInterval: 60000,
+  refetchIntervalInBackground: false,
+});
+
 export const usePublicClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
 ) => {
@@ -79,16 +89,7 @@ export const usePublicClientTransactionsWithLoadMore = (
       !!blockchainClient &&
       clientType === "public" &&
       currentAddresses.length > 0,
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length >= pageSize
-        ? allPages.length * pageSize
-        : undefined;
-    },
-    refetchOnWindowFocus: true, // Enable refetch on window focus
-    staleTime: TRANSACTION_STALE_TIME,
-    // Add refetch interval for automatic updates
-    refetchInterval: 60000, // Refetch every minute
-    refetchIntervalInBackground: false,
+    ...getCommonQueryOptions(pageSize),
   });
 
   const allTransactions = useMemo(
@@ -97,14 +98,8 @@ export const usePublicClientTransactionsWithLoadMore = (
   );
 
   return {
-    data: allTransactions,
-    isLoading: infiniteQuery.isLoading,
-    isLoadingMore: infiniteQuery.isFetchingNextPage,
-    error: infiniteQuery.error,
-    hasMore: infiniteQuery.hasNextPage ?? false,
-    loadMore: () => infiniteQuery.fetchNextPage(),
-    reset: () => infiniteQuery.refetch(),
-    refetch: infiniteQuery.refetch,
+    ...infiniteQuery, // Expose all infiniteQuery properties
+    data: allTransactions, // Maintain flattened data for backward compatibility
     totalLoaded: allTransactions.length,
     // Method to force refresh all transaction data
     forceRefresh: () => {
@@ -137,15 +132,7 @@ export const usePrivateClientTransactionsWithLoadMore = (
       );
     },
     enabled: !!blockchainClient && clientType === "private",
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length >= pageSize
-        ? allPages.length * pageSize
-        : undefined;
-    },
-    refetchOnWindowFocus: true,
-    staleTime: TRANSACTION_STALE_TIME,
-    refetchInterval: 60000,
-    refetchIntervalInBackground: false,
+    ...getCommonQueryOptions(pageSize),
   });
 
   const allTransactions = useMemo(
@@ -154,14 +141,8 @@ export const usePrivateClientTransactionsWithLoadMore = (
   );
 
   return {
-    data: allTransactions,
-    isLoading: infiniteQuery.isLoading,
-    isLoadingMore: infiniteQuery.isFetchingNextPage,
-    error: infiniteQuery.error,
-    hasMore: infiniteQuery.hasNextPage ?? false,
-    loadMore: () => infiniteQuery.fetchNextPage(),
-    reset: () => infiniteQuery.refetch(),
-    refetch: infiniteQuery.refetch,
+    ...infiniteQuery, // Expose all infiniteQuery properties
+    data: allTransactions, // Maintain flattened data for backward compatibility
     totalLoaded: allTransactions.length,
     forceRefresh: () => {
       queryClient.invalidateQueries({
