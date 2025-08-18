@@ -58,10 +58,6 @@ export const usePublicClientTransactionsWithLoadMore = (
   const infiniteQuery = useInfiniteQuery({
     queryKey: transactionKeys.confirmedHistory(pageSize),
     queryFn: async ({ pageParam = 0 }) => {
-      if (!blockchainClient) {
-        throw new Error("No blockchain client available");
-      }
-
       if (currentAddresses.length === 0) {
         return [];
       }

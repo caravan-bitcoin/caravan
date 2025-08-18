@@ -172,14 +172,3 @@ export const fetchTransactionCoins = async (
   }
   return coins;
 };
-
-// Basic hook for fetching transaction coins
-export const useTransactionCoins = (txid: string) => {
-  const blockchainClient = useGetClient();
-
-  return useQuery({
-    queryKey: transactionKeys.coins(txid),
-    queryFn: () => fetchTransactionCoins(txid, blockchainClient),
-    enabled: !!blockchainClient && !!txid,
-  });
-};
