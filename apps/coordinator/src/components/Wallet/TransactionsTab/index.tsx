@@ -17,7 +17,7 @@ import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
 import { useCompletedTransactionsWithLoadMore } from "clients/txHistory";
-import { CompletedTransactionsView } from "./ConfirmedTransactionsView";
+import { ConfirmedTransactionsView } from "./ConfirmedTransactionsView";
 import {
   useSortedTransactions,
   useTransactionPagination,
@@ -272,7 +272,7 @@ const TransactionsTab: React.FC = () => {
         aria-labelledby="completed-tab"
       >
         {tabValue === 1 && (
-          <CompletedTransactionsView
+          <ConfirmedTransactionsView
             transactions={completedTransactions}
             isLoading={completedIsLoading}
             isLoadingMore={completedIsLoadingMore}

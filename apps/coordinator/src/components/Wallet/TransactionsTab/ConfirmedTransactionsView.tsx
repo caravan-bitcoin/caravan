@@ -31,7 +31,7 @@ interface Props {
   onClickTransaction?: (txid: string) => void;
 }
 
-export const CompletedTransactionsView: React.FC<Props> = ({
+export const ConfirmedTransactionsView: React.FC<Props> = ({
   transactions,
   isLoading,
   isLoadingMore,
