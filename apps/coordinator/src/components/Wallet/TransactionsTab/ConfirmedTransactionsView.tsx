@@ -60,7 +60,7 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
   const currentPageTxs = getCurrentPageItems(sortedTransactions);
 
   // Show loading state for initial load
-  if (isLoading && transactions.length === 0) {
+  if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" p={3}>
         <CircularProgress />
@@ -75,8 +75,8 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
     );
   }
 
-  // Show empty state
-  if (!isLoading && transactions.length === 0) {
+  // Show empty state only after loading completes
+  if (transactions.length === 0) {
     return (
       <Box display="flex" justifyContent="center" p={3}>
         <Typography variant="body1" color="textSecondary">
