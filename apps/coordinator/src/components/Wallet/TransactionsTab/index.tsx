@@ -54,10 +54,10 @@ const TransactionsTab: React.FC = () => {
   const {
     data: completedTransactions,
     isLoading: completedIsLoading,
-    isLoadingMore: completedIsLoadingMore,
+    isFetchingNextPage: completedIsLoadingMore,
     error: completedError,
-    hasMore: completedHasMore,
-    loadMore: loadMoreCompleted,
+    hasNextPage: completedHasMore,
+    fetchNextPage: loadMoreCompleted,
     totalLoaded: completedTotalLoaded,
   } = useCompletedTransactionsWithLoadMore(100); // Load 100 transactions at a time
 
@@ -277,7 +277,7 @@ const TransactionsTab: React.FC = () => {
             isLoading={completedIsLoading}
             isLoadingMore={completedIsLoadingMore}
             error={completedError}
-            hasMore={completedHasMore}
+            hasMore={completedHasMore ?? false}
             onLoadMore={loadMoreCompleted}
             totalLoaded={completedTotalLoaded}
             network={network}
