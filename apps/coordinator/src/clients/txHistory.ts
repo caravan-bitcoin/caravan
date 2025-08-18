@@ -203,37 +203,3 @@ export const useCompletedTransactionsWithLoadMore = (
 
   return clientType === "private" ? privateQuery : publicQuery;
 };
-
-// Hook for transaction state change events
-export const useTransactionStateSync = () => {
-  const queryClient = useQueryClient();
-
-  // Function to call when a transaction changes state (pending -> confirmed)
-  const onTransactionStateChange = (txid?: string) => {
-    // Invalidate all transaction queries to pick up state changes
-    queryClient.invalidateQueries({
-      queryKey: transactionKeys.all,
-      exact: false,
-    });
-
-    // If specific transaction, also invalidate its individual query
-    if (txid) {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.tx(txid),
-      });
-    }
-  };
-
-  // Function to call when wallet balance changes (indicates new transactions)
-  const onBalanceChange = () => {
-    queryClient.invalidateQueries({
-      queryKey: transactionKeys.all,
-      exact: false,
-    });
-  };
-
-  return {
-    onTransactionStateChange,
-    onBalanceChange,
-  };
-};
