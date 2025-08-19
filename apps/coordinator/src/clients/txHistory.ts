@@ -11,7 +11,7 @@ import {
 import { useGetClient } from "hooks/client";
 import { transactionKeys } from "clients/transactions";
 
-const DEFAULT_PAGE_SIZE = 100;
+export const DEFAULT_PAGE_SIZE = 100;
 const TRANSACTION_STALE_TIME = 30 * 1000; // Reduced to 30 seconds for more responsive updates
 
 // Common query options shared between public and private hooks
