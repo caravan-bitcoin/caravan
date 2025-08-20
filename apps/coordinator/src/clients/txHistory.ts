@@ -111,7 +111,6 @@ export const usePrivateClientTransactionsWithLoadMore = (
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = blockchainClient?.type;
-
   const infiniteQuery = useInfiniteQuery({
     queryKey: transactionKeys.confirmedHistory(pageSize),
     queryFn: async ({ pageParam = 0 }) => {
