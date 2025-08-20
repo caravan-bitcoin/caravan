@@ -85,6 +85,23 @@ const TransactionsTab: React.FC = () => {
     ? getCurrentPageItems(sortedTransactions)
     : [];
 
+  // Calculate display count more reliably for confirmed transactions
+  const getConfirmedDisplayCount = () => {
+    if (completedIsLoading) return "...";
+
+    // If we have loaded exactly a full page size (100) or more, and either:
+    // - hasMore is true, OR
+    // - we have exactly 100 (which suggests there might be more)
+    // Then show the "+" indicator
+    if (
+      completedTotalLoaded >= 100 &&
+      (completedHasMore || completedTotalLoaded % 100 === 0)
+    ) {
+      return `${completedTotalLoaded}+`;
+    }
+    return completedTotalLoaded.toString();
+  };
+
   // Handle tab change - single function with user interaction tracking
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -157,7 +174,7 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`Confirmed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
+              label={`Confirmed (${getConfirmedDisplayCount()})`}
               id="completed-tab"
               aria-controls="completed-tabpanel"
             />
