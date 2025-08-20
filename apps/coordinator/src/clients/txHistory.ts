@@ -101,13 +101,6 @@ export const usePublicClientTransactionsWithLoadMore = (
     ...infiniteQuery, // Expose all infiniteQuery properties
     data: allTransactions, // Maintain flattened data for backward compatibility
     totalLoaded: allTransactions.length,
-    // Method to force refresh all transaction data
-    forceRefresh: () => {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.all,
-        exact: false,
-      });
-    },
   };
 };
 
@@ -115,10 +108,9 @@ export const usePublicClientTransactionsWithLoadMore = (
 export const usePrivateClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
 ) => {
-  const queryClient = useQueryClient();
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
-  const clientType = useSelector((state: WalletState) => state.client.type);
+  const clientType = blockchainClient?.type;
 
   const infiniteQuery = useInfiniteQuery({
     queryKey: transactionKeys.confirmedHistory(pageSize),
@@ -144,12 +136,6 @@ export const usePrivateClientTransactionsWithLoadMore = (
     ...infiniteQuery, // Expose all infiniteQuery properties
     data: allTransactions, // Maintain flattened data for backward compatibility
     totalLoaded: allTransactions.length,
-    forceRefresh: () => {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.all,
-        exact: false,
-      });
-    },
   };
 };
 
