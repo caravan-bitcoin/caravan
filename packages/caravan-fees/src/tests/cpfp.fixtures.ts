@@ -117,7 +117,6 @@ export const cpfpInvalidFixtures = [
   // Removed the Dust output creation case, as now we use the parent tx to get the spendable output, as child tx's input so cannot override it's amount to create this invalid case .
 ];
 
-// Add these to your existing cpfpInvalidFixtures array
 export const cpfpParentUtxoValidationFixtures = [
   {
     case: "Parent UTXO txid mismatch",

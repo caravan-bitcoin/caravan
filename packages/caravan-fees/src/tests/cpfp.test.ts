@@ -10,7 +10,12 @@ import {
   reverseHex,
 } from "../utils";
 
-import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
+import {
+  cpfpValidFixtures,
+  cpfpInvalidFixtures,
+  cpfpMissingPsbtFieldsFixtures,
+  cpfpParentUtxoValidationFixtures,
+} from "./cpfp.fixtures";
 
 describe("CPFP Transaction Creation", () => {
   describe("Valid CPFP Transactions", () => {
@@ -47,6 +52,11 @@ describe("CPFP Transaction Creation", () => {
         expect(psbt.PSBT_IN_OUTPUT_INDEX[0]).toBe(
           fixture.options.spendableOutputIndex,
         );
+
+        // Verify parent UTXO PSBT fields are present
+        expect(psbt.PSBT_IN_WITNESS_UTXO[0]).toBeDefined();
+        expect(psbt.PSBT_IN_BIP32_DERIVATION[0]).toBeDefined();
+        expect(psbt.PSBT_IN_WITNESS_SCRIPT[0]).toBeDefined();
 
         // Step 5: Verify change output
         expect(psbt.PSBT_OUT_SCRIPT[0]).toContain(
@@ -92,6 +102,27 @@ describe("CPFP Transaction Creation", () => {
     cpfpInvalidFixtures.forEach((fixture) => {
       it(fixture.case, () => {
         expect(() => createCPFPTransaction(fixture.options)).toThrow();
+      });
+    });
+  });
+
+  describe("Parent UTXO Validation", () => {
+    cpfpParentUtxoValidationFixtures.forEach((fixture) => {
+      it(fixture.case, () => {
+        expect(() => createCPFPTransaction(fixture.options)).toThrow(
+          fixture.expectedError,
+        );
+      });
+    });
+  });
+
+  // NEW: Missing PSBT fields tests
+  describe("Missing PSBT Fields", () => {
+    cpfpMissingPsbtFieldsFixtures.forEach((fixture) => {
+      it(fixture.case, () => {
+        expect(() => createCPFPTransaction(fixture.options)).toThrow(
+          fixture.expectedError,
+        );
       });
     });
   });
