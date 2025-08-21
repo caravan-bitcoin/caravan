@@ -23,11 +23,15 @@ import { Network, P2WSH } from "@caravan/bitcoin";
  * - The transaction has a change output back to your wallet
  * - You spend your own change output to create a CPFP transaction
  *
- * ## What We're Testing:
- * - That the parent output is correctly identified and enriched with PSBT metadata
- * - That the child transaction properly references the parent transaction
- * - That all necessary signing information (scripts, derivations) is present
- * - That the combined fee rate achieves the target acceleration
+ *
+ * Each test follows this pattern:
+ * 1. Start with a real unconfirmed transaction (parent)
+ * 2. Identify a spendable output from that transaction
+ * 3. Create a CPFP transaction that spends that output
+ * 4. Verify the generated PSBT matches our expected binary output exactly
+ *
+ * The "exactPsbt" field in fixtures contains the precise PSBT we expect our
+ * code to generate. This ensures no regressions in PSBT generation logic.
  *
  * What we're NOT testing here:
  * - Fee calculation logic (that's covered in separate tests)
@@ -58,7 +62,7 @@ export const cpfpPsbtFixtures = {
       // The parent UTXO - this is output 1 from the parent transaction
       // This output was sent TO US, so we have the signing keys and can spend it
       parentUtxo: {
-        txid: "db9bccbcc5d74bf23faac7de67b45d81a8ca1370f7b312f4c2d2b291f1666570",
+        txid: "706566f191b2d2c2f412b3f77013caa8815db467dec7aa3ff24bd7c5bccc9bdb",
         vout: 1, // Spending output index 1 (the one sent to our wallet)
         value: "100000000", // 1 BTC in satoshis
         prevTxHex:
@@ -139,10 +143,10 @@ export const cpfpPsbtFixtures = {
         parentVsize: 140.25,
         childInputCount: 1, // Only spending the parent output
         childOutputCount: 1, // Only one change output
-        combinedFeeRate: 32.5, // Achieved combined fee rate
+        combinedFeeRate: 39.7, // Achieved combined fee rate
         // The exact PSBT we expect to generate for this CPFP transaction
         exactPsbt:
-          "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",
+          "cHNidP8B+wQCAAAAAQIEAgAAAAEEAQEBBQEBAQMEAAAAAAEGAQNPAQQ1h88Dgl2SPYAAAAA1gVrVrrCaAW77pvICudYT1OgMKWDHqygcNSGGEkGHtgOdMV/Gaa1omz+62G2Nk86Bp394s033WzYxU10IL4gndhBzmxmnVAAAgAEAAIAAAACATwEENYfPA13Er/mAAAAAXIkZAJ6zR6nZcfefzibOf8yIfgZw/MEBt3mO/wcS3tUC0m1lmogMBUHKndl7pk8FE6bqDneo61acMUMLVwZ3YpYQxzpCNlQAAIABAACAAAAAgE8BBDWHzwPmwZ+cgAAAAKgJSKesi1xqjMGyDjwGyadlp3IKHoSuCeqQobWE26BsAnYI4VTYWIrnlYwnBhG0SKKBnaJTTXHYnfQVPuD75Ba0EM4hZYJUAACAAQAAgAAAAIAAAQ4g25vMvMXXS/I/qsfeZ7RdgajKE3D3sxL0wtKykfFmZXABDwQBAAAAAQDNAgAAAAABAcuZhRB270eyF5uZ9NZkes2JmYC7QzBcSM/GgxYTuikUAAAAAAD9////AgJndM4CAAAAIlEgwgRxu/eg0TNg0SfBd8xyO3SgOq0IBq+cYsfn6aSUGmkA4fUFAAAAACIAICn+8vRBEU+5VfeZTXt8FONmSZDcEXUc88e/6D+SROL/AUBCV2GrTX0G0hgsnYix+yuKPSXrgWcqQJRDLsbzviRinoL43qPokzfBpfyc66J+0GbyQWU+Bt88htzwg3AqQTF3AAAAAAEBewDh9QUAAAAAcgDh9QUAAAAAaVIhAjY9pkhm1G9ybFB0geUquQMKOzT+pnil4pC3tJC0X2OAIQKW1q44thLR57znb7mb9hJZPubSuAQsrNk5/7aeXmniaSEDC+2bcYNaXdfUW8cvtIpX8qM5bgyuVJ+4P+fwO4J80JRTrgEFaVIhAjY9pkhm1G9ybFB0geUquQMKOzT+pnil4pC3tJC0X2OAIQKW1q44thLR57znb7mb9hJZPubSuAQsrNk5/7aeXmniaSEDC+2bcYNaXdfUW8cvtIpX8qM5bgyuVJ+4P+fwO4J80JRTriIGAjY9pkhm1G9ybFB0geUquQMKOzT+pnil4pC3tJC0X2OAGHObGadUAACAAQAAgAAAAIAAAAAAEQAAACIGApbWrji2EtHnvOdvuZv2Elk+5tK4BCys2Tn/tp5eaeJpGMc6QjZUAACAAQAAgAAAAIAAAAAAEQAAACIGAwvtm3GDWl3X1FvHL7SKV/KjOW4MrlSfuD/n8DuCfNCUGM4hZYJUAACAAQAAgAAAAIAAAAAAEQAAAAABAwhRv/UFAAAAAAEEIgAgkaeXjJOPqXV0taM43yaCh16Fv+TvQ22/sHBWVpJH+DAA",
       },
     },
   ],
@@ -238,7 +242,7 @@ export const cpfpPsbtFixtures = {
 
       expected: {
         parentTxid:
-          "8bc8d3a82ec6ce9725b42699aa0040143122857a919a4a39e5063052be6542c0",
+          "c04265be523006e5394a9a917a852231144000aa9926b42597cec62ea8d3c88b",
         parentFee: 2020,
         parentVsize: 188.5,
         childInputCount: 1, // Only spending the parent change output
@@ -246,7 +250,7 @@ export const cpfpPsbtFixtures = {
         combinedFeeRate: 32.5, // Achieved combined fee rate
         // The exact PSBT we expect to generate for this CPFP transaction
         exactPsbt:
-          "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",
+          "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",
       },
     },
   ],
