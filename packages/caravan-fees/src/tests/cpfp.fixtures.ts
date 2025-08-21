@@ -5,6 +5,36 @@ import { UTXO } from "../types";
 const parentTxHex =
   "020000000001019ef21963fbf5261d3b62f7f0467ab4b6d006b7d25a27d6744c95d9c11f577b210300000000ffffffff02713d0000000000001600147938bb5013f400246165f507ed015853430e28d2007c500200000000160014f2aecd6ab28d970ee8eea34665c181393b8754c60247304402201aaa53e645c14148171c3ea39841ee4ad7451d3a30f651e8a38ca20cec2cab9402206eab21ae37a5e0eaa0fe39d26821133e2c97297897de75b854865b5884a3523b012102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b800000000";
 
+const parentTxid =
+  "77f437ae7f796896f1d69e2c9329202d6ac4b4a03fbc0f18e06dfab87f4b0702";
+const spendableOutputIndex = 1;
+
+// parent UTXO with full PSBT metadata
+const parentUtxo: UTXO = {
+  txid: parentTxid,
+  vout: spendableOutputIndex,
+  value: "38829056", // Value from output index 1 of parent transaction
+  prevTxHex: parentTxHex,
+  witnessUtxo: {
+    script: Buffer.from("0014f2aecd6ab28d970ee8eea34665c181393b8754c6", "hex"),
+    value: 38829056,
+  },
+  bip32Derivations: [
+    {
+      pubkey: Buffer.from(
+        "02b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b8",
+        "hex",
+      ),
+      masterFingerprint: Buffer.from("12345678", "hex"),
+      path: "m/48'/1'/0'/2'/0/0",
+    },
+  ],
+  witnessScript: Buffer.from(
+    "512102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b851ae",
+    "hex",
+  ),
+};
+
 const availableUTXOs: UTXO[] = [
   {
     txid: "9805c05eebf91913601ed9024330b8a3d4fcc4d2503abf4dce5067cb011673c5",
@@ -42,6 +72,7 @@ export const cpfpValidFixtures = [
       originalTx: parentTxHex,
       availableInputs: availableUTXOs,
       spendableOutputIndex: 1,
+      parentUtxo: parentUtxo,
       changeAddress: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
       network: Network.MAINNET,
       dustThreshold: "546",
