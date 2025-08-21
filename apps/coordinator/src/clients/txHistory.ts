@@ -15,9 +15,13 @@ export const DEFAULT_PAGE_SIZE = 100;
 const TRANSACTION_STALE_TIME = 30 * 1000; // Reduced to 30 seconds for more responsive updates
 
 // Common query options shared between public and private hooks
-const getCommonQueryOptions = (pageSize: number) => ({
-  getNextPageParam: (lastPage: any[], allPages: any[][]) =>
-    lastPage.length >= pageSize ? allPages.length * pageSize : undefined,
+const getCommonQueryOptions = (pageSize: number, pendingCount: number = 0) => ({
+  getNextPageParam: (lastPage: any[], allPages: any[][]) => {
+    const effectiveMinPageSize = Math.max(1, pageSize - pendingCount);
+    return lastPage.length >= effectiveMinPageSize
+      ? allPages.length * pageSize
+      : undefined;
+  },
   refetchOnWindowFocus: true,
   staleTime: TRANSACTION_STALE_TIME,
   refetchInterval: 60000,
@@ -26,6 +30,7 @@ const getCommonQueryOptions = (pageSize: number) => ({
 
 export const usePublicClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
+  pendingCount: number = 0,
 ) => {
   const queryClient = useQueryClient();
   const blockchainClient = useGetClient();
@@ -89,7 +94,7 @@ export const usePublicClientTransactionsWithLoadMore = (
       !!blockchainClient &&
       clientType === "public" &&
       currentAddresses.length > 0,
-    ...getCommonQueryOptions(pageSize),
+    ...getCommonQueryOptions(pageSize, pendingCount),
   });
 
   const allTransactions = useMemo(
@@ -107,6 +112,7 @@ export const usePublicClientTransactionsWithLoadMore = (
 // Enhanced private client version
 export const usePrivateClientTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
+  pendingCount: number = 0,
 ) => {
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
@@ -123,7 +129,7 @@ export const usePrivateClientTransactionsWithLoadMore = (
       );
     },
     enabled: !!blockchainClient && clientType === "private",
-    ...getCommonQueryOptions(pageSize),
+    ...getCommonQueryOptions(pageSize, pendingCount),
   });
 
   const allTransactions = useMemo(
@@ -141,11 +147,18 @@ export const usePrivateClientTransactionsWithLoadMore = (
 // Main hook with enhanced refresh capabilities
 export const useCompletedTransactionsWithLoadMore = (
   pageSize: number = DEFAULT_PAGE_SIZE,
+  pendingCount: number = 0,
 ) => {
   const clientType = useSelector((state: WalletState) => state.client.type);
 
-  const privateQuery = usePrivateClientTransactionsWithLoadMore(pageSize);
-  const publicQuery = usePublicClientTransactionsWithLoadMore(pageSize);
+  const privateQuery = usePrivateClientTransactionsWithLoadMore(
+    pageSize,
+    pendingCount,
+  );
+  const publicQuery = usePublicClientTransactionsWithLoadMore(
+    pageSize,
+    pendingCount,
+  );
 
   return clientType === "private" ? privateQuery : publicQuery;
 };
