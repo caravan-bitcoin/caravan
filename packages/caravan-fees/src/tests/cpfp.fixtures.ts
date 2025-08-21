@@ -116,3 +116,83 @@ export const cpfpInvalidFixtures = [
   },
   // Removed the Dust output creation case, as now we use the parent tx to get the spendable output, as child tx's input so cannot override it's amount to create this invalid case .
 ];
+
+// Add these to your existing cpfpInvalidFixtures array
+export const cpfpParentUtxoValidationFixtures = [
+  {
+    case: "Parent UTXO txid mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        txid: "wrongtxid0000000000000000000000000000000000000000000000000000000000000000",
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+  {
+    case: "Parent UTXO vout mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        vout: 0, // Wrong output index
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+  {
+    case: "Parent UTXO value mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        value: "1000000", // Wrong value
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+];
+
+export const cpfpMissingPsbtFieldsFixtures = [
+  {
+    case: "Missing witnessUtxo and nonWitnessUtxo",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        witnessUtxo: undefined,
+        nonWitnessUtxo: undefined,
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required witnessUtxo or nonWitnessUtxo field/,
+  },
+  {
+    case: "Missing bip32Derivations",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        bip32Derivations: undefined,
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required bip32Derivations for multisig signing/,
+  },
+  {
+    case: "Empty bip32Derivations array",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        bip32Derivations: [],
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required bip32Derivations for multisig signing/,
+  },
+];
