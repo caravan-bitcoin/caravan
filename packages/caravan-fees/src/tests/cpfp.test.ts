@@ -54,9 +54,20 @@ describe("CPFP Transaction Creation", () => {
         );
 
         // Verify parent UTXO PSBT fields are present
-        expect(psbt.PSBT_IN_WITNESS_UTXO[0]).toBeDefined();
-        expect(psbt.PSBT_IN_BIP32_DERIVATION[0]).toBeDefined();
-        expect(psbt.PSBT_IN_WITNESS_SCRIPT[0]).toBeDefined();
+        expect(psbt.PSBT_IN_WITNESS_UTXO[0]).toEqual(
+          fixture.expected.psbtFields.witnessUtxo,
+        );
+
+        const bip32Derivation = psbt.PSBT_IN_BIP32_DERIVATION[0][0]; // BIP32 derivation returns key-value pairs
+        expect(bip32Derivation.key).toBe(
+          fixture.expected.psbtFields.bip32DerivationKey,
+        );
+        expect(bip32Derivation.value).toBe(
+          fixture.expected.psbtFields.bip32DerivationValue,
+        );
+        expect(psbt.PSBT_IN_WITNESS_SCRIPT[0]).toBe(
+          fixture.expected.psbtFields.witnessScript,
+        );
 
         // Step 5: Verify change output
         expect(psbt.PSBT_OUT_SCRIPT[0]).toContain(
@@ -116,7 +127,6 @@ describe("CPFP Transaction Creation", () => {
     });
   });
 
-  // NEW: Missing PSBT fields tests
   describe("Missing PSBT Fields", () => {
     cpfpMissingPsbtFieldsFixtures.forEach((fixture) => {
       it(fixture.case, () => {

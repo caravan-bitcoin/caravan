@@ -95,6 +95,18 @@ export const cpfpValidFixtures = [
         address: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
         value: "38828300",
       },
+      psbtFields: {
+        witnessUtxo:
+          "007c500200000000160014f2aecd6ab28d970ee8eea34665c181393b8754c6",
+        // BIP32 derivation key: 06 (key type) + pubkey
+        bip32DerivationKey:
+          "0602b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b8",
+        // BIP32 derivation value: master fingerprint + encoded path
+        bip32DerivationValue:
+          "12345678300000800100008000000080020000800000000000000000",
+        witnessScript:
+          "512102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b851ae",
+      },
     },
   },
 ];
