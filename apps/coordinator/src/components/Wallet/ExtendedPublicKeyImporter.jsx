@@ -10,19 +10,13 @@ import {
   P2SH,
 } from "@caravan/bitcoin";
 import {
-<<<<<<< HEAD
-=======
   JADE,
->>>>>>> e784f82 (fixed linting errors)
   BITBOX,
   TREZOR,
   LEDGER,
   HERMIT,
   COLDCARD,
-<<<<<<< HEAD
   BCUR2,
-=======
->>>>>>> e784f82 (fixed linting errors)
 } from "@caravan/wallets";
 import {
   Card,
