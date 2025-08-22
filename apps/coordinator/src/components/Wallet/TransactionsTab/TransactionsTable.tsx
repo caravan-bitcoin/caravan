@@ -40,9 +40,9 @@ const formatRelativeTime = (timestamp?: number): string => {
 // Column definitions with sorting configuration - dynamic based on showAcceleration
 const getColumns = (showAcceleration: boolean) => [
   { id: "txid", label: "Transaction ID", sortable: false },
-  { id: "blockTime", label: "Time", sortable: true },
-  { id: "size", label: "Size (vBytes)", sortable: true },
-  { id: "fee", label: "Fee (sats)", sortable: true },
+  { id: "blockTime", label: "Time", sortable: false },
+  { id: "size", label: "Size (vBytes)", sortable: false },
+  { id: "fee", label: "Fee (sats)", sortable: false },
   { id: "valueToWallet", label: "Value", sortable: false },
   { id: "status", label: "Status", sortable: false },
   ...(showAcceleration
