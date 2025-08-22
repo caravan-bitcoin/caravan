@@ -6,8 +6,7 @@ import {
 } from "./btcTransactionComponents";
 import { BtcTransactionTemplate } from "./btcTransactionTemplate";
 import { TransactionAnalyzer } from "./transactionAnalyzer";
-import { FeeBumpStrategy, CPFPOptions, UTXO } from "./types";
-import { createOutputScript } from "./utils";
+import { FeeBumpStrategy, CPFPOptions } from "./types";
 
 /**
  * Creates a Child-Pays-for-Parent (CPFP) transaction to accelerate the confirmation
@@ -20,12 +19,13 @@ import { createOutputScript } from "./utils";
  *
  * The CPFP calculation process:
  * 1. Analyze the parent transaction to determine its fee, size, and available outputs.
- * 2. Create a child transaction template with the target fee rate for the combined package.
- * 3. Add the spendable output from the parent as an input to the child transaction.
- * 4. Iteratively add additional inputs to the child transaction until the combined
+ * 2. Validate the provided parent UTXO matches the expected output.
+ * 3. Create a child transaction template with the target fee rate for the combined package.
+ * 4. Add the parent UTXO as an input to the child transaction.
+ * 5. Iteratively add additional inputs to the child transaction until the combined
  *    fee rate of the parent and child meets or exceeds the target fee rate.
- * 5. Calculate and set the change output amount for the child transaction.
- * 6. Validate the child transaction and ensure the combined fee rate is sufficient.
+ * 6. Calculate and set the change output amount for the child transaction.
+ * 7. Validate the child transaction and ensure the combined fee rate is sufficient.
  *
  * The combined fee rate is calculated as:
  * (parentFee + childFee) / (parentVsize + childVsize)
@@ -40,6 +40,7 @@ import { createOutputScript } from "./utils";
  *   originalTx: originalTxHex,
  *   availableInputs: availableUTXOs,
  *   spendableOutputIndex: 1,
+ *   parentUtxo: enrichedParentUtxo,
  *   changeAddress: 'bc1q...',
  *   network: Network.MAINNET,
  *   dustThreshold: '546',
@@ -67,6 +68,7 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     scriptType,
     dustThreshold,
     spendableOutputIndex,
+    parentUtxo,
     changeAddress,
   } = options;
 
@@ -104,6 +106,42 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
         analysis.recommendedStrategy,
     );
   }
+  // validate the provided parent UTXO matches the expected output
+  const parentOutput = txAnalyzer.outputs[spendableOutputIndex];
+  if (!parentOutput) {
+    throw new Error(
+      `Spendable output at index ${spendableOutputIndex} not found in the parent transaction.`,
+    );
+  }
+
+  // Validate that the provided parent UTXO matches the expected output
+  if (
+    parentUtxo.txid !== analysis.txid ||
+    parentUtxo.vout !== spendableOutputIndex ||
+    parentUtxo.value !== parentOutput.amountSats
+  ) {
+    throw new Error(
+      `Provided parent UTXO does not match the expected parent output. ` +
+        `Expected: ${analysis.txid}:${spendableOutputIndex} with ${parentOutput.amountSats} sats, ` +
+        `Got: ${parentUtxo.txid}:${parentUtxo.vout} with ${parentUtxo.value} sats`,
+    );
+  }
+
+  // Validate that the parent UTXO has required PSBT fields
+  if (!parentUtxo.witnessUtxo && !parentUtxo.nonWitnessUtxo) {
+    throw new Error(
+      "Parent UTXO is missing required witnessUtxo or nonWitnessUtxo field for PSBT creation",
+    );
+  }
+
+  if (
+    !parentUtxo.bip32Derivations ||
+    parentUtxo.bip32Derivations.length === 0
+  ) {
+    throw new Error(
+      "Parent UTXO is missing required bip32Derivations for multisig signing",
+    );
+  }
 
   // Step 3: Create a new transaction template for the child transaction
   const childTxTemplate = new BtcTransactionTemplate({
@@ -118,28 +156,8 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
     ...(options.globalXpubs && { globalXpubs: options.globalXpubs }), // Only add if user-code provides us globalXpubs
   });
 
-  // Step 4: Add the spendable output from the parent transaction as an input
-  const parentOutput = txAnalyzer.outputs[spendableOutputIndex];
-  if (!parentOutput) {
-    throw new Error(
-      `Spendable output at index ${spendableOutputIndex} not found in the parent transaction.`,
-    );
-  }
-
-  // Create a UTXO from the parent transaction's output
-  const parentOutputUTXO: UTXO = {
-    txid: analysis.txid,
-    vout: spendableOutputIndex,
-    value: parentOutput.amountSats,
-    witnessUtxo: {
-      script: createOutputScript(parentOutput.address, network),
-      value: parseInt(parentOutput.amountSats),
-    },
-
-    prevTxHex: originalTx,
-  };
-
-  childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(parentOutputUTXO));
+  // Step 4: Add the parent UTXO as an input to the child transaction
+  childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(parentUtxo));
 
   // Step 5: Add a change output (at least 1 output required for a valid transaction)
   childTxTemplate.addOutput(
