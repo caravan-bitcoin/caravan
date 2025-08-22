@@ -43,7 +43,7 @@ const getColumns = (showAcceleration: boolean) => [
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
-  { id: "valueToWallet", label: "Value", sortable: true },
+  { id: "valueToWallet", label: "Value", sortable: false },
   { id: "status", label: "Status", sortable: false },
   ...(showAcceleration
     ? [{ id: "accelerate", label: "Accelerate", sortable: false }]
