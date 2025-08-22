@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
 import {
@@ -58,7 +58,6 @@ const TransactionsTab: React.FC = () => {
     error: completedError,
     hasNextPage: completedHasMore,
     fetchNextPage: loadMoreCompleted,
-    totalLoaded: completedTotalLoaded,
   } = useCompletedTransactionsWithLoadMore(100, pendingTransactions.length); // Load 100 transactions at a time
 
   const sortingResult = useSortedTransactions(pendingTransactions);
@@ -91,6 +90,10 @@ const TransactionsTab: React.FC = () => {
     setHasUserInteracted(true); // Mark that user has manually interacted
   };
 
+  const filteredCompletedTransactions = useMemo(() => {
+    const pendingTxids = new Set(pendingTransactions.map((tx) => tx.txid));
+    return completedTransactions.filter((tx) => !pendingTxids.has(tx.txid));
+  }, [completedTransactions, pendingTransactions]);
   // Handle acceleration button click
   const handleAccelerateTransaction = async (tx: any) => {
     if (!tx || !blockchainClient) return;
@@ -157,7 +160,7 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`Confirmed (${completedTotalLoaded}${completedHasMore ? "+" : ""})`}
+              label={`Confirmed (${filteredCompletedTransactions.length}${completedHasMore ? "+" : ""})`}
               id="completed-tab"
               aria-controls="completed-tabpanel"
             />
@@ -273,13 +276,13 @@ const TransactionsTab: React.FC = () => {
       >
         {tabValue === 1 && (
           <ConfirmedTransactionsView
-            transactions={completedTransactions}
+            transactions={filteredCompletedTransactions}
             isLoading={completedIsLoading}
             isLoadingMore={completedIsLoadingMore}
             error={completedError}
             hasMore={completedHasMore ?? false}
             onLoadMore={loadMoreCompleted}
-            totalLoaded={completedTotalLoaded}
+            totalLoaded={filteredCompletedTransactions.length}
             network={network}
             onClickTransaction={handleExplorerLinkClick}
           />
