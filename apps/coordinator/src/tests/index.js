@@ -5,10 +5,7 @@ import {
   LEDGER,
   HERMIT,
   COLDCARD,
-<<<<<<< HEAD
   BCUR2,
-=======
->>>>>>> e784f82 (fixed linting errors)
 } from "@caravan/wallets";
 import { TEST_FIXTURES } from "@caravan/bitcoin";
 

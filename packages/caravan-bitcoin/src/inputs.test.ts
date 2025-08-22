@@ -56,7 +56,7 @@ describe("inputs", () => {
   describe("validateMultisigInputs", () => {
     it("should return an error message with no inputs", () => {
       expect(validateMultisigInputs([])).toMatch(
-        /At least one input.+required/i
+        /At least one input.+required/i,
       );
     });
 
@@ -65,7 +65,7 @@ describe("inputs", () => {
         validateMultisigInputs([
           { txid: VALID_TXID, index: 0 },
           { txid: VALID_TXID, index: 1, multisig: true },
-        ])
+        ]),
       ).toMatch(/not have a multisig.+property/i);
     });
 
@@ -74,7 +74,7 @@ describe("inputs", () => {
         validateMultisigInputs([
           { txid: VALID_TXID, index: 0, multisig: true },
           { txid: VALID_TXID, index: 0, multisig: true },
-        ])
+        ]),
       ).toMatch(/duplicate input/i);
     });
 
@@ -83,7 +83,7 @@ describe("inputs", () => {
         validateMultisigInputs([
           { txid: VALID_TXID, index: 0, multisig: true },
           { txid: VALID_TXID, index: 1, multisig: true },
-        ])
+        ]),
       ).toEqual("");
     });
   });
@@ -91,31 +91,31 @@ describe("inputs", () => {
   describe("validateMultisigInput", () => {
     it("should return an error message for a missing txid", () => {
       expect(validateMultisigInput({ index: 0, multisig: true })).toMatch(
-        /does not have.+txid/i
+        /does not have.+txid/i,
       );
     });
 
     it("should return an error message for an invalid txid", () => {
       expect(
-        validateMultisigInput({ index: 0, multisig: true, txid: "hi there" })
+        validateMultisigInput({ index: 0, multisig: true, txid: "hi there" }),
       ).toMatch(/txid is invalid/i);
     });
 
     it("should return an error message for a missing index", () => {
       expect(
-        validateMultisigInput({ txid: VALID_TXID, multisig: true })
+        validateMultisigInput({ txid: VALID_TXID, multisig: true }),
       ).toMatch(/does not have.+index/i);
     });
 
     it("should return an error message for an invalid index", () => {
       expect(
-        validateMultisigInput({ txid: VALID_TXID, index: -1, multisig: true })
+        validateMultisigInput({ txid: VALID_TXID, index: -1, multisig: true }),
       ).toMatch(/index cannot be negative/i);
     });
 
     it("should return an error message for a missing multisig", () => {
       expect(validateMultisigInput({ txid: VALID_TXID, index: 0 })).toMatch(
-        /does not have.+multisig/i
+        /does not have.+multisig/i,
       );
     });
   });
@@ -123,7 +123,7 @@ describe("inputs", () => {
   describe("validateBraidAwareMultisigInputs", () => {
     it("should return an error message with no inputs", () => {
       expect(validateMultisigInputs([], true)).toMatch(
-        /At least one input.+required/i
+        /At least one input.+required/i,
       );
     });
 
@@ -138,8 +138,8 @@ describe("inputs", () => {
               multisig: { braidDetails: true, bip32Derivation: [] },
             },
           ],
-          true
-        )
+          true,
+        ),
       ).toMatch(/not have a multisig.+property/i);
     });
 
@@ -150,8 +150,8 @@ describe("inputs", () => {
             { txid: VALID_TXID, index: 0, multisig: { braidDetails: true } },
             { txid: VALID_TXID, index: 0, multisig: { braidDetails: true } },
           ],
-          true
-        )
+          true,
+        ),
       ).toMatch(/duplicate input/i);
     });
 
@@ -159,10 +159,10 @@ describe("inputs", () => {
       expect(
         validateMultisigInputs(
           [{ txid: VALID_TXID, index: 0, multisig: true }],
-          true
-        )
+          true,
+        ),
       ).toMatch(
-        /input cannot be traced back to its set of extended public keys/i
+        /input cannot be traced back to its set of extended public keys/i,
       );
     });
 
@@ -173,8 +173,8 @@ describe("inputs", () => {
             { txid: VALID_TXID, index: 0, multisig: { braidDetails: true } },
             { txid: VALID_TXID, index: 1, multisig: { braidDetails: true } },
           ],
-          true
-        )
+          true,
+        ),
       ).toEqual("");
     });
   });
@@ -184,8 +184,8 @@ describe("inputs", () => {
       expect(
         validateMultisigInputs(
           [{ index: 0, multisig: { braidDetails: true } }],
-          true
-        )
+          true,
+        ),
       ).toMatch(/does not have.+txid/i);
     });
 
@@ -193,7 +193,7 @@ describe("inputs", () => {
       expect(
         validateMultisigInputs([
           { index: 0, multisig: { braidDetails: true }, txid: "hi there" },
-        ])
+        ]),
       ).toMatch(/txid is invalid/i);
     });
 
@@ -201,8 +201,8 @@ describe("inputs", () => {
       expect(
         validateMultisigInputs(
           [{ txid: VALID_TXID, multisig: { braidDetails: true } }],
-          true
-        )
+          true,
+        ),
       ).toMatch(/does not have.+index/i);
     });
 
@@ -210,14 +210,14 @@ describe("inputs", () => {
       expect(
         validateMultisigInputs(
           [{ txid: VALID_TXID, index: -1, multisig: { braidDetails: true } }],
-          true
-        )
+          true,
+        ),
       ).toMatch(/index cannot be negative/i);
     });
 
     it("should return an error message for a missing multisig", () => {
       expect(
-        validateMultisigInputs([{ txid: VALID_TXID, index: 0 }], true)
+        validateMultisigInputs([{ txid: VALID_TXID, index: 0 }], true),
       ).toMatch(/does not have.+multisig/i);
     });
   });

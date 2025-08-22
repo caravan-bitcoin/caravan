@@ -57,7 +57,6 @@ import {
   ERROR,
 } from "./interaction";
 
-
 /**
  * What's going on with this TrezorConnect import?
  * For some reason the way trezor/connect and trezor/connect-web export their default
