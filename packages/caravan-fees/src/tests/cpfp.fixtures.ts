@@ -5,6 +5,36 @@ import { UTXO } from "../types";
 const parentTxHex =
   "020000000001019ef21963fbf5261d3b62f7f0467ab4b6d006b7d25a27d6744c95d9c11f577b210300000000ffffffff02713d0000000000001600147938bb5013f400246165f507ed015853430e28d2007c500200000000160014f2aecd6ab28d970ee8eea34665c181393b8754c60247304402201aaa53e645c14148171c3ea39841ee4ad7451d3a30f651e8a38ca20cec2cab9402206eab21ae37a5e0eaa0fe39d26821133e2c97297897de75b854865b5884a3523b012102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b800000000";
 
+const parentTxid =
+  "77f437ae7f796896f1d69e2c9329202d6ac4b4a03fbc0f18e06dfab87f4b0702";
+const spendableOutputIndex = 1;
+
+// parent UTXO with full PSBT metadata
+const parentUtxo: UTXO = {
+  txid: parentTxid,
+  vout: spendableOutputIndex,
+  value: "38829056", // Value from output index 1 of parent transaction
+  prevTxHex: parentTxHex,
+  witnessUtxo: {
+    script: Buffer.from("0014f2aecd6ab28d970ee8eea34665c181393b8754c6", "hex"),
+    value: 38829056,
+  },
+  bip32Derivations: [
+    {
+      pubkey: Buffer.from(
+        "02b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b8",
+        "hex",
+      ),
+      masterFingerprint: Buffer.from("12345678", "hex"),
+      path: "m/48'/1'/0'/2'/0/0",
+    },
+  ],
+  witnessScript: Buffer.from(
+    "512102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b851ae",
+    "hex",
+  ),
+};
+
 const availableUTXOs: UTXO[] = [
   {
     txid: "9805c05eebf91913601ed9024330b8a3d4fcc4d2503abf4dce5067cb011673c5",
@@ -42,6 +72,7 @@ export const cpfpValidFixtures = [
       originalTx: parentTxHex,
       availableInputs: availableUTXOs,
       spendableOutputIndex: 1,
+      parentUtxo: parentUtxo,
       changeAddress: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
       network: Network.MAINNET,
       dustThreshold: "546",
@@ -64,6 +95,18 @@ export const cpfpValidFixtures = [
         address: "bc1q72hv664j3ktsa68w5drxtsvp8yacw4xxt7rvxm",
         value: "38828300",
       },
+      psbtFields: {
+        witnessUtxo:
+          "007c500200000000160014f2aecd6ab28d970ee8eea34665c181393b8754c6",
+        // BIP32 derivation key: 06 (key type) + pubkey
+        bip32DerivationKey:
+          "0602b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b8",
+        // BIP32 derivation value: master fingerprint + encoded path
+        bip32DerivationValue:
+          "12345678300000800100008000000080020000800000000000000000",
+        witnessScript:
+          "512102b38786de2766d97e9d0341f9c2435b71242f0e41e887aebf8af5943afa7fa9b851ae",
+      },
     },
   },
 ];
@@ -84,4 +127,83 @@ export const cpfpInvalidFixtures = [
     },
   },
   // Removed the Dust output creation case, as now we use the parent tx to get the spendable output, as child tx's input so cannot override it's amount to create this invalid case .
+];
+
+export const cpfpParentUtxoValidationFixtures = [
+  {
+    case: "Parent UTXO txid mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        txid: "wrongtxid0000000000000000000000000000000000000000000000000000000000000000",
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+  {
+    case: "Parent UTXO vout mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        vout: 0, // Wrong output index
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+  {
+    case: "Parent UTXO value mismatch",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        value: "1000000", // Wrong value
+      },
+    },
+    expectedError:
+      /Provided parent UTXO does not match the expected parent output/,
+  },
+];
+
+export const cpfpMissingPsbtFieldsFixtures = [
+  {
+    case: "Missing witnessUtxo and nonWitnessUtxo",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        witnessUtxo: undefined,
+        nonWitnessUtxo: undefined,
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required witnessUtxo or nonWitnessUtxo field/,
+  },
+  {
+    case: "Missing bip32Derivations",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        bip32Derivations: undefined,
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required bip32Derivations for multisig signing/,
+  },
+  {
+    case: "Empty bip32Derivations array",
+    options: {
+      ...cpfpValidFixtures[0].options,
+      parentUtxo: {
+        ...parentUtxo,
+        bip32Derivations: [],
+      },
+    },
+    expectedError:
+      /Parent UTXO is missing required bip32Derivations for multisig signing/,
+  },
 ];
