@@ -87,7 +87,7 @@ export const usePublicClientTransactionsWithLoadMore = (
       return selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
-        "all",
+        "confirmed",
       );
     },
     enabled:
