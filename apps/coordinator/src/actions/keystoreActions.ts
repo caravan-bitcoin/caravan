@@ -1,4 +1,5 @@
 import {
+  JADE,
   BITBOX,
   TREZOR,
   LEDGER,
