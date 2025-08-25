@@ -39,7 +39,7 @@ export const JADE = "jade";
 
 const DEFAULT_NETWORK = "mainnet";
 
-function variantFromAddressType(
+export function variantFromAddressType(
   t: MultisigAddressType,
 ): MultisigDescriptor["variant"] {
   switch (t) {
@@ -54,11 +54,11 @@ function variantFromAddressType(
   }
 }
 
-function fingerprintFromHex(xfp: string): Uint8Array {
+export function fingerprintFromHex(xfp: string): Uint8Array {
   return Uint8Array.from(Buffer.from(xfp, "hex"));
 }
 
-function walletConfigToJadeDescriptor(
+export function walletConfigToJadeDescriptor(
   cfg: MultisigWalletConfig,
 ): MultisigDescriptor {
   const signers: SignerDescriptor[] = cfg.extendedPublicKeys.map((ek) => ({
@@ -76,7 +76,7 @@ function walletConfigToJadeDescriptor(
   };
 }
 
-function getSignatureArray(
+export function getSignatureArray(
   fingerprint: string | null,
   parsedPsbt: any,
 ): string[] {
@@ -120,6 +120,12 @@ function getSignatureArray(
   return sigArray;
 }
 
+export interface JadeDependencies {
+  transport?: JadeTransport;
+  jadeInterface?: IJadeInterface;
+  jade?: IJade;
+}
+
 export class JadeInteraction extends DirectKeystoreInteraction {
   protected transport: JadeTransport;
 
@@ -129,12 +135,14 @@ export class JadeInteraction extends DirectKeystoreInteraction {
 
   protected network: BitcoinNetwork;
 
-  constructor(network?: BitcoinNetwork) {
+  constructor(network?: BitcoinNetwork, dependencies?: JadeDependencies) {
     super();
-    this.transport = new SerialTransport({});
-    this.ijade = new JadeInterface(this.transport);
-    this.jade = new Jade(this.ijade);
     this.network = network ?? (DEFAULT_NETWORK as BitcoinNetwork);
+
+    // Dependency injections or default to an instance from jadets
+    this.transport = dependencies?.transport ?? new SerialTransport({}); 
+    this.ijade = dependencies?.jadeInterface ?? new JadeInterface(this.transport);
+    this.jade = dependencies?.jade ?? new Jade(this.ijade);
   }
 
   /**
@@ -242,12 +250,14 @@ export class JadeExportPublicKey extends JadeInteraction {
     network,
     bip32Path,
     includeXFP,
+    dependencies,
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
     includeXFP: boolean;
+    dependencies?: JadeDependencies;
   }) {
-    super(network);
+    super(network, dependencies);
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
@@ -280,12 +290,14 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
     network,
     bip32Path,
     includeXFP,
+    dependencies,
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
     includeXFP: boolean;
+    dependencies?: JadeDependencies;
   }) {
-    super(network);
+    super(network, dependencies);
     this.bip32Path = bip32Path;
     this.includeXFP = includeXFP;
   }
@@ -310,8 +322,8 @@ export class JadeExportExtendedPublicKey extends JadeInteraction {
 export class JadeRegisterWalletPolicy extends JadeInteraction {
   walletConfig: MultisigWalletConfig;
 
-  constructor({ walletConfig }: { walletConfig: MultisigWalletConfig }) {
-    super(walletConfig.network);
+  constructor({ walletConfig, dependencies }: { walletConfig: MultisigWalletConfig, dependencies?: JadeDependencies }) {
+    super(walletConfig.network, dependencies);
     this.walletConfig = walletConfig;
   }
 
@@ -347,12 +359,14 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
     network,
     bip32Path,
     walletConfig,
+    dependencies,
   }: {
     network?: BitcoinNetwork;
     bip32Path: string;
     walletConfig: MultisigWalletConfig;
+    dependencies?: JadeDependencies;
   }) {
-    super(network);
+    super(network, dependencies);
     this.bip32Path = bip32Path;
     this.walletConfig = walletConfig;
   }
@@ -407,12 +421,14 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
     walletConfig,
     psbt,
     returnSignatureArray = false,
+    dependencies,
   }: {
     walletConfig: MultisigWalletConfig;
     psbt: string;
     returnSignatureArray: boolean;
+    dependencies?: JadeDependencies;
   }) {
-    super(walletConfig.network);
+    super(walletConfig.network, dependencies);
     this.walletConfig = walletConfig;
     this.returnSignatureArray = returnSignatureArray;
     this.unsignedPsbt = base64ToBytes(psbt);
@@ -442,18 +458,28 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
   }
 }
 
-
 export class JadeSignMessage extends JadeInteraction {
+
   bip32Path: string;
-
+ 
   message: string;
-
-  constructor({ bip32Path, message }: { bip32Path: string; message: string }) {
-    super();
+  
+  constructor({ 
+    bip32Path, 
+    message, 
+    network,
+    dependencies 
+  }: { 
+    bip32Path: string; 
+    message: string;
+    network?: BitcoinNetwork;
+    dependencies?: JadeDependencies;
+  }) {
+    super(network, dependencies);
     this.bip32Path = bip32Path;
     this.message = message;
   }
-
+  
   async run() {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
@@ -461,4 +487,3 @@ export class JadeSignMessage extends JadeInteraction {
     });
   }
 }
-
