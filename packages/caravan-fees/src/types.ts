@@ -533,6 +533,17 @@ export interface CPFPOptions {
   spendableOutputIndex: number;
 
   /**
+   * The parent output UTXO with complete PSBT metadata.
+   * This UTXO represents the output from the parent transaction that will be spent
+   * in the child transaction. It must include all necessary signing information
+   * (scripts, derivation paths, etc.) for proper PSBT construction.
+   *
+   * This should be created using wallet-specific logic that can reconstruct
+   * the full UTXO metadata from the transaction output.
+   */
+  parentUtxo: UTXO;
+
+  /**
    * The address where any excess funds (change) will be sent in the child transaction.
    */
   changeAddress: string;
