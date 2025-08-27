@@ -25,6 +25,7 @@ import {
   MultisigDescriptor,
   SignerDescriptor,
   ReceiveOptions,
+  JadeHttpRequestFunction,
 } from "jadets";
 
 import {
@@ -183,22 +184,27 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     // in order to authorize the user from the device.
     // for more information on how this works you can read the docs @ 
     // https://github.com/Blockstream/Jade/blob/master/docs/index.rst#welcome-to-jades-rpc-documentation
-    const httpRequestFn = async (params: any): Promise<{ body: any }> => {
-      const url = params.urls[0];
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params.data),
-      });
-      if (!res.ok) throw new Error("HTTP request failed in authUser");
-      return { body: await res.json() };
-    };
+  const httpRequestFn: JadeHttpRequestFunction = async (params) => {
+    const firstUrl = params.urls[0];
+    const url = typeof firstUrl === 'string' ? firstUrl : firstUrl.url || firstUrl.onion;
+    
+    if (!url) throw new Error("No URL provided in http request params");
 
-    const unlocked = await this.jade.authUser(this.rpcNetwork, httpRequestFn);
-    if (unlocked !== true) throw new Error("Failed to unlock Jade device");
+    const res = await fetch(url, {
+      method: params.method || "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params.data),
+    });
 
-    //run jade action
-    return await fn(this.jade);
+    if (!res.ok) throw new Error("HTTP request failed in authUser");
+    return { body: await res.json() };
+  };
+
+  const unlocked = await this.jade.authUser(this.rpcNetwork, httpRequestFn);
+  if (unlocked !== true) throw new Error("Failed to unlock Jade device");
+
+  //run jade action
+  return await fn(this.jade);
   } finally {
     if (connected) {
       try {
