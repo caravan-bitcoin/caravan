@@ -9,7 +9,14 @@ import {
   Network,
   P2SH,
 } from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import {
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+  BCUR2,
+} from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -38,6 +45,7 @@ import {
 } from "../../actions/extendedPublicKeyImporterActions";
 import ColdcardExtendedPublicKeyImporter from "../Coldcard/ColdcardExtendedPublicKeyImporter";
 import HermitExtendedPublicKeyImporter from "../Hermit/HermitExtendedPublicKeyImporter";
+import BCUR2ExtendedPublicKeyImporter from "../BCUR2/BCUR2ExtendedPublicKeyImporter";
 
 const TEXT = "text";
 
@@ -88,6 +96,7 @@ class ExtendedPublicKeyImporter extends React.Component {
             <MenuItem value={COLDCARD}>Coldcard</MenuItem>
             <MenuItem value={LEDGER}>Ledger</MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
+            <MenuItem value={BCUR2}>QR Code (BCUR2)</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
@@ -150,6 +159,17 @@ class ExtendedPublicKeyImporter extends React.Component {
           addressType={addressType}
           defaultBIP32Path={defaultBIP32Path}
           network={network}
+        />
+      );
+    }
+    if (method === BCUR2) {
+      return (
+        <BCUR2ExtendedPublicKeyImporter
+          extendedPublicKeyImporter={extendedPublicKeyImporter}
+          validateAndSetExtendedPublicKey={this.validateAndSetExtendedPublicKey}
+          validateAndSetBIP32Path={this.validateAndSetBIP32Path}
+          validateAndSetRootFingerprint={this.validateAndSetRootFingerprint}
+          enableChangeMethod={this.enableChangeMethod}
         />
       );
     }
