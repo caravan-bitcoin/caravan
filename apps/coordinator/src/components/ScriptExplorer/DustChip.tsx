@@ -13,8 +13,8 @@ interface DustChipProps {
  * DustChip component displays the dust status of a UTXO based on its amount and fee rate.
  * It uses the WasteMetrics class to determine if the UTXO is economical, in warning range, or dust.
  * It also provides a tooltip with additional information.
- * @param {DustChipProps} props - Component properties
- * @returns {JSX.Element} Rendered DustChip component
+ * @param DustChipProps props - Component properties
+ * @returns JSX.Element Rendered DustChip component
  */
 
 const DustChip: React.FC<DustChipProps> = ({
@@ -28,39 +28,62 @@ const DustChip: React.FC<DustChipProps> = ({
     (state: any) => state.spend?.transaction?.feeRate || 1,
   );
   const { addressType: defaultScriptType, quorum } = walletConfig;
-
-  // Instantiate metrics and compute dust limits
-  const wasteMetrics = new WasteMetrics();
-  const config = {
-    requiredSignerCount: quorum.requiredSigners,
-    totalSignerCount: quorum.totalSigners,
-  };
-  const { lowerLimit, upperLimit } = wasteMetrics.calculateDustLimits(
-    feeRate,
-    scriptType || defaultScriptType,
-    config,
-  );
-
   // Determine chip appearance
   let color: "error" | "warning" | "success" = "success";
   let label = "Economical";
+  let hasError = false;
+  let dustLimits:
+    | {
+        lowerLimit: number;
+        upperLimit: number;
+      }
+    | undefined;
 
-  if (amountSats <= lowerLimit) {
-    color = "error";
-    label = "Dust";
-  } else if (amountSats > lowerLimit && amountSats <= upperLimit) {
-    color = "warning";
-    label = "Warning";
+  try {
+    // Instantiate metrics and compute dust limits
+    const wasteMetrics = new WasteMetrics();
+    const config = {
+      requiredSignerCount: quorum.requiredSigners,
+      totalSignerCount: quorum.totalSigners,
+    };
+    dustLimits = wasteMetrics.calculateDustLimits(
+      feeRate,
+      scriptType || defaultScriptType,
+      config,
+    );
+
+    if (dustLimits && dustLimits.lowerLimit && dustLimits.upperLimit) {
+      const { lowerLimit, upperLimit } = dustLimits;
+
+      if (amountSats <= lowerLimit) {
+        color = "error";
+        label = "Dust";
+      } else if (amountSats > lowerLimit && amountSats <= upperLimit) {
+        color = "warning";
+        label = "Warning";
+      }
+    } else {
+      // Fallback for fresh UTXOs where calculation fails
+      hasError = true;
+      color = "default" as any; // Use default color for unknown status
+      label = "Unknown";
+    }
+  } catch (error) {
+    console.warn("Dust calculation failed:", error);
+    hasError = true;
+    color = "default" as any;
+    label = "Unknown";
   }
-
   // Fallback tooltip text based on range
-  const defaultTooltip = `This UTXO is ${
-    amountSats <= lowerLimit
-      ? "too small (dust) and costs more to spend than its value."
-      : amountSats <= upperLimit
-        ? "in the warning range; consider batching or consolidating."
-        : "economical to spend."
-  }`;
+  const defaultTooltip = hasError
+    ? "Unable to determine dust status for this UTXO. This may be a fresh address that hasn't been analyzed yet."
+    : `This UTXO is ${
+        amountSats <= (dustLimits?.lowerLimit ?? 0)
+          ? "too small (dust) and costs more to spend than its value."
+          : amountSats <= (dustLimits?.upperLimit ?? Infinity)
+            ? "in the warning range; consider batching or consolidating."
+            : "economical to spend."
+      }`;
 
   return (
     <Tooltip title={tooltipText ?? defaultTooltip} arrow>
