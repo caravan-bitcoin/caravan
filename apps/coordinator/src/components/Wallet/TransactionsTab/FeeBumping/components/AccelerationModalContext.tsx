@@ -31,12 +31,16 @@ interface AccelerationModalState {
   analysisIsLoading: boolean;
   analysisIsError: string | null;
   availableUtxos: UTXO[];
+  changeOutputIndex: number | undefined;
 
   // Strategy selection
   selectedStrategy: FeeBumpStrategy | null;
 
   // RBF configuration
   rbfType: RbfType;
+
+  // CPFP configuration
+  cpfp: any;
 
   // Fee bump PSBT
   feeBumpResult: FeeBumpResult | null;
@@ -70,6 +74,8 @@ const initialState: AccelerationModalState = {
   transaction: null,
   txHex: "",
   analysis: null,
+  cpfp: null,
+  changeOutputIndex: undefined,
   availableUtxos: [],
   analysisIsLoading: false,
   analysisIsError: null,
@@ -153,6 +159,8 @@ function accelerationModalReducer(
 interface AccelerationModalContextType {
   transaction: TransactionDetails;
   txHex: string;
+  cpfp: any;
+  changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;
   analysisIsLoading: boolean;
   analysisError: string | null;
@@ -196,10 +204,14 @@ export function AccelerationModalProvider({
   txHex,
 }: AccelerationModalProviderProps) {
   const [state, dispatch] = useReducer(accelerationModalReducer, initialState);
-  const { analysis, isLoading, error, availableUtxos } = useAnalyzeTransaction(
-    transaction,
-    txHex,
-  );
+  const {
+    analysis,
+    isLoading,
+    error,
+    availableUtxos,
+    cpfp,
+    changeOutputIndex,
+  } = useAnalyzeTransaction(transaction, txHex);
 
   // Action creators
   const setActiveStep = useCallback((step: number) => {
@@ -250,6 +262,8 @@ export function AccelerationModalProvider({
     setFeeBumpResult,
     setDownloadClicked,
     analysis,
+    cpfp,
+    changeOutputIndex,
     availableUtxos,
     analysisIsLoading: isLoading,
     analysisError: error,

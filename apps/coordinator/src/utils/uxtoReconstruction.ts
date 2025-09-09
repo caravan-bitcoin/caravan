@@ -1,6 +1,9 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
+import { UTXO } from "@caravan/fees";
 import { Slice } from "selectors/wallet";
+import { Coin } from "clients/transactions";
+import { getUtxoFromCoin } from "hooks/utxos";
 import { createInputIdentifier, Input } from "./psbtUtils";
 
 /**
@@ -293,4 +296,84 @@ export function matchPsbtInputsToUtxos(
   });
 
   return matchedInputs;
+}
+
+/**
+ * Hook to reconstruct a parent transaction output for Child-Pays-for-Parent (CPFP) spending.
+ *
+ * When you want to speed up a stuck Bitcoin transaction using CPFP, you need to create a new
+ * transaction (the "child") that spends an output from your unconfirmed transaction (the "parent").
+ *
+ * The problem: While your wallet knows about the parent transaction's outputs, those outputs
+ * don't have the detailed signing information (scripts, derivation paths, etc.) needed to
+ * create a proper PSBT for spending them.
+ *
+ * ## What this hook does:
+ * 1. **Identifies ownership**: Checks if the specified output actually belongs to user's wallet
+ * 2. **Reconstructs metadata**: Adds all the missing signing information from user wallet's
+ *    slice data (multisig scripts, BIP32 derivation paths, etc.)
+ * 3. **Formats for fees package**: Converts the result to the UTXO format expected by
+ *    the @caravan/fees package for transaction creation
+ *
+ *
+ * @param parentTransaction - The unconfirmed transaction containing the output we want to spend
+ * @param spendableOutputIndex
+ * @param txHex - The raw hex data of the parent transaction (needed for signing)
+ * @returns A fully enriched UTXO ready for spending, or null if the output doesn't belong to the wallet
+ */
+export const reconstructParentUtxo = (
+  parentTransaction: TransactionDetails,
+  spendableOutputIndex: number,
+  txHex: string,
+  walletSlices: Slice[],
+): UTXO | null => {
+  if (!parentTransaction || spendableOutputIndex === undefined || !txHex) {
+    return null;
+  }
+
+  const input = {
+    txid: parentTransaction.txid,
+    vout: spendableOutputIndex,
+  };
+
+  const caravanUtxo = reconstructSingleUtxo(
+    input,
+    parentTransaction,
+    txHex,
+    walletSlices,
+  );
+
+  // If reconstruction failed, this output doesn't belong to our wallet
+  if (!caravanUtxo) {
+    return null;
+  }
+  const coinForConversion = convertCaravanUtxoToCoin(caravanUtxo);
+  console.log("coinForConversion", coinForConversion, caravanUtxo);
+  try {
+    return getUtxoFromCoin(coinForConversion);
+  } catch (error) {
+    console.error(
+      "Failed to convert reconstructed UTXO to fees format:",
+      error,
+    );
+    return null;
+  }
+};
+
+/**
+ * Converts a Caravan-style UTXO object to a Coin object.
+ *
+ * @param caravanUtxo - UTXO object returned by reconstructSingleUtxo
+ * @returns Coin object ready for getUtxoFromCoin conversion
+ */
+function convertCaravanUtxoToCoin(caravanUtxo: any): Coin {
+  // Return a Coin object in the format expected by getUtxoFromCoin
+  return {
+    prevTxId: caravanUtxo.txid,
+    vout: caravanUtxo.index,
+    address: caravanUtxo.multisig.address,
+    value: caravanUtxo.amountSats,
+    prevTxHex: caravanUtxo.transactionHex,
+    slice: caravanUtxo,
+  };
 }

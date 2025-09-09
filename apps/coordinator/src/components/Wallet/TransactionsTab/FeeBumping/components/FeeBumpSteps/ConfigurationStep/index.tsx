@@ -16,7 +16,7 @@ export const ConfigurationStep: React.FC = () => {
   const {
     state: { selectedStrategy },
   } = useAccelerationModal();
-
+  console.log("selectedStrategy", selectedStrategy);
   // Show CPFP placeholder (not implemented yet in next PR)
   if (selectedStrategy === FeeBumpStrategy.CPFP) {
     return <CPFPForm />;

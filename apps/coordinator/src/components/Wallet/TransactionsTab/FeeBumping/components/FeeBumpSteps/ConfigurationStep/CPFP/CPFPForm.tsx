@@ -35,11 +35,13 @@ export const CPFPForm: React.FC = () => {
   const {
     transaction,
     analysis,
+    changeOutputIndex,
     txHex,
     availableUtxos,
     state: { selectedStrategy },
     setFeeBumpResult,
     nextStep,
+    cpfp,
   } = useAccelerationModal();
 
   const { data: feeEstimates } = useFeeEstimates();
@@ -48,7 +50,7 @@ export const CPFPForm: React.FC = () => {
     feeEstimates?.[FEE_LEVELS.MEDIUM] || 10,
   );
   const [spendableOutputIndex, setSpendableOutputIndex] = useState<number>(
-    analysis?.spendableOutputIndex || 0,
+    changeOutputIndex || 0,
   );
   const [changeAddress, setChangeAddress] = useState<string>("");
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
@@ -65,9 +67,9 @@ export const CPFPForm: React.FC = () => {
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
 
   // CPFP specific calculations
-  const parentVsize = analysis?.vsize || 0;
-  const estimatedChildVsize = 150; // Rough estimate, will be refined
-  const combinedVsize = parentVsize + estimatedChildVsize;
+  const parentVsize = analysis?.vsize;
+  const estimatedChildVsize = cpfp.childSize;
+  const combinedVsize = cpfp.combinedEstimatedSize;
 
   const targetCombinedFee = Math.ceil(combinedVsize * feeBumpRate);
   const childFeeNeeded = Math.max(0, targetCombinedFee - originalFee);

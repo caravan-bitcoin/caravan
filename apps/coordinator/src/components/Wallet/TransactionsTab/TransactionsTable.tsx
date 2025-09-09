@@ -56,18 +56,26 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   feeInSats,
   isReceived = false,
 }) => {
-  // For received transactions, show appropriate message
+  // For received transactions, show fee in green with a note
   if (isReceived) {
+    const feeInBTC = feeInSats
+      ? satoshisToBitcoins(feeInSats.toString())
+      : null;
+
     return (
-      <Tooltip
-        title="Fee not shown for received transactions as you didn't pay it"
-        placement="top"
-      >
-        <Box display="flex" alignItems="center">
-          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
-            N/A
+      <Tooltip title="You did not spend this fee" placement="top">
+        <Box display="flex" flexDirection="column">
+          <Typography variant="body2" sx={{ color: "green", fontWeight: 500 }}>
+            {feeInSats?.toLocaleString() ?? "--"} sats
           </Typography>
-          <InfoOutlinedIcon fontSize="small" color="disabled" />
+          {feeInBTC && (
+            <Typography
+              variant="caption"
+              sx={{ color: "green", fontWeight: 400 }}
+            >
+              {feeInBTC} BTC
+            </Typography>
+          )}
         </Box>
       </Tooltip>
     );
@@ -302,7 +310,7 @@ const TransactionTableRow: React.FC<{
       {/* Accelerate button for pending transactions */}
       {canAccelerate &&
         onAccelerateTransaction &&
-        (tx.isReceived ? (
+        (!tx.fee ? (
           <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
             <TableCell>
               <Box>

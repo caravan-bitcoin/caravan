@@ -19,6 +19,9 @@ const transactionKeys = {
     [...transactionKeys.all, txid, "withHex"] as const,
   // all the coins for a given transaction
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
+  // fees for pending transaction
+  fee: (txid: string) =>
+    [...transactionKeys.all, txid, "pending-fees"] as const,
 };
 
 // Service function for fetching transaction details
@@ -39,6 +42,43 @@ export const useFetchTransactionDetails = (txid: string) => {
     queryFn: () => fetchTransactionDetails(txid, blockchainClient),
     enabled: !!blockchainClient && !!txid,
   });
+};
+
+// Service function for fetching pending transaction fees
+const fetchPendingTransactionFee = async (
+  txid: string,
+  client: BlockchainClient,
+) => {
+  if (!client) {
+    throw new Error("No blockchain client available");
+  }
+  return await client.getFeesForPendingTransaction(txid);
+};
+
+export const useFetchPendingFeesForTxids = (txids: string[]) => {
+  console.log("txs", txids);
+  const blockchainClient = useGetClient();
+  const feeQueries = useQueries({
+    queries: txids.map((txid) => ({
+      queryKey: transactionKeys.fee(txid),
+      queryFn: () => fetchPendingTransactionFee(txid, blockchainClient!),
+      enabled: !!blockchainClient && !!txid,
+    })),
+  });
+
+  // Build a map: txid → fee (string or null)
+  const feeMap = new Map<string, string | null>();
+  txids.forEach((txid, i) => {
+    console.log("test", feeQueries[i].data, txid);
+    feeMap.set(txid, feeQueries[i].data ?? null);
+  });
+
+  return {
+    feeMap,
+    isLoading: feeQueries.some((q) => q.isLoading),
+    error: feeQueries.find((q) => q.error)?.error,
+    refetchAll: () => feeQueries.forEach((q) => q.refetch()),
+  };
 };
 
 // Hook for fetching all pending transactions
@@ -83,27 +123,45 @@ export const usePendingTransactions = () => {
   const error = transactionQueries.find((query) => query.error)?.error;
 
   // Process transactions with calculated values and filter out confirmed ones
-  const transactions = transactionQueries
+  const pendingTransactions = transactionQueries
     .filter((query) => query.data && !query.data.status?.confirmed)
-    .map((query) => {
-      const tx = query.data!;
-      return {
-        ...tx,
-        valueToWallet: calculateTransactionValue(tx, walletAddresses),
-        isReceived:
-          tx.isReceived !== undefined
-            ? tx.isReceived
-            : calculateTransactionValue(tx, walletAddresses) > 0,
-      };
-    });
+    .map((query) => query.data!);
+
+  // Now we find the txid which we recieved without any fees-field
+  const missingFeeTxids = pendingTransactions
+    .filter((txid) => !txid.fee)
+    .map((tx) => tx.txid);
+
+  const {
+    feeMap,
+    isLoading: feesLoading,
+    error: feesError,
+    refetchAll: refetchFees,
+  } = useFetchPendingFeesForTxids(missingFeeTxids);
+
+  const transactions = pendingTransactions.map((tx) => {
+    console.log("test2", tx.fee || feeMap.get(tx.txid));
+    const fee = tx.fee || Number(feeMap.get(tx.txid)) || null;
+
+    return {
+      ...tx,
+      fee,
+      valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      isReceived:
+        tx.isReceived !== undefined
+          ? tx.isReceived
+          : calculateTransactionValue(tx, walletAddresses) > 0,
+    };
+  });
 
   return {
     transactions,
-    isLoading,
-    error,
+    isLoading: isLoading || feesLoading,
+    error: error || feesError,
     refetch: () => {
       // Refetch all transaction queries
       transactionQueries.forEach((query) => query.refetch());
+      refetchFees();
     },
   };
 };
