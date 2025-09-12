@@ -92,9 +92,16 @@ export const CPFPForm: React.FC = () => {
   }, [transaction, analysis]);
 
   const handleFeeLevelChange = useCallback(
-    (newLevel: FeeLevelType) => {
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newLevel = event.target.value as FeeLevelType;
       setCurrentFeeLevel(newLevel);
-      if (newLevel !== FEE_LEVELS.CUSTOM && feeEstimates) {
+
+      if (newLevel === FEE_LEVELS.CUSTOM) {
+        // For custom, don't change the fee rate - user will set it manually
+        return;
+      }
+
+      if (feeEstimates && newLevel in feeEstimates) {
         setFeeBumpRate(feeEstimates[newLevel as keyof typeof feeEstimates]);
       }
     },
@@ -185,9 +192,10 @@ export const CPFPForm: React.FC = () => {
   // Check if custom slider should be shown
   const isCustomFeeRate = useMemo(() => {
     if (!feeEstimates) return false;
-    return !Object.values(FEE_LEVELS)
-      .filter((level) => level !== FEE_LEVELS.CUSTOM)
-      .some((level) => feeEstimates[level] === feeBumpRate);
+
+    // It checks if the current feeBumpRate exists as a value in the feeEstimates object.
+    // If it doesn't match any of the standard fee estimates, it's considered custom.
+    return !Object.values(feeEstimates).some((rate) => rate === feeBumpRate);
   }, [feeEstimates, feeBumpRate]);
 
   const showCustomSlider =
