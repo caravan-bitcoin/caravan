@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
+import { satoshisToBitcoins, bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
 import {
@@ -56,17 +56,17 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   feeInSats,
   isReceived = false,
 }) => {
-  // For received transactions, show fee in green with a note
+  // For received transactions, show fee in green with a note , also fee comes in BTC format - convert to sats
   if (isReceived) {
-    const feeInBTC = feeInSats
-      ? satoshisToBitcoins(feeInSats.toString())
-      : null;
+    // feeInSats is actually in BTC format when isReceived is true
+    const feeInBTC = feeInSats?.toString() || "0";
+    const actualFeeInSats = Number(bitcoinsToSatoshis(feeInBTC));
 
     return (
       <Tooltip title="You did not spend this fee" placement="top">
         <Box display="flex" flexDirection="column">
           <Typography variant="body2" sx={{ color: "green", fontWeight: 500 }}>
-            {feeInSats?.toLocaleString() ?? "--"} sats
+            {actualFeeInSats?.toLocaleString() ?? "--"} sats
           </Typography>
           {feeInBTC && (
             <Typography
@@ -250,7 +250,7 @@ const TransactionTableRow: React.FC<{
 }) => {
   // Check if transaction can be accelerated (pending/unconfirmed)
   const canAccelerate = !tx.status.confirmed;
-
+  console.log("in tx tab", tx);
   return (
     <TableRow>
       <TableCell>
