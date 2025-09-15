@@ -93,7 +93,6 @@ export const useAnalyzeTransaction = (
     try {
       // Validate inputs
       validateTransactionInputs(txHex, transaction.fee, availableUtxos);
-
       // Create analyzer with wallet-specific parameters
       const analyzer = new TransactionAnalyzer({
         txHex,
@@ -108,21 +107,21 @@ export const useAnalyzeTransaction = (
         addressType: addressType as MultisigAddressType,
         ...(changeOutputIndex !== undefined && { changeOutputIndex }),
       });
-      console.log(
-        "analysis",
-        analyzer.analyze(),
-        analyzer.targetFeeRate,
-        analyzer.estimatedCPFPChildSize,
-        analyzer.vsize,
-      );
-      return {
-        analysis: analyzer.analyze(),
-        cpfp: {
+      let cpfpData = null;
+      try {
+        // added here so that in case `analyzer.cpfpFeeRate` throws error it gets catched
+        cpfpData = {
           // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
           feeRate: analyzer.cpfpFeeRate,
           childSize: analyzer.estimatedCPFPChildSize,
           combinedEstimatedSize: analyzer.CPFPPackageSize,
-        },
+        };
+      } catch (cpfpError) {
+        console.warn("CPFP calculation failed:", cpfpError);
+      }
+      return {
+        analysis: analyzer.analyze(),
+        cpfpData,
       };
     } catch (error) {
       console.error("Error analyzing transaction:", error);
@@ -131,6 +130,7 @@ export const useAnalyzeTransaction = (
           ? error.message
           : "Unknown error analyzing transaction",
       );
+      return null;
     }
   }, [
     transaction?.txid,
@@ -141,16 +141,19 @@ export const useAnalyzeTransaction = (
     addressType,
     requiredSigners,
     totalSigners,
+    changeOutputIndex,
   ]);
 
   return {
     analysis: analysis?.analysis ?? null,
-    cpfp: {
-      // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
-      feeRate: analysis?.cpfp.feeRate,
-      childSize: analysis?.cpfp.childSize,
-      combinedEstimatedSize: analysis?.cpfp.combinedEstimatedSize,
-    },
+    cpfp: analysis?.cpfpData
+      ? {
+          // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
+          feeRate: analysis?.cpfpData?.feeRate,
+          childSize: analysis?.cpfpData?.childSize,
+          combinedEstimatedSize: analysis?.cpfpData?.combinedEstimatedSize,
+        }
+      : null,
     changeOutputIndex,
     availableUtxos,
     error,
@@ -362,7 +365,6 @@ export const useCreateCPFP = (
         txHex,
         walletSlices,
       ) as UTXO;
-      console.log("availableUtxos", availableUtxos, parentUtxo);
       const cpfpOptions: CPFPOptions = {
         originalTx: txHex,
         network: network as Network,

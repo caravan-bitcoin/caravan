@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { satoshisToBitcoins, bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
 import { OpenInNew } from "@mui/icons-material";
 import {
@@ -56,11 +56,25 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   feeInSats,
   isReceived = false,
 }) => {
+  // For missing fee data
+  if (feeInSats === null || feeInSats === undefined) {
+    return (
+      <Tooltip title="Fee information not available" placement="top">
+        <Box display="flex" alignItems="center">
+          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
+            --
+          </Typography>
+          <InfoOutlinedIcon fontSize="small" color="disabled" />
+        </Box>
+      </Tooltip>
+    );
+  }
+
   // For received transactions, show fee in green with a note , also fee comes in BTC format - convert to sats
   if (isReceived) {
     // feeInSats is actually in BTC format when isReceived is true
-    const feeInBTC = feeInSats?.toString() || "0";
-    const actualFeeInSats = Number(bitcoinsToSatoshis(feeInBTC));
+    const feeInBTC = satoshisToBitcoins(feeInSats!) || "0";
+    const actualFeeInSats = Number(feeInSats);
 
     return (
       <Tooltip title="You did not spend this fee" placement="top">
@@ -76,20 +90,6 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
               {feeInBTC} BTC
             </Typography>
           )}
-        </Box>
-      </Tooltip>
-    );
-  }
-
-  // For missing fee data
-  if (feeInSats === null || feeInSats === undefined) {
-    return (
-      <Tooltip title="Fee information not available" placement="top">
-        <Box display="flex" alignItems="center">
-          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
-            --
-          </Typography>
-          <InfoOutlinedIcon fontSize="small" color="disabled" />
         </Box>
       </Tooltip>
     );
@@ -250,7 +250,6 @@ const TransactionTableRow: React.FC<{
 }) => {
   // Check if transaction can be accelerated (pending/unconfirmed)
   const canAccelerate = !tx.status.confirmed;
-  console.log("in tx tab", tx);
   return (
     <TableRow>
       <TableCell>

@@ -48,7 +48,6 @@ export const getUtxoFromCoin = (coin: Coin): UTXO => {
   if (!slice) {
     throw new Error("Slice not found in coin");
   }
-  console.log("coin", coin);
   const { addressType }: { addressType?: MultisigAddressType } = JSON.parse(
     slice.multisig.braidDetails,
   );

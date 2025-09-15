@@ -77,7 +77,6 @@ const TransactionsTab: React.FC = () => {
       if (!txHex || typeof txHex !== "string") {
         throw new Error("Invalid transaction hex received");
       }
-
       // Set the selected transaction and raw tx hex
       setSelectedTransaction(tx);
       setTxHex(txHex);

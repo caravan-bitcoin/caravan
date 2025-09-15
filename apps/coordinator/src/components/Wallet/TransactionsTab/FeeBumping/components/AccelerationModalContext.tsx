@@ -40,7 +40,11 @@ interface AccelerationModalState {
   rbfType: RbfType;
 
   // CPFP configuration
-  cpfp: any;
+  cpfp: {
+    feeRate: string;
+    childSize: number;
+    combinedEstimatedSize: number;
+  } | null;
 
   // Fee bump PSBT
   feeBumpResult: FeeBumpResult | null;
@@ -159,7 +163,11 @@ function accelerationModalReducer(
 interface AccelerationModalContextType {
   transaction: TransactionDetails;
   txHex: string;
-  cpfp: any;
+  cpfp: {
+    feeRate: string | undefined;
+    childSize: number | undefined;
+    combinedEstimatedSize: number | undefined;
+  } | null;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;
   analysisIsLoading: boolean;

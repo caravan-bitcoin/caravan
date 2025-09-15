@@ -63,11 +63,11 @@ export const FeeStrategySelector: React.FC = () => {
           "Creates a new transaction that spends outputs from the original with a higher fee",
         icon: <ChildCareIcon fontSize="large" />,
         learnMoreUrl: "https://bitcoinops.org/en/topics/cpfp/",
-        disabled: !analysis.canCPFP,
+        disabled: !analysis.canCPFP || !cpfp?.feeRate, // Disable if no CPFP data
         disabledReason:
           "This transaction doesn't have suitable outputs for CPFP",
         minimumFee: new BigNumber(analysis.estimatedCPFPFee).toNumber(),
-        suggestedFeeRate: cpfp.feeRate
+        suggestedFeeRate: cpfp?.feeRate
           ? new BigNumber(cpfp.feeRate).toNumber()
           : new BigNumber(analysis.estimatedCPFPFee)
               .dividedBy(new BigNumber(analysis.vsize))

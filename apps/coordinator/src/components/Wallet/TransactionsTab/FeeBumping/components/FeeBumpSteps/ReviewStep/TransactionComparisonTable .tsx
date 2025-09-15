@@ -21,6 +21,7 @@ interface TransactionComparisonTableProps {
   originalFeeRate: number;
   feeDifference: number;
   rbfType: string;
+  isCPFP?: boolean;
 }
 
 // Table Row Component
@@ -73,112 +74,179 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
       originalFeeRate,
       feeDifference,
       rbfType,
+      isCPFP = false,
     }) => {
-      // Prepare comparison data
       const comparisonData = React.useMemo(() => {
         const isCancel = rbfType === "cancel";
 
-        return {
-          txid: {
-            original: `${originalTx.txid.substring(0, 12)}...${originalTx.txid.substring(originalTx.txid.length - 8)}`,
-            new: "Will be generated after signing",
-          },
-          status: {
-            original: <Chip label="Pending" color="warning" size="small" />,
-            new: <Chip label="Created (Unsigned)" color="info" size="small" />,
-          },
-          rbfAction: {
-            original: "Current transaction",
-            new: isCancel
-              ? "Will cancel and redirect funds"
-              : "Will replace with higher fee",
-          },
-          fee: {
-            original: parseInt(originalTx.fee.toString()).toLocaleString(),
-            new: parseInt(feeBumpResult.newFee).toLocaleString(),
-            difference: (
-              <Typography
-                component="span"
-                sx={{
-                  color: feeDifference > 0 ? "error.main" : "success.main",
-                  fontWeight: "bold",
-                }}
-              >
-                {feeDifference > 0 ? "+" : ""}
-                {feeDifference.toLocaleString()}
-              </Typography>
-            ),
-          },
-          feeRate: {
-            original: originalFeeRate.toFixed(1),
-            new: feeBumpResult.newFeeRate.toFixed(1),
-            difference: (
-              <Typography
-                component="span"
-                sx={{
-                  color:
-                    feeBumpResult.newFeeRate > originalFeeRate
-                      ? "success.main"
-                      : "error.main",
-                  fontWeight: "bold",
-                }}
-              >
-                {feeBumpResult.newFeeRate > originalFeeRate ? "+" : ""}
-                {(feeBumpResult.newFeeRate - originalFeeRate).toFixed(1)}
-              </Typography>
-            ),
-          },
-        };
+        if (isCPFP) {
+          // CPFP-specific data
+          return {
+            txid: {
+              original: `${originalTx.txid.substring(0, 12)}...${originalTx.txid.substring(originalTx.txid.length - 8)}`,
+              new: "Child TXID will be generated after signing",
+            },
+            status: {
+              original: (
+                <Chip label="Parent (Pending)" color="warning" size="small" />
+              ),
+              new: (
+                <Chip label="Child (Created)" color="success" size="small" />
+              ),
+            },
+            rbfAction: {
+              original: "Original transaction (will remain)",
+              new: "Child transaction spending parent output",
+            },
+            fee: {
+              original: parseInt(originalTx.fee.toString()).toLocaleString(),
+              new: `${feeDifference.toLocaleString()} (child only)`,
+              difference: (
+                <Typography
+                  component="span"
+                  sx={{
+                    color: "info.main",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Total: {parseInt(feeBumpResult.newFee).toLocaleString()}
+                </Typography>
+              ),
+            },
+            feeRate: {
+              original: originalFeeRate.toFixed(1),
+              new: `${feeBumpResult.newFeeRate.toFixed(1)} (package rate)`,
+              difference: (
+                <Typography
+                  component="span"
+                  sx={{
+                    color: "success.main",
+                    fontWeight: "bold",
+                  }}
+                >
+                  +{(feeBumpResult.newFeeRate - originalFeeRate).toFixed(1)}
+                </Typography>
+              ),
+            },
+          };
+        } else {
+          // RBF-specific data
+          return {
+            txid: {
+              original: `${originalTx.txid.substring(0, 12)}...${originalTx.txid.substring(originalTx.txid.length - 8)}`,
+              new: "Will be generated after signing",
+            },
+            status: {
+              original: <Chip label="Pending" color="warning" size="small" />,
+              new: (
+                <Chip label="Created (Unsigned)" color="info" size="small" />
+              ),
+            },
+            rbfAction: {
+              original: "Current transaction",
+              new: isCancel
+                ? "Will cancel and redirect funds"
+                : "Will replace with higher fee",
+            },
+            fee: {
+              original: parseInt(originalTx.fee.toString()).toLocaleString(),
+              new: parseInt(feeBumpResult.newFee).toLocaleString(),
+              difference: (
+                <Typography
+                  component="span"
+                  sx={{
+                    color: feeDifference > 0 ? "error.main" : "success.main",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {feeDifference > 0 ? "+" : ""}
+                  {feeDifference.toLocaleString()}
+                </Typography>
+              ),
+            },
+            feeRate: {
+              original: originalFeeRate.toFixed(1),
+              new: feeBumpResult.newFeeRate.toFixed(1),
+              difference: (
+                <Typography
+                  component="span"
+                  sx={{
+                    color:
+                      feeBumpResult.newFeeRate > originalFeeRate
+                        ? "success.main"
+                        : "error.main",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {feeBumpResult.newFeeRate > originalFeeRate ? "+" : ""}
+                  {(feeBumpResult.newFeeRate - originalFeeRate).toFixed(1)}
+                </Typography>
+              ),
+            },
+          };
+        }
       }, [originalTx, feeBumpResult, originalFeeRate, feeDifference, rbfType]);
 
       const tableRows = React.useMemo(
         () => [
           {
+            id: "txid", // Add unique id for key
             label: "Transaction ID",
-            tooltip: "Unique identifier for the Bitcoin transaction",
+            tooltip: isCPFP
+              ? "Parent transaction ID (existing) vs Child transaction ID (will be generated)"
+              : "Unique identifier for the Bitcoin transaction",
             originalValue: comparisonData.txid.original,
             newValue: comparisonData.txid.new,
             showDifference: false,
           },
           {
+            id: "status", // Add unique id for key
             label: "Status",
-            tooltip: "Current state of the transaction in the network",
+            tooltip: isCPFP
+              ? "Parent transaction remains pending, child transaction will be created"
+              : "Current state of the transaction in the network",
             originalValue: comparisonData.status.original,
             newValue: comparisonData.status.new,
             showDifference: false,
           },
           {
-            label: "RBF Action",
-            tooltip:
-              "What will happen when this Replace-by-Fee transaction is broadcast",
+            id: "action", // Add unique id for key
+            label: isCPFP ? "Transaction Role" : "RBF Action",
+            tooltip: isCPFP
+              ? "The parent transaction provides an output for the child to spend"
+              : "What will happen when this Replace-by-Fee transaction is broadcast",
             originalValue: comparisonData.rbfAction.original,
             newValue: comparisonData.rbfAction.new,
             showDifference: false,
           },
           {
+            id: "fee", // Add unique id for key
             label: "Fee (sats)",
-            tooltip:
-              "The amount of bitcoin paid to miners to include your transaction in a block",
+            tooltip: isCPFP
+              ? "Parent fee (already paid) vs Child fee (additional) vs Total package fee"
+              : "The amount of bitcoin paid to miners to include your transaction in a block",
             originalValue: comparisonData.fee.original,
             newValue: comparisonData.fee.new,
             difference: comparisonData.fee.difference,
           },
           {
+            id: "feeRate", // Add unique id for key
             label: "Fee Rate (sats/vB)",
-            tooltip:
-              "The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners.",
+            tooltip: isCPFP
+              ? "Parent fee rate vs Combined package fee rate (what miners see)"
+              : "The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners.",
             originalValue: comparisonData.feeRate.original,
             newValue: comparisonData.feeRate.new,
             difference: comparisonData.feeRate.difference,
           },
         ],
-        [comparisonData],
+        [comparisonData, isCPFP],
       );
 
       return (
         <>
           <Typography variant="subtitle1" gutterBottom>
-            Transaction Comparison
+            {isCPFP ? "Parent vs Child Transaction" : "Transaction Comparison"}
           </Typography>
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
@@ -188,20 +256,24 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     <strong>Property</strong>
                   </TableCell>
                   <TableCell align="right">
-                    <strong>Original Transaction</strong>
+                    <strong>
+                      {isCPFP ? "Parent Transaction" : "Original Transaction"}
+                    </strong>
                   </TableCell>
                   <TableCell align="right">
-                    <strong>New Transaction</strong>
+                    <strong>
+                      {isCPFP ? "Child Transaction" : "New Transaction"}
+                    </strong>
                   </TableCell>
                   <TableCell align="right">
-                    <strong>Difference</strong>
+                    <strong>{isCPFP ? "Package Total" : "Difference"}</strong>
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {tableRows.map((row) => (
                   <ComparisonRow
-                    key={row.label}
+                    key={row.id}
                     label={row.label}
                     tooltip={row.tooltip}
                     originalValue={row.originalValue}

@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Button,
   Divider,
   Paper,
   Typography,
-  Tooltip,
   FormControl,
   InputLabel,
   Select,
@@ -13,16 +12,18 @@ import {
   TextField,
   Alert,
 } from "@mui/material";
-import { InfoOutlined } from "@mui/icons-material";
-import { FeeLevelType, FEE_LEVELS, FeeBumpResult } from "../../../../types";
-import { useFeeEstimates } from "clients/fees";
+import { useSelector } from "react-redux";
+
 import { TransactionDetails } from "@caravan/clients";
+
+import { useFeeEstimates } from "clients/fees";
+import { getChangeAddresses } from "selectors/wallet";
+import { FeeLevelType, FEE_LEVELS, FeeBumpResult } from "../../../../types";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
 import { useCreateCPFP } from "../../../hooks";
-import { FeeLevelSelector } from "../RBF/FeeLevelSelector";
-import { CustomFeeSlider } from "../RBF/CustomFeeSlider";
 import { FeeComparison } from "../RBF/FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";
+import { CPFPFeeSlider } from "./CPFPFeeSlider";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -45,18 +46,16 @@ export const CPFPForm: React.FC = () => {
   } = useAccelerationModal();
 
   const { data: feeEstimates } = useFeeEstimates();
+  const changeAddresses = useSelector(getChangeAddresses);
 
-  const [feeBumpRate, setFeeBumpRate] = useState<number>(
-    feeEstimates?.[FEE_LEVELS.MEDIUM] || 10,
-  );
   const [spendableOutputIndex, setSpendableOutputIndex] = useState<number>(
     changeOutputIndex || 0,
   );
   const [changeAddress, setChangeAddress] = useState<string>("");
-  const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
-    FEE_LEVELS.MEDIUM,
-  );
-
+  const [, setCurrentFeeLevel] = useState<FeeLevelType>(FEE_LEVELS.MEDIUM);
+  const [addressSelectionType, setAddressSelectionType] = useState<
+    "predefined" | "custom"
+  >("predefined");
   // Error state
   const [error, setError] = useState<string>("");
   const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
@@ -68,17 +67,20 @@ export const CPFPForm: React.FC = () => {
 
   // CPFP specific calculations
   const parentVsize = analysis?.vsize;
-  const estimatedChildVsize = cpfp.childSize;
-  const combinedVsize = cpfp.combinedEstimatedSize;
+  const estimatedChildVsize = cpfp?.childSize;
+  const combinedVsize = cpfp?.combinedEstimatedSize;
+  const minimumFeeRate = useMemo(() => {
+    const cpfpTargetRate = cpfp?.feeRate ? parseFloat(cpfp.feeRate) : null;
 
-  const targetCombinedFee = Math.ceil(combinedVsize * feeBumpRate);
+    return Math.ceil(
+      cpfpTargetRate || Math.max(originalFeeRate + 1, feeEstimates?.medium, 1),
+    );
+  }, [cpfp, originalFeeRate, feeEstimates]);
+
+  const [feeBumpRate, setFeeBumpRate] = useState<number>(minimumFeeRate);
+
+  const targetCombinedFee = Math.ceil(combinedVsize! * feeBumpRate);
   const childFeeNeeded = Math.max(0, targetCombinedFee - originalFee);
-  const estimatedNewFee = childFeeNeeded;
-
-  const minimumFeeRate = useMemo(
-    () => Math.max(originalFeeRate + 1, 1),
-    [originalFeeRate],
-  );
 
   const spendableOutputs = useMemo(() => {
     if (!transaction?.vout) return [];
@@ -91,23 +93,6 @@ export const CPFPForm: React.FC = () => {
       .filter((_, index) => analysis?.outputs?.[index]?.isMalleable);
   }, [transaction, analysis]);
 
-  const handleFeeLevelChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newLevel = event.target.value as FeeLevelType;
-      setCurrentFeeLevel(newLevel);
-
-      if (newLevel === FEE_LEVELS.CUSTOM) {
-        // For custom, don't change the fee rate - user will set it manually
-        return;
-      }
-
-      if (feeEstimates && newLevel in feeEstimates) {
-        setFeeBumpRate(feeEstimates[newLevel as keyof typeof feeEstimates]);
-      }
-    },
-    [feeEstimates],
-  );
-
   const handleSliderChange = (_: Event, newValue: number | number[]) => {
     setFeeBumpRate(newValue as number);
     setCurrentFeeLevel(FEE_LEVELS.CUSTOM);
@@ -117,7 +102,6 @@ export const CPFPForm: React.FC = () => {
     const value = parseFloat(event.target.value);
     if (!isNaN(value) && value >= minimumFeeRate) {
       setFeeBumpRate(value);
-      setCurrentFeeLevel(FEE_LEVELS.CUSTOM);
     }
   };
 
@@ -156,7 +140,7 @@ export const CPFPForm: React.FC = () => {
 
       const result: FeeBumpResult = {
         psbtBase64,
-        newFee: estimatedNewFee.toString(),
+        newFee: targetCombinedFee.toString(),
         newFeeRate: feeBumpRate,
         strategy: selectedStrategy!,
         isCancel: false,
@@ -176,30 +160,56 @@ export const CPFPForm: React.FC = () => {
     }
   };
 
-  const feeDifference = useMemo(() => {
-    return estimatedNewFee;
-  }, [estimatedNewFee]);
-
   // Calculate max fee rate
   const maxFeeRate = useMemo(() => {
-    const maxReasonableFee = Math.max(
-      minimumFeeRate * 10,
-      feeEstimates?.[FEE_LEVELS.HIGH] * 3 || 300,
+    return Math.max(
+      originalFeeRate + 1,
+      minimumFeeRate + 1,
+      1000, // Maximum ceiling of 1000 sats/vB
     );
-    return maxReasonableFee;
   }, [minimumFeeRate, feeEstimates]);
 
-  // Check if custom slider should be shown
-  const isCustomFeeRate = useMemo(() => {
-    if (!feeEstimates) return false;
+  // Prepare address options for dropdown
+  const addressOptions = useMemo(() => {
+    const options = changeAddresses.map((addr, index) => ({
+      value: addr,
+      label: `Change Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
+      type: "predefined" as const,
+    }));
 
-    // It checks if the current feeBumpRate exists as a value in the feeEstimates object.
-    // If it doesn't match any of the standard fee estimates, it's considered custom.
-    return !Object.values(feeEstimates).some((rate) => rate === feeBumpRate);
-  }, [feeEstimates, feeBumpRate]);
+    return [
+      ...options,
+      {
+        value: "custom",
+        label: "Enter Custom Address",
+        type: "custom" as const,
+      },
+    ];
+  }, [changeAddresses]);
 
-  const showCustomSlider =
-    currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
+  const handleAddressSelectionChange = (value: string) => {
+    if (value === "custom") {
+      setAddressSelectionType("custom");
+      setChangeAddress("");
+    } else {
+      setAddressSelectionType("predefined");
+      setChangeAddress(value);
+    }
+  };
+
+  const handleCustomAddressChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setChangeAddress(event.target.value);
+  };
+
+  // Set initial change address if available
+  React.useEffect(() => {
+    if (changeAddresses.length > 0 && !changeAddress) {
+      setChangeAddress(changeAddresses[0]);
+      setAddressSelectionType("predefined");
+    }
+  }, [changeAddresses, changeAddress]);
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -255,38 +265,59 @@ export const CPFPForm: React.FC = () => {
 
       {/* Change Address Input */}
       <Box mb={3}>
-        <TextField
-          fullWidth
-          label="Change Address"
-          value={changeAddress}
-          onChange={(e) => setChangeAddress(e.target.value)}
-          placeholder="Enter the address to receive the change"
-          helperText="The address where the remaining funds will be sent after fees"
-          required
-        />
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="change-address-select-label">
+            Change Address
+          </InputLabel>
+          <Select
+            labelId="change-address-select-label"
+            value={addressSelectionType === "custom" ? "custom" : changeAddress}
+            onChange={(e) => handleAddressSelectionChange(e.target.value)}
+            label="Change Address"
+          >
+            {addressOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Custom Address Input */}
+        {addressSelectionType === "custom" && (
+          <TextField
+            fullWidth
+            label="Custom Change Address"
+            value={changeAddress}
+            onChange={handleCustomAddressChange}
+            placeholder="Enter the address to receive the change"
+            helperText="Enter a custom address where the remaining funds will be sent after fees"
+            required
+          />
+        )}
+
+        {/* Selected Address Display */}
+        {addressSelectionType === "predefined" && changeAddress && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Selected: {changeAddress}
+          </Typography>
+        )}
       </Box>
 
       <Divider sx={{ my: 2 }} />
 
       {/* Fee Rate Selection */}
       <Box mb={3}>
-        <Typography
-          variant="subtitle1"
-          gutterBottom
-          fontWeight="medium"
-          display="flex"
-          alignItems="center"
-        >
-          Target Combined Fee Rate
-          <Tooltip
-            title="This is the desired fee rate for the parent + child transactions combined. Higher rates will confirm faster."
-            arrow
-          >
-            <InfoOutlined fontSize="small" sx={{ ml: 1 }} />
-          </Tooltip>
-        </Typography>
+        <CPFPFeeSlider
+          feeBumpRate={feeBumpRate}
+          onSliderChange={handleSliderChange}
+          onInputChange={handleInputChange}
+          minimumFeeRate={minimumFeeRate}
+          maxFeeRate={maxFeeRate}
+          feeEstimates={feeEstimates || {}}
+        />
 
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Parent fee rate: {originalFeeRate.toFixed(1)} sats/vB
           </Typography>
@@ -294,27 +325,6 @@ export const CPFPForm: React.FC = () => {
             Target combined rate: {feeBumpRate.toFixed(1)} sats/vB
           </Typography>
         </Box>
-
-        {/* Fee level selection */}
-        <FeeLevelSelector
-          currentFeeLevel={currentFeeLevel}
-          onFeeLevelChange={handleFeeLevelChange}
-          feeEstimates={feeEstimates || {}}
-          feeBumpRate={feeBumpRate}
-          disabled={!feeEstimates}
-        />
-
-        <Divider sx={{ my: 2 }} />
-
-        {/* Custom fee slider */}
-        <CustomFeeSlider
-          feeBumpRate={feeBumpRate}
-          onSliderChange={handleSliderChange}
-          onInputChange={handleInputChange}
-          minimumFeeRate={minimumFeeRate}
-          maxFeeRate={maxFeeRate}
-          show={showCustomSlider}
-        />
       </Box>
 
       <Divider sx={{ my: 2 }} />
@@ -337,8 +347,8 @@ export const CPFPForm: React.FC = () => {
 
       <FeeComparison
         originalFee={originalFee}
-        estimatedNewFee={estimatedNewFee}
-        feeDifference={feeDifference}
+        estimatedNewFee={targetCombinedFee}
+        feeDifference={childFeeNeeded}
       />
 
       {/* Submit button */}
