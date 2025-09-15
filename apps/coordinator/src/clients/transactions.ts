@@ -140,8 +140,7 @@ export const usePendingTransactions = () => {
   } = useFetchPendingFeesForTxids(missingFeeTxids);
 
   const transactions = pendingTransactions.map((tx) => {
-    console.log("test2", tx.fee || feeMap.get(tx.txid));
-    const fee = tx.fee || Number(feeMap.get(tx.txid)) || null;
+    const fee = tx.fee || Number(feeMap.get(tx.txid)) || 0;
 
     return {
       ...tx,
