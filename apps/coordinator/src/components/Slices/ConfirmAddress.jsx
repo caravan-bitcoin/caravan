@@ -194,17 +194,15 @@ const ConfirmAddress = ({ slice, network }) => {
     }
   }
 
-  // run interaction and see if address confirms
   async function confirmOnDevice() {
     dispatch({ type: "SET_ACTIVE" });
     const { multisig } = slice;
-
     try {
       let confirmed = await interaction.run();
       if (
-        (typeof confirmed === "string" && state.deviceType === LEDGER) || 
-         state.deviceType === JADE
-	  ) {
+        (typeof confirmed === "string" && state.deviceType === LEDGER) ||
+        state.deviceType === JADE
+      ) {
         confirmed = {
           address: confirmed,
           serializedPath: interaction.bip32Path,
