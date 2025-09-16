@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.1
+
+### Patch Changes
+
+- [#375](https://github.com/caravan-bitcoin/caravan/pull/375) [`e889db1`](https://github.com/caravan-bitcoin/caravan/commit/e889db1e7670e554222065ee17b75ba50558de4d) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fixed Bug : Expanding Receive Tab address causes React stack error in Chrome
+
 ## 1.12.0
 
 ### Minor Changes
