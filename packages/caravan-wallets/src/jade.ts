@@ -79,7 +79,7 @@ export function walletConfigToJadeDescriptor(
 
 export function getSignatureArray(
   fingerprint: string | null,
-  parsedPsbt: any,
+  parsedPsbt: PsbtV2,
 ): string[] {
   const sigArray: string[] = [];
 

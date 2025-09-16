@@ -201,7 +201,10 @@ const ConfirmAddress = ({ slice, network }) => {
 
     try {
       let confirmed = await interaction.run();
-      if (typeof confirmed === "string" && state.deviceType === LEDGER) {
+      if (
+        (typeof confirmed === "string" && state.deviceType === LEDGER) || 
+         state.deviceType === JADE
+	  ) {
         confirmed = {
           address: confirmed,
           serializedPath: interaction.bip32Path,
