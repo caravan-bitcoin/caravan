@@ -1,9 +1,19 @@
 import { useSelector } from "react-redux";
 import { useMemo } from "react";
+import { WalletState } from "selectors/wallet";
 import { dustAnalysis, privacyAnalysis } from "utils/transactionAnalysisUtils";
-import type { WalletState } from "selectors/wallet";
 import type { MultisigAddressType } from "@caravan/bitcoin";
 
+// ============= TRANSACTION ANALYSIS =============
+
+/**
+ * Hook for analyzing transaction dust and privacy metrics
+ * Provides real-time analysis of the current transaction being constructed
+ *
+ * @returns {Object} Analysis results containing dust and privacy metrics
+ * @returns {Object} returns.dust - Dust analysis results for the transaction
+ * @returns {Object} returns.privacy - Privacy analysis results for the transaction
+ */
 export function useTransactionAnalysis() {
   const {
     inputs = [],

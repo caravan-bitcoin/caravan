@@ -96,7 +96,7 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
  */
 export const useTransactionPagination = (totalItems: number) => {
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Reset page when total items changes
   useEffect(() => {
