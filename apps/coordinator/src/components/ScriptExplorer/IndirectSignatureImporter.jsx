@@ -183,9 +183,10 @@ class IndirectSignatureImporter extends React.Component {
       });
 
       this.setState({ signatureError: "" });
+      // Pass through the original PSBT data so downstream can offer a download
       validateAndSetSignature(signatures, (signatureError) => {
         this.setState({ signatureError });
-      });
+      }, data);
     } catch (e) {
       e.errorType = "Coldcard Signing Error";
       this.setState({ signatureError: e.message });

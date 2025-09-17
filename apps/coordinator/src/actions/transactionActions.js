@@ -5,11 +5,7 @@ import {
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
-import {
-  selectAvailableInputsFromPSBT,
-  selectSignaturesFromPSBT,
-  selectSignaturesForImporters,
-} from "../selectors/transaction";
+import { selectAvailableInputsFromPSBT } from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -18,7 +14,13 @@ import {
 } from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
-import { loadPsbt } from "../utils/psbtUtils";
+import {
+  loadPsbt,
+  extractSignaturesFromPSBT,
+  mapSignaturesToImporters,
+} from "../utils/psbtUtils";
+import { parseSignatureArrayFromPSBT } from "@caravan/bitcoin";
+import { Buffer } from "buffer";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -390,48 +392,66 @@ function setOutputsFromPSBT(psbt) {
  */
 export function setSignaturesFromPsbt(psbt) {
   return (dispatch, getState) => {
-    // === STEP 1: Extract signature sets from the PSBT ===
-    // This uses our composed selectors to:
-    // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
-    // - Parse partial signatures from PSBT data
-    // - Group signatures by signer (one signer signs ALL inputs)
     const state = getState();
-    const signatureSets = selectSignaturesFromPSBT(state, psbt);
-    // === STEP 2: Process signatures if any were found ===
-    if (signatureSets.length > 0) {
-      // Transform raw signature data into Caravan's signature importer format
-      // This maps each signature set to an "importer" (numbered 1, 2, 3...)
-      // that corresponds to Caravan's UI signature input slots
-      const importerData = selectSignaturesForImporters(state, psbt);
-      // === STEP 3: Update Redux state for each signature set ===
-      // For each complete signature set, we need to update multiple parts
-      // of the signature importer state. This is Caravan's pattern for
-      // managing signature data across the signing workflow.
+    // Use the inputs we just placed into Redux (may include reconstructed/RBF inputs)
+    const resolvedInputs = state.spend?.transaction?.inputs || [];
+
+    try {
+      const signatureSets = extractSignaturesFromPSBT(psbt, resolvedInputs);
+      if (signatureSets.length === 0) {
+        // Fallback: directly parse signatures from PSBT when validation path fails
+        const parsed = parseSignatureArrayFromPSBT(psbt.toBase64());
+        if (!parsed) return;
+        const sets = Array.isArray(parsed[0]) ? parsed : [parsed];
+        sets.forEach((signatures, index) => {
+          // Derive public keys for each input using our validator
+          const publicKeys = signatures.map((sig, inputIndex) => {
+            try {
+              const pub = validateMultisigPsbtSignature(
+                psbt.toBase64(),
+                inputIndex,
+                Buffer.from(sig, "hex"),
+                resolvedInputs[inputIndex]?.amountSats,
+              );
+              return typeof pub === "string" ? pub : "";
+            } catch (e) {
+              return "";
+            }
+          });
+
+          dispatch(
+            setSignatureImporterSignature(index + 1, signatures),
+          );
+          dispatch(
+            setSignatureImporterPublicKeys(index + 1, publicKeys),
+          );
+          dispatch(setSignatureImporterFinalized(index + 1, true));
+          dispatch(
+            setSignatureImporterComplete(index + 1, {
+              signature: signatures,
+              publicKeys,
+              finalized: true,
+            }),
+          );
+        });
+        return;
+      }
+
+      const importerData = mapSignaturesToImporters(signatureSets);
       importerData.forEach((sigData) => {
-        // Set the raw signature data (hex-encoded signatures)
         dispatch(
           setSignatureImporterSignature(
             sigData.importerNumber,
             sigData.signatures,
           ),
         );
-
-        // Set the public keys that correspond to these signatures
-        // These are used for signature verification
         dispatch(
           setSignatureImporterPublicKeys(
             sigData.importerNumber,
             sigData.publicKeys,
           ),
         );
-
-        // Mark this importer as "finalized" - meaning we have a complete
-        // signature set and it's ready for use in transaction construction
         dispatch(setSignatureImporterFinalized(sigData.importerNumber, true));
-
-        // Set the complete signature data object
-        // This is Caravan's "master" action that bundles everything together
-        // and is used by the signing components to display signature status
         dispatch(
           setSignatureImporterComplete(sigData.importerNumber, {
             signature: sigData.signatures,
@@ -440,6 +460,10 @@ export function setSignaturesFromPsbt(psbt) {
           }),
         );
       });
+    } catch (e) {
+      // Non-fatal: if we fail to extract signatures, continue without crashing
+      // eslint-disable-next-line no-console
+      console.warn("Signature extraction failed:", e);
     }
   };
 }
@@ -501,6 +525,9 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
     }
 
     dispatch(resetOutputs());
+    // Ensure signature importers are initialized for the current quorum
+    // so we can populate them with signatures from the imported PSBT.
+    dispatch(setRequiredSigners(getState().settings.requiredSigners));
     dispatch(setUnsignedPSBT(psbt.toBase64()));
 
     // ==== PROCESS INPUTS ====
@@ -528,25 +555,10 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
     // Calculate and set fee and feeRate
     dispatch(setFeeAndFeeRateFromState(outputsTotalSats, psbt));
 
-    // ==== Extract and import signatures (If they are present)====
-
-    // We currently skip signature extraction for RBF PSBTs because:
-    // 1. The UTXOs required for signature verification might not be available in the current wallet state.
-    // 2. Signature extraction is tightly coupled to `selectAvailableInputsFromPSBT`, which relies on spendable slices.
-    // 3. In some flows (e.g., external RBF workflows), partially signed PSBTs may still be valid, but our logic doesn’t currently support those cases.
-    // 4. Attempting extraction without proper UTXO context may cause errors or incorrect behavior.
-    //
-    // NOTE: This is a limitation of the current implementation, not a fundamental restriction.
-    // It's entirely possible for RBF PSBTs to be partially signed—e.g., in shared wallets where one party creates and signs an RBF,
-    // then sends it to a co-signer for completion.
-    //
-    // TODO: Decouple signature extraction from wallet-bound spendable slices so we can support
-    // partial sig extraction for externally signed or collaboratively constructed PSBTs.
-    //
-    // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
-    if (!hasPendingInputs) {
-      dispatch(setSignaturesFromPsbt(psbt));
-    }
+    // ==== Extract and import signatures (if present) ====
+    // We now always attempt extraction using the already-resolved inputs stored in Redux.
+    // This preserves signatures even for RBF PSBTs where inputs were reconstructed.
+    dispatch(setSignaturesFromPsbt(psbt));
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));
