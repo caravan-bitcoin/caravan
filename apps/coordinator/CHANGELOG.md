@@ -1,8 +1,8 @@
 # Changelog
 
-## 2.0.0
+## 1.13.0
 
-### Major Changes
+### Minor Changes
 
 - [#324](https://github.com/caravan-bitcoin/caravan/pull/324) [`531186a`](https://github.com/caravan-bitcoin/caravan/commit/531186a7031961103752f612566a497557a5678f) Thanks [@Austin-Fulbright](https://github.com/Austin-Fulbright)! - Add support for the jade hardware wallet
 
