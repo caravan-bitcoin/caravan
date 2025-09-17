@@ -161,7 +161,7 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
               <>
                 <Button
                   variant="outlined"
-                  onClick={onLoadMore}
+                  onClick={() => onLoadMore()}
                   disabled={isLoadingMore}
                   size="medium"
                 >
