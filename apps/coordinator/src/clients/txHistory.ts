@@ -71,7 +71,7 @@ export const usePublicClientTransactionsWithLoadMore = (
   }, [addressesKey, queryClient]);
 
   const infiniteQuery = useInfiniteQuery({
-    queryKey: transactionKeys.confirmedHistory(pageSize),
+    queryKey: transactionKeys.confirmedHistory(pageSize + pendingCount),
     queryFn: async ({ pageParam = 0 }) => {
       if (currentAddresses.length === 0) {
         return [];
@@ -117,8 +117,11 @@ export const usePrivateClientTransactionsWithLoadMore = (
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = blockchainClient?.type;
+  // Need to use this as a key because once we get an update
+  // on pending, then the total query size changes and we want to invalidate cache
+  const totalPageSize = pageSize + pendingCount;
   const infiniteQuery = useInfiniteQuery({
-    queryKey: transactionKeys.confirmedHistory(pageSize),
+    queryKey: transactionKeys.confirmedHistory(totalPageSize),
     queryFn: async ({ pageParam = 0 }) => {
       const rawTransactions =
         await blockchainClient.getWalletTransactionHistory(pageSize, pageParam);
