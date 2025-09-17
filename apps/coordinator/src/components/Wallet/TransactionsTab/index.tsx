@@ -92,8 +92,21 @@ const TransactionsTab: React.FC = () => {
 
   const filteredCompletedTransactions = useMemo(() => {
     const pendingTxids = new Set(pendingTransactions.map((tx) => tx.txid));
-    return completedTransactions.filter((tx) => !pendingTxids.has(tx.txid));
+    const completedTxids = new Set();
+    return completedTransactions.filter((tx) => {
+      // if multiple wallets are loaded into the wallet on a private node,
+      // you can end up in a situation of duplicate transactions being sent back
+      // one from each wallet. This filters out the duplicates but unfortunately
+      // the request count is still going to be off because we can't know this count
+      // ahead of time
+      if (completedTxids.has(tx.txid)) {
+        return false;
+      }
+      completedTxids.add(tx.txid);
+      return !pendingTxids.has(tx.txid);
+    });
   }, [completedTransactions, pendingTransactions]);
+
   // Handle acceleration button click
   const handleAccelerateTransaction = async (tx: any) => {
     if (!tx || !blockchainClient) return;

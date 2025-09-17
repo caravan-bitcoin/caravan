@@ -18,6 +18,7 @@ import {
   useTransactionPagination,
 } from "./hooks";
 import { Transaction } from "./types";
+import { useGetClient } from "hooks/client";
 
 interface Props {
   transactions: Transaction[];
@@ -45,7 +46,7 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
   const { sortedTransactions, handleSort, sortBy, sortDirection } =
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
-
+  const client = useGetClient();
   // Set up pagination for the currently loaded transactions
   const {
     page,
@@ -89,6 +90,14 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
   return (
     <Box>
       {/* Transaction Table */}
+      {client?.type === "private" && (
+        <Box mb={2}>
+          <Typography variant="caption" color="textSecondary">
+            (Confirmed transaction history maybe unreliable for nodes that have
+            multiple wallets loaded)
+          </Typography>
+        </Box>
+      )}
       <TransactionTable
         transactions={Array.isArray(currentPageTxs) ? currentPageTxs : []}
         sortBy={sortBy}
