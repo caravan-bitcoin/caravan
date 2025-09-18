@@ -123,8 +123,31 @@ Here you should build out a query key map and the hooks that will be used to acc
 
 See the [transactions client](./src/clients/transactions.ts) for an example of how to build out a new query.
 
+Here’s a cleaned-up markdown block you can drop directly into your docs for **Troubleshooting**:
+
+## Troubleshooting
+
+### React "Unexpected fiber pop" in Chrome
+
+If you encounter vague React errors like:
+
+> Unexpected fiber pop
+
+or similar cryptic messages, here’s why:
+
+* Caravan is still on **React 17.0.0**
+* Chrome’s **V8 engine** is stricter about context stack depth
+* Complex components (e.g., Material-Table with nested MUI Tabs) create **deep context trees**
+* This can trigger stack overflows → React throws misleading errors instead of the real one
+
+✅ **Dev tip**:
+Try reproducing in **Firefox** or **Safari**. Their JS engines handle deep nesting more gracefully, often surfacing the *actual underlying issue* (like an infinite re-render).
+
+---
+
 ## Help needed
 
 Please checkout the open issues for ideas of things to work on.
+Also you can checkout caravan's official discord channel : https://discord.gg/GzndpdwkHU
 
 Also, please watch the repo and respond to questions/bug reports/feature requests, Thanks!
