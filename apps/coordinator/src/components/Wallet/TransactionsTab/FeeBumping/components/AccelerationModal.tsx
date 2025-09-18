@@ -29,6 +29,7 @@ import {
   AccelerationModalProvider,
   useAccelerationModal,
 } from "./AccelerationModalContext";
+import { TransactionDetails } from "@caravan/clients";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -78,7 +79,10 @@ const AccelerationModalWithContext: React.FC<AccelerationModalProps> = ({
   txHex,
 }) => {
   return (
-    <AccelerationModalProvider transaction={transaction} txHex={txHex}>
+    <AccelerationModalProvider
+      transaction={transaction as TransactionDetails}
+      txHex={txHex}
+    >
       <AccelerationModalContent
         open={open}
         onClose={onClose}
@@ -195,7 +199,9 @@ const AccelerationModalContent: React.FC<
     if (analysisError) {
       return (
         <ErrorDialog
-          error="Failed to load available UTXOs"
+          error={
+            analysisError ? analysisError : "Failed to load available UTXOs"
+          }
           showErrorDetails={showErrorDetails}
           setShowErrorDetails={setErrorDetails}
         />

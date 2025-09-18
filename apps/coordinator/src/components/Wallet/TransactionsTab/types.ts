@@ -13,7 +13,7 @@ export interface Transaction {
     blockHeight?: number;
   };
   size: number;
-  fee: number;
+  fee: number | null;
   isReceived?: boolean;
   vsize?: number;
   valueToWallet?: number;
@@ -39,7 +39,7 @@ export interface TransactionT {
     blockHeight?: number;
   };
   size: number;
-  fee: number;
+  fee: number | null;
   isSpent?: boolean;
   vsize?: number;
   isReceived?: boolean;

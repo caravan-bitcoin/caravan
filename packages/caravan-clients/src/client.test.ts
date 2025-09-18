@@ -2453,7 +2453,7 @@ describe("BlockchainClient", () => {
           method: "getmempoolentry",
           params: [mockTxid],
         });
-        expect(fee).toBe(mockFee.toString());
+        expect(satoshisToBitcoins(fee!)).toBe(mockFee.toString());
       });
 
       it("should return null if mempool entry has no fees", async () => {
@@ -2544,7 +2544,7 @@ describe("BlockchainClient", () => {
         const fee = await client.getFeesForPendingTransaction(mockTxid);
 
         expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
-        expect(fee).toBe(satoshisToBitcoins(mockFee));
+        expect(fee).toBe(mockFee.toString());
       });
 
       it("should return the fee for a transaction without status (MEMPOOL client)", async () => {
@@ -2565,7 +2565,7 @@ describe("BlockchainClient", () => {
         const fee = await client.getFeesForPendingTransaction(mockTxid);
 
         expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
-        expect(fee).toBe(satoshisToBitcoins(mockFee));
+        expect(fee).toBe(mockFee.toString());
       });
 
       it("should return null for a confirmed transaction (MEMPOOL client)", async () => {
@@ -2645,7 +2645,7 @@ describe("BlockchainClient", () => {
         const fee = await client.getFeesForPendingTransaction(mockTxid);
 
         expect(mockGet).toHaveBeenCalledWith(`/tx/${mockTxid}`);
-        expect(fee).toBe(satoshisToBitcoins(mockFee));
+        expect(fee).toBe(mockFee.toString());
       });
 
       it("should throw an error if the API call fails (MEMPOOL client)", async () => {

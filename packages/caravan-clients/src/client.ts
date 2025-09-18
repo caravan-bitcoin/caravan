@@ -2,7 +2,12 @@
 /*
 TODO: cleanup the no explicit any. added to quickly type error catches
 */
-import { Network, satoshisToBitcoins, sortInputs } from "@caravan/bitcoin";
+import {
+  Network,
+  bitcoinsToSatoshis,
+  satoshisToBitcoins,
+  sortInputs,
+} from "@caravan/bitcoin";
 import axios, { Method } from "axios";
 import { BigNumber } from "bignumber.js";
 
@@ -1054,7 +1059,7 @@ export class BlockchainClient extends ClientBase {
    * @see https://mempool.space/docs/api/rest#get-transaction
    *
    * @param txid - Transaction ID to get fees
-   * @returns Tx fees in BTC, or null if transaction is not pending
+   * @returns Tx fees in satoshis, or null if transaction is not pending
    */
   public async getFeesForPendingTransaction(
     txid: string,
@@ -1073,11 +1078,11 @@ export class BlockchainClient extends ClientBase {
         if (!mempoolEntry || !mempoolEntry.fees) {
           return null;
         }
-        return mempoolEntry.fees.base.toString();
+        return bitcoinsToSatoshis(mempoolEntry.fees.base.toString());
       }
       const txData: RawTransactionData = await this.Get(`/tx/${txid}`);
       if (txData && txData.fee && !txData.status?.confirmed) {
-        return satoshisToBitcoins(txData.fee);
+        return txData.fee.toString();
       }
 
       return null;
