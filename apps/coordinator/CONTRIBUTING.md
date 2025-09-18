@@ -123,7 +123,6 @@ Here you should build out a query key map and the hooks that will be used to acc
 
 See the [transactions client](./src/clients/transactions.ts) for an example of how to build out a new query.
 
-Here’s a cleaned-up markdown block you can drop directly into your docs for **Troubleshooting**:
 
 ## Troubleshooting
 
