@@ -543,8 +543,16 @@ export function groupSignaturesBySigner(
 
   // Now we group signatures by their signer index
   for (const sig of inputSignatures) {
-    const { signerIndex, masterFingerprint, inputIndex, signature, pubkey } = sig;
-    const key = masterFingerprint || (signerIndex !== undefined ? `idx:${signerIndex}` : undefined);
+    const {
+      signerIndex,
+      masterFingerprint,
+      inputIndex,
+      signature,
+      pubkey,
+    } = sig;
+    const key =
+      masterFingerprint ||
+      (signerIndex !== undefined ? `idx:${signerIndex}` : undefined);
     if (!key) continue;
 
     let signerGroup = signerGroups.get(key);
@@ -674,7 +682,8 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
           validatedPubkey,
           walletInput,
         );
-        const xfp = walletInput?.multisig?.bip32Derivation?.[0]?.masterFingerprint
+        const xfp = walletInput?.multisig?.bip32Derivation?.[0]
+          ?.masterFingerprint
           ? walletInput.multisig.bip32Derivation[0].masterFingerprint.toString(
               "hex",
             )
