@@ -543,13 +543,8 @@ export function groupSignaturesBySigner(
 
   // Now we group signatures by their signer index
   for (const sig of inputSignatures) {
-    const {
-      signerIndex,
-      masterFingerprint,
-      inputIndex,
-      signature,
-      pubkey,
-    } = sig;
+    const { signerIndex, masterFingerprint, inputIndex, signature, pubkey } =
+      sig;
     const key =
       masterFingerprint ||
       (signerIndex !== undefined ? `idx:${signerIndex}` : undefined);
