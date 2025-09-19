@@ -5,6 +5,7 @@ import {
   UTXO,
   Input,
   Slice,
+  convertTxidToLittleEndian,
   getSequenceForInput,
   getInputIdentifiersFromPsbt,
   mapSignaturesToImporters,
@@ -29,23 +30,37 @@ export const selectAvailableInputsFromPSBT = createSelector(
   [getSpendableSlices, (state: WalletState, psbt: Psbt) => psbt],
   (slices: any[], psbt: Psbt) => {
     const inputIdentifiers = getInputIdentifiersFromPsbt(psbt);
-    const availableInputs: Input[] = [];
+
+    // Build a quick lookup from txid:index -> wallet input
+    const identifierToInput = new Map<string, Input>();
+
     slices.forEach((slice: Slice & { utxos: UTXO }) => {
       Object.entries(slice.utxos || {}).forEach(([, utxo]) => {
         const inputIdentifier = createInputIdentifier(utxo.txid, utxo.index);
         if (inputIdentifiers.has(inputIdentifier)) {
-          const input = {
+          identifierToInput.set(inputIdentifier, {
             ...utxo,
             multisig: slice.multisig,
             bip32Path: slice.bip32Path,
             change: slice.change,
             sequence: getSequenceForInput(psbt, inputIdentifier),
-          };
-          availableInputs.push(input);
+          });
         }
       });
     });
-    return availableInputs;
+
+    // Return inputs ordered to match the PSBT input order
+    const orderedInputs: Input[] = [];
+    const psbtInputIdsInOrder: string[] = psbt.txInputs.map((txIn) =>
+      createInputIdentifier(convertTxidToLittleEndian(txIn.hash), txIn.index),
+    );
+
+    psbtInputIdsInOrder.forEach((id) => {
+      const input = identifierToInput.get(id);
+      if (input) orderedInputs.push(input);
+    });
+
+    return orderedInputs;
   },
 );
 
