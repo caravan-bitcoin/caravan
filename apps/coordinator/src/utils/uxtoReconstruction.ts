@@ -348,7 +348,6 @@ export const reconstructParentUtxo = (
     return null;
   }
   const coinForConversion = convertCaravanUtxoToCoin(caravanUtxo);
-  console.log("coinForConversion", coinForConversion, caravanUtxo);
   try {
     return getUtxoFromCoin(coinForConversion);
   } catch (error) {

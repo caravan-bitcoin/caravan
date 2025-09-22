@@ -56,7 +56,6 @@ const fetchPendingTransactionFee = async (
 };
 
 export const useFetchPendingFeesForTxids = (txids: string[]) => {
-  console.log("txs", txids);
   const blockchainClient = useGetClient();
   const feeQueries = useQueries({
     queries: txids.map((txid) => ({
