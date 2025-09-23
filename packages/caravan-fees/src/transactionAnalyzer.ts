@@ -307,8 +307,11 @@ export class TransactionAnalyzer {
     );
     const feeDifference = desiredPackageFee.minus(this.fee);
 
-    // Check if the parent transaction already meets or exceeds the target fee rate , this was added because of a near impossible edge cause
-    // Discussed in this thread : https://discord.com/channels/1352754651044515941/1352758476870516796/1417181497302974484
+    // Handle edge case: parent transaction already has a higher fee rate than target
+    // Example scenario: Parent tx has 105 sats/vB fee rate, but target is only 35 sats/vB
+    // In this case, desiredPackageFee (35 * packageSize) < actual parent fee,
+    // making feeDifference negative. CPFP is unnecessary since the parent should
+    // already be prioritized for mining at its current higher fee rate.
     if (feeDifference.isLessThanOrEqualTo(0)) {
       throw new Error(
         `CPFP not needed: Parent transaction fee rate (${this.feeRate.toFixed(1)} sats/vB) ` +
