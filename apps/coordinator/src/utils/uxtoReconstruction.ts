@@ -41,10 +41,10 @@ export interface ReconstructedUtxos {
   amountSats: string;
   amount: string;
   confirmed: boolean;
-  transactionHex: any;
-  multisig: any;
-  bip32Path: string;
-  change: boolean;
+  transactionHex: string;
+  multisig: Slice["multisig"];
+  bip32Path: Slice["bip32Path"];
+  change: Slice["change"];
 }
 
 /**
@@ -345,6 +345,10 @@ export const reconstructParentUtxo = (
 
   // If reconstruction failed, this output doesn't belong to our wallet
   if (!caravanUtxo) {
+    console.warn(
+      `Failed to reconstruct UTXO for output ${spendableOutputIndex} of transaction ${parentTransaction.txid}. ` +
+        `This output may not belong to the wallet or wallet slice data may be incomplete.`,
+    );
     return null;
   }
   const coinForConversion = convertCaravanUtxoToCoin(caravanUtxo);
@@ -365,7 +369,7 @@ export const reconstructParentUtxo = (
  * @param caravanUtxo - UTXO object returned by reconstructSingleUtxo
  * @returns Coin object ready for getUtxoFromCoin conversion
  */
-function convertCaravanUtxoToCoin(caravanUtxo: any): Coin {
+function convertCaravanUtxoToCoin(caravanUtxo: ReconstructedUtxos): Coin {
   // Return a Coin object in the format expected by getUtxoFromCoin
   return {
     prevTxId: caravanUtxo.txid,
@@ -373,6 +377,6 @@ function convertCaravanUtxoToCoin(caravanUtxo: any): Coin {
     address: caravanUtxo.multisig.address,
     value: caravanUtxo.amountSats,
     prevTxHex: caravanUtxo.transactionHex,
-    slice: caravanUtxo,
+    slice: caravanUtxo as unknown as Slice,
   };
 }
