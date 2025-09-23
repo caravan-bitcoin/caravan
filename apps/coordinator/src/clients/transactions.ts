@@ -68,7 +68,6 @@ export const useFetchPendingFeesForTxids = (txids: string[]) => {
   // Build a map: txid → fee (string or null)
   const feeMap = new Map<string, string | null>();
   txids.forEach((txid, i) => {
-    console.log("test", feeQueries[i].data, txid);
     feeMap.set(txid, feeQueries[i].data ?? null);
   });
 
