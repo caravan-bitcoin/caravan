@@ -62,8 +62,8 @@ export const useAnalyzeTransaction = (
     isError: isErrorAvailableUtxos,
   } = useGetAvailableUtxos(transaction!);
 
-  //  ChangeOutputIndex is critical for fee bumping strategies , like in CPFP (Child-Pays-For-Parent) it helps,
-  //  Identifies which output can be spent in a child transaction
+  //  ChangeOutputIndex is critical for fee bumping strategies , specifically for CPFP (Child-Pays-For-Parent) it helps,
+  //  identify which output can be spent in a child transaction by the current wallet.
   const changeOutputIndex = useChangeOutputIndex(transaction);
 
   const { data: feeEstimates, isLoading: isLoadingFeeEstimates } =
@@ -109,7 +109,7 @@ export const useAnalyzeTransaction = (
       });
       let cpfpData = null;
       try {
-        // added here so that in case `analyzer.cpfpFeeRate` throws error it gets catched
+        // added here in case `analyzer.cpfpFeeRate` throws an error
         cpfpData = {
           // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
           feeRate: analyzer.cpfpFeeRate,
@@ -148,7 +148,7 @@ export const useAnalyzeTransaction = (
     analysis: analysis?.analysis ?? null,
     cpfp: analysis?.cpfpData
       ? {
-          // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
+          // we need this because for CPFP we cannot calculate feeRate simply by using vsize and fees (as we do for RBF)
           feeRate: analysis?.cpfpData?.feeRate,
           childSize: analysis?.cpfpData?.childSize,
           combinedEstimatedSize: analysis?.cpfpData?.combinedEstimatedSize,
