@@ -17,7 +17,6 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
-import { Transaction } from "../../types";
 import {
   ConfigurationStep,
   StrategySelectionStep,
@@ -44,7 +43,7 @@ import { TransactionDetails } from "@caravan/clients";
 interface AccelerationModalProps {
   open: boolean;
   onClose: () => void;
-  transaction: Transaction; // The transaction to accelerate
+  transaction: TransactionDetails; // The transaction to accelerate
   txHex: string; // Raw transaction hex
 }
 
@@ -79,10 +78,7 @@ const AccelerationModalWithContext: React.FC<AccelerationModalProps> = ({
   txHex,
 }) => {
   return (
-    <AccelerationModalProvider
-      transaction={transaction as TransactionDetails}
-      txHex={txHex}
-    >
+    <AccelerationModalProvider transaction={transaction} txHex={txHex}>
       <AccelerationModalContent
         open={open}
         onClose={onClose}
