@@ -15,13 +15,13 @@ const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
+  pendingTx: (txid: string) => [...transactionKeys.pending(), txid],
+  // fees for pending transaction
+  pendingTxFee: (txid: string) => [...transactionKeys.pendingTx(txid), "fee"],
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   // all the coins for a given transaction
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  // fees for pending transaction
-  fee: (txid: string) =>
-    [...transactionKeys.all, txid, "pending-fees"] as const,
 };
 
 // Service function for fetching transaction details
@@ -59,7 +59,7 @@ export const useFetchPendingFeesForTxids = (txids: string[]) => {
   const blockchainClient = useGetClient();
   const feeQueries = useQueries({
     queries: txids.map((txid) => ({
-      queryKey: transactionKeys.fee(txid),
+      queryKey: transactionKeys.pendingTxFee(txid),
       queryFn: () => fetchPendingTransactionFee(txid, blockchainClient!),
       enabled: !!blockchainClient && !!txid,
     })),
