@@ -195,9 +195,7 @@ const AccelerationModalContent: React.FC<
     if (analysisError) {
       return (
         <ErrorDialog
-          error={
-            analysisError ? analysisError : "Failed to load available UTXOs"
-          }
+          error={analysisError}
           showErrorDetails={showErrorDetails}
           setShowErrorDetails={setErrorDetails}
         />
