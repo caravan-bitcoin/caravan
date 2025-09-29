@@ -2,6 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 
 import {
+  JADE,
   BITBOX,
   TREZOR,
   LEDGER,
@@ -91,6 +92,7 @@ const KeystorePickerBase = ({
               variant="standard"
             >
               <MenuItem value="">{"< Select type >"}</MenuItem>
+              <MenuItem value={JADE}>Jade</MenuItem>
               <MenuItem value={BITBOX}>BitBox</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
