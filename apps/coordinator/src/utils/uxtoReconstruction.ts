@@ -321,7 +321,7 @@ export function matchPsbtInputsToUtxos(
  * @param txHex - The raw hex data of the parent transaction (needed for signing)
  * @returns A fully enriched UTXO ready for spending, or null if the output doesn't belong to the wallet
  */
-export const reconstructParentUtxo = (
+export const buildUtxoFromSpendingTransaction = (
   parentTransaction: TransactionDetails,
   spendableOutputIndex: number,
   txHex: string,

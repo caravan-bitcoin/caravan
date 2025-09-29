@@ -22,7 +22,7 @@ import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
-import { reconstructParentUtxo } from "utils/uxtoReconstruction";
+import { buildUtxoFromSpendingTransaction } from "utils/uxtoReconstruction";
 import { DUST_IN_SATOSHIS } from "utils/constants";
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
@@ -32,7 +32,7 @@ export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
     isError,
   } = usePendingUtxos(transaction?.txid || "");
   const walletUtxos = useWalletUtxos();
-
+  console.log("pendingUtxos", pendingUtxos, transaction?.txid, isError);
   // Memoize the combined UTXOs so it only recalculates when dependencies change
   const availableUtxos = useMemo(() => {
     // Return empty array if no transaction
@@ -61,8 +61,8 @@ export const useAnalyzeTransaction = (
     isLoading: isLoadingAvailableUtxos,
     isError: isErrorAvailableUtxos,
   } = useGetAvailableUtxos(transaction!);
-
-  //  ChangeOutputIndex is critical for fee bumping strategies , specifically for CPFP (Child-Pays-For-Parent) it helps,
+  console.log("useGetAvailableUtxos", availableUtxos);
+  //  ChangeOutputIndex is critical for fee bumping strategies, specifically for CPFP (Child-Pays-For-Parent) it helps
   //  identify which output can be spent in a child transaction by the current wallet.
   const changeOutputIndex = useChangeOutputIndex(transaction);
 
@@ -143,7 +143,21 @@ export const useAnalyzeTransaction = (
     totalSigners,
     changeOutputIndex,
   ]);
-
+  console.log("analysis", analysis, {
+    analysis: analysis?.analysis ?? null,
+    cpfp: analysis?.cpfpData
+      ? {
+          // we need this because for CPFP we cannot calculate feeRate simply by using vsize and fees (as we do for RBF)
+          feeRate: analysis?.cpfpData?.feeRate,
+          childSize: analysis?.cpfpData?.childSize,
+          combinedEstimatedSize: analysis?.cpfpData?.combinedEstimatedSize,
+        }
+      : null,
+    changeOutputIndex,
+    availableUtxos,
+    error,
+    isLoading: isLoadingAvailableUtxos || isLoadingFeeEstimates,
+  });
   return {
     analysis: analysis?.analysis ?? null,
     cpfp: analysis?.cpfpData
@@ -359,7 +373,7 @@ export const useCreateCPFP = (
       ) {
         throw new Error("Missing required parameters for CPFP");
       }
-      const parentUtxo = reconstructParentUtxo(
+      const parentUtxo = buildUtxoFromSpendingTransaction(
         transaction,
         spendableOutputIndex,
         txHex,
