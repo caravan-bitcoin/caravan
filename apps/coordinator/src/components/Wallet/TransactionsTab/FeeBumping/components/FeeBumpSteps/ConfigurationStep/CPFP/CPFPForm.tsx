@@ -68,7 +68,7 @@ export const CPFPForm: React.FC = () => {
   // CPFP specific calculations
   const parentVsize = analysis?.vsize;
   const estimatedChildVsize = cpfp?.childSize;
-  const combinedVsize = cpfp?.combinedEstimatedSize;
+  const combinedVsize = cpfp?.estimatedPackageSize;
   const minimumFeeRate = useMemo(() => {
     const cpfpTargetRate = cpfp?.feeRate ? parseFloat(cpfp.feeRate) : null;
 

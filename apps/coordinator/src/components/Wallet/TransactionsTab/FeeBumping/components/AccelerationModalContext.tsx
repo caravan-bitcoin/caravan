@@ -166,7 +166,7 @@ interface AccelerationModalContextType {
   cpfp: {
     feeRate: string | undefined;
     childSize: number | undefined;
-    combinedEstimatedSize: number | undefined;
+    estimatedPackageSize: number | undefined;
   } | null;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;

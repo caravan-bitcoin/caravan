@@ -114,7 +114,7 @@ export const useAnalyzeTransaction = (
           // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
           feeRate: analyzer.cpfpFeeRate,
           childSize: analyzer.estimatedCPFPChildSize,
-          combinedEstimatedSize: analyzer.CPFPPackageSize,
+          estimatedPackageSize: analyzer.CPFPPackageSize,
         };
       } catch (cpfpError) {
         console.warn("CPFP calculation failed:", cpfpError);
