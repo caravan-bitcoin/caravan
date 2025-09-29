@@ -152,14 +152,7 @@ export const useAnalyzeTransaction = (
 
   return {
     analysis: analysis?.analysis ?? null,
-    cpfp: analysis?.cpfpData
-      ? {
-          // we need this because for CPFP we cannot calculate feeRate simply by using vsize and fees (as we do for RBF)
-          feeRate: analysis?.cpfpData?.feeRate,
-          childSize: analysis?.cpfpData?.childSize,
-          combinedEstimatedSize: analysis?.cpfpData?.combinedEstimatedSize,
-        }
-      : null,
+    cpfp: analysis?.cpfpData ?? null,
     changeOutputIndex,
     availableUtxos,
     error,
