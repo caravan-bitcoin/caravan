@@ -43,12 +43,11 @@ import { getInputIdentifiersFromPsbt } from "utils/psbtUtils";
  * - redeemScript (script if p2sh)
  * - sequence number (optional)
  */
-const getUtxoFromCoin = (coin: Coin): UTXO => {
+export const getUtxoFromCoin = (coin: Coin): UTXO => {
   const { slice } = coin;
   if (!slice) {
     throw new Error("Slice not found in coin");
   }
-
   const { addressType }: { addressType?: MultisigAddressType } = JSON.parse(
     slice.multisig.braidDetails,
   );
