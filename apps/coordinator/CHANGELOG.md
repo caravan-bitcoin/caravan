@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.14.0
+
+### Minor Changes
+
+- [#349](https://github.com/caravan-bitcoin/caravan/pull/349) [`5f999b9`](https://github.com/caravan-bitcoin/caravan/commit/5f999b916dac36db31748a58dbbccc8a23b61de5) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add support for Child-Pays-for-Parent (CPFP)
+
+### Patch Changes
+
+- Updated dependencies [[`5f999b9`](https://github.com/caravan-bitcoin/caravan/commit/5f999b916dac36db31748a58dbbccc8a23b61de5)]:
+  - @caravan/clients@1.0.0
+
 ## 1.13.0
 
 ### Minor Changes
