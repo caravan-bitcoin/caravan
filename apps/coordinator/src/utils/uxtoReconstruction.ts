@@ -363,6 +363,13 @@ export const buildUtxoFromSpendingTransaction = (
   }
 };
 
+// TODO: Type conversion complexity in convertCaravanUtxoToCoin
+// This conversion chain (ReconstructedUtxos → Coin → UTXO) highlights unnecessary
+// type complexity. We should consolidate ReconstructedUtxos and Coin into a single
+// type to eliminate this intermediary conversion. This would simplify the codebase
+// by having reconstructSingleUtxo directly return a Coin object that can be passed
+// to getUtxoFromCoin.
+
 /**
  * Converts a Caravan-style UTXO object to a Coin object.
  *
