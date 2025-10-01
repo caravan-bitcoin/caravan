@@ -15,9 +15,6 @@ const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
-  pendingTx: (txid: string) => [...transactionKeys.pending(), txid],
-  // fees for pending transaction
-  pendingTxFee: (txid: string) => [...transactionKeys.pendingTx(txid), "fee"],
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   // all the coins for a given transaction
