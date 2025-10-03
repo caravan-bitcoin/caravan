@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- [#341](https://github.com/caravan-bitcoin/caravan/pull/341) [`d0d2d1d`](https://github.com/caravan-bitcoin/caravan/commit/d0d2d1df159a6ca6e049634ead1c5b89060f0e2b) Thanks [@cc-unchained](https://github.com/cc-unchained)! - convert Uint8Array to Buffer
+
+## 0.4.0
+
+### Minor Changes
+
+- [#318](https://github.com/caravan-bitcoin/caravan/pull/318) [`8d22ab5`](https://github.com/caravan-bitcoin/caravan/commit/8d22ab5178b1b731858b2fd08683e7d3a1b0aa44) Thanks [@bucko13](https://github.com/bucko13)! - fixes miscalculations and edge cases around tx and input size calcuations. also exposes a new utility for providing weight of a input for a given script type.
+
 ## 0.3.4
 
 ### Patch Changes

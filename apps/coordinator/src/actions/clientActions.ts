@@ -1,11 +1,16 @@
 import { Dispatch } from "react";
-import { BlockchainClient, ClientType } from "@caravan/clients";
+import {
+  BlockchainClient,
+  ClientType,
+  PublicBitcoinProvider,
+} from "@caravan/clients";
 import { BitcoinNetwork } from "@caravan/bitcoin";
 
 export const SET_CLIENT_TYPE = "SET_CLIENT_TYPE";
 export const SET_CLIENT_URL = "SET_CLIENT_URL";
 export const SET_CLIENT_USERNAME = "SET_CLIENT_USERNAME";
 export const SET_CLIENT_PASSWORD = "SET_CLIENT_PASSWORD";
+export const SET_CLIENT_PROVIDER = "SET_CLIENT_PROVIDER";
 
 export const SET_CLIENT_URL_ERROR = "SET_CLIENT_URL_ERROR";
 export const SET_CLIENT_USERNAME_ERROR = "SET_CLIENT_USERNAME_ERROR";
@@ -21,11 +26,14 @@ export const setClientWalletName = (walletName: string) => {
 
 export interface ClientSettings {
   type: string;
+  provider?: string;
   url: string;
   username: string;
   password: string;
   walletName?: string;
+  blockchainClient?: BlockchainClient;
 }
+
 // Ideally we'd just use the hook to get the client
 // and do the comparisons. Because the action creators for the
 // other pieces of the client store are not implemented and we
@@ -37,22 +45,26 @@ const matchesClient = (
   client: ClientSettings,
   network: BitcoinNetwork,
 ) => {
+  const translatedType = getClientType(client);
+  const translatedProvider = getClientProvider(client);
   return (
     blockchainClient &&
     blockchainClient.network === network &&
-    blockchainClient.type === client.type &&
-    (client.type === "private"
+    blockchainClient.type === translatedType &&
+    (translatedType === ClientType.PRIVATE
       ? blockchainClient.bitcoindParams.url === client.url &&
         blockchainClient.bitcoindParams.auth.username === client.username &&
         blockchainClient.bitcoindParams.auth.password === client.password
-      : true)
+      : blockchainClient.provider === translatedProvider)
   );
 };
 
 const getClientType = (client: ClientSettings): ClientType => {
   switch (client.type) {
     case "public":
-      return ClientType.BLOCKSTREAM;
+    case "mempool":
+    case "blockstream":
+      return ClientType.PUBLIC;
     case "private":
       return ClientType.PRIVATE;
     default:
@@ -60,16 +72,33 @@ const getClientType = (client: ClientSettings): ClientType => {
   }
 };
 
+export const getClientProvider = (client: ClientSettings) => {
+  if (
+    client.type === "public" ||
+    client.type === "mempool" ||
+    client.type === "blockstream"
+  ) {
+    // For public clients, we need to determine which provider to use
+    if (client.provider === "blockstream" || client.type === "blockstream") {
+      return PublicBitcoinProvider.BLOCKSTREAM;
+    } else if (client.provider === "mempool" || client.type === "mempool") {
+      return PublicBitcoinProvider.MEMPOOL;
+    }
+    return PublicBitcoinProvider.MEMPOOL; // Default to mempool if not specified
+  }
+  return undefined;
+};
+
 export const updateBlockchainClient = () => {
   return (
     dispatch: Dispatch<any>,
-    getState: () => { settings: any; client: any },
+    getState: () => { settings: any; client: ClientSettings },
   ) => {
     const { network } = getState().settings;
     const { client } = getState();
     const { blockchainClient } = client;
 
-    if (matchesClient(blockchainClient, client, network)) {
+    if (blockchainClient && matchesClient(blockchainClient, client, network)) {
       return blockchainClient;
     }
     return dispatch(setBlockchainClient());
@@ -84,15 +113,40 @@ export const setBlockchainClient = () => {
     const { network } = getState().settings;
     const { client } = getState();
 
-    const clientType = getClientType(client);
+    let clientType = getClientType(client);
+    let provider = getClientProvider(client);
+
+    // Only create a new client if the values are different
+    const { blockchainClient } = client;
+
+    if (blockchainClient && matchesClient(blockchainClient, client, network)) {
+      return blockchainClient;
+    }
+
+    // Handle regtest network: switch to private client if public client was selected
+    if (network === "regtest" && clientType === ClientType.PUBLIC) {
+      clientType = ClientType.PRIVATE;
+      provider = undefined;
+
+      // Update client state to private for regtest
+      dispatch({ type: SET_CLIENT_TYPE, value: ClientType.PRIVATE });
+
+      // Set default regtest URL if not already set to a regtest port
+      if (!client.url || !client.url.includes("18443")) {
+        const defaultRegtestUrl = "http://localhost:18443";
+        dispatch({ type: SET_CLIENT_URL, value: defaultRegtestUrl });
+      }
+    }
+
     const newClient = new BlockchainClient({
       client,
       type: clientType,
+      provider,
       network,
-      throttled: client.type === ClientType.BLOCKSTREAM,
+      throttled: provider === PublicBitcoinProvider.BLOCKSTREAM,
     });
-
     dispatch({ type: SET_BLOCKCHAIN_CLIENT, value: newClient });
+
     return newClient;
   };
 };

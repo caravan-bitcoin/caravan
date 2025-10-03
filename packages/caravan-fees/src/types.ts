@@ -1,4 +1,4 @@
-import { Network, MULTISIG_ADDRESS_TYPES } from "@caravan/bitcoin";
+import { Network, MultisigAddressType } from "@caravan/bitcoin";
 
 import {
   BtcTxInputTemplate,
@@ -6,12 +6,74 @@ import {
 } from "./btcTransactionComponents";
 
 /**
+ * BIP32 derivation information for a specific public key in a multisig setup.
+ * This provides the wallet with the necessary information to derive the correct
+ * private key for signing and to validate signatures from other cosigners.
+ *
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+ * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#input-types
+ */
+export interface InputDerivation {
+  /** The public key that corresponds to this derivation path */
+  pubkey: Buffer;
+
+  /**
+   * The master key fingerprint (first 4 bytes of the master public key hash).
+   * Used to identify which master key this derivation belongs to in a multisig setup.
+   */
+  masterFingerprint: Buffer;
+
+  /**
+   * The full BIP32 derivation path from the master key.
+   * Example: "m/84'/1'/0'/0/5" for a specific address in a BIP84 wallet
+   */
+  path: string;
+}
+
+/**
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
+ *
+ * @remarks
+ * **TXID Format Convention for @caravan/fees Package:**
+ *
+ * Throughout this entire package, all input TXIDs are expected to be in **big-endian**
+ * format (human-readable format). This includes:
+ * - UTXO.txid fields
+ * - originalTx parameters in RBF/CPFP functions
+ * - Any transaction references in analysis
+ *
+ * This maintains consistency with external expectations (block explorers, wallets, APIs)
+ * while the package internally handles the conversion to Bitcoin's native little-endian
+ * format when constructing raw transactions and PSBTs.
+ *
+ * **Output Format:**
+ * When this package returns fee-bumped PSBTs, the internal TXID references within
+ * those PSBTs will be in little-endian format to ensure compatibility with Bitcoin's
+ * internal data structures and protocol requirements.
  *
  * @see https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  */
 export interface UTXO {
-  /** The transaction ID of the UTXO in reversed hex format (big-endian). */
+  /** The transaction ID of the UTXO in reversed hex format (big-endian).
+   *
+   * @remarks
+   * **Package-wide TXID Convention:**
+   * All TXIDs provided to this package should be in big-endian format (human-readable format), which is the
+   * standard format used by:
+   * - Block explorers (e.g., blockstream.info, blockchain.info)
+   * - Wallet APIs and RPC interfaces
+   * - Bitcoin Core's getrawmempool, getrawtransaction outputs
+   * - User-facing interfaces
+   *
+   * The package will internally convert these to little-endian format when needed
+   * for Bitcoin protocol operations and PSBT construction.
+   *
+   * @example
+   * Big-endian (user-facing): `6fe28c0ab6f1b372...`
+   * Little-endian (internal use): `...72b3f1b60a8ce26f`
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
+   */
   txid: string;
 
   /** The output index of the UTXO in its parent transaction. */
@@ -21,8 +83,17 @@ export interface UTXO {
   value: Satoshis;
 
   /**
+   * The sequence number of the input.
+   * This is used for relative time locks and signaling RBF.
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki
+   */
+  sequence?: number;
+
+  /**
    * The full previous transaction in hexadecimal format.
-   * Required for non-segwit inputs in PSBTs.
+   * Required for non-segwit inputs in PSBTs to prevent fee attacks.
+   * For P2SH and some hardware wallets, this is mandatory.
    */
   prevTxHex?: string;
 
@@ -34,10 +105,56 @@ export interface UTXO {
     script: Buffer;
     value: number;
   };
+
+  /**
+   * The non-witness UTXO information for non-segwit transactions.
+   * (The buffer of the full previous transaction)
+   * Required for non-segwit inputs in PSBTs.
+   */
+  nonWitnessUtxo?: Buffer;
+
+  /**
+   * The redeem script for P2SH outputs.
+   * For multisig P2SH addresses, this contains the actual multisig script that
+   * defines the m-of-n signature requirements. Required for spending P2SH outputs.
+   *
+   * Example: For a 2-of-3 P2SH multisig, this would be the script:
+   * OP_2 <pubkey1> <pubkey2> <pubkey3> OP_3 OP_CHECKMULTISIG
+   */
+  redeemScript?: Buffer;
+
+  /**
+   * The witness script for P2WSH and P2SH-P2WSH outputs.
+   * For segwit multisig addresses, this contains the multisig script that
+   * gets committed to in the witness program. Required for spending segwit script outputs.
+   *
+   * Note: For P2SH-P2WSH, both redeemScript and witnessScript are needed:
+   * - redeemScript: Contains the witness program (version + witness script hash)
+   * - witnessScript: Contains the actual multisig script
+   */
+  witnessScript?: Buffer;
+
+  /**
+   * BIP32 derivation information for all public keys involved in this UTXO.
+   * This array contains derivation paths for each cosigner's public key in a multisig setup.
+   *
+   * Critical for:
+   * - Hardware wallets to derive the correct signing key
+   * - Coordinators to validate signatures from other cosigners
+   * - PSBT signers to identify which keys they control
+   *
+   * Each entry maps a public key to its derivation path and master fingerprint.
+   */
+  bip32Derivations?: InputDerivation[];
 }
 
 /**
  * Configuration options for the TransactionAnalyzer.
+ *
+ * @remarks
+ * **TXID Format Convention:**
+ * All transaction hex data and TXID references provided to this analyzer
+ * should use big-endian format (human-readable format).
  */
 export interface AnalyzerOptions {
   /**
@@ -102,7 +219,7 @@ export interface AnalyzerOptions {
    * This is used to determine the input size for different address types
    * when estimating transaction size.
    */
-  addressType: ScriptType;
+  addressType: MultisigAddressType;
 
   /**
    * The hexadecimal representation of the raw transaction.
@@ -145,7 +262,7 @@ export enum FeeBumpStrategy {
  */
 export interface TransactionInput {
   /**
-   * The transaction ID of the previous transaction containing the output being spent.
+   * The transaction ID of the previous transaction containing the output being spent in big-endian format.
    */
   txid: string;
 
@@ -195,6 +312,18 @@ export type Satoshis = string;
 export type BTC = string;
 
 /**
+ * Interface for global xpub information
+ */
+export interface GlobalXpub {
+  /** The extended public key */
+  xpub: string;
+  /** The master fingerprint (4 bytes) */
+  masterFingerprint: string;
+  /** The BIP32 derivation path */
+  path: string;
+}
+
+/**
  * Configuration options for creating a transaction template.
  * This is used to set up the initial state and parameters for a new transaction.
  */
@@ -221,7 +350,7 @@ export interface TransactionTemplateOptions {
    * The type of script used for the transaction (e.g., "p2pkh", "p2sh", "p2wpkh", "p2wsh").
    * This affects how the transaction is constructed and signed.
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * Optional array of input templates to use in the transaction.
@@ -244,6 +373,9 @@ export interface TransactionTemplateOptions {
    * This is used along with requiredSigners for multisig transactions.
    */
   totalSigners: number;
+
+  /** Optional array of global xpubs to include in the PSBT */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**
@@ -279,7 +411,7 @@ export interface CancelRbfOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * The number of required signers for the multisig setup.
@@ -330,6 +462,11 @@ export interface CancelRbfOptions {
    * @default false
    */
   reuseAllInputs?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
 
 /**
@@ -396,6 +533,17 @@ export interface CPFPOptions {
   spendableOutputIndex: number;
 
   /**
+   * The parent output UTXO with complete PSBT metadata.
+   * This UTXO represents the output from the parent transaction that will be spent
+   * in the child transaction. It must include all necessary signing information
+   * (scripts, derivation paths, etc.) for proper PSBT construction.
+   *
+   * This should be created using wallet-specific logic that can reconstruct
+   * the full UTXO metadata from the transaction output.
+   */
+  parentUtxo: UTXO;
+
+  /**
    * The address where any excess funds (change) will be sent in the child transaction.
    */
   changeAddress: string;
@@ -413,7 +561,7 @@ export interface CPFPOptions {
   /**
    * The type of script used for the transaction (e.g., P2PKH, P2SH, P2WSH).
    */
-  scriptType: ScriptType;
+  scriptType: MultisigAddressType;
 
   /**
    * The target fee rate in satoshis per virtual byte. This is used to calculate
@@ -444,40 +592,12 @@ export interface CPFPOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Optional array of global xpubs to include in the PSBT.
+   */
+  globalXpubs?: GlobalXpub[];
 }
-
-/**
- * Comprehensive object containing all supported Bitcoin script types.
- * This includes multisig address types from Caravan and additional types.
- *
- * @readonly
- * @enum {string}
- */
-export const SCRIPT_TYPES = {
-  /** Pay to Public Key Hash */
-  P2PKH: "P2PKH",
-  /** Pay to Witness Public Key Hash (Native SegWit) */
-  P2WPKH: "P2WPKH",
-  /** Pay to Script Hash wrapping a Pay to Witness Public Key Hash (Nested SegWit) */
-  P2SH_P2WPKH: "P2SH_P2WPKH",
-  /** Unknown or unsupported script type */
-  UNKNOWN: "UNKNOWN",
-  /** Pay to Script Hash */
-  P2SH: MULTISIG_ADDRESS_TYPES.P2SH,
-  /** Pay to Script Hash wrapping a Pay to Witness Script Hash */
-  P2SH_P2WSH: MULTISIG_ADDRESS_TYPES.P2SH_P2WSH,
-  /** Pay to Witness Script Hash (Native SegWit for scripts) */
-  P2WSH: MULTISIG_ADDRESS_TYPES.P2WSH,
-} as const;
-
-/**
- * Union type representing all possible Bitcoin script types.
- * This type can be used for type checking and autocompletion in functions
- * that deal with different Bitcoin address formats.
- *
- * @type {typeof SCRIPT_TYPES[keyof typeof SCRIPT_TYPES]} ScriptType
- */
-export type ScriptType = (typeof SCRIPT_TYPES)[keyof typeof SCRIPT_TYPES];
 
 /**
  * Represents the comprehensive analysis of a Bitcoin transaction.

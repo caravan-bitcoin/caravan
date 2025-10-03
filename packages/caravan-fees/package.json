@@ -1,6 +1,6 @@
 {
   "name": "@caravan/fees",
-  "version": "1.0.1-beta",
+  "version": "1.0.1",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,6 +21,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
+    "test:ui": "vitest --ui --watch",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src"
   },
@@ -37,8 +38,8 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
     "@caravan/typescript-config": "*",
+    "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   },
   "dependencies": {

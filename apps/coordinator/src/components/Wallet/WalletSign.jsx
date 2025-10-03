@@ -16,6 +16,10 @@ import {
   resetPSBT as resetPSBTAction,
   SPEND_STEP_CREATE,
 } from "../../actions/transactionActions";
+
+// Utils and Selectors
+import { downloadFile } from "../../utils";
+import { getWalletDetailsText } from "../../selectors/wallet";
 import {
   updateTxSlices as updateTxSlicesAction,
   resetWalletView as resetWalletViewAction,
@@ -98,8 +102,26 @@ class WalletSign extends React.Component {
     setSpendStep(SPEND_STEP_CREATE);
   };
 
+  handleWalletConfigDownload = () => {
+    const { walletDetailsText, walletName } = this.props;
+
+    if (!walletDetailsText) {
+      console.error("No wallet configuration available");
+      return;
+    }
+
+    try {
+      const filename = `${walletName}-config.json`;
+      downloadFile(walletDetailsText, filename);
+    } catch (error) {
+      console.error("Failed to download wallet configuration:", error);
+    }
+  };
+
   render = () => {
     const { spent } = this.state;
+    const { unsignedPSBT } = this.props;
+
     return (
       <Box>
         <Button href="#" onClick={this.handleCancel}>
@@ -110,7 +132,7 @@ class WalletSign extends React.Component {
         </Box>
         {this.renderKeySelectors()}
 
-        <Box mt={2}>
+        <Box mt={2} display="flex" gap={2}>
           <Button
             href="#"
             onClick={(e) => {
@@ -120,6 +142,16 @@ class WalletSign extends React.Component {
           >
             Abandon Transaction
           </Button>
+
+          {unsignedPSBT && (
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={this.handleWalletConfigDownload}
+            >
+              Download Wallet Config
+            </Button>
+          )}
         </Box>
 
         {this.signaturesFinalized() && (
@@ -161,6 +193,10 @@ WalletSign.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updateTxSlices: PropTypes.func.isRequired,
   txid: PropTypes.string.isRequired,
+  unsignedPSBT: PropTypes.string,
+  network: PropTypes.string,
+  walletName: PropTypes.string.isRequired,
+  walletDetailsText: PropTypes.string.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -172,6 +208,10 @@ function mapStateToProps(state) {
     requiredSigners: state.spend.transaction.requiredSigners,
     totalSigners: state.spend.transaction.totalSigners,
     changeSlice: state.wallet.change.nextNode,
+    unsignedPSBT: state.spend.transaction.unsignedPSBT,
+    network: state.settings.network,
+    walletName: state.wallet.common.walletName,
+    walletDetailsText: getWalletDetailsText(state),
   };
 }
 

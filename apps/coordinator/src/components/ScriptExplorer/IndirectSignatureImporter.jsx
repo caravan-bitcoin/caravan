@@ -22,28 +22,36 @@ import InteractionMessages from "../InteractionMessages";
 class IndirectSignatureImporter extends React.Component {
   constructor(props) {
     super(props);
+    let initialStatus = PENDING;
+    try {
+      const interaction = this.interaction();
+      initialStatus = interaction.isSupported() ? PENDING : UNSUPPORTED;
+    } catch (error) {
+      initialStatus = PENDING; // Safe fallback
+    }
+
     this.state = {
       bip32PathError: "",
       signatureError: "",
-      status: this.interaction().isSupported() ? PENDING : UNSUPPORTED,
+      status: initialStatus,
     };
   }
 
-  interaction = () => {
-    const { signatureImporter, network, inputs, outputs } = this.props;
-    const keystore = signatureImporter.method;
-    const bip32Paths = inputs.map((input) => {
-      if (typeof input.bip32Path === "undefined")
-        return signatureImporter.bip32Path; // pubkey path
-      return `${signatureImporter.bip32Path}${input.bip32Path.slice(1)}`; // xpub/pubkey slice away the m, keep /
+  componentDidCatch(error) {
+    this.setState({
+      signatureError: `Component error: ${error.message || "Unknown error"}`,
+      status: UNSUPPORTED,
     });
+  }
+
+  interaction = () => {
+    const { signatureImporter, network, psbt } = this.props;
+    const keystore = signatureImporter.method;
 
     return SignMultisigTransaction({
       keystore,
       network,
-      inputs,
-      outputs,
-      bip32Paths,
+      psbt,
     });
   };
 
@@ -93,7 +101,9 @@ class IndirectSignatureImporter extends React.Component {
     const { disableChangeMethod, extendedPublicKeyImporter, Signer } =
       this.props;
     const { signatureError, status } = this.state;
+
     const interaction = this.interaction();
+
     if (status === UNSUPPORTED) {
       return (
         <InteractionMessages
@@ -102,6 +112,7 @@ class IndirectSignatureImporter extends React.Component {
         />
       );
     }
+
     return (
       <Box mt={2}>
         <Box mt={2}>
@@ -112,7 +123,7 @@ class IndirectSignatureImporter extends React.Component {
               hasError={this.hasBIP32PathError()}
               onReceive={this.onReceive}
               onReceivePSBT={this.onReceivePSBT}
-              interaction={this.interaction()}
+              interaction={interaction}
               setActive={this.setActive}
               disableChangeMethod={disableChangeMethod}
               extendedPublicKeyImporter={extendedPublicKeyImporter}
@@ -232,9 +243,10 @@ IndirectSignatureImporter.propTypes = {
   extendedPublicKeyImporter: PropTypes.shape({
     method: PropTypes.string,
   }),
-  Signer: PropTypes.shape({}).isRequired,
+  Signer: PropTypes.elementType.isRequired, // React component type
   fee: PropTypes.string,
   inputsTotalSats: PropTypes.shape({}),
+  psbt: PropTypes.string,
 };
 
 IndirectSignatureImporter.defaultProps = {
@@ -246,6 +258,7 @@ IndirectSignatureImporter.defaultProps = {
   extendedPublicKeyImporter: {},
   fee: "",
   inputsTotalSats: {},
+  psbt: "",
 };
 
 export default IndirectSignatureImporter;

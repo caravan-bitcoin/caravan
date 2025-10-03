@@ -1,0 +1,189 @@
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import { BlockchainClient, TransactionDetails } from "@caravan/clients";
+import {
+  getPendingTransactionIds,
+  getWalletAddresses,
+  Slice,
+} from "selectors/wallet";
+import { calculateTransactionValue } from "utils/transactionCalculations";
+import { useGetClient } from "hooks/client";
+import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+
+// Query key factory for pending transactions
+const transactionKeys = {
+  all: ["transactions"] as const,
+  tx: (txid: string) => [...transactionKeys.all, txid] as const,
+  pending: () => [...transactionKeys.all, "pending"] as const,
+  txWithHex: (txid: string) =>
+    [...transactionKeys.all, txid, "withHex"] as const,
+  // all the coins for a given transaction
+  coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
+};
+
+// Service function for fetching transaction details
+const fetchTransactionDetails = async (
+  txid: string,
+  client: BlockchainClient,
+): Promise<TransactionDetails> => {
+  if (!client) {
+    throw new Error("No blockchain client available");
+  }
+  return await client.getTransaction(txid);
+};
+
+export const useFetchTransactionDetails = (txid: string) => {
+  const blockchainClient = useGetClient();
+  return useQuery({
+    queryKey: transactionKeys.tx(txid),
+    queryFn: () => fetchTransactionDetails(txid, blockchainClient),
+    enabled: !!blockchainClient && !!txid,
+  });
+};
+
+// Service function for fetching pending transaction fees
+const fetchPendingTransactionFee = async (
+  txid: string,
+  client: BlockchainClient,
+) => {
+  if (!client) {
+    throw new Error("No blockchain client available");
+  }
+  return await client.getFeesForPendingTransaction(txid);
+};
+
+// Hook for fetching all pending transactions
+const useFetchPendingTransactions = () => {
+  const pendingTransactionIds = useSelector(getPendingTransactionIds);
+  const blockchainClient = useGetClient();
+
+  return useQueries({
+    queries: pendingTransactionIds.map((txid) => ({
+      queryKey: transactionKeys.tx(txid),
+      queryFn: async () => {
+        const transaction = await fetchTransactionDetails(
+          txid,
+          blockchainClient,
+        );
+
+        // If transaction doesn't have a fee, fetch it
+        if (!transaction.fee) {
+          const fee = await fetchPendingTransactionFee(txid, blockchainClient);
+          return {
+            ...transaction,
+            fee: Number(fee),
+          };
+        }
+
+        return transaction;
+      },
+      enabled: !!blockchainClient && !!txid,
+    })),
+  });
+};
+
+export const useTransactionsWithHex = (txids: string[]) => {
+  const blockchainClient = useGetClient();
+  return useQueries({
+    queries: txids.map((txid) => ({
+      queryKey: transactionKeys.txWithHex(txid),
+      queryFn: async () => {
+        const [transaction, transactionHex] = await Promise.all([
+          blockchainClient.getTransaction(txid),
+          blockchainClient.getTransactionHex(txid),
+        ]);
+
+        return { txid, transaction, transactionHex };
+      },
+      enabled: !!txid,
+    })),
+  });
+};
+
+// Hook for processed pending transactions with calculated values
+export const usePendingTransactions = () => {
+  const walletAddresses = useSelector(getWalletAddresses);
+  const transactionQueries = useFetchPendingTransactions();
+
+  // Calculate loading and error states
+  const isLoading = transactionQueries.some((query) => query.isLoading);
+  const error = transactionQueries.find((query) => query.error)?.error;
+
+  // Process transactions with calculated values and filter out confirmed ones
+  const pendingTransactions = transactionQueries
+    .filter((query) => query.data && !query.data.status?.confirmed)
+    .map((query) => query.data!);
+
+  const transactions = pendingTransactions.map((tx) => {
+    return {
+      ...tx,
+      valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      isReceived:
+        tx.isReceived !== undefined
+          ? tx.isReceived
+          : calculateTransactionValue(tx, walletAddresses) > 0,
+    };
+  });
+
+  return {
+    transactions,
+    isLoading,
+    error,
+    refetch: () => {
+      // Refetch all transaction queries
+      transactionQueries.forEach((query) => query.refetch());
+    },
+  };
+};
+
+export interface Coin {
+  prevTxId: string;
+  vout: number;
+  address: string;
+  value: string;
+  prevTxHex: string;
+  slice?: Slice;
+}
+
+// Service function for fetching transaction coins (spendable outputs from prev txs)
+export const fetchTransactionCoins = async (
+  txid: string,
+  client: BlockchainClient,
+) => {
+  const transaction = await client.getTransaction(txid);
+  const coins = new Map<string, Coin>();
+  for (const input of transaction.vin) {
+    const { txid, vout } = input;
+
+    // Skip if we don't have valid identifiers
+    if (!txid || vout === undefined) continue;
+    const coinId = `${txid}:${vout}`;
+
+    const [prevTxHex, prevTx] = await Promise.all([
+      client.getTransactionHex(txid),
+      client.getTransaction(txid),
+    ]);
+
+    if (!prevTx || !prevTxHex) {
+      throw new Error(
+        `Failed to fetch prev tx info for input ${coinId}. Are you sure the transaction was sent from this wallet?`,
+      );
+    }
+
+    const coinAddress = prevTx.vout[vout].scriptPubkeyAddress;
+    const coinValue = bitcoinsToSatoshis(prevTx.vout[vout].value.toString());
+
+    if (!coinAddress) {
+      throw new Error(`Failed to fetch coin address for input ${coinId}.`);
+    }
+
+    coins.set(coinAddress, {
+      prevTxId: txid,
+      vout,
+      address: coinAddress,
+      value: coinValue,
+      prevTxHex,
+    });
+  }
+  return coins;
+};

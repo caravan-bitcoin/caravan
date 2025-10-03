@@ -8,12 +8,14 @@ import {
   TEST_FIXTURES,
 } from "@caravan/bitcoin";
 import {
+  JADE,
   BITBOX,
   COLDCARD,
   HERMIT,
   LEDGER,
   SignMultisigTransaction,
 } from "@caravan/wallets";
+import { validateMultisigPsbtSignature } from "@caravan/psbt";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 import Test from "./Test";
@@ -30,12 +32,70 @@ class SignMultisigTransactionTest extends Test {
     if (this.params.keystore === HERMIT) {
       tempResult = this.interaction().parse(result);
     }
-    return tempResult.signatures ? tempResult.signatures : tempResult;
+
+    const finalResult = tempResult.signatures
+      ? tempResult.signatures
+      : tempResult;
+
+    return finalResult;
   }
 
   // eslint-disable-next-line class-methods-use-this
   matches(expected, actual) {
-    return JSON.stringify(expected) === JSON.stringify(actual);
+    // If either is null/undefined or lengths don't match, fail immediately
+    if (!expected || !actual || expected.length !== actual.length) {
+      return false;
+    }
+
+    // Get the unsigned PSBT for validation
+    let psbtHex;
+    try {
+      const unsignedPSBTWrapper = unsignedMultisigPSBT(
+        this.params.network,
+        this.params.inputs,
+        this.params.outputs,
+      );
+
+      // The unsignedMultisigPSBT returns { data, txn } where data is the actual PSBT
+      psbtHex = unsignedPSBTWrapper.data.toHex();
+    } catch (e) {
+      return false;
+    }
+
+    // Validate each signature cryptographically
+    for (let inputIndex = 0; inputIndex < expected.length; inputIndex++) {
+      const expectedSig = expected[inputIndex];
+      const actualSig = actual[inputIndex];
+
+      if (!expectedSig || !actualSig) {
+        return false;
+      }
+
+      // Convert hex string to Buffer if needed
+      const sigBuffer =
+        typeof actualSig === "string"
+          ? Buffer.from(actualSig, "hex")
+          : actualSig;
+
+      // Validate the actual signature cryptographically
+      const validatedPubkey = validateMultisigPsbtSignature(
+        psbtHex,
+        inputIndex,
+        sigBuffer,
+        this.params.inputs[inputIndex].amountSats,
+      );
+
+      if (!validatedPubkey) {
+        return false;
+      }
+
+      // Check if the validated pubkey matches the expected one
+      if (validatedPubkey !== this.params.publicKeys[inputIndex]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   description() {
@@ -158,7 +218,8 @@ class SignMultisigTransactionTest extends Test {
         returnSignatureArray: true,
       });
     }
-    return SignMultisigTransaction({
+
+    const interaction = SignMultisigTransaction({
       keystore: this.params.keystore,
       network: this.params.network,
       inputs: this.params.inputs,
@@ -169,10 +230,12 @@ class SignMultisigTransactionTest extends Test {
       psbt: this.params.psbt,
       returnSignatureArray: this.params.returnSignatureArray,
     });
+
+    return interaction;
   }
 
   expected() {
-    if (this.params.keystore === COLDCARD) {
+    if (this.params.keystore === COLDCARD || this.params.keystore === JADE) {
       return this.params.byteCeilingSignature;
     }
     return this.params.signature;
@@ -194,6 +257,17 @@ export function signingTests(keystore) {
         }
       });
       return transactions;
+    case JADE:
+      return TEST_FIXTURES.transactions
+        .filter((fixture) => fixture.braidDetails)
+        .map(
+          (fixture) =>
+            new SignMultisigTransactionTest({
+              ...fixture,
+              ...{ keystore },
+              returnSignatureArray: true,
+            }),
+        );
     case BITBOX:
       return TEST_FIXTURES.transactions
         .filter((fixture) => fixture.braidDetails)

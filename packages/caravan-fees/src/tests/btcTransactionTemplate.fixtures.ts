@@ -1,4 +1,4 @@
-import { Network } from "@caravan/bitcoin";
+import { Network, P2SH_P2WSH, MultisigAddressType } from "@caravan/bitcoin";
 
 export const fixtures: TestFixture[] = [
   {
@@ -65,14 +65,14 @@ export const fixtures: TestFixture[] = [
       ],
       network: Network.MAINNET,
       targetFeeRate: 1,
-      scriptType: "P2SH-P2WSH",
+      scriptType: P2SH_P2WSH,
       requiredSigners: 1,
       totalSigners: 1,
     },
     expected: {
-      vsize: 406,
+      vsize: 284,
       fee: "1192",
-      feeRate: "2.93",
+      feeRate: "4.19",
     },
   },
   {
@@ -121,14 +121,14 @@ export const fixtures: TestFixture[] = [
       ],
       network: Network.MAINNET,
       targetFeeRate: 1,
-      scriptType: "P2SH-P2WSH",
+      scriptType: P2SH_P2WSH,
       requiredSigners: 1,
       totalSigners: 3,
     },
     expected: {
-      vsize: 287,
+      vsize: 205,
       fee: "3285",
-      feeRate: "11.4",
+      feeRate: "16.02",
     },
   },
 ];
@@ -154,7 +154,7 @@ export interface TestFixture {
     }[];
     network: Network;
     targetFeeRate: number;
-    scriptType: string;
+    scriptType: MultisigAddressType;
     requiredSigners: number;
     totalSigners: number;
   };

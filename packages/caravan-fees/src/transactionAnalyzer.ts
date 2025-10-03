@@ -1,4 +1,10 @@
-import { Network } from "@caravan/bitcoin";
+import {
+  Network,
+  P2SH_P2WSH,
+  P2SH,
+  P2WSH,
+  MultisigAddressType,
+} from "@caravan/bitcoin";
 import { BigNumber } from "bignumber.js";
 import { Transaction } from "bitcoinjs-lib-v6";
 
@@ -12,8 +18,6 @@ import {
   AnalyzerOptions,
   FeeBumpStrategy,
   Satoshis,
-  ScriptType,
-  SCRIPT_TYPES,
   FeeRateSatsPerVByte,
   TxAnalysis,
 } from "./types";
@@ -30,7 +34,7 @@ interface ValidatedAnalyzerOptions {
   incrementalRelayFeeRate: BigNumber;
   requiredSigners: number;
   totalSigners: number;
-  addressType: ScriptType;
+  addressType: MultisigAddressType;
 }
 
 /**
@@ -52,6 +56,17 @@ interface ValidatedAnalyzerOptions {
  * const analyzer = new TransactionAnalyzer({txHex,...other-options});
  * const analysis = analyzer.analyze();
  *
+ * @remarks
+ * As this is a **public-facing class**, any input transaction IDs (`txid`) returned
+ * by its methods are provided in **big-endian format**, consistent with how they appear
+ * in UIs and block explorers.
+ *
+ * If you are using these `txid`s internally for raw Bitcoin protocol operations,
+ * you may need to reverse them to **little-endian** using a helper such as `reverseHex()`.
+ *
+ * For more information on byte order in Bitcoin, see:
+ * @see https://learnmeabitcoin.com/technical/general/byte-order
+ *
  * @class
  */
 export class TransactionAnalyzer {
@@ -64,7 +79,7 @@ export class TransactionAnalyzer {
   private readonly _incrementalRelayFeeRate: BigNumber;
   private readonly _requiredSigners: number;
   private readonly _totalSigners: number;
-  private readonly _addressType: ScriptType;
+  private readonly _addressType: MultisigAddressType;
 
   private _canRBF: boolean | null = null;
   private _canCPFP: boolean | null = null;
@@ -123,6 +138,16 @@ export class TransactionAnalyzer {
   /**
    * Gets the deserialized inputs of the transaction.
    * @returns {BtcTxInputTemplate[]} An array of transaction inputs
+   *
+   * @remarks
+   * Each input's `txid` will be in **big-endian** format, consistent with how TXIDs are typically
+   * displayed in block explorers and user interfaces.
+   *
+   * If you are performing any low-level Bitcoin protocol operations with these inputs (e.g. signing,
+   * hashing, or PSBT creation), ensure that you **convert the `txid` to little-endian** byte order
+   * as required by the Bitcoin protocol.
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   get inputs(): BtcTxInputTemplate[] {
     return this.deserializeInputs();
@@ -270,14 +295,32 @@ export class TransactionAnalyzer {
   /**
    * Calculates and returns the fee rate required for a successful CPFP.
    * @returns {string} The CPFP fee rate in satoshis per vbyte
+   * @throws {Error} When CPFP is not needed or not possible
    */
   get cpfpFeeRate(): string {
+    // Sanity check because we never know
+    if (this.estimatedCPFPChildSize <= 0) {
+      throw new Error("Invalid CPFP child size: cannot be zero or negative");
+    }
     const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
       this.CPFPPackageSize,
     );
-    const expectedFeeRate = BigNumber.max(
-      desiredPackageFee.minus(this.fee).dividedBy(this.estimatedCPFPChildSize),
-      new BigNumber(0),
+    const feeDifference = desiredPackageFee.minus(this.fee);
+
+    // Handle edge case: parent transaction already has a higher fee rate than target
+    // Example scenario: Parent tx has 105 sats/vB fee rate, but target is only 35 sats/vB
+    // In this case, desiredPackageFee (35 * packageSize) < actual parent fee,
+    // making feeDifference negative. CPFP is unnecessary since the parent should
+    // already be prioritized for mining at its current higher fee rate.
+    if (feeDifference.isLessThanOrEqualTo(0)) {
+      throw new Error(
+        `CPFP not needed: Parent transaction fee rate (${this.feeRate.toFixed(1)} sats/vB) ` +
+          `already meets or exceeds target fee rate (${this.targetFeeRate} sats/vB)`,
+      );
+    }
+
+    const expectedFeeRate = feeDifference.dividedBy(
+      this.estimatedCPFPChildSize,
     );
 
     return expectedFeeRate.toString();
@@ -450,6 +493,16 @@ export class TransactionAnalyzer {
    *          the inputs of the analyzed transaction. These templates will not have
    *          amounts set and will need to be populated later with data from an external
    *          source (e.g., bitcoind wallet, blockchain explorer, or local UTXO set).
+   *
+   * @remarks
+   * Each input's `txid` will be in **big-endian** format, consistent with how TXIDs are typically
+   * displayed in block explorers and user interfaces.
+   *
+   * If you are performing any low-level Bitcoin protocol operations with these inputs (e.g. signing,
+   * hashing, or PSBT creation), ensure that you **convert the `txid` to little-endian** byte order
+   * as required by the Bitcoin protocol.
+   *
+   * @see https://learnmeabitcoin.com/technical/general/byte-order
    */
   public getInputTemplates(): BtcTxInputTemplate[] {
     return this.inputs.map((input) => {
@@ -517,7 +570,7 @@ export class TransactionAnalyzer {
       });
 
       // Set sequence
-      template.setSequence(input.sequence);
+      template.sequence = input.sequence;
       return template;
     });
   }
@@ -696,7 +749,7 @@ export class TransactionAnalyzer {
     validatedOptions.totalSigners = options.totalSigners;
 
     // Address type validation
-    if (!Object.values(SCRIPT_TYPES).includes(options.addressType)) {
+    if (![P2SH_P2WSH, P2SH, P2WSH].includes(options.addressType)) {
       throw new Error(`Invalid address type: ${options.addressType}`);
     }
     validatedOptions.addressType = options.addressType;

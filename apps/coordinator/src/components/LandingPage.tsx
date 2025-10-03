@@ -509,13 +509,13 @@ const LandingPage = () => {
             Social
           </h4>
           <a
-            href="https://twitter.com/unchainedcom"
+            href="https://x.com/unchained"
             className={classes.footerLink}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Follow Unchained Capital on Twitter"
+            aria-label="Follow Unchained Capital on X/Twitter"
           >
-            Twitter
+            X/Twitter
           </a>
         </div>
       </footer>

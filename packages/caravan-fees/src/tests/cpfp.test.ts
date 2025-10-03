@@ -7,9 +7,15 @@ import {
   calculateTotalInputValue,
   calculateTotalOutputValue,
   estimateTransactionVsize,
+  reverseHex,
 } from "../utils";
 
-import { cpfpValidFixtures, cpfpInvalidFixtures } from "./cpfp.fixtures";
+import {
+  cpfpValidFixtures,
+  cpfpInvalidFixtures,
+  cpfpMissingPsbtFieldsFixtures,
+  cpfpParentUtxoValidationFixtures,
+} from "./cpfp.fixtures";
 
 describe("CPFP Transaction Creation", () => {
   describe("Valid CPFP Transactions", () => {
@@ -40,9 +46,27 @@ describe("CPFP Transaction Creation", () => {
         expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(1);
 
         // Step 4: Verify spendable output is used as input
-        expect(psbt.PSBT_IN_PREVIOUS_TXID[0]).toBe(fixture.expected.parentTxid);
+        expect(reverseHex(psbt.PSBT_IN_PREVIOUS_TXID[0])).toBe(
+          fixture.expected.parentTxid,
+        );
         expect(psbt.PSBT_IN_OUTPUT_INDEX[0]).toBe(
           fixture.options.spendableOutputIndex,
+        );
+
+        // Verify parent UTXO PSBT fields are present
+        expect(psbt.PSBT_IN_WITNESS_UTXO[0]).toEqual(
+          fixture.expected.psbtFields.witnessUtxo,
+        );
+
+        const bip32Derivation = psbt.PSBT_IN_BIP32_DERIVATION[0][0]; // BIP32 derivation returns key-value pairs
+        expect(bip32Derivation.key).toBe(
+          fixture.expected.psbtFields.bip32DerivationKey,
+        );
+        expect(bip32Derivation.value).toBe(
+          fixture.expected.psbtFields.bip32DerivationValue,
+        );
+        expect(psbt.PSBT_IN_WITNESS_SCRIPT[0]).toBe(
+          fixture.expected.psbtFields.witnessScript,
         );
 
         // Step 5: Verify change output
@@ -89,6 +113,26 @@ describe("CPFP Transaction Creation", () => {
     cpfpInvalidFixtures.forEach((fixture) => {
       it(fixture.case, () => {
         expect(() => createCPFPTransaction(fixture.options)).toThrow();
+      });
+    });
+  });
+
+  describe("Parent UTXO Validation", () => {
+    cpfpParentUtxoValidationFixtures.forEach((fixture) => {
+      it(fixture.case, () => {
+        expect(() => createCPFPTransaction(fixture.options)).toThrow(
+          fixture.expectedError,
+        );
+      });
+    });
+  });
+
+  describe("Missing PSBT Fields", () => {
+    cpfpMissingPsbtFieldsFixtures.forEach((fixture) => {
+      it(fixture.case, () => {
+        expect(() => createCPFPTransaction(fixture.options)).toThrow(
+          fixture.expectedError,
+        );
       });
     });
   });

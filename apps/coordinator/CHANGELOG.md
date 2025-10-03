@@ -1,5 +1,137 @@
 # Changelog
 
+## 1.14.0
+
+### Minor Changes
+
+- [#349](https://github.com/caravan-bitcoin/caravan/pull/349) [`5f999b9`](https://github.com/caravan-bitcoin/caravan/commit/5f999b916dac36db31748a58dbbccc8a23b61de5) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Add support for Child-Pays-for-Parent (CPFP)
+
+### Patch Changes
+
+- Updated dependencies [[`5f999b9`](https://github.com/caravan-bitcoin/caravan/commit/5f999b916dac36db31748a58dbbccc8a23b61de5)]:
+  - @caravan/clients@1.0.0
+
+## 1.13.0
+
+### Minor Changes
+
+- [#324](https://github.com/caravan-bitcoin/caravan/pull/324) [`531186a`](https://github.com/caravan-bitcoin/caravan/commit/531186a7031961103752f612566a497557a5678f) Thanks [@Austin-Fulbright](https://github.com/Austin-Fulbright)! - Add support for the jade hardware wallet
+
+### Patch Changes
+
+- Updated dependencies [[`531186a`](https://github.com/caravan-bitcoin/caravan/commit/531186a7031961103752f612566a497557a5678f)]:
+  - @caravan/wallets@0.9.0
+
+## 1.12.1
+
+### Patch Changes
+
+- [#375](https://github.com/caravan-bitcoin/caravan/pull/375) [`e889db1`](https://github.com/caravan-bitcoin/caravan/commit/e889db1e7670e554222065ee17b75ba50558de4d) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fixed Bug : Expanding Receive Tab address causes React stack error in Chrome
+
+## 1.12.0
+
+### Minor Changes
+
+- [#363](https://github.com/caravan-bitcoin/caravan/pull/363) [`ab19b86`](https://github.com/caravan-bitcoin/caravan/commit/ab19b86a38ec72ec1f4c8998b9390aa5adc312a0) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Added support of BCUR2 xpub import and psbt signing in coordinator wallet.
+
+## 1.11.3
+
+### Patch Changes
+
+- [#369](https://github.com/caravan-bitcoin/caravan/pull/369) [`66c44d2`](https://github.com/caravan-bitcoin/caravan/commit/66c44d2f09a22a49b1faf5e84ac50315a120b279) Thanks [@bucko13](https://github.com/bucko13)! - Include bip32 derivation for change output in unsignedPsbt
+
+- [#370](https://github.com/caravan-bitcoin/caravan/pull/370) [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b) Thanks [@sambradbury](https://github.com/sambradbury)! - Updated @ledgerhq/hw-app-btc from ^5.34.1 to 10.10.0, updated @ledgerhq/hw-transport-webusb from 6.27.12 to 6.29.8
+
+- Updated dependencies [[`625191d`](https://github.com/caravan-bitcoin/caravan/commit/625191ddc8e1ddb1292c033448fee4fd77007aa6), [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b)]:
+  - @caravan/clients@0.6.1
+  - @caravan/wallets@0.8.2
+
+## 1.11.2
+
+### Patch Changes
+
+- [#345](https://github.com/caravan-bitcoin/caravan/pull/345) [`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679) Thanks [@benma](https://github.com/benma)! - bump bitbox dependency to support bitbox02 nova devices
+
+- Updated dependencies [[`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679)]:
+  - @caravan/wallets@0.8.1
+
+## 1.11.1
+
+### Patch Changes
+
+- [#355](https://github.com/caravan-bitcoin/caravan/pull/355) [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e) Thanks [@bucko13](https://github.com/bucko13)! - add input sequence support for caravan coordinator, psbt transformations, and trezor. Coordinator also gets some cleanup of old patterns that can be circumvented with better psbt tooling
+
+- Updated dependencies [[`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e), [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e)]:
+  - @caravan/wallets@0.7.1
+  - @caravan/psbt@2.0.2
+
+## 1.11.0
+
+### Minor Changes
+
+- [#338](https://github.com/caravan-bitcoin/caravan/pull/338) [`0c66ab1`](https://github.com/caravan-bitcoin/caravan/commit/0c66ab1b9c8c6bc6362bdaf57b595c4deed8dcd2) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - This PR introduces foundational Replace-By-Fee (RBF) support, enabling users to accelerate or cancel unconfirmed transactions directly from the Pending Transactions tab.
+
+- [#348](https://github.com/caravan-bitcoin/caravan/pull/348) [`ef7bc63`](https://github.com/caravan-bitcoin/caravan/commit/ef7bc635c5bc2066169862ebc1552da014fb7d8e) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - add support to read RBFed PSBT's
+
+### Patch Changes
+
+- [#344](https://github.com/caravan-bitcoin/caravan/pull/344) [`ccc05d3`](https://github.com/caravan-bitcoin/caravan/commit/ccc05d3cbed69c50e6df2ded3145813340d8de90) Thanks [@abbi4code](https://github.com/abbi4code)! - Add regtest network selection to ui for private clients
+
+- Updated dependencies [[`d068e4e`](https://github.com/caravan-bitcoin/caravan/commit/d068e4e7c0203abe2ceafc079588c1ce37251d2a)]:
+  - @caravan/clients@0.6.0
+
+## 1.10.0
+
+### Minor Changes
+
+- [#311](https://github.com/caravan-bitcoin/caravan/pull/311) [`fed322e`](https://github.com/caravan-bitcoin/caravan/commit/fed322e026d496bd4842ab9bdabaa6e7b21aac70) Thanks [@ice-009](https://github.com/ice-009)! - Added the SWA Slider and minor improvements in the coordinator
+
+### Patch Changes
+
+- [#312](https://github.com/caravan-bitcoin/caravan/pull/312) [`136babd`](https://github.com/caravan-bitcoin/caravan/commit/136babdb9c03921cf8c4b206e48be676e3bd453f) Thanks [@RIYAKUMARI001](https://github.com/RIYAKUMARI001)! - Added missing `export` statements to the `WalletState` interface and selector functions in `wallet.ts`.
+  Added `@caravan/fees` as a dependency to coordinator.
+  Improves type safety and makes exports consistent across packages.
+- Updated dependencies [[`d0d2d1d`](https://github.com/caravan-bitcoin/caravan/commit/d0d2d1df159a6ca6e049634ead1c5b89060f0e2b), [`65344a9`](https://github.com/caravan-bitcoin/caravan/commit/65344a9f5890b93f4833514a3f7d331458344ab5)]:
+  - @caravan/bitcoin@0.4.1
+  - @caravan/clients@0.5.1
+  - @caravan/psbt@2.0.1
+
+## 1.9.3
+
+### Patch Changes
+
+- [#322](https://github.com/caravan-bitcoin/caravan/pull/322) [`468d833`](https://github.com/caravan-bitcoin/caravan/commit/468d83311d977c0c06c313037093f60586ebfaa5) Thanks [@bucko13](https://github.com/bucko13)! - introduce tanstack query and patch transactions fetching
+
+- [#326](https://github.com/caravan-bitcoin/caravan/pull/326) [`050b739`](https://github.com/caravan-bitcoin/caravan/commit/050b739a460df80dc5ef0777875f8f2969b3e9e3) Thanks [@robertshuford](https://github.com/robertshuford)! - Add docker image validation to test pipeline.
+
+- Updated dependencies [[`8d22ab5`](https://github.com/caravan-bitcoin/caravan/commit/8d22ab5178b1b731858b2fd08683e7d3a1b0aa44)]:
+  - @caravan/bitcoin@0.4.0
+  - @caravan/psbt@2.0.0
+
+## 1.9.2
+
+### Patch Changes
+
+- [#319](https://github.com/caravan-bitcoin/caravan/pull/319) [`33f8c17`](https://github.com/caravan-bitcoin/caravan/commit/33f8c17400bad7996c6a201cf22582b3d051c27d) Thanks [@ice-009](https://github.com/ice-009)! - Introduced the DustChip for coordinator.
+
+## 1.9.1
+
+### Patch Changes
+
+- [#305](https://github.com/caravan-bitcoin/caravan/pull/305) [`c6f7607`](https://github.com/caravan-bitcoin/caravan/commit/c6f76071e151fd359bc12d05c9e038d32995bf5d) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Import Partially Signed PSBT works now
+
+## 1.9.0
+
+### Minor Changes
+
+- [#244](https://github.com/caravan-bitcoin/caravan/pull/244) [`2fdced3`](https://github.com/caravan-bitcoin/caravan/commit/2fdced3ec1c51ed8df5b5d91f88386cb2302bb94) Thanks [@waldenraines](https://github.com/waldenraines)! - separate public/private and blockchain explorer concerns
+
+### Patch Changes
+
+- Updated dependencies [[`2fdced3`](https://github.com/caravan-bitcoin/caravan/commit/2fdced3ec1c51ed8df5b5d91f88386cb2302bb94), [`f3e9b27`](https://github.com/caravan-bitcoin/caravan/commit/f3e9b2751b3673451fe637b42fc96ac6fea518ab)]:
+  - @caravan/clients@0.5.0
+  - @caravan/wallets@0.7.0
+
 ## 1.8.2
 
 ### Patch Changes

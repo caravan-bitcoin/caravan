@@ -13,7 +13,7 @@ export interface Transaction {
     blockHeight?: number;
   };
   size: number;
-  fee: number;
+  fee: number | null;
   isReceived?: boolean;
   vsize?: number;
   valueToWallet?: number;
@@ -26,6 +26,8 @@ export interface TransactionTableProps {
   sortDirection: "asc" | "desc";
   network?: string;
   onClickTransaction?: (txid: string) => void;
+  onAccelerateTransaction?: (tx: TransactionT) => void;
+  renderActions?: (tx: TransactionT) => React.ReactNode;
 }
 
 // How our Transaction Table's should look like
@@ -37,7 +39,7 @@ export interface TransactionT {
     blockHeight?: number;
   };
   size: number;
-  fee: number;
+  fee: number | null;
   isSpent?: boolean;
   vsize?: number;
   isReceived?: boolean;

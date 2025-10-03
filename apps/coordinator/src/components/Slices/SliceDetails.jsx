@@ -75,7 +75,9 @@ const SliceDetails = ({ slice, client, network }) => {
   const classes = useStyles();
 
   const handleChange = (_e, newIndex) => setTabIndex(newIndex);
-  const tabs = [
+
+  // Base tabs that are always present
+  const baseTabs = [
     {
       tab: {
         label: "Redeem Script",
@@ -98,10 +100,15 @@ const SliceDetails = ({ slice, client, network }) => {
         </div>
       ),
     },
-    {
+  ];
+
+  const conditionalTabs = [];
+
+  // Only add UTXOs tab if there's a balance , we need this as if we render this in receive tab react does not play well and we get react stack pop issues
+  if (slice.balanceSats.isGreaterThan(0)) {
+    conditionalTabs.push({
       tab: {
         label: "UTXOs",
-        disabled: !slice.balanceSats.isGreaterThan(0),
       },
       panel: (
         <UTXOSet
@@ -110,11 +117,14 @@ const SliceDetails = ({ slice, client, network }) => {
           showSelection={false}
         />
       ),
-    },
-    {
+    });
+  }
+
+  // Watch Address tab (only for private clients)
+  if (client.type === "private") {
+    conditionalTabs.push({
       tab: {
         label: "Watch Address",
-        disabled: client.type !== "private",
       },
       panel: (
         <div>
@@ -131,8 +141,11 @@ const SliceDetails = ({ slice, client, network }) => {
           </Box>
         </div>
       ),
-    },
-  ];
+    });
+  }
+
+  // Combine all tabs
+  const tabs = [...baseTabs, ...conditionalTabs];
 
   return (
     <Grid container className={classes.root}>

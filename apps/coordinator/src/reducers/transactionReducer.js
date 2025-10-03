@@ -12,6 +12,7 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
   unsignedMultisigTransaction,
+  getAddressType,
 } from "@caravan/bitcoin";
 import {
   convertLegacyInput,
@@ -46,6 +47,7 @@ import {
   SET_BALANCE_ERROR,
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
+  SET_ENABLE_RBF,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -82,6 +84,7 @@ export const initialState = () => ({
   chosen: false,
   network: Network.MAINNET,
   inputs: [],
+  enableRBF: true,
   inputsTotalSats: new BigNumber(0),
   outputs: initialOutputsState(),
   changeOutputIndex: 0,
@@ -248,10 +251,9 @@ function updateOutputAddress(state, action) {
   }
   newOutputs[action.number - 1].address = address;
   newOutputs[action.number - 1].addressError = error;
-  return {
-    ...state,
-    ...{ outputs: newOutputs },
-  };
+  newOutputs[action.number - 1].scriptType =
+    error === "" ? getAddressType(address, state.network) : "";
+  return { ...state, ...{ outputs: newOutputs } };
 }
 
 function updateOutputMultisig(state, action) {
@@ -291,9 +293,17 @@ function finalizeOutputs(state, action) {
   // then try to build it using the old TransactionBuilder plumbing.
   let unsignedPSBT = "";
   try {
+    // Set sequence number based on RBF setting (0xfffffffd enables RBF)
+    const sequence = state.enableRBF ? 0xfffffffd : 0xffffffff;
     const args = {
       network: state.network,
-      inputs: state.inputs.map(convertLegacyInput),
+      inputs: state.inputs.map((input) => {
+        const convertedInput = convertLegacyInput(input);
+        return {
+          ...convertedInput,
+          sequence: sequence, // Apply RBF
+        };
+      }),
       outputs: state.outputs.map(convertLegacyOutput),
       includeGlobalXpubs: true,
     };
@@ -461,6 +471,16 @@ export default (state = initialState(), action) => {
       return updateState(state, { balanceError: action.value });
     case SET_SPEND_STEP:
       return updateState(state, { spendingStep: action.value });
+    case SET_ENABLE_RBF:
+      return updateState(state, {
+        enableRBF: action.value,
+        // if RBF is toggled we need to make sure to update the
+        // sequence of all inputs to reflect this change
+        inputs: state.inputs.map((input) => ({
+          ...input,
+          sequence: action.value ? 0xfffffffd : 0xffffffff,
+        })),
+      });
     default:
       return state;
   }

@@ -9,7 +9,14 @@ import {
   getMaskedDerivation,
   P2SH,
 } from "@caravan/bitcoin";
-import { BITBOX, TREZOR, LEDGER, HERMIT, COLDCARD } from "@caravan/wallets";
+import {
+  JADE,
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  HERMIT,
+  COLDCARD,
+} from "@caravan/wallets";
 import {
   Card,
   CardHeader,
@@ -26,6 +33,7 @@ import TextSignatureImporter from "./TextSignatureImporter";
 import DirectSignatureImporter from "./DirectSignatureImporter";
 import HermitSignatureImporter from "../Hermit/HermitSignatureImporter";
 import ColdcardSignatureImporter from "../Coldcard/ColdcardSignatureImporter";
+import BCUR2SignatureImporter from "../BCUR2/BCUR2SignatureImporter";
 import EditableName from "../EditableName";
 import {
   setSignatureImporterName,
@@ -38,14 +46,10 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-  validateMultisigPsbtSignature,
-} from "@caravan/psbt";
+import { validateMultisigPsbtSignature } from "@caravan/psbt";
 
 const TEXT = "text";
+const BCUR2 = "bcur2";
 const UNKNOWN = "unknown";
 
 class SignatureImporter extends React.Component {
@@ -88,7 +92,7 @@ class SignatureImporter extends React.Component {
 
   scrollToTitle = () => {
     const { number } = this.props;
-    if (number === this.getCurrent()) {
+    if (number === this.getCurrent() && this.titleRef.current) {
       this.titleRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
@@ -126,7 +130,9 @@ class SignatureImporter extends React.Component {
             <MenuItem value={COLDCARD} disabled={!isWallet}>
               Coldcard
             </MenuItem>
+            <MenuItem value={JADE}>Jade</MenuItem>
             <MenuItem value={HERMIT}>Hermit</MenuItem>
+            <MenuItem value={BCUR2}>BCUR2</MenuItem>
             <MenuItem value={TEXT}>Enter as text</MenuItem>
           </TextField>
         </FormControl>
@@ -157,7 +163,12 @@ class SignatureImporter extends React.Component {
     } = this.props;
     const { method } = signatureImporter;
 
-    if (method === BITBOX || method === TREZOR || method === LEDGER) {
+    if (
+      method === BITBOX ||
+      method === TREZOR ||
+      method === LEDGER ||
+      method === JADE
+    ) {
       return (
         <DirectSignatureImporter
           network={network}
@@ -211,6 +222,20 @@ class SignatureImporter extends React.Component {
     if (method === COLDCARD) {
       return (
         <ColdcardSignatureImporter
+          network={network}
+          signatureImporter={signatureImporter}
+          inputs={inputs}
+          outputs={outputs}
+          inputsTotalSats={inputsTotalSats}
+          fee={fee}
+          extendedPublicKeyImporter={extendedPublicKeyImporter}
+          validateAndSetSignature={this.validateAndSetSignature}
+        />
+      );
+    }
+    if (method === BCUR2) {
+      return (
+        <BCUR2SignatureImporter
           network={network}
           signatureImporter={signatureImporter}
           inputs={inputs}
@@ -348,9 +373,8 @@ class SignatureImporter extends React.Component {
       inputs,
       signatureImporters,
       setComplete,
-      network,
-      outputs,
       setSigningKey,
+      unsignedPSBT,
     } = this.props;
     this.setState({ signedPsbt });
     if (!Array.isArray(inputsSignatures)) {
@@ -397,14 +421,8 @@ class SignatureImporter extends React.Component {
 
         let publicKey;
         try {
-          const args = {
-            network,
-            inputs: inputs.map(convertLegacyInput),
-            outputs: outputs.map(convertLegacyOutput),
-          };
-          const psbt = getUnsignedMultisigPsbtV0(args);
           publicKey = validateMultisigPsbtSignature(
-            psbt.toBase64(),
+            unsignedPSBT,
             inputIndex,
             inputSignature,
             inputs[inputIndex].amountSats,
@@ -495,14 +513,8 @@ class SignatureImporter extends React.Component {
               return;
             }
             try {
-              const args = {
-                network,
-                inputs: inputs.map(convertLegacyInput),
-                outputs: outputs.map(convertLegacyOutput),
-              };
-              const psbt = getUnsignedMultisigPsbtV0(args);
               publicKey = validateMultisigPsbtSignature(
-                psbt.toBase64(),
+                unsignedPSBT,
                 inputIndex,
                 inputSignature,
                 inputs[inputIndex].amountSats,
@@ -596,8 +608,11 @@ SignatureImporter.propTypes = {
     }),
   ).isRequired,
   fee: PropTypes.string.isRequired,
-  inputs: PropTypes.arrayOf(PropTypes.shape({ amountSats: PropTypes.string }))
-    .isRequired,
+  inputs: PropTypes.arrayOf(
+    PropTypes.shape({
+      amountSats: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    }),
+  ).isRequired,
   inputsTotalSats: PropTypes.shape({}).isRequired,
   isWallet: PropTypes.bool.isRequired,
   network: PropTypes.string.isRequired,
@@ -627,6 +642,7 @@ SignatureImporter.propTypes = {
   unsignedPSBT: PropTypes.string,
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
+  enableRBF: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   ledgerPolicyHmacs: PropTypes.array.isRequired,
 };

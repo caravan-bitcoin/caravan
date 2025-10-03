@@ -145,6 +145,15 @@ export interface TransactionDetails {
   isReceived?: boolean;
 }
 
+export interface WalletTransactionDetails extends TransactionDetails {
+  amount?: number;
+  confirmations?: number;
+  category?: string;
+  address?: string;
+  abandoned?: boolean;
+  time?: number;
+}
+
 export interface ListTransactionsItem {
   involvesWatchonly?: boolean; // Only present if imported addresses were involved
   address: string; // The bitcoin address of the transaction
@@ -418,4 +427,28 @@ export interface WalletTransactionResponse {
     hash: string;
     height: number;
   };
+}
+
+export interface MempoolEntry {
+  vsize: number;
+  weight: number;
+  fee?: number;
+  modifiedfee?: number;
+  time: number;
+  height: number;
+  descendantcount: number;
+  descendantsize: number;
+  ancestorcount: number;
+  ancestorsize: number;
+  wtxid: string;
+  fees: {
+    base: number;
+    modified: number;
+    ancestor: number;
+    descendant: number;
+  };
+  depends: string[];
+  spentby: string[];
+  "bip125-replaceable": boolean;
+  unbroadcast: boolean;
 }

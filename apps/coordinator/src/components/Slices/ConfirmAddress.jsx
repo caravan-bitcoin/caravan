@@ -24,6 +24,7 @@ import {
   P2SH,
 } from "@caravan/bitcoin";
 import {
+  JADE,
   BITBOX,
   TREZOR,
   LEDGER,
@@ -140,6 +141,7 @@ const ConfirmAddress = ({ slice, network }) => {
       }
       // FIXME - hardcoded to just show up for trezor
       if (
+        extendedPublicKeyImporter.method === JADE ||
         extendedPublicKeyImporter.method === BITBOX ||
         extendedPublicKeyImporter.method === TREZOR ||
         extendedPublicKeyImporter.method === LEDGER
@@ -192,14 +194,15 @@ const ConfirmAddress = ({ slice, network }) => {
     }
   }
 
-  // run interaction and see if address confirms
   async function confirmOnDevice() {
     dispatch({ type: "SET_ACTIVE" });
     const { multisig } = slice;
-
     try {
       let confirmed = await interaction.run();
-      if (typeof confirmed === "string" && state.deviceType === LEDGER) {
+      if (
+        (typeof confirmed === "string" && state.deviceType === LEDGER) ||
+        state.deviceType === JADE
+      ) {
         confirmed = {
           address: confirmed,
           serializedPath: interaction.bip32Path,
@@ -236,6 +239,7 @@ const ConfirmAddress = ({ slice, network }) => {
               {addressType != P2SH && (
                 <MenuItem value={BITBOX}>BitBox</MenuItem>
               )}
+              <MenuItem value={JADE}>Jade</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD} disabled>

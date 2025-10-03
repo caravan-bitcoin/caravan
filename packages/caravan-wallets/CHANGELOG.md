@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.9.0
+
+### Minor Changes
+
+- [#324](https://github.com/caravan-bitcoin/caravan/pull/324) [`531186a`](https://github.com/caravan-bitcoin/caravan/commit/531186a7031961103752f612566a497557a5678f) Thanks [@Austin-Fulbright](https://github.com/Austin-Fulbright)! - Add support for the jade hardware wallet
+
+## 0.8.2
+
+### Patch Changes
+
+- [#370](https://github.com/caravan-bitcoin/caravan/pull/370) [`944d1e0`](https://github.com/caravan-bitcoin/caravan/commit/944d1e0d6118b6df838125c6045ba6cf1da8ab3b) Thanks [@sambradbury](https://github.com/sambradbury)! - Updated @ledgerhq/hw-app-btc from ^5.34.1 to 10.10.0, updated @ledgerhq/hw-transport-webusb from 6.27.12 to 6.29.8
+
+## 0.8.1
+
+### Patch Changes
+
+- [#345](https://github.com/caravan-bitcoin/caravan/pull/345) [`a3b674e`](https://github.com/caravan-bitcoin/caravan/commit/a3b674ef0de85188856ddb97fb145e83c6061679) Thanks [@benma](https://github.com/benma)! - bump bitbox dependency to support bitbox02 nova devices
+
+## 0.8.0
+
+### Minor Changes
+
+- [#353](https://github.com/caravan-bitcoin/caravan/pull/353) [`cab05cb`](https://github.com/caravan-bitcoin/caravan/commit/cab05cb229fc871d6991fb48f49aa2f3b889d1f8) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - Added BCUR2 encoders in caravan-wallets for supporting psbt-signing.
+
+## 0.7.1
+
+### Patch Changes
+
+- [#355](https://github.com/caravan-bitcoin/caravan/pull/355) [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e) Thanks [@bucko13](https://github.com/bucko13)! - add input sequence support for caravan coordinator, psbt transformations, and trezor. Coordinator also gets some cleanup of old patterns that can be circumvented with better psbt tooling
+
+- Updated dependencies [[`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e), [`ed62d7c`](https://github.com/caravan-bitcoin/caravan/commit/ed62d7cc7e2e731a590429c9e092b86a21d5ea1e)]:
+  - @caravan/psbt@2.0.2
+
+## 0.7.0
+
+### Minor Changes
+
+- [#299](https://github.com/caravan-bitcoin/caravan/pull/299) [`f3e9b27`](https://github.com/caravan-bitcoin/caravan/commit/f3e9b2751b3673451fe637b42fc96ac6fea518ab) Thanks [@krrish-sehgal](https://github.com/krrish-sehgal)! - This introduces a support for exporting xpubs in caravan through BCUR2 Qr codes making wallets like seedsigner, jade etc compatible for the mentioned purpose.
+
 ## 0.6.2
 
 ### Patch Changes

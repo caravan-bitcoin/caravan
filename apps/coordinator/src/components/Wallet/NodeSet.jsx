@@ -134,7 +134,7 @@ class NodeSet extends React.Component {
         }
         const amin = Math.min(...a.utxos.map((utxo) => utxo.time));
         const bmin = Math.min(...b.utxos.map((utxo) => utxo.time));
-        if (Number.isNaN(amin) && Number.Number.isNaN(bmin)) return 0;
+        if (Number.isNaN(amin) && Number.isNaN(bmin)) return 0;
         if (Number.isNaN(amin)) return direction;
         if (Number.isNaN(bmin)) return -direction;
         return amin > bmin ? direction : -direction;
@@ -202,7 +202,7 @@ class NodeSet extends React.Component {
     const spending = walletMode === WALLET_MODES.SPEND;
     return (
       <Grid item md={12}>
-        <Table style={{ tableLayout: "fixed" }}>
+        <Table style={{ tableLayout: "fixed" }} data-testid="main-utxo-table">
           <TableHead>
             <TableRow>
               {spending && <TableCell width={62}>Select</TableCell>}

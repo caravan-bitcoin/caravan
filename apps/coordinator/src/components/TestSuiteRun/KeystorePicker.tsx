@@ -2,6 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 
 import {
+  JADE,
   BITBOX,
   TREZOR,
   LEDGER,
@@ -12,6 +13,7 @@ import {
   INDIRECT_KEYSTORES,
   GetMetadata,
   KEYSTORE_TYPES,
+  BCUR2,
 } from "@caravan/wallets";
 
 import {
@@ -90,11 +92,13 @@ const KeystorePickerBase = ({
               variant="standard"
             >
               <MenuItem value="">{"< Select type >"}</MenuItem>
+              <MenuItem value={JADE}>Jade</MenuItem>
               <MenuItem value={BITBOX}>BitBox</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={COLDCARD}>Coldcard</MenuItem>
               <MenuItem value={HERMIT}>Hermit</MenuItem>
+              <MenuItem value={BCUR2}>BCUR2</MenuItem>
             </TextField>
           </FormControl>
         </Grid>

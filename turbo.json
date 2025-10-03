@@ -10,6 +10,9 @@
         "build/**"
       ]
     },
+    "clean": {
+      "cache": false
+    },
     "lint": {
       "dependsOn": [
         "^build"
@@ -25,6 +28,13 @@
       "cache": false
     },
     "test:watch": {
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": false,
+      "persistent": true
+    },
+    "test:ui": {
       "dependsOn": [
         "^build"
       ],
@@ -54,6 +64,18 @@
       "dependsOn": [
         "^build"
       ]
+    },
+    "test:e2e": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
+    "test:e2e:ui":{
+      "cache": false,
+      "dependsOn": ["build"]
+    },
+    "test:e2e:headed":{
+      "cache": false,
+      "dependsOn": ["build"]
     }
   }
 }
