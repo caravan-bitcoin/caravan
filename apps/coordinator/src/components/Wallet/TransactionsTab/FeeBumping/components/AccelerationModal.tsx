@@ -17,7 +17,6 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { FeeBumpStrategy } from "@caravan/fees";
 
-import { Transaction } from "../../types";
 import {
   ConfigurationStep,
   StrategySelectionStep,
@@ -29,6 +28,7 @@ import {
   AccelerationModalProvider,
   useAccelerationModal,
 } from "./AccelerationModalContext";
+import { TransactionDetails } from "@caravan/clients";
 
 /**
  * Modal for transaction acceleration and fee bumping
@@ -43,7 +43,7 @@ import {
 interface AccelerationModalProps {
   open: boolean;
   onClose: () => void;
-  transaction: Transaction; // The transaction to accelerate
+  transaction: TransactionDetails; // The transaction to accelerate
   txHex: string; // Raw transaction hex
 }
 
@@ -107,6 +107,8 @@ const AccelerationModalContent: React.FC<
       selectedStrategy,
       feeBumpResult,
     },
+    analysis,
+    cpfp,
     nextStep,
     previousStep,
     setErrorDetails, // can probably be removed
@@ -167,6 +169,20 @@ const AccelerationModalContent: React.FC<
     return activeStep === 0;
   }, [activeStep]);
 
+  // check if we can proceed with the selected strategy
+  const isSelectedStrategyDisabled = useCallback(() => {
+    if (!selectedStrategy || !analysis) return true;
+
+    if (selectedStrategy === FeeBumpStrategy.RBF) {
+      return !analysis.canRBF;
+    }
+    if (selectedStrategy === FeeBumpStrategy.CPFP) {
+      return !analysis.canCPFP || !cpfp?.feeRate;
+    }
+
+    return false;
+  }, [selectedStrategy, analysis, cpfp]);
+
   // Check if we're on the configuration step
   const isConfigurationStep = useMemo(() => {
     return activeStep === 1;
@@ -195,7 +211,7 @@ const AccelerationModalContent: React.FC<
     if (analysisError) {
       return (
         <ErrorDialog
-          error="Failed to load available UTXOs"
+          error={analysisError}
           showErrorDetails={showErrorDetails}
           setShowErrorDetails={setErrorDetails}
         />
@@ -262,7 +278,10 @@ const AccelerationModalContent: React.FC<
           <Button
             variant="contained"
             onClick={nextStep}
-            disabled={activeStep === 0 && !selectedStrategy}
+            disabled={
+              activeStep === 0 &&
+              (!selectedStrategy || isSelectedStrategyDisabled())
+            }
           >
             Next
           </Button>

@@ -5,6 +5,8 @@ import {
   createCancelRbfTransaction,
   TransactionAnalyzer,
   UTXO,
+  createCPFPTransaction,
+  CPFPOptions,
 } from "@caravan/fees";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
@@ -14,11 +16,13 @@ import {
   getExtendedPublicKeyImporters,
   getWalletAddresses,
   selectWalletConfig,
+  getWalletSlices,
 } from "selectors/wallet";
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
+import { buildUtxoFromSpendingTransaction } from "utils/uxtoReconstruction";
 import { DUST_IN_SATOSHIS } from "utils/constants";
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
@@ -58,6 +62,10 @@ export const useAnalyzeTransaction = (
     isError: isErrorAvailableUtxos,
   } = useGetAvailableUtxos(transaction!);
 
+  //  ChangeOutputIndex is critical for fee bumping strategies, specifically for CPFP (Child-Pays-For-Parent) it helps
+  //  identify which output can be spent in a child transaction by the current wallet.
+  const changeOutputIndex = useChangeOutputIndex(transaction);
+
   const { data: feeEstimates, isLoading: isLoadingFeeEstimates } =
     useFeeEstimates();
 
@@ -85,7 +93,6 @@ export const useAnalyzeTransaction = (
     try {
       // Validate inputs
       validateTransactionInputs(txHex, transaction.fee, availableUtxos);
-
       // Create analyzer with wallet-specific parameters
       const analyzer = new TransactionAnalyzer({
         txHex,
@@ -98,8 +105,30 @@ export const useAnalyzeTransaction = (
         requiredSigners,
         totalSigners,
         addressType: addressType as MultisigAddressType,
+        ...(changeOutputIndex !== undefined && { changeOutputIndex }),
       });
-      return analyzer.analyze();
+      let cpfpData = null;
+      try {
+        // added here in case `analyzer.cpfpFeeRate` throws an error
+        cpfpData = {
+          // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
+          feeRate: analyzer.cpfpFeeRate,
+          childSize: analyzer.estimatedCPFPChildSize,
+          estimatedPackageSize: analyzer.CPFPPackageSize,
+        };
+      } catch (cpfpError) {
+        console.warn("CPFP calculation failed:", cpfpError);
+        setError(
+          cpfpError instanceof Error
+            ? cpfpError.message
+            : "CPFP calculation failed",
+        );
+      }
+
+      return {
+        analysis: analyzer.analyze(),
+        cpfpData,
+      };
     } catch (error) {
       console.error("Error analyzing transaction:", error);
       setError(
@@ -107,6 +136,7 @@ export const useAnalyzeTransaction = (
           ? error.message
           : "Unknown error analyzing transaction",
       );
+      return null;
     }
   }, [
     transaction?.txid,
@@ -117,10 +147,13 @@ export const useAnalyzeTransaction = (
     addressType,
     requiredSigners,
     totalSigners,
+    changeOutputIndex,
   ]);
 
   return {
-    analysis: analysis ?? null,
+    analysis: analysis?.analysis ?? null,
+    cpfp: analysis?.cpfpData ?? null,
+    changeOutputIndex,
     availableUtxos,
     error,
     isLoading: isLoadingAvailableUtxos || isLoadingFeeEstimates,
@@ -297,4 +330,70 @@ export const useCreateCancelRBF = (
   );
 
   return { createCancelRBF };
+};
+
+export const useCreateCPFP = (
+  transaction: TransactionDetails,
+  txHex: string,
+  availableUtxos: UTXO[],
+) => {
+  const { network, addressType, requiredSigners, totalSigners } =
+    useSelector(selectWalletConfig);
+  const globalXpubs = useGetGlobalXpubs();
+  const walletSlices = useSelector(getWalletSlices);
+
+  const createCPFP = useCallback(
+    (feeRate: number, spendableOutputIndex: number, changeAddress: string) => {
+      if (
+        !transaction ||
+        !txHex ||
+        !availableUtxos ||
+        !network ||
+        !addressType ||
+        !requiredSigners ||
+        !totalSigners ||
+        !globalXpubs ||
+        !changeAddress ||
+        spendableOutputIndex === undefined
+      ) {
+        throw new Error("Missing required parameters for CPFP");
+      }
+      const parentUtxo = buildUtxoFromSpendingTransaction(
+        transaction,
+        spendableOutputIndex,
+        txHex,
+        walletSlices,
+      ) as UTXO;
+      const cpfpOptions: CPFPOptions = {
+        originalTx: txHex,
+        network: network as Network,
+        targetFeeRate: feeRate,
+        absoluteFee: transaction.fee.toString(),
+        availableInputs: availableUtxos,
+        requiredSigners,
+        totalSigners,
+        scriptType: addressType as MultisigAddressType,
+        dustThreshold: DUST_IN_SATOSHIS.toString(),
+        spendableOutputIndex,
+        parentUtxo,
+        changeAddress,
+        strict: false, // Less strict validation for better user experience
+        globalXpubs,
+      };
+
+      return createCPFPTransaction(cpfpOptions);
+    },
+    [
+      transaction,
+      txHex,
+      availableUtxos,
+      network,
+      addressType,
+      requiredSigners,
+      totalSigners,
+      globalXpubs,
+    ],
+  );
+
+  return { createCPFP };
 };

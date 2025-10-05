@@ -282,10 +282,9 @@ export const getSpendableSlices = createSelector(
   (slices: SliceWithLastUsed[]): SliceWithLastUsed[] => {
     return slices.filter(
       (slice: SliceWithLastUsed) =>
-        // pending change is considered spendable
-        (slice.lastUsed !== "Pending" || slice.change) &&
-        slice.lastUsed !== "Spent" &&
-        slice.utxos.length,
+        // All pending change/deposit is considered spendable when we have to
+        // consider fee bumping strategies as in CPFP
+        slice.lastUsed !== "Spent" && slice.utxos.length,
     );
   },
 );

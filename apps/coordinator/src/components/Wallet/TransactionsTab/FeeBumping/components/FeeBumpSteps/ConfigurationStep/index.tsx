@@ -2,6 +2,7 @@ import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { RBFForm } from "./RBF/RBFForm";
+import { CPFPForm } from "./CPFP/CPFPForm";
 import { useAccelerationModal } from "../../AccelerationModalContext";
 
 /**
@@ -15,16 +16,9 @@ export const ConfigurationStep: React.FC = () => {
   const {
     state: { selectedStrategy },
   } = useAccelerationModal();
-
   // Show CPFP placeholder (not implemented yet in next PR)
   if (selectedStrategy === FeeBumpStrategy.CPFP) {
-    return (
-      <Alert severity="warning">
-        <AlertTitle>CPFP Support Coming Soon</AlertTitle>
-        Child-Pays-for-Parent (CPFP) support is coming in a future update.
-        Please use Replace-by-Fee (RBF) for now.
-      </Alert>
-    );
+    return <CPFPForm />;
   }
 
   // Fallback for unknown strategies

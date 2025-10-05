@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 1.0.0
+
+### Major Changes
+
+- [#349](https://github.com/caravan-bitcoin/caravan/pull/349) [`5f999b9`](https://github.com/caravan-bitcoin/caravan/commit/5f999b916dac36db31748a58dbbccc8a23b61de5) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fix `getFeesForPendingTransaction` to return fees in sats for consistency
+
 ## 0.6.1
 
 ### Patch Changes

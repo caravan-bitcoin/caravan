@@ -29,6 +29,7 @@ export const FeeStrategySelector: React.FC = () => {
     setStrategy,
     state: { selectedStrategy },
     analysis,
+    cpfp,
   } = useAccelerationModal();
   const { data: networkFeeEstimates, isLoading: isLoadingFeeEstimates } =
     useFeeEstimates();
@@ -62,14 +63,15 @@ export const FeeStrategySelector: React.FC = () => {
           "Creates a new transaction that spends outputs from the original with a higher fee",
         icon: <ChildCareIcon fontSize="large" />,
         learnMoreUrl: "https://bitcoinops.org/en/topics/cpfp/",
-        disabled: !analysis.canCPFP || true, // Force disable CPFP for now as we'll add it later
-        disabledReason: !analysis.canCPFP
-          ? "This transaction doesn't have suitable outputs for CPFP"
-          : "CPFP support is coming in a future update",
+        disabled: !analysis.canCPFP || !cpfp?.feeRate, // Disable if no CPFP data
+        disabledReason:
+          "This transaction doesn't have suitable outputs for CPFP",
         minimumFee: new BigNumber(analysis.estimatedCPFPFee).toNumber(),
-        suggestedFeeRate: new BigNumber(analysis.estimatedCPFPFee)
-          .dividedBy(new BigNumber(analysis.vsize))
-          .toNumber(),
+        suggestedFeeRate: cpfp?.feeRate
+          ? new BigNumber(cpfp.feeRate).toNumber()
+          : new BigNumber(analysis.estimatedCPFPFee)
+              .dividedBy(new BigNumber(analysis.vsize))
+              .toNumber(),
       },
     ],
     [analysis],
