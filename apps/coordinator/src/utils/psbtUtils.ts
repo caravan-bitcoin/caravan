@@ -1,7 +1,6 @@
 import {
   networkData,
   Network,
-  multisigPublicKeys,
   multisigRedeemScript,
   multisigWitnessScript,
   generateMultisigFromPublicKeys,
@@ -60,8 +59,7 @@ export interface SignatureInfo {
   signature: Buffer | string;
   pubkey: string;
   inputIndex: number;
-  signerIndex?: number; // Which signer in the multisig (0, 1, 2, etc.)
-  masterFingerprint?: string; // XFP of the signer for stable identity across inputs
+  masterFingerprint: string; // XFP of the signer for stable identity across inputs
   derivedPubkey: string; // The actual derived pubkey for this input
 }
 
@@ -69,8 +67,7 @@ export interface SignatureInfo {
  * Interface for signer identification across multiple inputs
  */
 export interface SignerIdentity {
-  signerIndex?: number; // Position in the multisig setup (0, 1, 2, etc.)
-  masterFingerprint?: string; // Master key fingerprint if available
+  masterFingerprint: string; // Master key fingerprint if available
   signatures: Buffer[] | string[]; // Signatures for each input (in order)
   publicKeys: string[]; // Derived pubkeys for each input (in order)
 }
@@ -498,33 +495,6 @@ export function addMissingScriptDataToPsbt(psbt: Psbt, inputs: Input[]): Psbt {
 }
 
 /**
- * Identifies which signer (by index in multisig) a given public key belongs to.
- *
- * This function derives the expected public keys for all signers at the given
- * input's derivation path and matches the provided pubkey to determine the signer.
- *
- * @param pubkey - The public key to identify
- * @param input - The input containing multisig and derivation information
- * @returns The signer index (0, 1, 2, etc.) or -1 if not found
- */
-export function identifySignerFromPubkey(pubkey: string, input: Input): number {
-  try {
-    // Get all possible public keys for this input's derivation path
-    const expectedPubkeys: string[] = multisigPublicKeys(input.multisig);
-    // Find which signer this pubkey belongs to
-    const signerIndex = expectedPubkeys.findIndex(
-      (expectedPubkey: string) => expectedPubkey === pubkey,
-    );
-
-    return signerIndex;
-  } catch (e) {
-    throw new Error(
-      `Error deriving pubkeys for input: ${e.message || "Unknown error"}`,
-    );
-  }
-}
-
-/**
  * Groups signatures by signer identity across all inputs.
  *
  * For each signer that has signed at least one input,
@@ -543,22 +513,21 @@ export function groupSignaturesBySigner(
 
   // Now we group signatures by their signer index
   for (const sig of inputSignatures) {
-    const { signerIndex, masterFingerprint, inputIndex, signature, pubkey } =
-      sig;
-    const key =
-      masterFingerprint ||
-      (signerIndex !== undefined ? `idx:${signerIndex}` : undefined);
-    if (!key) continue;
+    const { masterFingerprint, inputIndex, signature, pubkey } = sig;
 
-    let signerGroup = signerGroups.get(key);
+    if (!masterFingerprint)
+      throw new Error(
+        `No master fingerprint found for input ${inputIndex}. Can't map signatures.`,
+      );
+
+    let signerGroup = signerGroups.get(masterFingerprint);
     if (!signerGroup) {
       signerGroup = {
-        signerIndex,
         masterFingerprint,
         signatures: Array(inputs.length).fill(null),
         publicKeys: Array(inputs.length).fill(null),
       };
-      signerGroups.set(key, signerGroup);
+      signerGroups.set(masterFingerprint, signerGroup);
     }
 
     signerGroup.signatures[inputIndex] = signature;
@@ -633,8 +602,6 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
   // Each input in a PSBT can have multiple partial signatures (one per signer)
   const inputSignatures: SignatureInfo[] = [];
 
-  // minimal: no debug noise in production
-
   for (
     let inputIndex = 0;
     inputIndex < psbtWithScripts.data.inputs.length;
@@ -643,15 +610,13 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
     const psbtInput = psbtWithScripts.data.inputs[inputIndex];
     const walletInput = inputs[inputIndex];
 
-    //
-
     // Now we extract partial signatures from this PSBT input
     if (psbtInput.partialSig && psbtInput.partialSig.length > 0) {
       for (const partialSig of psbtInput.partialSig) {
         const signature = partialSig.signature.toString("hex");
         const pubkeyFromPsbt = partialSig.pubkey.toString("hex");
 
-        // **STEP 1: Validate the signature**
+        // **Validate the signature**
         let validatedPubkey: string | false = false;
         try {
           validatedPubkey = validateSignatureForInput(
@@ -668,27 +633,21 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
           continue;
         }
 
-        // **STEP 2: Verify the pubkey matches what we expect**
-        if (validatedPubkey !== pubkeyFromPsbt) {
-          // still proceed with validated pubkey so we can persist signature
-        }
-        // **STEP 3: Determine signer identity (prefer master fingerprint if available)**
-        const signerIndex = identifySignerFromPubkey(
-          validatedPubkey,
-          walletInput,
-        );
         const xfp = walletInput?.multisig?.bip32Derivation?.[0]
           ?.masterFingerprint
           ? walletInput.multisig.bip32Derivation[0].masterFingerprint.toString(
               "hex",
             )
           : undefined;
-        // if signer index not found, we still persist the signature via xfp grouping when available
+
+        if (!xfp) {
+          throw new Error(`No xfp found for input ${inputIndex}`);
+        }
+
         inputSignatures.push({
           signature,
           pubkey: pubkeyFromPsbt,
           inputIndex,
-          signerIndex: signerIndex === -1 ? undefined : signerIndex,
           masterFingerprint: xfp,
           derivedPubkey: validatedPubkey,
         });
