@@ -339,15 +339,19 @@ Derivation: ${test.params.derivation}
                               .interaction()
                               .parse("confirmed");
                             this.resolve(result);
+                            this.setState({ showBCURExport: false });
                           }}
                           style={{ marginRight: "10px" }}
                         >
-                          Confirm Address Matches Device
+                          Confirm Address Matches Wallet
                         </Button>
                         <Button
                           variant="outlined"
                           color="primary"
-                          onClick={this.reset}
+                          onClick={() => {
+                            this.reset();
+                            this.setState({ showBCURExport: false });
+                          }}
                         >
                           Cancel
                         </Button>

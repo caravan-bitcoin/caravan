@@ -715,6 +715,18 @@ export class BCUR2ConfirmMultisigAddress extends BCUR2Interaction {
   }
 
   /**
+   * Parses the confirmation response
+   * @param {string} data - Confirmation string (e.g., "confirmed")
+   * @returns {Object} The result with address and confirmation status
+   */
+  parse(data: string) {
+    if (data === "confirmed") {
+      this.confirmed = true;
+    }
+    return this.getResult();
+  }
+
+  /**
    * Checks if the address has been confirmed
    * @returns {boolean} True if address is confirmed
    */
