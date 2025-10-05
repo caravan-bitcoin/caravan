@@ -9,6 +9,7 @@ import {
   BitcoinNetwork,
   Network,
   parseSignaturesFromPSBT,
+  getMaskedDerivation,
 } from "@caravan/bitcoin";
 
 import {
@@ -569,5 +570,167 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
       this.qrCodeFrames = this.encoder.encodePSBT();
     }
     return this.qrCodeFrames;
+  }
+}
+
+/**
+ * Interaction class for confirming a multisig address with BCUR2-compatible devices.
+ * This interaction displays the address details as QR codes and waits for confirmation
+ * from the airgapped signing device.
+ *
+ * @extends BCUR2Interaction
+ */
+export class BCUR2ConfirmMultisigAddress extends BCUR2Interaction {
+  private bip32Path: string;
+
+  private address: string;
+
+  private walletConfig: any;
+
+  private confirmed: boolean = false;
+
+  /**
+   * Creates a new BCUR2 address confirmation interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.bip32Path - BIP32 derivation path for the address
+   * @param {string} params.address - The multisig address to confirm
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {Object} params.walletConfig - Wallet configuration including quorum info
+   * @param {BCUR2Decoder} params.decoder - Decoder instance
+   */
+  constructor({
+    bip32Path,
+    address,
+    network = Network.MAINNET,
+    walletConfig,
+    decoder,
+  }: {
+    bip32Path: string;
+    address: string;
+    network?: BitcoinNetwork;
+    walletConfig: any;
+    decoder?: BCUR2Decoder;
+  }) {
+    super(network, decoder);
+    this.bip32Path = bip32Path;
+    this.address = address;
+    this.walletConfig = walletConfig;
+    this.workflow = ["request", "parse"];
+  }
+
+  /**
+   * Provides messages for the address confirmation process
+   */
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.address_confirmation_request",
+      text: "Display the address QR code to your signing device for confirmation",
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "bcur2.address_scanning",
+      text: "Scan the confirmation response from your signing device",
+    });
+
+    return messages;
+  }
+
+  /**
+   * Generates the request data for address confirmation
+   * @returns {Object} Request data containing address confirmation details and wallet config for descriptor generation
+   */
+  request() {
+    // Prepare the wallet config in the format expected by encodeDescriptors
+    const multisigConfig = this.prepareMultisigConfig();
+
+    return {
+      instruction: "Confirm this address on your signing device",
+      address: this.address,
+      bip32Path: this.bip32Path,
+      walletConfig: this.walletConfig,
+      network: this.network,
+      // Return the config in the format expected by encodeDescriptors function
+      multisigConfig,
+      // For address confirmation, we provide the plain address for simple QR encoding
+      // Hardware wallets like SeedSigner expect just the address as a plain QR code
+      qrCodeFrames: [], // Empty for now - UI will handle plain address QR generation
+    };
+  }
+
+  /**
+   * Prepares the wallet config in the format expected by encodeDescriptors
+   * This matches the format used by the wallet page's useGetDescriptors hook
+   * @returns {Object} Multisig config for encodeDescriptors function
+   */
+  private prepareMultisigConfig() {
+    const {
+      requiredSigners,
+      extendedPublicKeys,
+      quorum,
+      addressType,
+      network,
+    } = this.walletConfig;
+
+    // Get the required signers from quorum or direct property
+    const signers = requiredSigners || quorum?.requiredSigners || 2;
+
+    // Map extended public keys to the format expected by encodeDescriptors
+    const keyOrigins = extendedPublicKeys.map((keyInfo: any) => {
+      const xfp =
+        keyInfo.xfp ||
+        keyInfo.rootFingerprint ||
+        keyInfo.fingerprint ||
+        "00000000";
+      const xpub = keyInfo.xpub || keyInfo.extendedPublicKey;
+      const bip32Path = keyInfo.bip32Path || this.bip32Path || "m/48'/1'/0'/2'";
+
+      // Use getMaskedDerivation like the wallet page does
+      let maskedDerivation;
+      try {
+        maskedDerivation = getMaskedDerivation({ xpub, bip32Path });
+      } catch (error) {
+        // Fallback if getMaskedDerivation fails
+        maskedDerivation = bip32Path;
+      }
+
+      return {
+        xfp,
+        bip32Path: maskedDerivation,
+        xpub,
+      };
+    });
+
+    return {
+      requiredSigners: signers,
+      keyOrigins,
+      addressType: addressType || "P2WSH",
+      network: network || this.network,
+    };
+  }
+
+  /**
+   * Checks if the address has been confirmed
+   * @returns {boolean} True if address is confirmed
+   */
+  isConfirmed(): boolean {
+    return this.confirmed;
+  }
+
+  /**
+   * Gets the confirmation result
+   * @returns {Object} The confirmation result with address and path
+   */
+  getResult() {
+    return {
+      address: this.address,
+      serializedPath: this.bip32Path,
+      confirmed: this.confirmed,
+    };
   }
 }

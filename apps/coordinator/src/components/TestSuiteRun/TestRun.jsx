@@ -31,7 +31,7 @@ import * as errorNotificationActions from "../../actions/errorNotificationAction
 import InteractionMessages from "../InteractionMessages";
 import { TestRunNote } from "./Note";
 import { HermitReader, HermitDisplayer } from "../Hermit";
-import { BCUR2Reader, BCUR2Encoder } from "../BCUR2"; // Import for displaying transaction QR codes
+import { BCUR2Reader, BCUR2Encoder, DescriptorQRCodes } from "../BCUR2"; // Import for displaying transaction QR codes
 import {
   ColdcardJSONReader,
   ColdcardPSBTReader,
@@ -39,6 +39,7 @@ import {
 } from "../Coldcard";
 import "./TestRun.css";
 import { downloadFile } from "../../utils";
+import QRCode from "qrcode.react";
 
 const SPACEBAR_CODE = 32;
 
@@ -47,6 +48,8 @@ class TestRunBase extends React.Component {
     super(props);
     this.state = {
       showBCURExport: false,
+      descriptors: { change: "", receive: "" },
+      descriptorsLoading: false,
     };
   }
 
@@ -240,30 +243,152 @@ Derivation: ${test.params.derivation}
                 />
               </Box>
             )}
-            {keystore.type === BCUR2 && !this.testComplete() && (
-              <Box>
-                <BCUR2Reader
-                  onStart={this.start}
-                  onSuccess={
-                    test.unsignedTransaction
-                      ? (psbtData) => {
-                          // For signing tests, we need to parse the PSBT through the interaction
-                          const parsedData = test.interaction().parse(psbtData);
-                          this.resolve(parsedData);
+            {keystore.type === BCUR2 &&
+              !this.testComplete() &&
+              test.interaction().constructor.name ===
+                "BCUR2ConfirmMultisigAddress" && (
+                <Box>
+                  <Typography variant="body1" gutterBottom align="center">
+                    Address Confirmation Test
+                  </Typography>
+                  <Box align="center" mt={1}>
+                    <Typography variant="body2" color="textSecondary">
+                      Address:{" "}
+                      <code>{test.interaction().request().address}</code>
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Path:{" "}
+                      <code>{test.interaction().request().bip32Path}</code>
+                    </Typography>
+                  </Box>
+                  <Box align="center" mt={2}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() =>
+                        this.setState({
+                          showBCURExport: !this.state?.showBCURExport,
+                        })
+                      }
+                      style={{ marginRight: "1em" }}
+                    >
+                      {this.state?.showBCURExport ? "Hide" : "Show"} Address QR
+                      Codes
+                    </Button>
+                  </Box>
+                  {this.state?.showBCURExport && (
+                    <Box align="center" mt={2}>
+                      <Typography variant="body2" gutterBottom>
+                        Display these QR codes to your hardware wallet for
+                        address confirmation:
+                      </Typography>
+
+                      {/* Step 1: Address QR */}
+                      <Box mb={3}>
+                        <Typography variant="h6" gutterBottom color="primary">
+                          Step 1: Address QR Code
+                        </Typography>
+                        <Box
+                          border={1}
+                          borderColor="grey.300"
+                          p={2}
+                          borderRadius={2}
+                        >
+                          <QRCode
+                            value={test.interaction().request().address}
+                            size={300}
+                            level="M"
+                          />
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          color="textSecondary"
+                          mt={1}
+                          display="block"
+                        >
+                          Scan this address with your hardware wallet
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          mt={1}
+                        >
+                          Address:{" "}
+                          <code>{test.interaction().request().address}</code>
+                        </Typography>
+                      </Box>
+
+                      {/* Step 2 & 3: Wallet Descriptor QRs using encodeDescriptors */}
+                      <DescriptorQRCodes
+                        multisigConfig={
+                          test.interaction().request().multisigConfig
                         }
-                      : this.resolve
-                  }
-                  onClear={this.reset}
-                  startText={
-                    test.unsignedTransaction
-                      ? "Scan the Signed PSBT QR Code Sequence"
-                      : "Scan the BCUR2 QR Code Sequence"
-                  }
-                  network={test.interaction().network}
-                  mode={test.unsignedTransaction ? "psbt" : "xpub"}
-                />
-              </Box>
-            )}
+                        onDescriptorsGenerated={(descriptors) => {
+                          this.setState({ descriptors });
+                        }}
+                        loading={this.state.descriptorsLoading}
+                      />
+                      <Box align="center" mt={2}>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          onClick={() => {
+                            // For address confirmation, we simulate the confirmation
+                            // In a real implementation, user would confirm after checking their device
+                            const result = test
+                              .interaction()
+                              .parse("confirmed");
+                            this.resolve(result);
+                          }}
+                          style={{ marginRight: "10px" }}
+                        >
+                          Confirm Address Matches Device
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={this.reset}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            {keystore.type === BCUR2 &&
+              !this.testComplete() &&
+              test.interaction().constructor.name !==
+                "BCUR2ConfirmMultisigAddress" && (
+                <Box>
+                  <BCUR2Reader
+                    onStart={this.start}
+                    onSuccess={
+                      test.unsignedTransaction
+                        ? (psbtData) => {
+                            // For signing tests, we need to parse the PSBT through the interaction
+                            const parsedData = test
+                              .interaction()
+                              .parse(psbtData);
+                            this.resolve(parsedData);
+                          }
+                        : (data) => {
+                            // For non-transaction tests (xpub), parse the data
+                            const parsedData = test.interaction().parse(data);
+                            this.resolve(parsedData);
+                          }
+                    }
+                    onClear={this.reset}
+                    startText={
+                      test.unsignedTransaction
+                        ? "Scan the Signed PSBT QR Code Sequence"
+                        : "Scan the BCUR2 QR Code Sequence"
+                    }
+                    network={test.interaction().network}
+                    mode={test.unsignedTransaction ? "psbt" : "xpub"}
+                  />
+                </Box>
+              )}
             {this.testComplete() && this.renderResult()}
 
             <TestRunNote />
