@@ -21,7 +21,7 @@ class SeedBase extends React.Component {
   render() {
     const { keystore } = this.props;
     const seedPhrase = bip39Phrase.join(" ");
-    
+
     return (
       <>
         <Grid container spacing={3}>
@@ -48,11 +48,19 @@ class SeedBase extends React.Component {
             </Grid>
           </Grid>
           <Grid item md={4}>
-            <Box display="flex" flexDirection="column" alignItems="flex-start" style={{ paddingLeft: '0px' }}>
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="flex-start"
+              style={{ paddingLeft: "0px" }}
+            >
               <Typography variant="subtitle2" gutterBottom>
                 Seed Phrase QR Code
               </Typography>
-              <Paper elevation={2} style={{ padding: '16px', backgroundColor: 'white' }}>
+              <Paper
+                elevation={2}
+                style={{ padding: "16px", backgroundColor: "white" }}
+              >
                 <QRCode
                   value={seedPhrase}
                   size={280}
@@ -60,7 +68,12 @@ class SeedBase extends React.Component {
                   includeMargin={true}
                 />
               </Paper>
-              <Typography variant="caption" color="textSecondary" align="center" style={{ marginTop: '8px', width: '100%' }}>
+              <Typography
+                variant="caption"
+                color="textSecondary"
+                align="center"
+                style={{ marginTop: "8px", width: "100%" }}
+              >
                 Scan with a hardware wallet or other compatible device
               </Typography>
             </Box>
