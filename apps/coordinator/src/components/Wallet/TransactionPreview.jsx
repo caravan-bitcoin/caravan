@@ -35,6 +35,7 @@ import {
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
 import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
+import TransactionFlowDiagram from "./TransactionFlowDiagram";
 
 /**
  * Custom hook to get current signing state
@@ -229,6 +230,17 @@ class TransactionPreview extends React.Component {
 
         {/* Signature Status Section */}
         <SignatureStatus />
+
+        {/* Transaction Flow Diagram - NEW! */}
+        <Box mb={4}>
+          <TransactionFlowDiagram
+            inputs={inputs || []}
+            outputs={outputs || []}
+            fee={fee}
+            changeAddress={this.props.changeAddress}
+            inputsTotalSats={inputsTotalSats}
+          />
+        </Box>
 
         <UnsignedTransaction />
 
