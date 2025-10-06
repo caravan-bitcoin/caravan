@@ -231,7 +231,7 @@ class TransactionPreview extends React.Component {
         {/* Signature Status Section */}
         <SignatureStatus />
 
-        {/* Transaction Flow Diagram - NEW! */}
+        {/* Transaction Flow Diagram - Comprehensive View */}
         <Box mb={4}>
           <TransactionFlowDiagram
             inputs={inputs || []}
@@ -239,84 +239,11 @@ class TransactionPreview extends React.Component {
             fee={fee}
             changeAddress={this.props.changeAddress}
             inputsTotalSats={inputsTotalSats}
+            network={this.props.network}
           />
         </Box>
 
         <UnsignedTransaction />
-
-        <h3>Inputs</h3>
-        <UTXOSet
-          inputs={inputs || []}
-          inputsTotalSats={inputsTotalSats}
-          showSelection={false}
-          finalizedOutputs
-        />
-        <h3>Outputs</h3>
-        <Box mb={2}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Address</TableCell>
-                <TableCell>Amount (BTC)</TableCell>
-                <TableCell>Script Type</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {outputs &&
-                outputs.map((output, idx) => {
-                  const isPoisoned =
-                    fingerprint.hasWalletFingerprinting &&
-                    fingerprint.poisonedOutputIndex === idx;
-                  return (
-                    <TableRow
-                      key={output.address}
-                      style={isPoisoned ? { background: "#fff3e0" } : {}}
-                    >
-                      <TableCell>
-                        <code>{output.address}</code>
-                        {isPoisoned && (
-                          <Tooltip title={fingerprintMsg} sx={tooltipSx}>
-                            <WarningAmber
-                              color="warning"
-                              fontSize="small"
-                              style={{ marginLeft: 4, verticalAlign: "middle" }}
-                            />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <code>{output.amount}</code>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={output.scriptType || ""}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ fontSize: "0.8rem", height: "26px" }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </Box>
-
-        <Grid container>
-          <Grid item xs={4}>
-            <h3>Fee</h3>
-            <div>{BigNumber(fee).toFixed(8)} BTC </div>
-          </Grid>
-          <Grid item xs={4}>
-            <h3>Fee Rate</h3>
-            <div>{feeRate} sats/byte</div>
-          </Grid>
-          <Grid item xs={4}>
-            <h3>Total</h3>
-            <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
-          </Grid>
-        </Grid>
 
         <Box mt={2}>
           <TransactionAnalysis />

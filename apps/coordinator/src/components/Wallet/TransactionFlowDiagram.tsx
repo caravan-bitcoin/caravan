@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Paper,
@@ -6,6 +6,8 @@ import {
   Chip,
   Tooltip,
   useTheme,
+  Button,
+  IconButton,
 } from "@mui/material";
 import {
   ArrowForward,
@@ -13,9 +15,14 @@ import {
   Savings,
   LocalGasStation,
   AccountBalanceWallet,
+  ExpandMore,
+  ExpandLess,
+  OpenInNew,
+  ContentCopy,
 } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
+import { satoshisToBitcoins, blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
+import DustChip from "../ScriptExplorer/DustChip";
 
 interface TransactionFlowDiagramProps {
   inputs: Array<{
@@ -34,6 +41,7 @@ interface TransactionFlowDiagramProps {
   fee: string; // in BTC
   changeAddress?: string;
   inputsTotalSats: any;
+  network?: string;
 }
 
 const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
@@ -42,8 +50,17 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   fee,
   changeAddress,
   inputsTotalSats,
+  network = "mainnet",
 }) => {
   const theme = useTheme();
+  const [showAllInputs, setShowAllInputs] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  const handleCopyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
 
   // Calculate totals and categorize outputs
   const flowData = useMemo(() => {
@@ -157,15 +174,18 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           alignItems: "stretch",
           minHeight: { xs: "auto", md: 400 },
           gap: { xs: 3, md: 4 },
+          width: "100%",
         }}
       >
         {/* INPUTS Column */}
         <Box
           sx={{
             flex: { xs: "1", md: "0 0 28%" },
+            width: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: "column",
             gap: 1.5,
+            alignSelf: "flex-start",
           }}
         >
           <Box
@@ -195,13 +215,11 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
 
           <Box
             sx={{
-              flex: 1,
               background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
               borderRadius: 2,
               p: 2.5,
               display: "flex",
               flexDirection: "column",
-              justifyContent: "center",
               gap: 1.5,
               boxShadow: `0 8px 24px ${theme.palette.primary.main}40`,
               position: "relative",
@@ -219,7 +237,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
               },
             }}
           >
-            {inputs.slice(0, 3).map((input, idx) => {
+            {inputs.slice(0, showAllInputs ? inputs.length : 3).map((input, idx) => {
               const inputAmount = BigNumber(
                 satoshisToBitcoins(input.amountSats.toString())
               );
@@ -249,17 +267,34 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   <Box
                     display="flex"
                     justifyContent="space-between"
-                    alignItems="center"
+                    alignItems="flex-start"
+                    mb={0.5}
                   >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {formatAddress(input.txid)}:{input.index}
-                    </Typography>
+                    <Box display="flex" alignItems="center" gap={0.5} flex={1}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          fontWeight: 500,
+                          fontFamily: "monospace",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        {formatAddress(input.txid)}:{input.index}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        href={blockExplorerTransactionURL(input.txid, network as Network)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          padding: 0.25,
+                          "& svg": { fontSize: "0.875rem" },
+                        }}
+                      >
+                        <OpenInNew fontSize="inherit" />
+                      </IconButton>
+                    </Box>
                     <Chip
                       label={scriptType}
                       size="small"
@@ -272,41 +307,61 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       }}
                     />
                   </Box>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 700,
-                      color: theme.palette.primary.main,
-                      mt: 0.5,
-                    }}
-                  >
-                    {inputAmount.toFixed(8)} BTC
-                  </Typography>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 700,
+                        color: theme.palette.primary.main,
+                      }}
+                    >
+                      {inputAmount.toFixed(8)} BTC
+                    </Typography>
+                    <Box sx={{ "& .MuiChip-root": { height: 22, fontSize: "0.7rem" } }}>
+                      <DustChip
+                        amountSats={parseInt(input.amountSats)}
+                        scriptType={input.multisig?.name}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
               );
             })}
 
             {inputs.length > 3 && (
-              <Box
+              <Button
+                onClick={() => setShowAllInputs(!showAllInputs)}
                 sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.85)",
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
                   borderRadius: 1.5,
                   p: 1.5,
                   textAlign: "center",
                   position: "relative",
                   zIndex: 1,
+                  width: "100%",
+                  textTransform: "none",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 1)",
+                    transform: "translateX(4px)",
+                  },
                 }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontWeight: 600,
-                  }}
-                >
-                  +{inputs.length - 3} more input{inputs.length - 3 > 1 ? "s" : ""}
-                </Typography>
-              </Box>
+                <Box display="flex" alignItems="center" gap={1} justifyContent="center">
+                  {showAllInputs ? <ExpandLess /> : <ExpandMore />}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {showAllInputs 
+                      ? "Show less" 
+                      : `+${inputs.length - 3} more input${inputs.length - 3 > 1 ? "s" : ""}`}
+                  </Typography>
+                </Box>
+              </Button>
             )}
           </Box>
         </Box>
@@ -329,121 +384,21 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           />
         </Box>
 
-        {/* FLOW Lines - SVG for smooth curves */}
+        {/* FLOW Arrow - Simple and Clean */}
         <Box
           sx={{
-            flex: { xs: "0", md: "0 0 12%" },
+            flex: { xs: "0", md: "0 0 8%" },
             display: { xs: "none", md: "flex" },
             alignItems: "center",
             justifyContent: "center",
             position: "relative",
-            minHeight: { md: 400 },
           }}
         >
-          <svg
-            width="100%"
-            height="100%"
-            style={{ position: "absolute", top: 0, left: 0 }}
-          >
-            {/* Main flow line to recipients */}
-            <defs>
-              <linearGradient
-                id="recipientGradient"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  style={{
-                    stopColor: theme.palette.primary.light,
-                    stopOpacity: 0.8,
-                  }}
-                />
-                <stop
-                  offset="100%"
-                  style={{ stopColor: "#ea9c0d", stopOpacity: 0.9 }}
-                />
-              </linearGradient>
-              <linearGradient
-                id="changeGradient"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  style={{
-                    stopColor: theme.palette.primary.light,
-                    stopOpacity: 0.6,
-                  }}
-                />
-                <stop
-                  offset="100%"
-                  style={{
-                    stopColor: theme.palette.success.main,
-                    stopOpacity: 0.7,
-                  }}
-                />
-              </linearGradient>
-              <linearGradient id="feeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop
-                  offset="0%"
-                  style={{
-                    stopColor: theme.palette.primary.light,
-                    stopOpacity: 0.4,
-                  }}
-                />
-                <stop
-                  offset="100%"
-                  style={{
-                    stopColor: theme.palette.error.main,
-                    stopOpacity: 0.6,
-                  }}
-                />
-              </linearGradient>
-            </defs>
-
-            {/* Recipient flow path */}
-            <path
-              d="M 10 30 Q 50 30, 90 25"
-              fill="none"
-              stroke="url(#recipientGradient)"
-              strokeWidth="40"
-              opacity="0.7"
-            />
-
-            {/* Change flow path */}
-            {flowData.changeOutputs.length > 0 && (
-              <path
-                d="M 10 50 Q 50 50, 90 50"
-                fill="none"
-                stroke="url(#changeGradient)"
-                strokeWidth="25"
-                opacity="0.6"
-              />
-            )}
-
-            {/* Fee flow path */}
-            <path
-              d="M 10 70 Q 50 70, 90 75"
-              fill="none"
-              stroke="url(#feeGradient)"
-              strokeWidth="15"
-              opacity="0.5"
-            />
-          </svg>
-
-          {/* Arrow icon overlay */}
           <ArrowForward
             sx={{
-              fontSize: 48,
+              fontSize: 64,
               color: theme.palette.primary.main,
-              opacity: 0.3,
-              position: "relative",
-              zIndex: 1,
+              opacity: 0.25,
             }}
           />
         </Box>
@@ -452,9 +407,11 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
         <Box
           sx={{
             flex: { xs: "1", md: "0 0 28%" },
+            width: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: "column",
             gap: 1.5,
+            alignSelf: "flex-start",
           }}
         >
           <Box
@@ -477,27 +434,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {flowData.recipientOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
             return (
-              <Tooltip
-                key={`recipient-${idx}`}
-                title={
-                  <Box sx={{ p: 0.5 }}>
-                    <Typography variant="caption" sx={{ display: "block" }}>
-                      Full Address:
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        wordBreak: "break-all",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {output.address}
-                    </Typography>
-                  </Box>
-                }
-                arrow
-              >
+              <Box key={`recipient-${idx}`}>
                 <Box
                   sx={{
                     background: `linear-gradient(135deg, #ea9c0d 0%, #f4b942 100%)`,
@@ -586,7 +523,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     )}
                   </Box>
                 </Box>
-              </Tooltip>
+              </Box>
             );
           })}
 
@@ -594,27 +531,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {flowData.changeOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
             return (
-              <Tooltip
-                key={`change-${idx}`}
-                title={
-                  <Box sx={{ p: 0.5 }}>
-                    <Typography variant="caption" sx={{ display: "block" }}>
-                      Full Address:
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        wordBreak: "break-all",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {output.address}
-                    </Typography>
-                  </Box>
-                }
-                arrow
-              >
+              <Box key={`change-${idx}`}>
                 <Box
                   sx={{
                     background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
@@ -703,7 +620,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     )}
                   </Box>
                 </Box>
-              </Tooltip>
+              </Box>
             );
           })}
 
@@ -784,9 +701,11 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
         <Box
           sx={{
             flex: { xs: "1", md: "0 0 26%" },
+            width: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: "column",
             gap: 2,
+            alignSelf: "flex-start",
           }}
         >
           <Typography
@@ -925,7 +844,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
               backgroundColor: theme.palette.primary.main,
               borderRadius: 2,
               color: "#fff",
-              mt: "auto",
             }}
           >
             <Typography
@@ -958,50 +876,99 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           mt: 3,
           pt: 2,
           borderTop: `1px solid ${theme.palette.divider}`,
-          display: "flex",
-          gap: 3,
-          flexWrap: "wrap",
-          justifyContent: "center",
         }}
       >
-        <Box display="flex" alignItems="center" gap={1}>
-          <Box
-            sx={{
-              width: 24,
-              height: 16,
-              background: "linear-gradient(135deg, #ea9c0d 0%, #f4b942 100%)",
-              borderRadius: 0.5,
-            }}
-          />
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-            Payment to Recipient
-          </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            gap: { xs: 2, sm: 3 },
+            flexWrap: "wrap",
+            justifyContent: "center",
+            mb: 2,
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 24,
+                height: 16,
+                background: "linear-gradient(135deg, #ea9c0d 0%, #f4b942 100%)",
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              Payment to Recipient
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 24,
+                height: 16,
+                background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              Change (Your Wallet)
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 24,
+                height: 16,
+                background: `linear-gradient(135deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              Network Fee (Miners)
+            </Typography>
+          </Box>
         </Box>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Box
+        
+        {/* Dust Status Explanation */}
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            backgroundColor: theme.palette.grey[50],
+            borderRadius: 1,
+            border: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Typography
+            variant="caption"
             sx={{
-              width: 24,
-              height: 16,
-              background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
-              borderRadius: 0.5,
+              fontWeight: 600,
+              color: theme.palette.text.secondary,
+              display: "block",
+              mb: 1,
             }}
-          />
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-            Change (Your Wallet)
+          >
+            Input Dust Status:
           </Typography>
-        </Box>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Box
-            sx={{
-              width: 24,
-              height: 16,
-              background: `linear-gradient(135deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
-              borderRadius: 0.5,
-            }}
-          />
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-            Network Fee (Miners)
-          </Typography>
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Economical" color="success" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Cost-effective to spend
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Warning" color="warning" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Consider batching
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Dust" color="error" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Costs more to spend than value
+              </Typography>
+            </Box>
+          </Box>
         </Box>
       </Box>
     </Paper>
