@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
 import {
@@ -16,7 +16,7 @@ import {
 import { TransactionTable } from "./TransactionsTable";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
-import { useCompletedTransactionsWithLoadMore } from "clients/txHistory";
+import { useConfirmedTransactions } from "clients/txHistory";
 import { ConfirmedTransactionsView } from "./ConfirmedTransactionsView";
 import {
   useSortedTransactions,
@@ -30,46 +30,37 @@ const TransactionsTab: React.FC = () => {
   // Tab state for switching between pending and completed
   const [tabValue, setTabValue] = useState(0);
 
-  // State to track if user has manually interacted with tabs
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-
-  // State for the selected transaction for acceleration
+  // Acceleration modal state
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
     null,
   );
-  // State for the acceleration modal
   const [accelerationModalOpen, setAccelerationModalOpen] = useState(false);
-  // State for the raw tx hex
   const [txHex, setTxHex] = useState<string>("");
-  // Get blockchain client from Redux store
+
   const blockchainClient = useGetClient();
 
-  // Use our custom hooks for pending transactions
-  const pendingTransactionsResult = usePendingTransactions();
-  const pendingTransactions = pendingTransactionsResult?.transactions || [];
-  const pendingIsLoading = pendingTransactionsResult?.isLoading || false;
-  const pendingError = pendingTransactionsResult?.error || null;
-
-  // Use completed transactions hook with loadmore functionality
+  // Fetch pending transactions
   const {
-    data: completedTransactions,
-    isLoading: completedIsLoading,
-    isFetchingNextPage: completedIsLoadingMore,
-    error: completedError,
-    hasNextPage: completedHasMore,
-    fetchNextPage: loadMoreCompleted,
-  } = useCompletedTransactionsWithLoadMore(100, pendingTransactions.length); // Load 100 transactions at a time
+    transactions: pendingTransactions = [],
+    isLoading: pendingIsLoading,
+    error: pendingError,
+  } = usePendingTransactions();
 
-  const sortingResult = useSortedTransactions(pendingTransactions);
-  const sortBy = sortingResult?.sortBy || "blockTime";
-  const sortDirection = sortingResult?.sortDirection || "desc";
-  const handleSort = sortingResult?.handleSort || (() => {});
-  const sortedTransactions = sortingResult?.sortedTransactions || [];
+  // Fetch confirmed transactions - all of them, up to our `MAX_TRANSACTIONS_TO_FETCH`
+  const {
+    transactions: confirmedTransactions = [],
+    isLoading: confirmedIsLoading,
+    error: confirmedError,
+  } = useConfirmedTransactions();
 
-  const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
+  // Sort and paginate pending transactions
+  const {
+    sortBy,
+    sortDirection,
+    handleSort,
+    sortedTransactions: sortedPendingTxs,
+  } = useSortedTransactions(pendingTransactions);
 
-  // Set up pagination for pending transactions
-  const paginationResult = useTransactionPagination(sortedTransactions.length);
   const {
     page,
     rowsPerPage,
@@ -77,35 +68,28 @@ const TransactionsTab: React.FC = () => {
     getCurrentPageItems,
     handlePageChange,
     handleRowsPerPageChange,
-  } = paginationResult;
+  } = useTransactionPagination(sortedPendingTxs.length);
 
-  // Get transactions for current page
-  const currentPageTxs = getCurrentPageItems
-    ? getCurrentPageItems(sortedTransactions)
-    : [];
+  const currentPagePendingTxs = getCurrentPageItems(sortedPendingTxs);
+  const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
-  // Handle tab change - single function with user interaction tracking
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-    setHasUserInteracted(true); // Mark that user has manually interacted
-  };
-
-  const filteredCompletedTransactions = useMemo(() => {
+  // Now we filter out pending transactions from confirmed transactions
+  // This ensures we don't show the same transaction in both tabs
+  const filteredConfirmedTransactions = useMemo(() => {
     const pendingTxids = new Set(pendingTransactions.map((tx) => tx.txid));
-    const completedTxids = new Set();
-    return completedTransactions.filter((tx) => {
-      // if multiple wallets are loaded into the wallet on a private node,
-      // you can end up in a situation of duplicate transactions being sent back
-      // one from each wallet. This filters out the duplicates but unfortunately
-      // the request count is still going to be off because we can't know this count
-      // ahead of time
-      if (completedTxids.has(tx.txid)) {
+    const seenTxids = new Set<string>();
+
+    return confirmedTransactions.filter((tx) => {
+      // Filter out duplicates (can happen with multiple wallets on private nodes)
+      if (seenTxids.has(tx.txid)) {
         return false;
       }
-      completedTxids.add(tx.txid);
+      seenTxids.add(tx.txid);
+
+      // Filter out transactions that are in pending
       return !pendingTxids.has(tx.txid);
     });
-  }, [completedTransactions, pendingTransactions]);
+  }, [confirmedTransactions, pendingTransactions]);
 
   // Handle acceleration button click
   const handleAccelerateTransaction = async (tx: any) => {
@@ -130,25 +114,9 @@ const TransactionsTab: React.FC = () => {
     }
   };
 
-  // Auto-switch to confirmed tab when there are no pending but some confirmed
-  // Only auto-switch if user hasn't manually interacted
-  useEffect(() => {
-    if (
-      !hasUserInteracted && // Only auto-switch if user hasn't manually clicked
-      tabValue === 0 &&
-      !pendingIsLoading &&
-      pendingTransactions.length === 0 &&
-      completedTransactions.length > 0
-    ) {
-      setTabValue(1); // Switch to confirmed tab
-    }
-  }, [
-    hasUserInteracted,
-    tabValue,
-    pendingTransactions.length, // Use .length instead of the whole array
-    pendingIsLoading,
-    completedTransactions.length, // Use .length instead of the whole array
-  ]);
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
 
   // Handle acceleration modal close
   const handleAccelerationModalClose = () => {
@@ -173,8 +141,8 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`Confirmed (${filteredCompletedTransactions.length}${completedHasMore ? "+" : ""})`}
-              id="completed-tab"
+              label={`Confirmed (${filteredConfirmedTransactions.length})`}
+              id="confirmed-tab"
               aria-controls="completed-tabpanel"
             />
           </Tabs>
@@ -213,9 +181,7 @@ const TransactionsTab: React.FC = () => {
               ) : (
                 <>
                   <TransactionTable
-                    transactions={
-                      Array.isArray(currentPageTxs) ? currentPageTxs : []
-                    }
+                    transactions={currentPagePendingTxs}
                     onSort={handleSort}
                     sortBy={sortBy}
                     sortDirection={sortDirection}
@@ -225,7 +191,7 @@ const TransactionsTab: React.FC = () => {
                     showAcceleration={true}
                   />
                   {/* Pagination controls for pending transactions */}
-                  {sortedTransactions.length > 0 && (
+                  {sortedPendingTxs.length > 0 && (
                     <Box
                       display="flex"
                       justifyContent="space-between"
@@ -260,8 +226,8 @@ const TransactionsTab: React.FC = () => {
                         >
                           {`${(page - 1) * rowsPerPage + 1}-${Math.min(
                             page * rowsPerPage,
-                            sortedTransactions.length,
-                          )} of ${sortedTransactions.length}`}
+                            sortedPendingTxs.length,
+                          )} of ${sortedPendingTxs.length}`}
                         </Typography>
                         <Pagination
                           count={totalPages}
@@ -289,13 +255,9 @@ const TransactionsTab: React.FC = () => {
       >
         {tabValue === 1 && (
           <ConfirmedTransactionsView
-            transactions={filteredCompletedTransactions}
-            isLoading={completedIsLoading}
-            isLoadingMore={completedIsLoadingMore}
-            error={completedError}
-            hasMore={completedHasMore ?? false}
-            onLoadMore={loadMoreCompleted}
-            totalLoaded={filteredCompletedTransactions.length}
+            transactions={filteredConfirmedTransactions}
+            isLoading={confirmedIsLoading}
+            error={confirmedError}
             network={network}
             onClickTransaction={handleExplorerLinkClick}
           />

@@ -3,13 +3,11 @@ import {
   CircularProgress,
   Typography,
   Box,
-  Button,
   Pagination,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Divider,
 } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import {
@@ -23,11 +21,7 @@ import { useGetClient } from "hooks/client";
 interface Props {
   transactions: Transaction[];
   isLoading: boolean;
-  isLoadingMore: boolean;
   error: any;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  totalLoaded: number;
   network?: string;
   onClickTransaction?: (txid: string) => void;
 }
@@ -35,11 +29,7 @@ interface Props {
 export const ConfirmedTransactionsView: React.FC<Props> = ({
   transactions,
   isLoading,
-  isLoadingMore,
   error,
-  hasMore,
-  onLoadMore,
-  totalLoaded,
   network,
   onClickTransaction,
 }) => {
@@ -47,6 +37,7 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
     useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
   const client = useGetClient();
+
   // Set up pagination for the currently loaded transactions
   const {
     page,
@@ -90,11 +81,12 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
   return (
     <Box>
       {/* Transaction Table */}
+      {/* Warning for private clients */}
       {client?.type === "private" && (
         <Box mb={2}>
           <Typography variant="caption" color="textSecondary">
-            (Confirmed transaction history maybe unreliable for nodes that have
-            multiple wallets loaded)
+            Transaction history may be incomplete for nodes with multiple
+            wallets loaded. Showing up to 500 most recent transactions.
           </Typography>
         </Box>
       )}
@@ -126,8 +118,10 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
               onChange={handleRowsPerPageChange}
               label="Rows"
             >
-              <MenuItem value="5">5</MenuItem>
               <MenuItem value="10">10</MenuItem>
+              <MenuItem value="25">25</MenuItem>
+              <MenuItem value="50">50</MenuItem>
+              <MenuItem value="100">100</MenuItem>
             </Select>
           </FormControl>
 
@@ -144,57 +138,6 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
               size="small"
             />
           </Box>
-        </Box>
-      )}
-
-      {/* Load More Section (if there are more transactions to load from API) */}
-      {(hasMore || isLoadingMore) && (
-        <>
-          <Divider sx={{ my: 2 }} />
-          <Box
-            display="flex"
-            flexDirection="column"
-            justifyContent="center"
-            alignItems="center"
-            p={2}
-            gap={1}
-          >
-            {isLoadingMore ? (
-              <Box display="flex" alignItems="center" gap={2}>
-                <CircularProgress size={20} />
-                <Typography variant="body2" color="textSecondary">
-                  Loading more transactions...
-                </Typography>
-              </Box>
-            ) : hasMore ? (
-              <>
-                <Button
-                  variant="outlined"
-                  onClick={() => onLoadMore()}
-                  disabled={isLoadingMore}
-                  size="medium"
-                >
-                  Load More Transactions
-                </Button>
-                <Typography variant="caption" color="textSecondary">
-                  Loaded {totalLoaded} transactions so far
-                </Typography>
-              </>
-            ) : (
-              <Typography variant="body2" color="textSecondary">
-                All transactions loaded ({totalLoaded} total)
-              </Typography>
-            )}
-          </Box>
-        </>
-      )}
-
-      {/* Summary Info */}
-      {!hasMore && !isLoadingMore && (
-        <Box display="flex" justifyContent="center" mt={1}>
-          <Typography variant="caption" color="textSecondary">
-            Showing all {totalLoaded} completed transactions
-          </Typography>
         </Box>
       )}
     </Box>
