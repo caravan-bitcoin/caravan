@@ -25,54 +25,79 @@ class SeedBase extends React.Component {
     return (
       <>
         <Grid container spacing={3}>
-          <Grid item md={8}>
-            <Grid container>
-              <Grid item md={6}>
+          <Grid item xs={12} md={8}>
+            <Grid container spacing={2}>
+              <Grid item xs={6} sm={6} md={6}>
                 <ol>{bip39Phrase.slice(0, 6).map(SeedBase.renderSeedWord)}</ol>
               </Grid>
-              <Grid item md={6}>
+              <Grid item xs={6} sm={6} md={6}>
                 <ol start={7}>
                   {bip39Phrase.slice(6, 12).map(SeedBase.renderSeedWord)}
                 </ol>
               </Grid>
-              <Grid item md={6}>
+              <Grid item xs={6} sm={6} md={6}>
                 <ol start={13}>
                   {bip39Phrase.slice(12, 18).map(SeedBase.renderSeedWord)}
                 </ol>
               </Grid>
-              <Grid item md={6}>
+              <Grid item xs={6} sm={6} md={6}>
                 <ol start={19}>
                   {bip39Phrase.slice(18, 24).map(SeedBase.renderSeedWord)}
                 </ol>
               </Grid>
             </Grid>
           </Grid>
-          <Grid item md={4}>
+          <Grid item xs={12} md={4}>
             <Box
               display="flex"
               flexDirection="column"
-              alignItems="flex-start"
-              style={{ paddingLeft: "0px" }}
+              alignItems="center"
+              justifyContent="center"
+              sx={{ width: "100%", px: { xs: 2, sm: 0 } }}
             >
               <Typography variant="subtitle2" gutterBottom>
                 Seed Phrase QR Code
               </Typography>
               <Paper
                 elevation={2}
-                style={{ padding: "16px", backgroundColor: "white" }}
+                sx={{
+                  p: 2,
+                  backgroundColor: "white",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  maxWidth: "100%",
+                  width: { xs: "100%", sm: "auto" },
+                }}
               >
-                <QRCode
-                  value={seedPhrase}
-                  size={280}
-                  level="M"
-                  includeMargin={true}
-                />
+                <Box
+                  sx={{
+                    width: "100%",
+                    maxWidth: { xs: "250px", sm: "280px" },
+                    aspectRatio: "1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <QRCode
+                    value={seedPhrase}
+                    size={280}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      maxWidth: "100%",
+                    }}
+                    level="M"
+                    includeMargin={true}
+                  />
+                </Box>
               </Paper>
               <Typography
                 variant="caption"
                 color="textSecondary"
                 align="center"
-                style={{ marginTop: "8px", width: "100%" }}
+                sx={{ mt: 1, width: "100%" }}
               >
                 Scan with a hardware wallet or other compatible device
               </Typography>
