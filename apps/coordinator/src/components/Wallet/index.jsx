@@ -61,6 +61,7 @@ import {
 } from "../../actions/clientActions";
 import { clientPropTypes, slicePropTypes } from "../../proptypes";
 import { ExtendedPublicKeyImporters } from "./ExtendedPublicKeyImporters";
+import { WalletConfigQRImport } from "../BCUR2";
 
 class CreateWallet extends React.Component {
   static validateProperties(config, properties, key) {
@@ -378,6 +379,9 @@ class CreateWallet extends React.Component {
               Import Wallet Configuration
             </Button>
           </label>
+          <Box component="span" ml={2}>
+            <WalletConfigQRImport onImport={this.setConfigJson.bind(this)} />
+          </Box>
           <FormHelperText error>{configError}</FormHelperText>
         </>
       );
