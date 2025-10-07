@@ -295,14 +295,32 @@ export class TransactionAnalyzer {
   /**
    * Calculates and returns the fee rate required for a successful CPFP.
    * @returns {string} The CPFP fee rate in satoshis per vbyte
+   * @throws {Error} When CPFP is not needed or not possible
    */
   get cpfpFeeRate(): string {
+    // Sanity check because we never know
+    if (this.estimatedCPFPChildSize <= 0) {
+      throw new Error("Invalid CPFP child size: cannot be zero or negative");
+    }
     const desiredPackageFee = new BigNumber(this.targetFeeRate).multipliedBy(
       this.CPFPPackageSize,
     );
-    const expectedFeeRate = BigNumber.max(
-      desiredPackageFee.minus(this.fee).dividedBy(this.estimatedCPFPChildSize),
-      new BigNumber(0),
+    const feeDifference = desiredPackageFee.minus(this.fee);
+
+    // Handle edge case: parent transaction already has a higher fee rate than target
+    // Example scenario: Parent tx has 105 sats/vB fee rate, but target is only 35 sats/vB
+    // In this case, desiredPackageFee (35 * packageSize) < actual parent fee,
+    // making feeDifference negative. CPFP is unnecessary since the parent should
+    // already be prioritized for mining at its current higher fee rate.
+    if (feeDifference.isLessThanOrEqualTo(0)) {
+      throw new Error(
+        `CPFP not needed: Parent transaction fee rate (${this.feeRate.toFixed(1)} sats/vB) ` +
+          `already meets or exceeds target fee rate (${this.targetFeeRate} sats/vB)`,
+      );
+    }
+
+    const expectedFeeRate = feeDifference.dividedBy(
+      this.estimatedCPFPChildSize,
     );
 
     return expectedFeeRate.toString();

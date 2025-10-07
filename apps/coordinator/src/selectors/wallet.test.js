@@ -57,7 +57,7 @@ describe("wallet selectors", () => {
     });
   });
   describe("getSpendableSlices", () => {
-    it("should return slices that are neither pending or spent", () => {
+    it("should return slices that spendable", () => {
       // add unused slice to make sure it's not included
       state.wallet.deposits.nodes.push({
         utxos: [],
@@ -68,14 +68,17 @@ describe("wallet selectors", () => {
         (total, slice) => total.plus(slice.balanceSats),
         new BigNumber(0),
       );
-      const expectedSpendableTotal = pendingChange.plus(confirmedBalance);
+      const expectedSpendableTotal = pendingDeposits.plus(
+        pendingChange.plus(confirmedBalance),
+      );
       expect(actualSpendableTotal).toEqual(expectedSpendableTotal);
       actuallySpendable.forEach((slice) => {
         expect(slice.utxos.length).toBeGreaterThan(0);
-        slice.utxos.forEach((utxo) => {
-          expect(utxo.confirmed || slice.change).toBeTruthy();
+        slice.utxos.forEach(() => {
+          // Note : To consider CPFP, any UTXO in a spendable slice is spendable
+          // No need to check if it's confirmed or in a change slice
+          expect(slice.lastUsed !== "Spent").toBeTruthy();
         });
-        if (slice.lastUsed === "Pending") expect(slice.change).toBe(true);
       });
     });
   });

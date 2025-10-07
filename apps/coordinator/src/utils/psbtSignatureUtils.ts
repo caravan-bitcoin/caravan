@@ -62,10 +62,10 @@ export function extractSignaturesFromPSBTData(
   const allSignatures: string[] = [];
 
   signatureSets.forEach((signatureSet) => {
-    // Convert Buffer signatures to hex strings if needed
-    const hexSignatures = signatureSet.signatures.map((sig) =>
-      typeof sig === "string" ? sig : sig.toString("hex"),
-    );
+    // Convert Buffer signatures to hex strings; skip nulls
+    const hexSignatures = signatureSet.signatures
+      .filter((sig): sig is string | Buffer => Boolean(sig))
+      .map((sig) => (typeof sig === "string" ? sig : sig.toString("hex")));
     allSignatures.push(...hexSignatures);
   });
 

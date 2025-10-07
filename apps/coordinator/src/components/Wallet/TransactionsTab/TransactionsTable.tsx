@@ -61,23 +61,6 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   feeInSats,
   isReceived = false,
 }) => {
-  // For received transactions, show appropriate message
-  if (isReceived) {
-    return (
-      <Tooltip
-        title="Fee not shown for received transactions as you didn't pay it"
-        placement="top"
-      >
-        <Box display="flex" alignItems="center">
-          <Typography variant="body2" color="textSecondary" sx={{ mr: 0.5 }}>
-            N/A
-          </Typography>
-          <InfoOutlinedIcon fontSize="small" color="disabled" />
-        </Box>
-      </Tooltip>
-    );
-  }
-
   // For missing fee data
   if (feeInSats === null || feeInSats === undefined) {
     return (
@@ -87,6 +70,31 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
             --
           </Typography>
           <InfoOutlinedIcon fontSize="small" color="disabled" />
+        </Box>
+      </Tooltip>
+    );
+  }
+
+  // For received transactions, show fee in green with a note , also fee comes in BTC format - convert to sats
+  if (isReceived) {
+    // feeInSats is actually in BTC format when isReceived is true
+    const feeInBTC = satoshisToBitcoins(feeInSats!) || "0";
+    const actualFeeInSats = Number(feeInSats);
+
+    return (
+      <Tooltip title="You did not spend this fee" placement="top">
+        <Box display="flex" flexDirection="column">
+          <Typography variant="body2" sx={{ color: "green", fontWeight: 500 }}>
+            {actualFeeInSats?.toLocaleString() ?? "--"} sats
+          </Typography>
+          {feeInBTC && (
+            <Typography
+              variant="caption"
+              sx={{ color: "green", fontWeight: 400 }}
+            >
+              {feeInBTC} BTC
+            </Typography>
+          )}
         </Box>
       </Tooltip>
     );
@@ -248,8 +256,7 @@ const TransactionTableRow: React.FC<{
   renderActions,
 }) => {
   // Check if transaction can be accelerated (pending/unconfirmed)
-  const canAccelerate = !tx.status.confirmed && showAcceleration;
-
+  const canAccelerate = !tx.status.confirmed;
   return (
     <TableRow>
       <TableCell>
@@ -306,41 +313,39 @@ const TransactionTableRow: React.FC<{
           size="small"
         />
       </TableCell>
-
-      {/* Accelerate button column - only show if showAcceleration is true */}
-      {showAcceleration && (
-        <TableCell>
-          {canAccelerate &&
-            onAccelerateTransaction &&
-            (tx.isReceived ? (
-              <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
-                <span>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color="primary"
-                    disabled={true}
-                  >
-                    Accelerate
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="outlined"
-                size="small"
-                color="primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAccelerateTransaction(tx);
-                }}
-              >
-                Accelerate
-              </Button>
-            ))}
-        </TableCell>
-      )}
-
+      {/* Accelerate button for pending transactions */}
+      {canAccelerate &&
+        onAccelerateTransaction &&
+        (!tx.fee ? (
+          <Tooltip title="You cannot accelerate received transactions, only transactions you've sent.">
+            <TableCell>
+              <Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  disabled={true}
+                >
+                  Accelerate
+                </Button>
+              </Box>
+            </TableCell>
+          </Tooltip>
+        ) : (
+          <TableCell>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAccelerateTransaction(tx);
+              }}
+            >
+              Accelerate
+            </Button>
+          </TableCell>
+        ))}
       <TableCell>
         {network && (
           <Tooltip title="View in your preferred block explorer">

@@ -45,6 +45,18 @@ export const useFetchTransactionDetails = (txid: string) => {
 };
 
 // Hook for fetching pending transaction IDs and their details
+// Service function for fetching pending transaction fees
+const fetchPendingTransactionFee = async (
+  txid: string,
+  client: BlockchainClient,
+) => {
+  if (!client) {
+    throw new Error("No blockchain client available");
+  }
+  return await client.getFeesForPendingTransaction(txid);
+};
+
+// Hook for fetching all pending transactions
 const useFetchPendingTransactions = () => {
   const pendingTransactionIds = useSelector(getPendingTransactionIds);
   const blockchainClient = useGetClient();
@@ -52,7 +64,23 @@ const useFetchPendingTransactions = () => {
   return useQueries({
     queries: pendingTransactionIds.map((txid) => ({
       queryKey: transactionKeys.tx(txid),
-      queryFn: () => fetchTransactionDetails(txid, blockchainClient),
+      queryFn: async () => {
+        const transaction = await fetchTransactionDetails(
+          txid,
+          blockchainClient,
+        );
+
+        // If transaction doesn't have a fee, fetch it
+        if (!transaction.fee) {
+          const fee = await fetchPendingTransactionFee(txid, blockchainClient);
+          return {
+            ...transaction,
+            fee: Number(fee),
+          };
+        }
+
+        return transaction;
+      },
       enabled: !!blockchainClient && !!txid,
     })),
   });
@@ -87,6 +115,21 @@ export const useRawPendingTransactions = () => {
   const transactions = transactionQueries
     .filter((query) => query.data)
     .map((query) => query.data!);
+  // Process transactions with calculated values and filter out confirmed ones
+  const pendingTransactions = transactionQueries
+    .filter((query) => query.data && !query.data.status?.confirmed)
+    .map((query) => query.data!);
+
+  const transactions = pendingTransactions.map((tx) => {
+    return {
+      ...tx,
+      valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      isReceived:
+        tx.isReceived !== undefined
+          ? tx.isReceived
+          : calculateTransactionValue(tx, walletAddresses) > 0,
+    };
+  });
 
   return {
     transactions,
