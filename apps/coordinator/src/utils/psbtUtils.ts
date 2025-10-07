@@ -1,7 +1,6 @@
 import {
   networkData,
   Network,
-  multisigPublicKeys,
   multisigRedeemScript,
   multisigWitnessScript,
   generateMultisigFromPublicKeys,
@@ -60,7 +59,7 @@ export interface SignatureInfo {
   signature: Buffer | string;
   pubkey: string;
   inputIndex: number;
-  signerIndex?: number; // Which signer in the multisig (0, 1, 2, etc.)
+  masterFingerprint: string; // XFP of the signer for stable identity across inputs
   derivedPubkey: string; // The actual derived pubkey for this input
 }
 
@@ -68,8 +67,7 @@ export interface SignatureInfo {
  * Interface for signer identification across multiple inputs
  */
 export interface SignerIdentity {
-  signerIndex: number; // Position in the multisig setup (0, 1, 2, etc.)
-  masterFingerprint?: string; // Master key fingerprint if available
+  masterFingerprint: string; // Master key fingerprint if available
   signatures: Buffer[] | string[]; // Signatures for each input (in order)
   publicKeys: string[]; // Derived pubkeys for each input (in order)
 }
@@ -78,8 +76,8 @@ export interface SignerIdentity {
  * Interface for signature sets grouped by signer
  */
 export interface SignatureSet {
-  signatures: Buffer[] | string[];
-  publicKeys: string[];
+  signatures: (Buffer | string | null)[];
+  publicKeys: (string | null)[];
 }
 
 /**
@@ -249,12 +247,19 @@ export const getInputIdentifiersFromPsbt = (psbt: Psbt): Set<string> => {
  * @returns Array formatted for Caravan's signature importers
  */
 export const mapSignaturesToImporters = (signatureSets: SignatureSet[]) => {
-  return signatureSets.map((sigSet, index) => ({
-    importerNumber: index + 1, // As in Caravan we use 1-based indexing
-    signatures: sigSet.signatures,
-    publicKeys: sigSet.publicKeys,
-    finalized: true, // Mark as complete since we have all signatures
-  }));
+  return signatureSets.map((sigSet, index) => {
+    const signatures = (sigSet.signatures || []).map((sig: any) => {
+      if (!sig) return "";
+      return typeof sig === "string" ? sig : sig.toString("hex");
+    });
+    const publicKeys = (sigSet.publicKeys || []).map((pk: any) => pk || "");
+    return {
+      importerNumber: index + 1, // 1-based indexing in UI
+      signatures,
+      publicKeys,
+      finalized: true,
+    };
+  });
 };
 
 /**
@@ -490,33 +495,6 @@ export function addMissingScriptDataToPsbt(psbt: Psbt, inputs: Input[]): Psbt {
 }
 
 /**
- * Identifies which signer (by index in multisig) a given public key belongs to.
- *
- * This function derives the expected public keys for all signers at the given
- * input's derivation path and matches the provided pubkey to determine the signer.
- *
- * @param pubkey - The public key to identify
- * @param input - The input containing multisig and derivation information
- * @returns The signer index (0, 1, 2, etc.) or -1 if not found
- */
-export function identifySignerFromPubkey(pubkey: string, input: Input): number {
-  try {
-    // Get all possible public keys for this input's derivation path
-    const expectedPubkeys: string[] = multisigPublicKeys(input.multisig);
-    // Find which signer this pubkey belongs to
-    const signerIndex = expectedPubkeys.findIndex(
-      (expectedPubkey: string) => expectedPubkey === pubkey,
-    );
-
-    return signerIndex;
-  } catch (e) {
-    throw new Error(
-      `Error deriving pubkeys for input: ${e.message || "Unknown error"}`,
-    );
-  }
-}
-
-/**
  * Groups signatures by signer identity across all inputs.
  *
  * For each signer that has signed at least one input,
@@ -530,22 +508,26 @@ export function identifySignerFromPubkey(pubkey: string, input: Input): number {
 export function groupSignaturesBySigner(
   inputSignatures: SignatureInfo[],
   inputs: Input[],
-): Map<number, SignerIdentity> {
-  const signerGroups = new Map<number, SignerIdentity>();
+): Map<string, SignerIdentity> {
+  const signerGroups = new Map<string, SignerIdentity>();
 
   // Now we group signatures by their signer index
   for (const sig of inputSignatures) {
-    const { signerIndex, inputIndex, signature, pubkey } = sig;
-    if (signerIndex === undefined) continue;
+    const { masterFingerprint, inputIndex, signature, pubkey } = sig;
 
-    let signerGroup = signerGroups.get(signerIndex);
+    if (!masterFingerprint)
+      throw new Error(
+        `No master fingerprint found for input ${inputIndex}. Can't map signatures.`,
+      );
+
+    let signerGroup = signerGroups.get(masterFingerprint);
     if (!signerGroup) {
       signerGroup = {
-        signerIndex,
+        masterFingerprint,
         signatures: Array(inputs.length).fill(null),
         publicKeys: Array(inputs.length).fill(null),
       };
-      signerGroups.set(signerIndex, signerGroup);
+      signerGroups.set(masterFingerprint, signerGroup);
     }
 
     signerGroup.signatures[inputIndex] = signature;
@@ -553,20 +535,9 @@ export function groupSignaturesBySigner(
   }
 
   // Now some filtering logic to only add complete signature sets (i.e signer signed ALL inputs)
-  const completeSigners = new Map<number, SignerIdentity>();
-
-  signerGroups.forEach((signerGroup, signerIndex) => {
-    const hasAllSignatures = signerGroup.signatures.every(
-      (sig) => sig !== null,
-    );
-    const hasAllPubkeys = signerGroup.publicKeys.every((pk) => pk !== null);
-
-    if (hasAllSignatures && hasAllPubkeys) {
-      completeSigners.set(signerIndex, signerGroup);
-    }
-  });
-
-  return completeSigners;
+  // Previously we filtered out incomplete signers. For partial uploads we
+  // need to keep incomplete sets so they can be persisted and shown.
+  return signerGroups;
 }
 
 /**
@@ -645,48 +616,46 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
         const signature = partialSig.signature.toString("hex");
         const pubkeyFromPsbt = partialSig.pubkey.toString("hex");
 
-        // **STEP 1: Validate the signature**
-        const validatedPubkey = validateSignatureForInput(
-          partialSig.signature,
-          inputIndex,
-          psbtWithScripts,
-          inputs,
-        );
+        // **Validate the signature**
+        let validatedPubkey: string | false = false;
+        try {
+          validatedPubkey = validateSignatureForInput(
+            partialSig.signature,
+            inputIndex,
+            psbtWithScripts,
+            inputs,
+          );
+        } catch (e) {
+          validatedPubkey = false;
+        }
 
         if (!validatedPubkey) {
-          throw new Error(
-            `Invalid signature for input ${inputIndex}, pubkey ${pubkeyFromPsbt.slice(0, 16)}... `,
-          );
+          continue;
         }
 
-        // **STEP 2: Verify the pubkey matches what we expect**
-        if (validatedPubkey !== pubkeyFromPsbt) {
-          throw new Error(
-            `⚠️ Validated pubkey ${validatedPubkey.slice(0, 16)}... doesn't match PSBT pubkey ${pubkeyFromPsbt.slice(0, 16)}... for input ${inputIndex}`,
-          );
+        const xfp = walletInput?.multisig?.bip32Derivation?.[0]
+          ?.masterFingerprint
+          ? walletInput.multisig.bip32Derivation[0].masterFingerprint.toString(
+              "hex",
+            )
+          : undefined;
+
+        if (!xfp) {
+          throw new Error(`No xfp found for input ${inputIndex}`);
         }
-        // **STEP 3: Determine which signer this validated pubkey belongs to**
-        // Now here we determine which signer does this pubkey belongs to as we need it later to check if signer has signed all the inputs properly
-        const signerIndex = identifySignerFromPubkey(
-          validatedPubkey,
-          walletInput,
-        );
-        if (signerIndex !== -1) {
-          inputSignatures.push({
-            signature,
-            pubkey: pubkeyFromPsbt,
-            inputIndex,
-            signerIndex,
-            derivedPubkey: validatedPubkey,
-          });
-        }
+
+        inputSignatures.push({
+          signature,
+          pubkey: pubkeyFromPsbt,
+          inputIndex,
+          masterFingerprint: xfp,
+          derivedPubkey: validatedPubkey,
+        });
       }
     }
   }
 
-  if (inputSignatures.length === 0) {
-    return [];
-  }
+  if (inputSignatures.length === 0) return [];
 
   // Now we need to group signatures by signer identity (not individual pubkeys)
   const signerGroups = groupSignaturesBySigner(inputSignatures, inputs);
@@ -694,6 +663,7 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
 
   signerGroups.forEach((signerGroup) => {
     signatureSets.push({
+      // Keep array shape aligned with inputs; allow nulls for missing
       signatures: signerGroup.signatures,
       publicKeys: signerGroup.publicKeys,
     });
