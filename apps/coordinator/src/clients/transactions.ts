@@ -8,6 +8,7 @@ import {
   Slice,
   selectProcessedTransactions,
 } from "selectors/wallet";
+import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
@@ -107,14 +108,12 @@ export const useTransactionsWithHex = (txids: string[]) => {
 
 // Basic hook for raw pending transactions (no processing)
 export const useRawPendingTransactions = () => {
+  const walletAddresses = useSelector(getWalletAddresses);
   const transactionQueries = useFetchPendingTransactions();
 
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
 
-  const transactions = transactionQueries
-    .filter((query) => query.data)
-    .map((query) => query.data!);
   // Process transactions with calculated values and filter out confirmed ones
   const pendingTransactions = transactionQueries
     .filter((query) => query.data && !query.data.status?.confirmed)
