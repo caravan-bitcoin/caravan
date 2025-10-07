@@ -10,7 +10,6 @@ import {
 } from "selectors/wallet";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
-import { DEFAULT_PAGE_SIZE } from "./txHistory";
 
 // Centralized query key factory for all transaction-related queries
 export const transactionKeys = {
@@ -20,8 +19,8 @@ export const transactionKeys = {
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  confirmedHistory: (pageSize: number = DEFAULT_PAGE_SIZE) =>
-    [...transactionKeys.all, "confirmed", "infinite", pageSize] as const,
+  confirmedHistory: () =>
+    [...transactionKeys.all, "confirmed", "infinite"] as const,
 };
 
 // Service function for fetching transaction details

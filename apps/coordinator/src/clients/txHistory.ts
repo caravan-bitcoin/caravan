@@ -1,6 +1,6 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo } from "react";
 import {
   getWalletAddresses,
   getSpentSlices,
@@ -11,28 +11,13 @@ import {
 import { useGetClient } from "hooks/client";
 import { transactionKeys } from "clients/transactions";
 
-export const DEFAULT_PAGE_SIZE = 100;
-const TRANSACTION_STALE_TIME = 30 * 1000; // Reduced to 30 seconds for more responsive updates
+// How many transactions to fetch in total
+// This is a reasonable limit that covers most use cases without overwhelming the browser and also prevents the
+// cascading complexity where the query keys change, cache invalidation gets messy, and the logic becomes hard to follow
+const MAX_TRANSACTIONS_TO_FETCH = 500;
+const TRANSACTION_STALE_TIME = 30 * 1000; // 30 seconds
 
-// Common query options shared between public and private hooks
-const getCommonQueryOptions = (pageSize: number, pendingCount: number = 0) => ({
-  getNextPageParam: (lastPage: any[], allPages: any[][]) => {
-    const effectiveMinPageSize = Math.max(1, pageSize - pendingCount);
-    return lastPage.length >= effectiveMinPageSize
-      ? allPages.length * pageSize
-      : undefined;
-  },
-  refetchOnWindowFocus: true,
-  staleTime: TRANSACTION_STALE_TIME,
-  refetchInterval: 60000,
-  refetchIntervalInBackground: false,
-});
-
-export const usePublicClientTransactionsWithLoadMore = (
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  pendingCount: number = 0,
-) => {
-  const queryClient = useQueryClient();
+export const usePublicClientTransactions = () => {
   const blockchainClient = useGetClient();
   const clientType = blockchainClient?.type;
 
@@ -54,34 +39,18 @@ export const usePublicClientTransactionsWithLoadMore = (
     return currentAddresses.slice().sort().join(",");
   }, [currentAddresses]);
 
-  // Effect to invalidate queries when addresses change significantly
-  const prevAddressesRef = useRef<string>("");
-  useEffect(() => {
-    const currentKey = addressesKey;
-    const prevKey = prevAddressesRef.current;
-
-    if (prevKey && prevKey !== currentKey) {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.all,
-        exact: false,
-      });
-    }
-
-    prevAddressesRef.current = currentKey;
-  }, [addressesKey, queryClient]);
-
-  const infiniteQuery = useInfiniteQuery({
-    queryKey: transactionKeys.confirmedHistory(pageSize + pendingCount),
-    queryFn: async ({ pageParam = 0 }) => {
+  const query = useQuery({
+    queryKey: [...transactionKeys.confirmedHistory(), addressesKey],
+    queryFn: async () => {
       if (currentAddresses.length === 0) {
         return [];
       }
-
+      // So we fetch all transactions in one call and let the blockchain client handle this efficiently
       const rawTransactions =
         await blockchainClient.getAddressTransactionHistory(
           currentAddresses,
-          pageSize,
-          pageParam,
+          MAX_TRANSACTIONS_TO_FETCH,
+          0,
         );
 
       return selectProcessedTransactions(
@@ -94,37 +63,36 @@ export const usePublicClientTransactionsWithLoadMore = (
       !!blockchainClient &&
       clientType === "public" &&
       currentAddresses.length > 0,
-    ...getCommonQueryOptions(pageSize, pendingCount),
+    staleTime: TRANSACTION_STALE_TIME,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000, // Refetch every minute
+    refetchIntervalInBackground: false,
   });
 
-  const allTransactions = useMemo(
-    () => infiniteQuery.data?.pages.flat() || [],
-    [infiniteQuery.data?.pages],
-  );
-
   return {
-    ...infiniteQuery, // Expose all infiniteQuery properties
-    data: allTransactions, // Maintain flattened data for backward compatibility
-    totalLoaded: allTransactions.length,
+    transactions: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
 
-// Enhanced private client version
-export const usePrivateClientTransactionsWithLoadMore = (
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  pendingCount: number = 0,
-) => {
+export const usePrivateClientTransactions = () => {
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = blockchainClient?.type;
-  // Need to use this as a key because once we get an update
-  // on pending, then the total query size changes and we want to invalidate cache
-  const totalPageSize = pageSize + pendingCount;
-  const infiniteQuery = useInfiniteQuery({
-    queryKey: transactionKeys.confirmedHistory(totalPageSize),
-    queryFn: async ({ pageParam = 0 }) => {
+
+  const query = useQuery({
+    queryKey: transactionKeys.confirmedHistory(),
+    queryFn: async () => {
+      // Fetch all transactions from the wallet in one call
       const rawTransactions =
-        await blockchainClient.getWalletTransactionHistory(pageSize, pageParam);
+        await blockchainClient.getWalletTransactionHistory(
+          MAX_TRANSACTIONS_TO_FETCH,
+          0,
+        );
+
+      // Process transactions to add wallet-specific data
       return selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
@@ -132,36 +100,29 @@ export const usePrivateClientTransactionsWithLoadMore = (
       );
     },
     enabled: !!blockchainClient && clientType === "private",
-    ...getCommonQueryOptions(pageSize, pendingCount),
+    staleTime: TRANSACTION_STALE_TIME,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
-  const allTransactions = useMemo(
-    () => infiniteQuery.data?.pages.flat() || [],
-    [infiniteQuery.data?.pages],
-  );
-
   return {
-    ...infiniteQuery, // Expose all infiniteQuery properties
-    data: allTransactions, // Maintain flattened data for backward compatibility
-    totalLoaded: allTransactions.length,
+    transactions: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
 
-// Main hook with enhanced refresh capabilities
-export const useCompletedTransactionsWithLoadMore = (
-  pageSize: number = DEFAULT_PAGE_SIZE,
-  pendingCount: number = 0,
-) => {
+/**
+ * Main hook that routes to the appropriate client type.
+ * Returns all confirmed transactions - UI handles pagination.
+ */
+export const useConfirmedTransactions = () => {
   const clientType = useSelector((state: WalletState) => state.client.type);
 
-  const privateQuery = usePrivateClientTransactionsWithLoadMore(
-    pageSize,
-    pendingCount,
-  );
-  const publicQuery = usePublicClientTransactionsWithLoadMore(
-    pageSize,
-    pendingCount,
-  );
+  const privateQuery = usePrivateClientTransactions();
+  const publicQuery = usePublicClientTransactions();
 
   return clientType === "private" ? privateQuery : publicQuery;
 };
