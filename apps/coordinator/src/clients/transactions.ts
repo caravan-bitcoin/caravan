@@ -71,7 +71,6 @@ const useFetchPendingTransactions = () => {
           blockchainClient,
         );
 
-        // If transaction doesn't have a fee, fetch it
         if (!transaction.fee) {
           const fee = await fetchPendingTransactionFee(txid, blockchainClient);
           return {
