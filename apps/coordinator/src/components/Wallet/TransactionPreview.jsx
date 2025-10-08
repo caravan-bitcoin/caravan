@@ -204,6 +204,8 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
       inputs,
       outputs,
+      signatureImporters,
+      requiredSigners,
     } = this.props;
 
     // Get wallet script type for fingerprint analysis
@@ -233,6 +235,20 @@ class TransactionPreview extends React.Component {
 
         {/* Transaction Flow Diagram - Comprehensive View */}
         <Box mb={4}>
+          {(() => {
+            // derive signing status without React hooks (class component)
+            let signedCount = 0;
+            const rs = requiredSigners || 0;
+            if (signatureImporters) {
+              signedCount = Object.values(signatureImporters).filter(
+                (importer) => importer && importer.finalized && importer.signature && importer.signature.length > 0,
+              ).length;
+            }
+            const isFullySigned = signedCount >= rs && rs > 0;
+            const hasPartial = signedCount > 0 && signedCount < rs;
+            this._flowStatus = isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+            return null;
+          })()}
           <TransactionFlowDiagram
             inputs={inputs || []}
             outputs={outputs || []}
@@ -240,6 +256,7 @@ class TransactionPreview extends React.Component {
             changeAddress={this.props.changeAddress}
             inputsTotalSats={inputsTotalSats}
             network={this.props.network}
+            status={this._flowStatus}
           />
         </Box>
 

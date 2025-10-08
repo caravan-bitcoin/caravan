@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useLayoutEffect, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -42,6 +42,20 @@ interface TransactionFlowDiagramProps {
   changeAddress?: string;
   inputsTotalSats: any;
   network?: string;
+  status?:
+    | "draft"
+    | "partial"
+    | "ready"
+    | "broadcast-pending"
+    | "unconfirmed"
+    | "confirmed"
+    | "finalized"
+    | "rbf"
+    | "dropped"
+    | "conflicted"
+    | "rejected"
+    | "unknown";
+  confirmations?: number;
 }
 
 const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
@@ -51,10 +65,21 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   changeAddress,
   inputsTotalSats,
   network = "mainnet",
+  status = "draft",
+  confirmations,
 }) => {
   const theme = useTheme();
   const [showAllInputs, setShowAllInputs] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const centerRef = useRef<HTMLDivElement | null>(null);
+  const inputRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const recipientOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const changeOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [inputPaths, setInputPaths] = useState<string[]>([]);
+  const [outputPaths, setOutputPaths] = useState<string[]>([]);
+  const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const feeRef = useRef<HTMLDivElement | null>(null);
 
   const handleCopyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -97,6 +122,73 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
     };
   }, [inputs, outputs, fee, changeAddress, inputsTotalSats]);
 
+  // Build smooth cubic-bezier path from (x1,y1) to (x2,y2)
+  const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
+    const dx = Math.abs(x2 - x1);
+    const control = Math.max(dx * 0.25, 40);
+    const c1x = x1 + (x2 > x1 ? control : -control);
+    const c2x = x2 - (x2 > x1 ? control : -control);
+    return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
+  };
+
+  // Measure DOM and compute all paths
+  const computePaths = () => {
+    const svgEl = svgRef.current;
+    const centerEl = centerRef.current;
+    if (!svgEl || !centerEl) return;
+
+    const containerRect = svgEl.getBoundingClientRect();
+    const centerRect = centerEl.getBoundingClientRect();
+
+    setSvgSize({ width: containerRect.width, height: containerRect.height });
+
+    const centerLeftX = centerRect.left - containerRect.left;
+    const centerRightX = centerRect.right - containerRect.left;
+    const centerY = centerRect.top - containerRect.top + centerRect.height / 2;
+
+    const newInputPaths: string[] = [];
+    inputRefs.current.forEach((el) => {
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const x1 = r.right - containerRect.left;
+      const y1 = r.top - containerRect.top + r.height / 2;
+      newInputPaths.push(buildCurvePath(x1, y1, centerLeftX, centerY));
+    });
+
+    const newOutputPaths: string[] = [];
+    const allOutputs = [
+      ...recipientOutputRefs.current,
+      ...changeOutputRefs.current,
+      feeRef.current || null,
+    ];
+    allOutputs.forEach((el) => {
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const x2 = r.left - containerRect.left;
+      const y2 = r.top - containerRect.top + r.height / 2;
+      newOutputPaths.push(buildCurvePath(centerRightX, centerY, x2, y2));
+    });
+
+    setInputPaths(newInputPaths);
+    setOutputPaths(newOutputPaths);
+  };
+
+  useLayoutEffect(() => {
+    computePaths();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAllInputs, inputs.length, outputs.length]);
+
+  useEffect(() => {
+    const onResize = () => computePaths();
+    window.addEventListener("resize", onResize);
+    const id = window.setTimeout(() => computePaths(), 0);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Get script type color
   const getScriptTypeColor = (scriptType?: string) => {
     switch (scriptType?.toLowerCase()) {
@@ -137,31 +229,68 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
     return Math.max(percentage, 5); // Minimum 5% height for visibility
   };
 
+  const getStatusDisplay = () => {
+    switch (status) {
+      case "draft":
+        return { label: "Draft", color: theme.palette.grey[500] };
+      case "partial":
+        return { label: "Partially Signed", color: theme.palette.info.main };
+      case "ready":
+        return { label: "Ready to Broadcast", color: theme.palette.primary.main };
+      case "broadcast-pending":
+        return { label: "Broadcast Pending", color: theme.palette.info.light };
+      case "unconfirmed":
+        return { label: "Unconfirmed", color: theme.palette.warning.main };
+      case "confirmed":
+        return { label: `Confirmed${confirmations ? ` (${confirmations})` : ""}`, color: theme.palette.success.main };
+      case "finalized":
+        return { label: "Finalized", color: theme.palette.success.dark };
+      case "rbf":
+        return { label: "Replaced by Fee", color: theme.palette.secondary.main };
+      case "dropped":
+        return { label: "Dropped", color: theme.palette.grey[400] };
+      case "conflicted":
+        return { label: "Conflicted", color: theme.palette.error.main };
+      case "rejected":
+        return { label: "Rejected", color: theme.palette.error.dark };
+      default:
+        return { label: "Unknown", color: theme.palette.grey[500] };
+    }
+  };
+
   return (
     <Paper
-      elevation={2}
+      elevation={0}
       sx={{
         p: 3,
-        background: "linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%)",
-        border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: "#fff",
+        border: `2px solid ${theme.palette.divider}`,
         borderRadius: 2,
         overflow: "hidden",
       }}
     >
-      <Box display="flex" alignItems="center" mb={3}>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
         <Typography
-          variant="h5"
+          variant="h6"
           sx={{
             fontWeight: 600,
-            color: theme.palette.primary.main,
+            color: theme.palette.text.primary,
             display: "flex",
             alignItems: "center",
             gap: 1,
           }}
         >
-          <AccountBalanceWallet />
-          Transaction Flow
+          Transaction Flow Diagram
         </Typography>
+        <Chip
+          label={`${flowData.inputCount} Input${flowData.inputCount > 1 ? "s" : ""} → ${flowData.outputCount} Output${flowData.outputCount > 1 ? "s" : ""}`}
+          size="small"
+          variant="outlined"
+          sx={{
+            fontWeight: 500,
+            borderColor: theme.palette.divider,
+          }}
+        />
       </Box>
 
       {/* Main Flow Visualization */}
@@ -172,20 +301,53 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           flexDirection: { xs: "column", md: "row" },
           justifyContent: "space-between",
           alignItems: "stretch",
-          minHeight: { xs: "auto", md: 400 },
-          gap: { xs: 3, md: 4 },
+          minHeight: { xs: "auto", md: 450 },
+          gap: { xs: 3, md: 3 },
           width: "100%",
+          mb: 3,
         }}
       >
+        {/* SVG for connecting lines - desktop only */}
+        <Box
+          component="svg"
+          ref={svgRef}
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 0,
+            display: { xs: "none", md: "block" },
+          }}
+          viewBox={`0 0 ${Math.max(svgSize.width, 1)} ${Math.max(svgSize.height, 1)}`}
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+              <polygon points="0 0, 12 6, 0 12" fill={theme.palette.text.secondary}/>
+            </marker>
+          </defs>
+          {inputPaths.map((d, i) => (
+            <path key={`in-${i}`} d={d} stroke={theme.palette.text.secondary} strokeWidth={2} fill="none"/>
+          ))}
+          {outputPaths.map((d, i) => (
+            <path key={`out-${i}`} d={d} stroke={theme.palette.text.secondary} strokeWidth={2} fill="none"/>
+          ))}
+        </Box>
+
         {/* INPUTS Column */}
         <Box
           sx={{
-            flex: { xs: "1", md: "0 0 28%" },
+            flex: { xs: "1", md: "0 0 30%" },
             width: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: "column",
             gap: 1.5,
             alignSelf: "flex-start",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <Box
@@ -215,26 +377,9 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
 
           <Box
             sx={{
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
-              borderRadius: 2,
-              p: 2.5,
               display: "flex",
               flexDirection: "column",
               gap: 1.5,
-              boxShadow: `0 8px 24px ${theme.palette.primary.main}40`,
-              position: "relative",
-              overflow: "hidden",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                top: 0,
-                right: 0,
-                width: "100%",
-                height: "100%",
-                background:
-                  "radial-gradient(circle at top right, rgba(255,255,255,0.2) 0%, transparent 60%)",
-                pointerEvents: "none",
-              },
             }}
           >
             {inputs.slice(0, showAllInputs ? inputs.length : 3).map((input, idx) => {
@@ -252,16 +397,33 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 <Box
                   key={`${input.txid}-${input.index}`}
                   sx={{
-                    backgroundColor: "rgba(255, 255, 255, 0.95)",
-                    borderRadius: 1.5,
+                    backgroundColor: "#fff",
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
                     p: 1.5,
                     position: "relative",
-                    zIndex: 1,
-                    transition: "transform 0.2s ease",
+                    transition: "all 0.2s ease",
                     "&:hover": {
-                      transform: "translateX(4px)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      borderColor: theme.palette.primary.main,
+                      boxShadow: `0 2px 8px rgba(0,0,0,0.08)`,
                     },
+                    "&::after": {
+                      content: '""',
+                      position: "absolute",
+                      right: -10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: theme.palette.text.secondary,
+                      border: "2px solid #fff",
+                      display: { xs: "none", md: "block" },
+                      zIndex: 2,
+                    },
+                  }}
+                  ref={(el: HTMLDivElement | null) => {
+                    inputRefs.current[idx] = el;
                   }}
                 >
                   <Box
@@ -384,34 +546,68 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           />
         </Box>
 
-        {/* FLOW Arrow - Simple and Clean */}
+        {/* FLOW Diagram - Center */}
         <Box
           sx={{
-            flex: { xs: "0", md: "0 0 8%" },
+            flex: { xs: "0", md: "0 0 14%" },
             display: { xs: "none", md: "flex" },
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             position: "relative",
+            gap: 2,
           }}
         >
-          <ArrowForward
+          {/* Transaction Node */}
+          <Box
             sx={{
-              fontSize: 64,
-              color: theme.palette.primary.main,
-              opacity: 0.25,
+              width: 120,
+              height: 120,
+              borderRadius: "50%",
+              border: `2px solid ${theme.palette.divider}`,
+              backgroundColor: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 0.5,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
             }}
-          />
+            ref={centerRef}
+          >
+            {(() => {
+              const sd = getStatusDisplay();
+              return (
+                <>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: theme.palette.text.secondary, fontWeight: 600, fontSize: "0.7rem" }}
+                  >
+                    STATUS
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 800, color: sd.color, textAlign: "center" }}
+                  >
+                    {sd.label}
+                  </Typography>
+                </>
+              );
+            })()}
+          </Box>
         </Box>
 
         {/* OUTPUTS Column */}
         <Box
           sx={{
-            flex: { xs: "1", md: "0 0 28%" },
+            flex: { xs: "1", md: "0 0 30%" },
             width: { xs: "100%", md: "auto" },
             display: "flex",
             flexDirection: "column",
             gap: 1.5,
             alignSelf: "flex-start",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <Box
@@ -433,33 +629,37 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {/* Recipient Outputs */}
           {flowData.recipientOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
-            return (
+              return (
               <Box key={`recipient-${idx}`}>
                 <Box
                   sx={{
-                    background: `linear-gradient(135deg, #ea9c0d 0%, #f4b942 100%)`,
-                    borderRadius: 2,
-                    p: 2.5,
+                    backgroundColor: "#fff",
+                    border: `2px solid #ea9c0d`,
+                    borderRadius: 1,
+                    p: 2,
                     position: "relative",
-                    overflow: "hidden",
-                    boxShadow: "0 8px 24px rgba(234, 156, 13, 0.3)",
-                    cursor: "pointer",
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      transform: "translateX(-4px)",
-                      boxShadow: "0 12px 32px rgba(234, 156, 13, 0.4)",
+                      backgroundColor: "#fffbf5",
+                      boxShadow: `0 2px 8px rgba(234, 156, 13, 0.15)`,
                     },
                     "&::before": {
                       content: '""',
                       position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      background:
-                        "radial-gradient(circle at top left, rgba(255,255,255,0.3) 0%, transparent 60%)",
-                      pointerEvents: "none",
+                      left: -10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: "#ea9c0d",
+                      border: "2px solid #fff",
+                      display: { xs: "none", md: "block" },
+                      zIndex: 2,
                     },
+                  }}
+                  ref={(el: HTMLDivElement | null) => {
+                    recipientOutputRefs.current[idx] = el;
                   }}
                 >
                   <Box
@@ -467,25 +667,31 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     alignItems="center"
                     gap={1}
                     mb={1}
-                    sx={{ position: "relative", zIndex: 1 }}
                   >
-                    <CallMade sx={{ fontSize: 20, color: "#fff" }} />
+                    <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
                     <Typography
                       variant="caption"
                       sx={{
                         fontWeight: 600,
-                        color: "#fff",
+                        color: theme.palette.text.secondary,
                         textTransform: "uppercase",
                         letterSpacing: 0.5,
+                        fontSize: "0.7rem",
                       }}
                     >
-                      Recipient
+                      Payment
                     </Typography>
                   </Box>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={0.5}
+                    mb={1}
+                  >
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "rgba(255,255,255,0.95)",
+                      color: theme.palette.text.secondary,
                       fontFamily: "monospace",
                       fontSize: "0.75rem",
                       mb: 1,
@@ -495,6 +701,23 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   >
                     {formatAddress(output.address)}
                   </Typography>
+                  <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopyAddress(output.address)}
+                        sx={{
+                          padding: 0.25,
+                          color: theme.palette.text.secondary,
+                          "&:hover": {
+                            color: theme.palette.primary.main,
+                          },
+                          "& svg": { fontSize: "0.75rem" },
+                        }}
+                      >
+                        <ContentCopy fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                   <Box
                     display="flex"
                     justifyContent="space-between"
@@ -503,7 +726,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   >
                     <Typography
                       variant="h6"
-                      sx={{ fontWeight: 700, color: "#fff" }}
+                      sx={{ fontWeight: 700, color: "#ea9c0d" }}
                     >
                       {amount.toFixed(8)} BTC
                     </Typography>
@@ -511,13 +734,12 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       <Chip
                         label={formatScriptType(output.scriptType)}
                         size="small"
+                        variant="outlined"
                         sx={{
                           height: 22,
-                          fontSize: "0.7rem",
-                          backgroundColor: "rgba(255,255,255,0.25)",
-                          color: "#fff",
-                          fontWeight: 600,
-                          backdropFilter: "blur(10px)",
+                          fontSize: "0.65rem",
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.secondary,
                         }}
                       />
                     )}
@@ -530,33 +752,37 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {/* Change Outputs */}
           {flowData.changeOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
-            return (
+              return (
               <Box key={`change-${idx}`}>
                 <Box
                   sx={{
-                    background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
-                    borderRadius: 2,
-                    p: 2.5,
+                    backgroundColor: "#fff",
+                    border: `2px solid ${theme.palette.primary.main}`,
+                    borderRadius: 1,
+                    p: 2,
                     position: "relative",
-                    overflow: "hidden",
-                    boxShadow: `0 8px 24px ${theme.palette.success.main}40`,
-                    cursor: "pointer",
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      transform: "translateX(-4px)",
-                      boxShadow: `0 12px 32px ${theme.palette.success.main}60`,
+                      backgroundColor: "#f0f7ff",
+                      boxShadow: `0 2px 8px ${theme.palette.primary.main}20`,
                     },
                     "&::before": {
                       content: '""',
                       position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      background:
-                        "radial-gradient(circle at top left, rgba(255,255,255,0.3) 0%, transparent 60%)",
-                      pointerEvents: "none",
+                      left: -10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: theme.palette.primary.main,
+                      border: "2px solid #fff",
+                      display: { xs: "none", md: "block" },
+                      zIndex: 2,
                     },
+                  }}
+                  ref={(el: HTMLDivElement | null) => {
+                    changeOutputRefs.current[idx] = el;
                   }}
                 >
                   <Box
@@ -564,43 +790,62 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     alignItems="center"
                     gap={1}
                     mb={1}
-                    sx={{ position: "relative", zIndex: 1 }}
                   >
-                    <Savings sx={{ fontSize: 20, color: "#fff" }} />
+                    <Savings sx={{ fontSize: 18, color: theme.palette.primary.main }} />
                     <Typography
                       variant="caption"
                       sx={{
                         fontWeight: 600,
-                        color: "#fff",
+                        color: theme.palette.text.secondary,
                         textTransform: "uppercase",
                         letterSpacing: 0.5,
+                        fontSize: "0.7rem",
                       }}
                     >
-                      Change (Back to Wallet)
+                      Change
                     </Typography>
                   </Box>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "rgba(255,255,255,0.95)",
-                      fontFamily: "monospace",
-                      fontSize: "0.75rem",
-                      mb: 1,
-                      position: "relative",
-                      zIndex: 1,
-                    }}
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={0.5}
+                    mb={1}
                   >
-                    {formatAddress(output.address)}
-                  </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        fontFamily: "monospace",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      {formatAddress(output.address)}
+                    </Typography>
+                    <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopyAddress(output.address)}
+                        sx={{
+                          padding: 0.25,
+                          color: theme.palette.text.secondary,
+                          "&:hover": {
+                            color: theme.palette.primary.main,
+                          },
+                          "& svg": { fontSize: "0.75rem" },
+                        }}
+                      >
+                        <ContentCopy fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                   <Box
                     display="flex"
                     justifyContent="space-between"
                     alignItems="center"
-                    sx={{ position: "relative", zIndex: 1 }}
                   >
                     <Typography
                       variant="h6"
-                      sx={{ fontWeight: 700, color: "#fff" }}
+                      sx={{ fontWeight: 700, color: theme.palette.primary.main }}
                     >
                       {amount.toFixed(8)} BTC
                     </Typography>
@@ -608,13 +853,12 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       <Chip
                         label={formatScriptType(output.scriptType)}
                         size="small"
+                        variant="outlined"
                         sx={{
                           height: 22,
-                          fontSize: "0.7rem",
-                          backgroundColor: "rgba(255,255,255,0.25)",
-                          color: "#fff",
-                          fontWeight: 600,
-                          backdropFilter: "blur(10px)",
+                          fontSize: "0.65rem",
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.secondary,
                         }}
                       />
                     )}
@@ -627,45 +871,48 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {/* Fee "Output" */}
           <Box
             sx={{
-              background: `linear-gradient(135deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
-              borderRadius: 2,
+              backgroundColor: "#fff",
+              border: `1px dashed ${theme.palette.divider}`,
+              borderRadius: 1,
               p: 2,
               position: "relative",
-              overflow: "hidden",
-              boxShadow: `0 6px 20px ${theme.palette.error.main}30`,
               transition: "all 0.2s ease",
               "&:hover": {
-                transform: "translateX(-4px)",
-                boxShadow: `0 8px 28px ${theme.palette.error.main}40`,
+                backgroundColor: theme.palette.grey[50],
               },
               "&::before": {
                 content: '""',
                 position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                background:
-                  "radial-gradient(circle at top left, rgba(255,255,255,0.2) 0%, transparent 60%)",
-                pointerEvents: "none",
+                left: -10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                backgroundColor: theme.palette.text.secondary,
+                border: "2px solid #fff",
+                opacity: 0.5,
+                display: { xs: "none", md: "block" },
+                zIndex: 2,
               },
             }}
+            ref={feeRef}
           >
             <Box
               display="flex"
               alignItems="center"
               gap={1}
               mb={0.5}
-              sx={{ position: "relative", zIndex: 1 }}
             >
-              <LocalGasStation sx={{ fontSize: 18, color: "#fff" }} />
+              <LocalGasStation sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
               <Typography
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: "#fff",
+                  color: theme.palette.text.secondary,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
+                  fontSize: "0.7rem",
                 }}
               >
                 Network Fee
@@ -674,52 +921,155 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: "rgba(255,255,255,0.9)",
-                fontSize: "0.75rem",
+                color: theme.palette.text.secondary,
+                fontSize: "0.7rem",
                 mb: 0.5,
-                position: "relative",
-                zIndex: 1,
               }}
             >
-              Paid to miners
+              To miners
             </Typography>
             <Typography
-              variant="h6"
+              variant="body1"
               sx={{
                 fontWeight: 700,
-                color: "#fff",
-                position: "relative",
-                zIndex: 1,
+                color: theme.palette.text.primary,
               }}
             >
               {flowData.feeBtc.toFixed(8)} BTC
             </Typography>
           </Box>
         </Box>
+      </Box>
 
-        {/* SUMMARY Column */}
+      {/* Legend */}
+      <Box
+        sx={{
+          mt: 3,
+          pt: 2,
+          borderTop: `1px solid ${theme.palette.divider}`,
+        }}
+      >
         <Box
           sx={{
-            flex: { xs: "1", md: "0 0 26%" },
-            width: { xs: "100%", md: "auto" },
             display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            alignSelf: "flex-start",
+            gap: { xs: 2, sm: 3 },
+            flexWrap: "wrap",
+            justifyContent: "center",
+            mb: 2,
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                border: "2px solid #ea9c0d",
+                backgroundColor: "#ea9c0d",
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+              Payment Output
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                border: `2px solid ${theme.palette.primary.main}`,
+                backgroundColor: theme.palette.primary.main,
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+              Change Output
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                border: `1px dashed ${theme.palette.divider}`,
+                backgroundColor: theme.palette.text.secondary,
+                borderRadius: 0.5,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+              Network Fee
+            </Typography>
+          </Box>
+        </Box>
+        
+        {/* Dust Status Explanation */}
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            backgroundColor: theme.palette.grey[50],
+            borderRadius: 1,
+            border: `1px solid ${theme.palette.divider}`,
           }}
         >
           <Typography
-            variant="subtitle1"
+            variant="caption"
             sx={{
               fontWeight: 600,
               color: theme.palette.text.secondary,
-              mb: 0,
+              display: "block",
+              mb: 1,
             }}
           >
-            Summary
+            Input Dust Status:
+          </Typography>
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Economical" color="success" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Cost-effective to spend
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Warning" color="warning" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Consider batching
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Chip label="Dust" color="error" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                = Costs more to spend than value
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+        {/* SUMMARY Section - Moved Below */}
+      <Box
+        sx={{
+          mt: 3,
+          mb: 3,
+        }}
+      >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              color: theme.palette.text.primary,
+              mb: 2,
+            }}
+          >
+            Transaction Summary
           </Typography>
 
-          {/* Summary Cards */}
+          {/* Summary Cards in Grid */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+              gap: 2,
+            }}
+          >
           <Paper
             elevation={0}
             sx={{
@@ -780,7 +1130,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 variant="h5"
                 sx={{
                   fontWeight: 700,
-                  color: theme.palette.success.main,
+                  color: theme.palette.primary.main,
                   mt: 0.5,
                 }}
               >
@@ -867,107 +1217,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
               {flowData.totalInputBtc.toFixed(8)} BTC
             </Typography>
           </Box>
-        </Box>
-      </Box>
-
-      {/* Legend */}
-      <Box
-        sx={{
-          mt: 3,
-          pt: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            gap: { xs: 2, sm: 3 },
-            flexWrap: "wrap",
-            justifyContent: "center",
-            mb: 2,
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 24,
-                height: 16,
-                background: "linear-gradient(135deg, #ea9c0d 0%, #f4b942 100%)",
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              Payment to Recipient
-            </Typography>
-          </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 24,
-                height: 16,
-                background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.light} 100%)`,
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              Change (Your Wallet)
-            </Typography>
-          </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 24,
-                height: 16,
-                background: `linear-gradient(135deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              Network Fee (Miners)
-            </Typography>
-          </Box>
-        </Box>
-        
-        {/* Dust Status Explanation */}
-        <Box
-          sx={{
-            mt: 2,
-            p: 2,
-            backgroundColor: theme.palette.grey[50],
-            borderRadius: 1,
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              fontWeight: 600,
-              color: theme.palette.text.secondary,
-              display: "block",
-              mb: 1,
-            }}
-          >
-            Input Dust Status:
-          </Typography>
-          <Box display="flex" gap={2} flexWrap="wrap">
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Economical" color="success" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                = Cost-effective to spend
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Warning" color="warning" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                = Consider batching
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Dust" color="error" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                = Costs more to spend than value
-              </Typography>
-            </Box>
           </Box>
         </Box>
       </Box>
