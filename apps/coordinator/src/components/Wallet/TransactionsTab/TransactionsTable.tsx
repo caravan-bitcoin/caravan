@@ -248,7 +248,6 @@ const TransactionTableRow: React.FC<{
   renderActions?: (tx: TransactionT) => React.ReactNode;
 }> = ({
   tx,
-  showAcceleration,
   network,
   onClickTransaction,
   onAccelerateTransaction,
