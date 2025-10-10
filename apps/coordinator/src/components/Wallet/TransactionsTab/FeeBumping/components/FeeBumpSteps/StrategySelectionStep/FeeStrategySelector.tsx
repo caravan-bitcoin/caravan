@@ -7,9 +7,11 @@ import {
   Alert,
   AlertTitle,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
+import { InfoOutlined } from "@mui/icons-material";
 import { FeeBumpStrategy } from "@caravan/fees";
 import { useAccelerationModal } from "../../../components/AccelerationModalContext";
 import { FeePriority, useFeeEstimates } from "clients/fees";
@@ -27,7 +29,8 @@ import { StrategyRadioGroup } from "./StrategyRadioGroup";
 export const FeeStrategySelector: React.FC = () => {
   const {
     setStrategy,
-    state: { selectedStrategy },
+    setEnableFullRBF,
+    state: { selectedStrategy, enableFullRBF },
     analysis,
     cpfp,
   } = useAccelerationModal();
@@ -37,7 +40,7 @@ export const FeeStrategySelector: React.FC = () => {
   if (!analysis?.recommendedStrategy || isLoadingFeeEstimates) {
     return null;
   }
-
+  const signalsRBF = analysis?.isRBFSignaled ?? false;
   // Memoize strategy configuration array to prevent re-creation on every render
   const strategyConfigs = useMemo(
     () => [
@@ -48,7 +51,7 @@ export const FeeStrategySelector: React.FC = () => {
           "Creates a new transaction that replaces the original with a higher fee",
         icon: <CompareArrowsIcon fontSize="large" />,
         learnMoreUrl: "https://bitcoinops.org/en/topics/replace-by-fee/",
-        disabled: !analysis.canRBF,
+        disabled: !analysis.canRBF && !enableFullRBF,
         disabledReason:
           "This transaction does not signal RBF and cannot be replaced",
         minimumFee: new BigNumber(analysis.estimatedRBFFee).toNumber(),
@@ -74,7 +77,7 @@ export const FeeStrategySelector: React.FC = () => {
               .toNumber(),
       },
     ],
-    [analysis],
+    [analysis, enableFullRBF],
   );
 
   // Auto-select the first strategy if none is selected
@@ -91,6 +94,50 @@ export const FeeStrategySelector: React.FC = () => {
       <Typography variant="h6" gutterBottom>
         Select Fee Bumping Strategy
       </Typography>
+
+      {!signalsRBF && (
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            backgroundColor: "rgba(255, 152, 0, 0.1)",
+            borderRadius: 1,
+            border: "1px solid rgba(255, 152, 0, 0.3)",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+            <input
+              type="checkbox"
+              checked={enableFullRBF}
+              onChange={(e) => setEnableFullRBF(e.target.checked)}
+              id="enable-full-rbf"
+              style={{ marginRight: 8, cursor: "pointer" }}
+            />
+            <label
+              htmlFor="enable-full-rbf"
+              style={{ cursor: "pointer", fontWeight: 500 }}
+            >
+              Enable Full RBF (Override RBF signaling)
+            </label>
+            <Tooltip title="This transaction does not signal RBF. Enabling Full RBF attempts to replace it anyway, but success depends on miner/node policies.">
+              <InfoOutlined
+                sx={{ ml: 1, fontSize: 18, color: "action.active" }}
+              />
+            </Tooltip>
+          </Box>
+
+          {enableFullRBF && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              <AlertTitle>⚠️ Full RBF Warning</AlertTitle>
+              <Typography variant="body2">
+                This transaction did not signal RBF. Using Full RBF may not be
+                accepted by all nodes. Success depends on miner and node
+                policies.
+              </Typography>
+            </Alert>
+          )}
+        </Box>
+      )}
 
       <Box mb={3}>
         {analysis.recommendedStrategy === FeeBumpStrategy.NONE && (

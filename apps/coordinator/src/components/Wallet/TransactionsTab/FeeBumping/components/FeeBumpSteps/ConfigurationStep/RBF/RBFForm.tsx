@@ -39,7 +39,7 @@ export const RBFForm: React.FC = () => {
     analysis,
     txHex,
     availableUtxos,
-    state: { rbfType, selectedStrategy },
+    state: { rbfType, selectedStrategy, enableFullRBF },
     setRbfType,
     setFeeBumpResult,
     nextStep,
@@ -65,11 +65,13 @@ export const RBFForm: React.FC = () => {
     transaction,
     txHex,
     availableUtxos,
+    enableFullRBF,
   );
   const { createAcceleratedRBF } = useCreateAcceleratedRBF(
     transaction,
     txHex,
     availableUtxos,
+    enableFullRBF,
   );
 
   const originalFee = transaction!.fee;
