@@ -212,6 +212,7 @@ export const useCreateAcceleratedRBF = (
   transaction: TransactionDetails,
   txHex: string,
   availableUtxos: UTXO[],
+  fullRBF: boolean = false,
 ) => {
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
@@ -245,7 +246,7 @@ export const useCreateAcceleratedRBF = (
         dustThreshold: DUST_IN_SATOSHIS.toString(),
         ...(changeAddress ? { changeAddress } : { changeIndex }),
         strict: false, // Less strict validation for better user experience
-        fullRBF: true, // TODO: Change to false and/or use configurable option
+        fullRBF,
         reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
         globalXpubs,
       };
@@ -272,6 +273,7 @@ export const useCreateCancelRBF = (
   transaction: TransactionDetails,
   txHex: string,
   availableUtxos: UTXO[],
+  fullRBF: boolean = false,
 ) => {
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
@@ -300,7 +302,7 @@ export const useCreateCancelRBF = (
         cancelAddress,
         dustThreshold: DUST_IN_SATOSHIS.toString(),
         strict: false,
-        fullRBF: true,
+        fullRBF,
         reuseAllInputs: true,
         requiredSigners,
         totalSigners,
