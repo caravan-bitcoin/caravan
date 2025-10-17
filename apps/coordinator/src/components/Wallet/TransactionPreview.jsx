@@ -31,6 +31,7 @@ import UnsignedTransaction from "../UnsignedTransaction";
 import {
   finalizeOutputs as finalizeOutputsAction,
   setChangeOutputMultisig as setChangeOutputMultisigAction,
+  SPEND_STEP_PREVIEW,
 } from "../../actions/transactionActions";
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
@@ -206,6 +207,9 @@ class TransactionPreview extends React.Component {
       outputs,
       signatureImporters,
       requiredSigners,
+      broadcasting,
+      txid,
+      spendingStep,
     } = this.props;
 
     // Get wallet script type for fingerprint analysis
@@ -236,17 +240,23 @@ class TransactionPreview extends React.Component {
         {/* Transaction Flow Diagram - Comprehensive View */}
         <Box mb={4}>
           {(() => {
-            // derive signing status without React hooks (class component)
-            let signedCount = 0;
+            // derive signing/broadcast status without React hooks (class component)
             const rs = requiredSigners || 0;
-            if (signatureImporters) {
-              signedCount = Object.values(signatureImporters).filter(
-                (importer) => importer && importer.finalized && importer.signature && importer.signature.length > 0,
-              ).length;
-            }
+            const signedCount = signatureImporters
+              ? Object.values(signatureImporters).filter(
+                  (importer) => importer && importer.finalized && importer.signature && importer.signature.length > 0,
+                ).length
+              : 0;
             const isFullySigned = signedCount >= rs && rs > 0;
             const hasPartial = signedCount > 0 && signedCount < rs;
-            this._flowStatus = isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+
+            if (broadcasting) {
+              this._flowStatus = "broadcast-pending";
+            } else if (txid && txid.length > 0) {
+              this._flowStatus = "unconfirmed";
+            } else {
+              this._flowStatus = isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+            }
             return null;
           })()}
           <TransactionFlowDiagram
@@ -278,15 +288,17 @@ class TransactionPreview extends React.Component {
                 Edit Transaction
               </Button>
             </Grid>
-            <Grid item>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSignTransaction}
-              >
-                Sign Transaction
-              </Button>
-            </Grid>
+            {spendingStep === SPEND_STEP_PREVIEW && (
+              <Grid item>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSignTransaction}
+                >
+                  Sign Transaction
+                </Button>
+              </Grid>
+            )}
             {unsignedPSBT && (
               <Grid item>
                 <Button
@@ -339,6 +351,9 @@ function mapStateToProps(state) {
     requiredSigners: state.settings.requiredSigners,
     addressType: state.settings.addressType,
     totalSigners: state.settings.totalSigners,
+    txid: state.spend.transaction.txid,
+    broadcasting: state.spend.transaction.broadcasting,
+    spendingStep: state.spend.transaction.spendingStep,
   };
 }
 

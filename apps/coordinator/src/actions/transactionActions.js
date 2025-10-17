@@ -51,6 +51,7 @@ export const SET_CHANGE_ADDRESS = "SET_CHANGE_ADDRESS";
 export const SET_SIGNING_KEY = "SET_SIGNING_KEY";
 export const SET_SPEND_STEP = "SET_SPEND_STEP";
 export const SET_BALANCE_ERROR = "SET_BALANCE_ERROR";
+export const SET_BROADCASTING = "SET_BROADCASTING";
 export const SPEND_STEP_CREATE = 0;
 export const SPEND_STEP_PREVIEW = 1;
 export const SPEND_STEP_SIGN = 2;
@@ -234,6 +235,13 @@ export function setTXID(txid) {
   return {
     type: SET_TXID,
     value: txid,
+  };
+}
+
+export function setBroadcasting(value) {
+  return {
+    type: SET_BROADCASTING,
+    value,
   };
 }
 

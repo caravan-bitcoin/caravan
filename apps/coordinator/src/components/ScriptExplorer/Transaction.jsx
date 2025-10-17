@@ -20,7 +20,7 @@ import { OpenInNew } from "@mui/icons-material";
 import { updateBlockchainClient } from "../../actions/clientActions";
 import Copyable from "../Copyable";
 import { externalLink } from "utils/ExternalLink";
-import { setTXID } from "../../actions/transactionActions";
+import { setTXID, setBroadcasting } from "../../actions/transactionActions";
 import {
   convertLegacyInput,
   convertLegacyOutput,
@@ -76,12 +76,13 @@ class Transaction extends React.Component {
   };
 
   handleBroadcast = async () => {
-    const { getBlockchainClient, setTxid } = this.props;
+    const { getBlockchainClient, setTxid, setBroadcastingFlag } = this.props;
     const client = await getBlockchainClient();
     const signedTransaction = this.buildSignedTransaction();
     let error = "";
     let txid = "";
     this.setState({ broadcasting: true });
+    setBroadcastingFlag(true);
     try {
       txid = await client.broadcastTransaction(signedTransaction);
     } catch (e) {
@@ -91,6 +92,7 @@ class Transaction extends React.Component {
     } finally {
       this.setState({ txid, error, broadcasting: false });
       setTxid(txid);
+      setBroadcastingFlag(false);
     }
   };
 
@@ -174,6 +176,7 @@ function mapStateToProps(state) {
 const mapDispatchToProps = {
   setTxid: setTXID,
   getBlockchainClient: updateBlockchainClient,
+  setBroadcastingFlag: setBroadcasting,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transaction);
