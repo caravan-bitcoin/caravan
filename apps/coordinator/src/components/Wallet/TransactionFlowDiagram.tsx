@@ -8,6 +8,8 @@ import {
   useTheme,
   Button,
   IconButton,
+  Drawer,
+  Divider,
 } from "@mui/material";
 import {
   ArrowForward,
@@ -19,6 +21,7 @@ import {
   ExpandLess,
   OpenInNew,
   ContentCopy,
+  Close,
 } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import { satoshisToBitcoins, blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
@@ -69,7 +72,8 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   confirmations,
 }) => {
   const theme = useTheme();
-  const [showAllInputs, setShowAllInputs] = useState(false);
+  const [inputsDrawerOpen, setInputsDrawerOpen] = useState(false);
+  const [outputsDrawerOpen, setOutputsDrawerOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const centerRef = useRef<HTMLDivElement | null>(null);
@@ -176,7 +180,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   useLayoutEffect(() => {
     computePaths();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAllInputs, inputs.length, outputs.length]);
+  }, [inputs.length, outputs.length]);
 
   useEffect(() => {
     const onResize = () => computePaths();
@@ -375,6 +379,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             />
           </Box>
 
+          {(() => { inputRefs.current = []; return null; })()}
           <Box
             sx={{
               display: "flex",
@@ -382,7 +387,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
               gap: 1.5,
             }}
           >
-            {inputs.slice(0, showAllInputs ? inputs.length : 3).map((input, idx) => {
+            {inputs.slice(0, 4).map((input, idx) => {
               const inputAmount = BigNumber(
                 satoshisToBitcoins(input.amountSats.toString())
               );
@@ -490,9 +495,9 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
               );
             })}
 
-            {inputs.length > 3 && (
+            {inputs.length > 4 && (
               <Button
-                onClick={() => setShowAllInputs(!showAllInputs)}
+                onClick={() => setInputsDrawerOpen(true)}
                 sx={{
                   backgroundColor: "rgba(255, 255, 255, 0.95)",
                   borderRadius: 1.5,
@@ -510,7 +515,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 }}
               >
                 <Box display="flex" alignItems="center" gap={1} justifyContent="center">
-                  {showAllInputs ? <ExpandLess /> : <ExpandMore />}
+                  <ExpandMore />
                   <Typography
                     variant="body2"
                     sx={{
@@ -518,9 +523,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       fontWeight: 600,
                     }}
                   >
-                    {showAllInputs 
-                      ? "Show less" 
-                      : `+${inputs.length - 3} more input${inputs.length - 3 > 1 ? "s" : ""}`}
+                    {`+${inputs.length - 4} more input${inputs.length - 4 > 1 ? "s" : ""}`}
                   </Typography>
                 </Box>
               </Button>
@@ -626,8 +629,9 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             </Typography>
           </Box>
 
-          {/* Recipient Outputs */}
-          {flowData.recipientOutputs.map((output, idx) => {
+          {/* Recipient Outputs (cap 4 inline) */}
+          {(() => { recipientOutputRefs.current = []; return null; })()}
+          {flowData.recipientOutputs.slice(0, 4).map((output, idx) => {
             const amount = BigNumber(output.amount);
               return (
               <Box key={`recipient-${idx}`}>
@@ -749,6 +753,40 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             );
           })}
 
+          {flowData.recipientOutputs.length > 4 && (
+            <Button
+              onClick={() => setOutputsDrawerOpen(true)}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                borderRadius: 1.5,
+                p: 1.5,
+                textAlign: "center",
+                position: "relative",
+                zIndex: 1,
+                width: "100%",
+                textTransform: "none",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 255, 255, 1)",
+                  transform: "translateX(4px)",
+                },
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1} justifyContent="center">
+                <ExpandMore />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    fontWeight: 600,
+                  }}
+                >
+                  {`+${flowData.recipientOutputs.length - 4} more output${flowData.recipientOutputs.length - 4 > 1 ? "s" : ""}`}
+                </Typography>
+              </Box>
+            </Button>
+          )}
+
           {/* Change Outputs */}
           {flowData.changeOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
@@ -864,6 +902,111 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     )}
                   </Box>
                 </Box>
+
+    {/* Inputs Drawer */}
+    <Drawer
+      anchor="right"
+      open={inputsDrawerOpen}
+      onClose={() => setInputsDrawerOpen(false)}
+      PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>All Inputs ({flowData.inputCount})</Typography>
+        <IconButton onClick={() => setInputsDrawerOpen(false)} sx={{ color: "inherit" }}>
+          <Close />
+        </IconButton>
+      </Box>
+      <Divider />
+      <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+        {inputs.map((input, idx) => {
+          const inputAmount = BigNumber(satoshisToBitcoins(input.amountSats.toString()));
+          const scriptType =
+            input.multisig?.name?.includes("p2wsh")
+              ? "P2WSH"
+              : input.multisig?.name?.includes("p2sh")
+                ? "P2SH"
+                : "Unknown";
+          return (
+            <Box
+              key={`drawer-input-${input.txid}-${input.index}-${idx}`}
+              sx={{
+                backgroundColor: "#fff",
+                border: `2px solid ${theme.palette.divider}`,
+                borderRadius: 1,
+                p: 1.5,
+              }}
+            >
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={0.5}>
+                <Box display="flex" alignItems="center" gap={0.5} flex={1}>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500, fontFamily: "monospace", fontSize: "0.7rem" }}>
+                    {formatAddress(input.txid)}:{input.index}
+                  </Typography>
+                  <IconButton size="small" href={blockExplorerTransactionURL(input.txid, network as Network)} target="_blank" rel="noopener noreferrer" sx={{ padding: 0.25, "& svg": { fontSize: "0.875rem" } }}>
+                    <OpenInNew fontSize="inherit" />
+                  </IconButton>
+                </Box>
+                <Chip label={scriptType} size="small" sx={{ height: 20, fontSize: "0.65rem", backgroundColor: getScriptTypeColor(scriptType), color: "#fff", fontWeight: 600 }} />
+              </Box>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
+                  {inputAmount.toFixed(8)} BTC
+                </Typography>
+                <Box sx={{ "& .MuiChip-root": { height: 22, fontSize: "0.7rem" } }}>
+                  <DustChip amountSats={parseInt(input.amountSats)} scriptType={input.multisig?.name} />
+                </Box>
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </Drawer>
+
+    {/* Outputs Drawer (recipient outputs only) */}
+    <Drawer
+      anchor="right"
+      open={outputsDrawerOpen}
+      onClose={() => setOutputsDrawerOpen(false)}
+      PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>All Payment Outputs ({flowData.recipientOutputs.length})</Typography>
+        <IconButton onClick={() => setOutputsDrawerOpen(false)} sx={{ color: "inherit" }}>
+          <Close />
+        </IconButton>
+      </Box>
+      <Divider />
+      <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+        {flowData.recipientOutputs.map((output, idx) => {
+          const amount = BigNumber(output.amount);
+          return (
+            <Box key={`drawer-recipient-${idx}`} sx={{ backgroundColor: "#fff", border: `2px solid #ea9c0d`, borderRadius: 1, p: 2 }}>
+              <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
+                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", letterSpacing: 0.5, fontSize: "0.7rem" }}>Payment</Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={0.5} mb={1}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontFamily: "monospace", fontSize: "0.75rem" }}>
+                  {formatAddress(output.address)}
+                </Typography>
+                <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
+                  <IconButton size="small" onClick={() => handleCopyAddress(output.address)} sx={{ padding: 0.25, color: theme.palette.text.secondary, "&:hover": { color: theme.palette.primary.main }, "& svg": { fontSize: "0.75rem" } }}>
+                    <ContentCopy fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6" sx={{ fontWeight: 700, color: "#ea9c0d" }}>
+                  {amount.toFixed(8)} BTC
+                </Typography>
+                {output.scriptType && (
+                  <Chip label={formatScriptType(output.scriptType)} size="small" variant="outlined" sx={{ height: 22, fontSize: "0.65rem", borderColor: theme.palette.divider, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </Drawer>
               </Box>
             );
           })}
