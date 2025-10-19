@@ -5,7 +5,7 @@ import {
   UTXO,
   Input,
   Slice,
-  convertTxidToLittleEndian,
+  reverseTxidEndianness,
   getSequenceForInput,
   getInputIdentifiersFromPsbt,
   mapSignaturesToImporters,
@@ -52,7 +52,7 @@ export const selectAvailableInputsFromPSBT = createSelector(
     // Return inputs ordered to match the PSBT input order
     const orderedInputs: Input[] = [];
     const psbtInputIdsInOrder: string[] = psbt.txInputs.map((txIn) =>
-      createInputIdentifier(convertTxidToLittleEndian(txIn.hash), txIn.index),
+      createInputIdentifier(reverseTxidEndianness(txIn.hash), txIn.index),
     );
 
     psbtInputIdsInOrder.forEach((id) => {

@@ -105,7 +105,7 @@ export interface CaravanMultisig {
 /**
  * Converts transaction ID from big-endian to little-endian format
  */
-export const convertTxidToLittleEndian = (hash: Buffer): string =>
+export const reverseTxidEndianness = (hash: Buffer): string =>
   reverseBuffer(hash).toString("hex");
 
 /**
@@ -212,7 +212,7 @@ export const getSequenceForInput = (
 ): number | undefined => {
   return psbt.txInputs.find((input) => {
     const identifier = createInputIdentifier(
-      convertTxidToLittleEndian(input.hash),
+      reverseTxidEndianness(input.hash),
       input.index,
     );
     return identifier === inputIdentifier;
@@ -229,7 +229,7 @@ export const getInputIdentifiersFromPsbt = (psbt: Psbt): Set<string> => {
          * But PSBTs will need txid to be in little-endian format to ensure compatibility with Bitcoin's
          * internal data structures and processing so here we convert the txid to little-endian format
          */
-        convertTxidToLittleEndian(input.hash),
+        reverseTxidEndianness(input.hash),
         input.index,
       );
     }),
