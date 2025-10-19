@@ -231,24 +231,30 @@ export const RBFForm: React.FC = () => {
     [minimumFeeRate],
   );
 
-  const handleCancelAddressSelectionChange = (value: string) => {
-    if (value === "custom") {
-      setCancelAddressSelectionType("custom");
+  const handleCancelSelectionTypeChange = (type: "predefined" | "custom") => {
+    setCancelAddressSelectionType(type);
+    if (type === "custom") {
       setCancelAddress("");
-    } else {
-      setCancelAddressSelectionType("predefined");
-      setCancelAddress(value);
+    } else if (changeAddresses.length > 0) {
+      setCancelAddress(changeAddresses[0]);
     }
   };
 
-  const handleChangeAddressSelectionChange = (value: string) => {
-    if (value === "custom") {
-      setChangeAddressSelectionType("custom");
+  const handleChangeSelectionTypeChange = (type: "predefined" | "custom") => {
+    setChangeAddressSelectionType(type);
+    if (type === "custom") {
       setChangeAddress("");
-    } else {
-      setChangeAddressSelectionType("predefined");
-      setChangeAddress(value);
+    } else if (changeAddresses.length > 0) {
+      setChangeAddress(changeAddresses[0]);
     }
+  };
+
+  const handleCancelAddressSelectionChange = (value: string) => {
+    setCancelAddress(value);
+  };
+
+  const handleChangeAddressSelectionChange = (value: string) => {
+    setChangeAddress(value);
   };
 
   const handleCancelAddressChange = (
@@ -275,17 +281,18 @@ export const RBFForm: React.FC = () => {
     currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
 
   React.useEffect(() => {
+    // Only initialize if we have addresses and BOTH states are still at their default
     if (changeAddresses.length > 0) {
-      if (!cancelAddress) {
+      // Only set cancel address if it's empty AND we're in predefined mode
+      if (!cancelAddress && cancelAddressSelectionType === "predefined") {
         setCancelAddress(changeAddresses[0]);
-        setCancelAddressSelectionType("predefined");
       }
-      if (!changeAddress) {
+      // Only set change address if it's empty AND we're in predefined mode
+      if (!changeAddress && changeAddressSelectionType === "predefined") {
         setChangeAddress(changeAddresses[0]);
-        setChangeAddressSelectionType("predefined");
       }
     }
-  }, [changeAddresses, cancelAddress, changeAddress]);
+  }, [changeAddresses]);
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -313,6 +320,8 @@ export const RBFForm: React.FC = () => {
         onCancelAddressSelectionChange={handleCancelAddressSelectionChange}
         changeAddressSelectionType={changeAddressSelectionType}
         onChangeAddressSelectionChange={handleChangeAddressSelectionChange}
+        onCancelSelectionTypeChange={handleCancelSelectionTypeChange}
+        onChangeSelectionTypeChange={handleChangeSelectionTypeChange}
       />
 
       <Divider sx={{ my: 2 }} />

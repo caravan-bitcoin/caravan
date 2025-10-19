@@ -9,6 +9,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Chip,
 } from "@mui/material";
 import { RBF_TYPES, RbfType } from "../../../../types";
 
@@ -27,8 +31,10 @@ interface AddressInputSectionProps {
   addressOptions: AddressOption[];
   cancelAddressSelectionType: "predefined" | "custom";
   onCancelAddressSelectionChange: (value: string) => void;
+  onCancelSelectionTypeChange: (type: "predefined" | "custom") => void;
   changeAddressSelectionType: "predefined" | "custom";
   onChangeAddressSelectionChange: (value: string) => void;
+  onChangeSelectionTypeChange: (type: "predefined" | "custom") => void;
 }
 
 export const AddressInputSection: React.FC<AddressInputSectionProps> =
@@ -42,44 +48,108 @@ export const AddressInputSection: React.FC<AddressInputSectionProps> =
       addressOptions,
       cancelAddressSelectionType,
       onCancelAddressSelectionChange,
+      onCancelSelectionTypeChange,
       changeAddressSelectionType,
       onChangeAddressSelectionChange,
+      onChangeSelectionTypeChange,
     }) => {
       const isCancel = rbfType === RBF_TYPES.CANCEL;
       const hasAddressError = isCancel && !cancelAddress.trim();
 
+      const predefinedAddresses = addressOptions.filter(
+        (opt) => opt.type === "predefined",
+      );
+
       if (isCancel) {
-        // Cancel Address Section with Dropdown
+        // Cancel Address Section
         return (
           <Box mb={3}>
             <Typography variant="subtitle1" gutterBottom fontWeight="medium">
               Cancel Address
             </Typography>
 
-            {/* Dropdown for address selection */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="cancel-address-select-label">
-                Select Cancel Address
-              </InputLabel>
-              <Select
-                labelId="cancel-address-select-label"
-                value={
-                  cancelAddressSelectionType === "custom"
-                    ? "custom"
-                    : cancelAddress
+            {/* Radio Group for Selection Type */}
+            <RadioGroup
+              value={cancelAddressSelectionType}
+              onChange={(e) => {
+                const newType = e.target.value as "predefined" | "custom";
+                onCancelSelectionTypeChange(newType);
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="predefined"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body2">Use wallet address</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Select from your change addresses
+                    </Typography>
+                  </Box>
                 }
-                onChange={(e) => onCancelAddressSelectionChange(e.target.value)}
-                label="Select Cancel Address"
-              >
-                {addressOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body2">
+                      Enter custom address
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Manually specify a Bitcoin address
+                    </Typography>
+                  </Box>
+                }
+              />
+            </RadioGroup>
 
-            {/* Custom Address Input */}
+            {/* Show dropdown if predefined is selected */}
+            {cancelAddressSelectionType === "predefined" && (
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="cancel-address-select-label">
+                  Select Address
+                </InputLabel>
+                <Select
+                  labelId="cancel-address-select-label"
+                  value={cancelAddress}
+                  onChange={(e) =>
+                    onCancelAddressSelectionChange(e.target.value)
+                  }
+                  label="Select Address"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Chip
+                        label={`${selected.slice(0, 10)}...${selected.slice(-8)}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Box>
+                  )}
+                >
+                  {predefinedAddresses.map((option, index) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box>
+                        <Typography variant="body2">
+                          Address {index + 1}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          {option.value}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Show text field if custom is selected */}
             {cancelAddressSelectionType === "custom" && (
               <TextField
                 fullWidth
@@ -87,79 +157,138 @@ export const AddressInputSection: React.FC<AddressInputSectionProps> =
                 value={cancelAddress}
                 onChange={onCancelAddressChange}
                 error={hasAddressError}
-                placeholder="Enter the address to send all funds to"
+                placeholder="bc1q... or 1... or 3..."
                 helperText={
                   hasAddressError
                     ? "Cancel address is required"
-                    : "Enter an address where you want to send all funds (minus fees)"
+                    : "Enter a valid Bitcoin address to receive all funds (minus fees)"
                 }
                 required
-                sx={{ mb: 1 }}
+                sx={{ mb: 2, fontFamily: "monospace" }}
+                inputProps={{
+                  style: { fontFamily: "monospace" },
+                }}
               />
             )}
 
-            {/* Selected Address Display */}
-            {cancelAddressSelectionType === "predefined" && cancelAddress && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Selected: {cancelAddress}
-              </Typography>
-            )}
-
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning">
               This will cancel the original transaction and send all funds
               (minus fees) to this address.
             </Alert>
           </Box>
         );
       } else {
+        // Change Address Section (Accelerate)
         return (
           <Box mb={3}>
             <Typography variant="subtitle1" gutterBottom fontWeight="medium">
               Change Address (Optional)
             </Typography>
 
-            {/* Dropdown for address selection */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="change-address-select-label">
-                Select Change Address
-              </InputLabel>
-              <Select
-                labelId="change-address-select-label"
-                value={
-                  changeAddressSelectionType === "custom"
-                    ? "custom"
-                    : changeAddress || "custom"
+            {/* Radio Group for Selection Type */}
+            <RadioGroup
+              value={changeAddressSelectionType}
+              onChange={(e) => {
+                const newType = e.target.value as "predefined" | "custom";
+                onChangeSelectionTypeChange(newType);
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="predefined"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body2">Use wallet address</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Select from your change addresses
+                    </Typography>
+                  </Box>
                 }
-                onChange={(e) => onChangeAddressSelectionChange(e.target.value)}
-                label="Select Change Address"
-              >
-                {addressOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body2">
+                      Enter custom address
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Manually specify a Bitcoin address
+                    </Typography>
+                  </Box>
+                }
+              />
+            </RadioGroup>
 
-            {/* Custom Address Input */}
+            {/* Show dropdown if predefined is selected */}
+            {changeAddressSelectionType === "predefined" && (
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id="change-address-select-label">
+                  Select Change Address
+                </InputLabel>
+                <Select
+                  labelId="change-address-select-label"
+                  value={changeAddress}
+                  onChange={(e) =>
+                    onChangeAddressSelectionChange(e.target.value)
+                  }
+                  label="Select Change Address"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Chip
+                        label={`${selected.slice(0, 10)}...${selected.slice(-8)}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Box>
+                  )}
+                >
+                  {predefinedAddresses.map((option, index) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box>
+                        <Typography variant="body2">
+                          Change Address {index + 1}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontFamily: "monospace" }}
+                        >
+                          {option.value}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Show text field if custom is selected */}
             {changeAddressSelectionType === "custom" && (
               <TextField
                 fullWidth
                 label="Custom Change Address"
                 value={changeAddress}
                 onChange={onChangeAddressChange}
-                placeholder="Enter custom change address (optional)"
+                placeholder="bc1q... or 1... or 3... (optional)"
                 helperText="Leave empty to use the default change address from the transaction"
-                sx={{ mb: 1 }}
+                sx={{ mb: 2, fontFamily: "monospace" }}
+                inputProps={{
+                  style: { fontFamily: "monospace" },
+                }}
               />
             )}
 
-            {/* Selected Address Display */}
-            {changeAddressSelectionType === "predefined" && changeAddress && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Selected: {changeAddress}
+            {/* Info about change address */}
+            <Alert severity="info" sx={{ mt: 1 }}>
+              <Typography variant="body2">
+                The change address receives any leftover funds after sending the
+                payment and fees. Using a custom address is optional.
               </Typography>
-            )}
+            </Alert>
           </Box>
         );
       }

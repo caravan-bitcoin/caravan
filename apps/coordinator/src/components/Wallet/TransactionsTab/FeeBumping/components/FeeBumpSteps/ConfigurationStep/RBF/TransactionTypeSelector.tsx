@@ -28,8 +28,10 @@ interface TransactionTypeSelectorProps {
   addressOptions: AddressOption[];
   cancelAddressSelectionType: "predefined" | "custom";
   onCancelAddressSelectionChange: (value: string) => void;
+  onCancelSelectionTypeChange: (type: "predefined" | "custom") => void;
   changeAddressSelectionType: "predefined" | "custom";
   onChangeAddressSelectionChange: (value: string) => void;
+  onChangeSelectionTypeChange: (type: "predefined" | "custom") => void;
 }
 
 // Transaction option label component
@@ -59,8 +61,10 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
       addressOptions,
       cancelAddressSelectionType,
       onCancelAddressSelectionChange,
+      onCancelSelectionTypeChange,
       changeAddressSelectionType,
       onChangeAddressSelectionChange,
+      onChangeSelectionTypeChange,
     }) => {
       return (
         <>
@@ -112,6 +116,8 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
             onCancelAddressSelectionChange={onCancelAddressSelectionChange}
             changeAddressSelectionType={changeAddressSelectionType}
             onChangeAddressSelectionChange={onChangeAddressSelectionChange}
+            onCancelSelectionTypeChange={onCancelSelectionTypeChange}
+            onChangeSelectionTypeChange={onChangeSelectionTypeChange}
           />
 
           <Divider sx={{ my: 2 }} />
