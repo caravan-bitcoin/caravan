@@ -9,7 +9,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
+  Chip,
   Alert,
 } from "@mui/material";
 import { useSelector } from "react-redux";
@@ -53,9 +53,7 @@ export const CPFPForm: React.FC = () => {
   );
   const [changeAddress, setChangeAddress] = useState<string>("");
   const [, setCurrentFeeLevel] = useState<FeeLevelType>(FEE_LEVELS.MEDIUM);
-  const [addressSelectionType, setAddressSelectionType] = useState<
-    "predefined" | "custom"
-  >("predefined");
+
   // Error state
   const [error, setError] = useState<string>("");
   const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
@@ -169,45 +167,10 @@ export const CPFPForm: React.FC = () => {
     );
   }, [minimumFeeRate, feeEstimates]);
 
-  // Prepare address options for dropdown
-  const addressOptions = useMemo(() => {
-    const options = changeAddresses.map((addr, index) => ({
-      value: addr,
-      label: `Change Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
-      type: "predefined" as const,
-    }));
-
-    return [
-      ...options,
-      {
-        value: "custom",
-        label: "Enter Custom Address",
-        type: "custom" as const,
-      },
-    ];
-  }, [changeAddresses]);
-
-  const handleAddressSelectionChange = (value: string) => {
-    if (value === "custom") {
-      setAddressSelectionType("custom");
-      setChangeAddress("");
-    } else {
-      setAddressSelectionType("predefined");
-      setChangeAddress(value);
-    }
-  };
-
-  const handleCustomAddressChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setChangeAddress(event.target.value);
-  };
-
   // Set initial change address if available
   React.useEffect(() => {
     if (changeAddresses.length > 0 && !changeAddress) {
       setChangeAddress(changeAddresses[0]);
-      setAddressSelectionType("predefined");
     }
   }, [changeAddresses, changeAddress]);
 
@@ -265,42 +228,112 @@ export const CPFPForm: React.FC = () => {
 
       {/* Change Address Input */}
       <Box mb={3}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="change-address-select-label">
-            Change Address
+        <Typography variant="subtitle1" gutterBottom fontWeight="medium">
+          Change Address
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Select where to receive the remaining funds after fees
+        </Typography>
+
+        <FormControl fullWidth>
+          <InputLabel id="cpfp-change-address-label">
+            Select Change Address
           </InputLabel>
           <Select
-            labelId="change-address-select-label"
-            value={addressSelectionType === "custom" ? "custom" : changeAddress}
-            onChange={(e) => handleAddressSelectionChange(e.target.value)}
-            label="Change Address"
+            labelId="cpfp-change-address-label"
+            value={changeAddress}
+            onChange={(e) => setChangeAddress(e.target.value)}
+            label="Select Change Address"
+            renderValue={(selected) => (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Chip
+                  label={`Address ${changeAddresses.indexOf(selected) + 1}`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: "monospace",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {selected.slice(0, 12)}...{selected.slice(-8)}
+                </Typography>
+              </Box>
+            )}
           >
-            {addressOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
+            {changeAddresses.map((addr, index) => (
+              <MenuItem key={addr} value={addr}>
+                <Box sx={{ py: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 0.5,
+                    }}
+                  >
+                    <Chip
+                      label={`Address ${index + 1}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color: "text.secondary",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    {addr}
+                  </Typography>
+                </Box>
               </MenuItem>
             ))}
           </Select>
         </FormControl>
 
-        {/* Custom Address Input */}
-        {addressSelectionType === "custom" && (
-          <TextField
-            fullWidth
-            label="Custom Change Address"
-            value={changeAddress}
-            onChange={handleCustomAddressChange}
-            placeholder="Enter the address to receive the change"
-            helperText="Enter a custom address where the remaining funds will be sent after fees"
-            required
-          />
+        {/* Selected Address Display */}
+        {changeAddress && (
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              backgroundColor: "rgba(25, 118, 210, 0.08)",
+              borderRadius: 1,
+              border: "1px solid rgba(25, 118, 210, 0.3)",
+            }}
+          >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mb: 0.5, display: "block" }}
+            >
+              Selected Change Address:
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: "monospace",
+                fontWeight: 500,
+                wordBreak: "break-all",
+              }}
+            >
+              {changeAddress}
+            </Typography>
+          </Box>
         )}
 
-        {/* Selected Address Display */}
-        {addressSelectionType === "predefined" && changeAddress && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Selected: {changeAddress}
-          </Typography>
+        {changeAddresses.length === 0 && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            No change addresses available in your wallet
+          </Alert>
         )}
       </Box>
 
