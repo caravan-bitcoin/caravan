@@ -34,17 +34,9 @@ export const usePublicClientTransactions = () => {
     return walletAddresses.length > 0 ? walletAddresses : spentAddresses;
   }, [walletAddresses, spentSlices]);
 
-  // Create stable query key based on sorted addresses
-  const addressesKey = useMemo(() => {
-    return currentAddresses.slice().sort().join(",");
-  }, [currentAddresses]);
-
   const query = useQuery({
-    queryKey: [...transactionKeys.confirmedHistory(), addressesKey],
+    queryKey: [...transactionKeys.confirmedHistory(currentAddresses)],
     queryFn: async () => {
-      if (currentAddresses.length === 0) {
-        return [];
-      }
       // So we fetch all transactions in one call and let the blockchain client handle this efficiently
       const rawTransactions =
         await blockchainClient.getAddressTransactionHistory(
