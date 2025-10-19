@@ -17,6 +17,7 @@ import {
   getWalletAddresses,
   selectWalletConfig,
   getWalletSlices,
+  Slice,
 } from "selectors/wallet";
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -364,7 +365,7 @@ export const useCreateCPFP = (
         transaction,
         spendableOutputIndex,
         txHex,
-        walletSlices,
+        walletSlices as Slice[],
       ) as UTXO;
       const cpfpOptions: CPFPOptions = {
         originalTx: txHex,

@@ -8,6 +8,8 @@ import {
   Tooltip,
 } from "@mui/material";
 import { InfoOutlined } from "@mui/icons-material";
+import { useSelector } from "react-redux";
+import { getChangeAddresses } from "selectors/wallet";
 import {
   FeeLevelType,
   RBF_TYPES,
@@ -46,6 +48,7 @@ export const RBFForm: React.FC = () => {
   } = useAccelerationModal();
 
   const { data: feeEstimates } = useFeeEstimates();
+  const changeAddresses = useSelector(getChangeAddresses);
 
   const [feeBumpRate, setFeeBumpRate] = useState<number>(
     feeEstimates[FEE_LEVELS.MEDIUM],
@@ -56,6 +59,13 @@ export const RBFForm: React.FC = () => {
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
     FEE_LEVELS.MEDIUM,
   );
+
+  const [cancelAddressSelectionType, setCancelAddressSelectionType] = useState<
+    "predefined" | "custom"
+  >("predefined");
+  const [changeAddressSelectionType, setChangeAddressSelectionType] = useState<
+    "predefined" | "custom"
+  >("predefined");
 
   // Error state
   const [error, setError] = useState<string>("");
@@ -129,6 +139,23 @@ export const RBFForm: React.FC = () => {
       return false;
     }
   };
+
+  const addressOptions = useMemo(() => {
+    const options = changeAddresses.map((addr, index) => ({
+      value: addr,
+      label: `Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
+      type: "predefined" as const,
+    }));
+
+    return [
+      ...options,
+      {
+        value: "custom",
+        label: "Enter Custom Address",
+        type: "custom" as const,
+      },
+    ];
+  }, [changeAddresses]);
 
   const estimatedNewFee = useMemo(() => {
     if (!transaction || !feeBumpRate) return 0;
@@ -204,6 +231,26 @@ export const RBFForm: React.FC = () => {
     [minimumFeeRate],
   );
 
+  const handleCancelAddressSelectionChange = (value: string) => {
+    if (value === "custom") {
+      setCancelAddressSelectionType("custom");
+      setCancelAddress("");
+    } else {
+      setCancelAddressSelectionType("predefined");
+      setCancelAddress(value);
+    }
+  };
+
+  const handleChangeAddressSelectionChange = (value: string) => {
+    if (value === "custom") {
+      setChangeAddressSelectionType("custom");
+      setChangeAddress("");
+    } else {
+      setChangeAddressSelectionType("predefined");
+      setChangeAddress(value);
+    }
+  };
+
   const handleCancelAddressChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -227,6 +274,19 @@ export const RBFForm: React.FC = () => {
   const showCustomSlider =
     currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
 
+  React.useEffect(() => {
+    if (changeAddresses.length > 0) {
+      if (!cancelAddress) {
+        setCancelAddress(changeAddresses[0]);
+        setCancelAddressSelectionType("predefined");
+      }
+      if (!changeAddress) {
+        setChangeAddress(changeAddresses[0]);
+        setChangeAddressSelectionType("predefined");
+      }
+    }
+  }, [changeAddresses, cancelAddress, changeAddress]);
+
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>
@@ -248,6 +308,11 @@ export const RBFForm: React.FC = () => {
         onCancelAddressChange={handleCancelAddressChange}
         changeAddress={changeAddress}
         onChangeAddressChange={handleChangeAddressChange}
+        addressOptions={addressOptions}
+        cancelAddressSelectionType={cancelAddressSelectionType}
+        onCancelAddressSelectionChange={handleCancelAddressSelectionChange}
+        changeAddressSelectionType={changeAddressSelectionType}
+        onChangeAddressSelectionChange={handleChangeAddressSelectionChange}
       />
 
       <Divider sx={{ my: 2 }} />

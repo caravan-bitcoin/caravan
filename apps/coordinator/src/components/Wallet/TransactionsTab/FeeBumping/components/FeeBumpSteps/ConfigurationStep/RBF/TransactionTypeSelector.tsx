@@ -12,6 +12,12 @@ import {
 import { AddressInputSection } from "./AddressInputSection";
 import { RBF_TYPES, RbfType } from "../../../../types";
 
+interface AddressOption {
+  value: string;
+  label: string;
+  type: "predefined" | "custom";
+}
+
 interface TransactionTypeSelectorProps {
   rbfType: RbfType;
   onRbfTypeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -19,6 +25,11 @@ interface TransactionTypeSelectorProps {
   onCancelAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   changeAddress: string;
   onChangeAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  addressOptions: AddressOption[];
+  cancelAddressSelectionType: "predefined" | "custom";
+  onCancelAddressSelectionChange: (value: string) => void;
+  changeAddressSelectionType: "predefined" | "custom";
+  onChangeAddressSelectionChange: (value: string) => void;
 }
 
 // Transaction option label component
@@ -45,6 +56,11 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
       onCancelAddressChange,
       changeAddress,
       onChangeAddressChange,
+      addressOptions,
+      cancelAddressSelectionType,
+      onCancelAddressSelectionChange,
+      changeAddressSelectionType,
+      onChangeAddressSelectionChange,
     }) => {
       return (
         <>
@@ -91,6 +107,11 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
             onCancelAddressChange={onCancelAddressChange}
             changeAddress={changeAddress}
             onChangeAddressChange={onChangeAddressChange}
+            addressOptions={addressOptions}
+            cancelAddressSelectionType={cancelAddressSelectionType}
+            onCancelAddressSelectionChange={onCancelAddressSelectionChange}
+            changeAddressSelectionType={changeAddressSelectionType}
+            onChangeAddressSelectionChange={onChangeAddressSelectionChange}
           />
 
           <Divider sx={{ my: 2 }} />

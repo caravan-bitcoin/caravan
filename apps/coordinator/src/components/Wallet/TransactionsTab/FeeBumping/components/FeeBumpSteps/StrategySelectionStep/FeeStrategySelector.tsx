@@ -128,7 +128,7 @@ export const FeeStrategySelector: React.FC = () => {
 
           {enableFullRBF && (
             <Alert severity="warning" sx={{ mt: 1 }}>
-              <AlertTitle>⚠️ Full RBF Warning</AlertTitle>
+              <AlertTitle>Full RBF Warning</AlertTitle>
               <Typography variant="body2">
                 This transaction did not signal RBF. Using Full RBF may not be
                 accepted by all nodes. Success depends on miner and node
