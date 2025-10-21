@@ -9,7 +9,7 @@ import {
   Typography,
   Divider,
 } from "@mui/material";
-import { AddressInputSection } from "./AddressInputSection";
+import { AddressInputSection } from "../shared/AddressInputSection";
 import { RBF_TYPES, RbfType } from "../../../../types";
 
 interface AddressOption {
@@ -18,20 +18,19 @@ interface AddressOption {
   type: "predefined" | "custom";
 }
 
+interface AddressInputHook {
+  address: string;
+  selectionType: "predefined" | "custom";
+  handleSelectionTypeChange: (type: "predefined" | "custom") => void;
+  handleAddressChange: (value: string) => void;
+}
+
 interface TransactionTypeSelectorProps {
   rbfType: RbfType;
   onRbfTypeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  cancelAddress: string;
-  onCancelAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  changeAddress: string;
-  onChangeAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  cancelAddressInput: AddressInputHook;
+  changeAddressInput: AddressInputHook;
   addressOptions: AddressOption[];
-  cancelAddressSelectionType: "predefined" | "custom";
-  onCancelAddressSelectionChange: (value: string) => void;
-  onCancelSelectionTypeChange: (type: "predefined" | "custom") => void;
-  changeAddressSelectionType: "predefined" | "custom";
-  onChangeAddressSelectionChange: (value: string) => void;
-  onChangeSelectionTypeChange: (type: "predefined" | "custom") => void;
 }
 
 // Transaction option label component
@@ -54,18 +53,11 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
     ({
       rbfType,
       onRbfTypeChange,
-      cancelAddress,
-      onCancelAddressChange,
-      changeAddress,
-      onChangeAddressChange,
+      cancelAddressInput,
+      changeAddressInput,
       addressOptions,
-      cancelAddressSelectionType,
-      onCancelAddressSelectionChange,
-      onCancelSelectionTypeChange,
-      changeAddressSelectionType,
-      onChangeAddressSelectionChange,
-      onChangeSelectionTypeChange,
     }) => {
+      const isCancel = rbfType === RBF_TYPES.CANCEL;
       return (
         <>
           <Box mb={3}>
@@ -105,20 +97,37 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
 
           <Divider sx={{ my: 2 }} />
 
-          <AddressInputSection
-            rbfType={rbfType}
-            cancelAddress={cancelAddress}
-            onCancelAddressChange={onCancelAddressChange}
-            changeAddress={changeAddress}
-            onChangeAddressChange={onChangeAddressChange}
-            addressOptions={addressOptions}
-            cancelAddressSelectionType={cancelAddressSelectionType}
-            onCancelAddressSelectionChange={onCancelAddressSelectionChange}
-            changeAddressSelectionType={changeAddressSelectionType}
-            onChangeAddressSelectionChange={onChangeAddressSelectionChange}
-            onCancelSelectionTypeChange={onCancelSelectionTypeChange}
-            onChangeSelectionTypeChange={onChangeSelectionTypeChange}
-          />
+          {isCancel ? (
+            <AddressInputSection
+              title="Cancel Address"
+              description="Select where to receive all funds (minus fees)"
+              address={cancelAddressInput.address}
+              onAddressChange={cancelAddressInput.handleAddressChange}
+              addressOptions={addressOptions}
+              selectionType={cancelAddressInput.selectionType}
+              onSelectionTypeChange={
+                cancelAddressInput.handleSelectionTypeChange
+              }
+              required={true}
+              helperText="Enter a valid Bitcoin address to receive all funds (minus fees)"
+              warningMessage="This will cancel the original transaction and send all funds (minus fees) to this address."
+            />
+          ) : (
+            <AddressInputSection
+              title="Change Address"
+              description="Select where to receive the remaining funds after fees (optional)"
+              address={changeAddressInput.address}
+              onAddressChange={changeAddressInput.handleAddressChange}
+              addressOptions={addressOptions}
+              selectionType={changeAddressInput.selectionType}
+              onSelectionTypeChange={
+                changeAddressInput.handleSelectionTypeChange
+              }
+              required={false}
+              helperText="Leave empty to use the default change address from the transaction"
+              infoMessage="The change address receives any leftover funds after sending the payment and fees. Using a custom address is optional."
+            />
+          )}
 
           <Divider sx={{ my: 2 }} />
         </>

@@ -9,7 +9,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
   Alert,
 } from "@mui/material";
 import { useSelector } from "react-redux";
@@ -24,6 +23,8 @@ import { useCreateCPFP } from "../../../hooks";
 import { FeeComparison } from "../RBF/FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";
 import { CPFPFeeSlider } from "./CPFPFeeSlider";
+import { AddressInputSection } from "../shared/AddressInputSection";
+import { useAddressInput } from "../shared/useAddressInput";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -47,11 +48,9 @@ export const CPFPForm: React.FC = () => {
 
   const { data: feeEstimates } = useFeeEstimates();
   const changeAddresses = useSelector(getChangeAddresses);
-
   const [spendableOutputIndex, setSpendableOutputIndex] = useState<number>(
     changeOutputIndex || 0,
   );
-  const [changeAddress, setChangeAddress] = useState<string>("");
   const [, setCurrentFeeLevel] = useState<FeeLevelType>(FEE_LEVELS.MEDIUM);
 
   // Error state
@@ -59,6 +58,17 @@ export const CPFPForm: React.FC = () => {
   const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
 
   const { createCPFP } = useCreateCPFP(transaction!, txHex, availableUtxos);
+  const changeAddressInput = useAddressInput({
+    availableAddresses: changeAddresses,
+  });
+
+  const addressOptions = useMemo(() => {
+    return changeAddresses.map((addr, index) => ({
+      value: addr,
+      label: `Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
+      type: "predefined" as const,
+    }));
+  }, [changeAddresses]);
 
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
@@ -117,7 +127,7 @@ export const CPFPForm: React.FC = () => {
       return;
     }
 
-    if (!changeAddress.trim()) {
+    if (!changeAddressInput.address.trim()) {
       setError("Change address is required for CPFP");
       setShowErrorDetails(true);
       return;
@@ -133,7 +143,7 @@ export const CPFPForm: React.FC = () => {
       const psbtBase64 = createCPFP(
         feeBumpRate,
         spendableOutputIndex,
-        changeAddress,
+        changeAddressInput.address,
       );
 
       const result: FeeBumpResult = {
@@ -166,13 +176,6 @@ export const CPFPForm: React.FC = () => {
       1000, // Maximum ceiling of 1000 sats/vB
     );
   }, [minimumFeeRate, feeEstimates]);
-
-  // Set initial change address if available
-  React.useEffect(() => {
-    if (changeAddresses.length > 0 && !changeAddress) {
-      setChangeAddress(changeAddresses[0]);
-    }
-  }, [changeAddresses, changeAddress]);
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -227,115 +230,17 @@ export const CPFPForm: React.FC = () => {
       </Box>
 
       {/* Change Address Input */}
-      <Box mb={3}>
-        <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-          Change Address
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Select where to receive the remaining funds after fees
-        </Typography>
-
-        <FormControl fullWidth>
-          <InputLabel id="cpfp-change-address-label">
-            Select Change Address
-          </InputLabel>
-          <Select
-            labelId="cpfp-change-address-label"
-            value={changeAddress}
-            onChange={(e) => setChangeAddress(e.target.value)}
-            label="Select Change Address"
-            renderValue={(selected) => (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Chip
-                  label={`Address ${changeAddresses.indexOf(selected) + 1}`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontFamily: "monospace",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {selected.slice(0, 12)}...{selected.slice(-8)}
-                </Typography>
-              </Box>
-            )}
-          >
-            {changeAddresses.map((addr, index) => (
-              <MenuItem key={addr} value={addr}>
-                <Box sx={{ py: 1 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 0.5,
-                    }}
-                  >
-                    <Chip
-                      label={`Address ${index + 1}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: "monospace",
-                      color: "text.secondary",
-                      fontSize: "0.875rem",
-                    }}
-                  >
-                    {addr}
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Selected Address Display */}
-        {changeAddress && (
-          <Box
-            sx={{
-              mt: 2,
-              p: 2,
-              backgroundColor: "rgba(25, 118, 210, 0.08)",
-              borderRadius: 1,
-              border: "1px solid rgba(25, 118, 210, 0.3)",
-            }}
-          >
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ mb: 0.5, display: "block" }}
-            >
-              Selected Change Address:
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                fontFamily: "monospace",
-                fontWeight: 500,
-                wordBreak: "break-all",
-              }}
-            >
-              {changeAddress}
-            </Typography>
-          </Box>
-        )}
-
-        {changeAddresses.length === 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            No change addresses available in your wallet
-          </Alert>
-        )}
-      </Box>
+      <AddressInputSection
+        title="Change Address"
+        description="Select where to receive the remaining funds after fees"
+        address={changeAddressInput.address}
+        onAddressChange={changeAddressInput.handleAddressChange}
+        addressOptions={addressOptions}
+        selectionType={changeAddressInput.selectionType}
+        onSelectionTypeChange={changeAddressInput.handleSelectionTypeChange}
+        required={true}
+        infoMessage="The change address receives any leftover funds after the child transaction fee is paid."
+      />
 
       <Divider sx={{ my: 2 }} />
 
@@ -392,7 +297,7 @@ export const CPFPForm: React.FC = () => {
           onClick={handleProcessCPFP}
           size="large"
           disabled={
-            !changeAddress.trim() ||
+            !changeAddressInput.address.trim() ||
             spendableOutputs.length === 0 ||
             feeBumpRate < minimumFeeRate
           }

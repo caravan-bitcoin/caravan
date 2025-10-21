@@ -24,6 +24,7 @@ import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
 
 import { FeeLevelSelector } from "./FeeLevelSelector";
 import { TransactionTypeSelector } from "./TransactionTypeSelector";
+import { useAddressInput } from "../shared/useAddressInput";
 import { CustomFeeSlider } from "./CustomFeeSlider";
 import { FeeComparison } from "./FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";
@@ -53,19 +54,19 @@ export const RBFForm: React.FC = () => {
   const [feeBumpRate, setFeeBumpRate] = useState<number>(
     feeEstimates[FEE_LEVELS.MEDIUM],
   );
-  const [cancelAddress, setCancelAddress] = useState<string>("");
-  const [changeAddress, setChangeAddress] = useState<string>("");
+
   // Local state for fee level selection (UI state only)
   const [currentFeeLevel, setCurrentFeeLevel] = useState<FeeLevelType>(
     FEE_LEVELS.MEDIUM,
   );
 
-  const [cancelAddressSelectionType, setCancelAddressSelectionType] = useState<
-    "predefined" | "custom"
-  >("predefined");
-  const [changeAddressSelectionType, setChangeAddressSelectionType] = useState<
-    "predefined" | "custom"
-  >("predefined");
+  const cancelAddressInput = useAddressInput({
+    availableAddresses: changeAddresses,
+  });
+
+  const changeAddressInput = useAddressInput({
+    availableAddresses: changeAddresses,
+  });
 
   // Error state
   const [error, setError] = useState<string>("");
@@ -104,7 +105,12 @@ export const RBFForm: React.FC = () => {
       return false;
     }
 
-    if (rbfType === RBF_TYPES.CANCEL && !cancelAddress.trim()) {
+    const targetAddress =
+      rbfType === RBF_TYPES.CANCEL
+        ? cancelAddressInput.address
+        : changeAddressInput.address;
+
+    if (rbfType === RBF_TYPES.CANCEL && !targetAddress.trim()) {
       console.error("Cancel address is required for cancel RBF");
       alert("Cancel address is required");
       return false;
@@ -115,8 +121,8 @@ export const RBFForm: React.FC = () => {
       const estimatedNewFee = Math.ceil(txVsize * feeBumpRate).toString();
       const psbtBase64 =
         rbfType === RBF_TYPES.CANCEL
-          ? createCancelRBF(feeBumpRate, cancelAddress)
-          : createAcceleratedRBF(feeBumpRate, changeAddress);
+          ? createCancelRBF(feeBumpRate, cancelAddressInput.address)
+          : createAcceleratedRBF(feeBumpRate, changeAddressInput.address);
 
       const result: FeeBumpResult = {
         psbtBase64,
@@ -231,44 +237,6 @@ export const RBFForm: React.FC = () => {
     [minimumFeeRate],
   );
 
-  const handleCancelSelectionTypeChange = (type: "predefined" | "custom") => {
-    setCancelAddressSelectionType(type);
-    if (type === "custom") {
-      setCancelAddress("");
-    } else if (changeAddresses.length > 0) {
-      setCancelAddress(changeAddresses[0]);
-    }
-  };
-
-  const handleChangeSelectionTypeChange = (type: "predefined" | "custom") => {
-    setChangeAddressSelectionType(type);
-    if (type === "custom") {
-      setChangeAddress("");
-    } else if (changeAddresses.length > 0) {
-      setChangeAddress(changeAddresses[0]);
-    }
-  };
-
-  const handleCancelAddressSelectionChange = (value: string) => {
-    setCancelAddress(value);
-  };
-
-  const handleChangeAddressSelectionChange = (value: string) => {
-    setChangeAddress(value);
-  };
-
-  const handleCancelAddressChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setCancelAddress(event.target.value);
-  };
-
-  const handleChangeAddressChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setChangeAddress(event.target.value);
-  };
-
   // Check if current fee rate matches any predefined level
   const isCustomFeeRate = !Object.values(feeEstimates).some(
     (level) => Math.ceil(level) === feeBumpRate,
@@ -279,20 +247,6 @@ export const RBFForm: React.FC = () => {
   // 2. The current fee rate doesn't match any preset level
   const showCustomSlider =
     currentFeeLevel === FEE_LEVELS.CUSTOM || isCustomFeeRate;
-
-  React.useEffect(() => {
-    // Only initialize if we have addresses and BOTH states are still at their default
-    if (changeAddresses.length > 0) {
-      // Only set cancel address if it's empty AND we're in predefined mode
-      if (!cancelAddress && cancelAddressSelectionType === "predefined") {
-        setCancelAddress(changeAddresses[0]);
-      }
-      // Only set change address if it's empty AND we're in predefined mode
-      if (!changeAddress && changeAddressSelectionType === "predefined") {
-        setChangeAddress(changeAddresses[0]);
-      }
-    }
-  }, [changeAddresses]);
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -311,17 +265,9 @@ export const RBFForm: React.FC = () => {
       <TransactionTypeSelector
         rbfType={rbfType}
         onRbfTypeChange={handleRbfTypeChange}
-        cancelAddress={cancelAddress}
-        onCancelAddressChange={handleCancelAddressChange}
-        changeAddress={changeAddress}
-        onChangeAddressChange={handleChangeAddressChange}
+        cancelAddressInput={cancelAddressInput}
+        changeAddressInput={changeAddressInput}
         addressOptions={addressOptions}
-        cancelAddressSelectionType={cancelAddressSelectionType}
-        onCancelAddressSelectionChange={handleCancelAddressSelectionChange}
-        changeAddressSelectionType={changeAddressSelectionType}
-        onChangeAddressSelectionChange={handleChangeAddressSelectionChange}
-        onCancelSelectionTypeChange={handleCancelSelectionTypeChange}
-        onChangeSelectionTypeChange={handleChangeSelectionTypeChange}
       />
 
       <Divider sx={{ my: 2 }} />
@@ -391,7 +337,8 @@ export const RBFForm: React.FC = () => {
           size="large"
           disabled={
             rbfType === RBF_TYPES.CANCEL
-              ? !cancelAddress.trim() || feeBumpRate < minimumFeeRate
+              ? !cancelAddressInput.address.trim() ||
+                feeBumpRate < minimumFeeRate
               : feeBumpRate < minimumFeeRate
           }
         >
