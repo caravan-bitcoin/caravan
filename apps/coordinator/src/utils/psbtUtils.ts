@@ -212,6 +212,7 @@ export const getSequenceForInput = (
 ): number | undefined => {
   return psbt.txInputs.find((input) => {
     const identifier = createInputIdentifier(
+      // As we get the input txid from PSBT class , hence here we convert from little-endian to big-endian format
       reverseTxidEndianness(input.hash),
       input.index,
     );

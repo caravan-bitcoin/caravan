@@ -52,6 +52,7 @@ export const selectAvailableInputsFromPSBT = createSelector(
     // Return inputs ordered to match the PSBT input order
     const orderedInputs: Input[] = [];
     const psbtInputIdsInOrder: string[] = psbt.txInputs.map((txIn) =>
+      // Here we are converting from big-endian to little-endian format to have the txid in the same format as they are in PSBT class
       createInputIdentifier(reverseTxidEndianness(txIn.hash), txIn.index),
     );
 
