@@ -20,11 +20,14 @@ import {
 import { useFeeEstimates } from "clients/fees";
 import { TransactionDetails } from "@caravan/clients";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
-import { useCreateAcceleratedRBF, useCreateCancelRBF } from "../../../hooks";
+import {
+  useCreateAcceleratedRBF,
+  useCreateCancelRBF,
+  useAddressInput,
+} from "../../../hooks";
 
 import { FeeLevelSelector } from "./FeeLevelSelector";
 import { TransactionTypeSelector } from "./TransactionTypeSelector";
-import { useAddressInput } from "../shared/useAddressInput";
 import { CustomFeeSlider } from "./CustomFeeSlider";
 import { FeeComparison } from "./FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";

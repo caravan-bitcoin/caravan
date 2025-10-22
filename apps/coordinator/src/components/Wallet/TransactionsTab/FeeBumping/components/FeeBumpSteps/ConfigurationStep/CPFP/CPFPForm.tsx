@@ -19,12 +19,11 @@ import { useFeeEstimates } from "clients/fees";
 import { getChangeAddresses } from "selectors/wallet";
 import { FeeLevelType, FEE_LEVELS, FeeBumpResult } from "../../../../types";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
-import { useCreateCPFP } from "../../../hooks";
+import { useCreateCPFP, useAddressInput } from "../../../hooks";
 import { FeeComparison } from "../RBF/FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";
 import { CPFPFeeSlider } from "./CPFPFeeSlider";
-import { AddressInputSection } from "../shared/AddressInputSection";
-import { useAddressInput } from "../shared/useAddressInput";
+import { AddressInputSection } from "../AddressInputSection";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
