@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Box,
   FormControl,
@@ -9,7 +9,7 @@ import {
   Typography,
   Divider,
 } from "@mui/material";
-import { AddressInputSection } from "../shared/AddressInputSection";
+import { AddressInputSection } from "../AddressInputSection";
 import { RBF_TYPES, RbfType } from "../../../../types";
 
 interface AddressOption {
@@ -58,6 +58,43 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
       addressOptions,
     }) => {
       const isCancel = rbfType === RBF_TYPES.CANCEL;
+      const addressInputProps = useMemo(() => {
+        if (isCancel) {
+          // Configuration for cancel transactions
+          return {
+            title: "Cancel Address",
+            description: "Select where to receive all funds (minus fees)",
+            address: cancelAddressInput.address,
+            onAddressChange: cancelAddressInput.handleAddressChange,
+            addressOptions,
+            selectionType: cancelAddressInput.selectionType,
+            onSelectionTypeChange: cancelAddressInput.handleSelectionTypeChange,
+            required: true,
+            helperText:
+              "Enter a valid Bitcoin address to receive all funds (minus fees)",
+            warningMessage:
+              "This will cancel the original transaction and send all funds (minus fees) to this address.",
+          };
+        } else {
+          // Configuration for accelerate transactions
+          return {
+            title: "Change Address",
+            description:
+              "Select where to receive the remaining funds after fees (optional)",
+            address: changeAddressInput.address,
+            onAddressChange: changeAddressInput.handleAddressChange,
+            addressOptions,
+            selectionType: changeAddressInput.selectionType,
+            onSelectionTypeChange: changeAddressInput.handleSelectionTypeChange,
+            required: false,
+            helperText:
+              "Leave empty to use the default change address from the transaction",
+            infoMessage:
+              "The change address receives any leftover funds after sending the payment and fees. Using a custom address is optional.",
+          };
+        }
+      }, [isCancel, cancelAddressInput, changeAddressInput, addressOptions]);
+
       return (
         <>
           <Box mb={3}>
@@ -97,37 +134,7 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
 
           <Divider sx={{ my: 2 }} />
 
-          {isCancel ? (
-            <AddressInputSection
-              title="Cancel Address"
-              description="Select where to receive all funds (minus fees)"
-              address={cancelAddressInput.address}
-              onAddressChange={cancelAddressInput.handleAddressChange}
-              addressOptions={addressOptions}
-              selectionType={cancelAddressInput.selectionType}
-              onSelectionTypeChange={
-                cancelAddressInput.handleSelectionTypeChange
-              }
-              required={true}
-              helperText="Enter a valid Bitcoin address to receive all funds (minus fees)"
-              warningMessage="This will cancel the original transaction and send all funds (minus fees) to this address."
-            />
-          ) : (
-            <AddressInputSection
-              title="Change Address"
-              description="Select where to receive the remaining funds after fees (optional)"
-              address={changeAddressInput.address}
-              onAddressChange={changeAddressInput.handleAddressChange}
-              addressOptions={addressOptions}
-              selectionType={changeAddressInput.selectionType}
-              onSelectionTypeChange={
-                changeAddressInput.handleSelectionTypeChange
-              }
-              required={false}
-              helperText="Leave empty to use the default change address from the transaction"
-              infoMessage="The change address receives any leftover funds after sending the payment and fees. Using a custom address is optional."
-            />
-          )}
+          <AddressInputSection {...addressInputProps} />
 
           <Divider sx={{ my: 2 }} />
         </>
