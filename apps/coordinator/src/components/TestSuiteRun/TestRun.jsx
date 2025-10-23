@@ -320,9 +320,24 @@ Derivation: ${test.params.derivation}
 
                       {/* Step 2 & 3: Wallet Descriptor QRs using encodeDescriptors */}
                       <DescriptorQRCodes
-                        multisigConfig={
-                          test.interaction().request().multisigConfig
-                        }
+                        multisigConfig={{
+                          requiredSigners: test.interaction().request()
+                            .walletConfig.quorum.requiredSigners,
+                          keyOrigins: test
+                            .interaction()
+                            .request()
+                            .walletConfig.extendedPublicKeys.map(
+                              ({ xfp, bip32Path, xpub }) => ({
+                                xfp,
+                                bip32Path,
+                                xpub,
+                              }),
+                            ),
+                          addressType: test.interaction().request().walletConfig
+                            .addressType,
+                          network: test.interaction().request().walletConfig
+                            .network,
+                        }}
                         onDescriptorsGenerated={(descriptors) => {
                           this.setState({ descriptors });
                         }}
