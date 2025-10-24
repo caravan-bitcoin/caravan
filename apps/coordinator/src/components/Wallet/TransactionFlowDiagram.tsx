@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useRef, useLayoutEffect, useEffect } from "react";
+import React, {
+  useMemo,
+  useState,
+  useRef,
+  useLayoutEffect,
+  useEffect,
+} from "react";
 import {
   Box,
   Paper,
@@ -16,15 +22,17 @@ import {
   CallMade,
   Savings,
   LocalGasStation,
-  AccountBalanceWallet,
   ExpandMore,
-  ExpandLess,
   OpenInNew,
   ContentCopy,
   Close,
 } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
-import { satoshisToBitcoins, blockExplorerTransactionURL, Network } from "@caravan/bitcoin";
+import {
+  satoshisToBitcoins,
+  blockExplorerTransactionURL,
+  Network,
+} from "@caravan/bitcoin";
 import DustChip from "../ScriptExplorer/DustChip";
 
 interface TransactionFlowDiagramProps {
@@ -82,7 +90,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   const changeOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [inputPaths, setInputPaths] = useState<string[]>([]);
   const [outputPaths, setOutputPaths] = useState<string[]>([]);
-  const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
   const feeRef = useRef<HTMLDivElement | null>(null);
 
   const handleCopyAddress = (address: string) => {
@@ -94,7 +105,9 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   // Calculate totals and categorize outputs
   const flowData = useMemo(() => {
     const totalInputSats = BigNumber(inputsTotalSats.toString());
-    const totalInputBtc = BigNumber(satoshisToBitcoins(totalInputSats.toString()));
+    const totalInputBtc = BigNumber(
+      satoshisToBitcoins(totalInputSats.toString()),
+    );
     const feeBtc = BigNumber(fee);
     const totalOutputBtc = outputs.reduce(
       (sum, output) => sum.plus(BigNumber(output.amount)),
@@ -179,7 +192,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
 
   useLayoutEffect(() => {
     computePaths();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputs.length, outputs.length]);
 
   useEffect(() => {
@@ -190,7 +202,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
       window.removeEventListener("resize", onResize);
       window.clearTimeout(id);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Get script type color
@@ -224,14 +235,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
 
-  // Calculate visual heights based on proportions
-  const getHeightPercentage = (amount: BigNumber) => {
-    const percentage = amount
-      .dividedBy(flowData.totalInputBtc)
-      .multipliedBy(100)
-      .toNumber();
-    return Math.max(percentage, 5); // Minimum 5% height for visibility
-  };
+  // (removed unused getHeightPercentage)
 
   const getStatusDisplay = () => {
     switch (status) {
@@ -240,17 +244,26 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
       case "partial":
         return { label: "Partially Signed", color: theme.palette.info.main };
       case "ready":
-        return { label: "Ready to Broadcast", color: theme.palette.primary.main };
+        return {
+          label: "Ready to Broadcast",
+          color: theme.palette.primary.main,
+        };
       case "broadcast-pending":
         return { label: "Broadcast Pending", color: theme.palette.info.light };
       case "unconfirmed":
         return { label: "Unconfirmed", color: theme.palette.warning.main };
       case "confirmed":
-        return { label: `Confirmed${confirmations ? ` (${confirmations})` : ""}`, color: theme.palette.success.main };
+        return {
+          label: `Confirmed${confirmations ? ` (${confirmations})` : ""}`,
+          color: theme.palette.success.main,
+        };
       case "finalized":
         return { label: "Finalized", color: theme.palette.success.dark };
       case "rbf":
-        return { label: "Replaced by Fee", color: theme.palette.secondary.main };
+        return {
+          label: "Replaced by Fee",
+          color: theme.palette.secondary.main,
+        };
       case "dropped":
         return { label: "Dropped", color: theme.palette.grey[400] };
       case "conflicted":
@@ -273,7 +286,12 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
         overflow: "hidden",
       }}
     >
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={3}
+      >
         <Typography
           variant="h6"
           sx={{
@@ -329,15 +347,37 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           preserveAspectRatio="none"
         >
           <defs>
-            <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-              <polygon points="0 0, 12 6, 0 12" fill={theme.palette.text.secondary}/>
+            <marker
+              id="arrowhead"
+              markerWidth="12"
+              markerHeight="12"
+              refX="10"
+              refY="6"
+              orient="auto"
+            >
+              <polygon
+                points="0 0, 12 6, 0 12"
+                fill={theme.palette.text.secondary}
+              />
             </marker>
           </defs>
           {inputPaths.map((d, i) => (
-            <path key={`in-${i}`} d={d} stroke={theme.palette.text.secondary} strokeWidth={2} fill="none"/>
+            <path
+              key={`in-${i}`}
+              d={d}
+              stroke={theme.palette.text.secondary}
+              strokeWidth={2}
+              fill="none"
+            />
           ))}
           {outputPaths.map((d, i) => (
-            <path key={`out-${i}`} d={d} stroke={theme.palette.text.secondary} strokeWidth={2} fill="none"/>
+            <path
+              key={`out-${i}`}
+              d={d}
+              stroke={theme.palette.text.secondary}
+              strokeWidth={2}
+              fill="none"
+            />
           ))}
         </Box>
 
@@ -379,7 +419,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             />
           </Box>
 
-          {(() => { inputRefs.current = []; return null; })()}
+          {(() => {
+            inputRefs.current = [];
+            return null;
+          })()}
           <Box
             sx={{
               display: "flex",
@@ -389,14 +432,13 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           >
             {inputs.slice(0, 4).map((input, idx) => {
               const inputAmount = BigNumber(
-                satoshisToBitcoins(input.amountSats.toString())
+                satoshisToBitcoins(input.amountSats.toString()),
               );
-              const scriptType =
-                input.multisig?.name?.includes("p2wsh")
-                  ? "P2WSH"
-                  : input.multisig?.name?.includes("p2sh")
-                    ? "P2SH"
-                    : "Unknown";
+              const scriptType = input.multisig?.name?.includes("p2wsh")
+                ? "P2WSH"
+                : input.multisig?.name?.includes("p2sh")
+                  ? "P2SH"
+                  : "Unknown";
 
               return (
                 <Box
@@ -451,7 +493,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       </Typography>
                       <IconButton
                         size="small"
-                        href={blockExplorerTransactionURL(input.txid, network as Network)}
+                        href={blockExplorerTransactionURL(
+                          input.txid,
+                          network as Network,
+                        )}
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{
@@ -474,7 +519,11 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       }}
                     />
                   </Box>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
                     <Typography
                       variant="body2"
                       sx={{
@@ -484,7 +533,11 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     >
                       {inputAmount.toFixed(8)} BTC
                     </Typography>
-                    <Box sx={{ "& .MuiChip-root": { height: 22, fontSize: "0.7rem" } }}>
+                    <Box
+                      sx={{
+                        "& .MuiChip-root": { height: 22, fontSize: "0.7rem" },
+                      }}
+                    >
                       <DustChip
                         amountSats={parseInt(input.amountSats)}
                         scriptType={input.multisig?.name}
@@ -514,7 +567,12 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   },
                 }}
               >
-                <Box display="flex" alignItems="center" gap={1} justifyContent="center">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={1}
+                  justifyContent="center"
+                >
                   <ExpandMore />
                   <Typography
                     variant="body2"
@@ -584,13 +642,21 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 <>
                   <Typography
                     variant="caption"
-                    sx={{ color: theme.palette.text.secondary, fontWeight: 600, fontSize: "0.7rem" }}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontWeight: 600,
+                      fontSize: "0.7rem",
+                    }}
                   >
                     STATUS
                   </Typography>
                   <Typography
                     variant="subtitle2"
-                    sx={{ fontWeight: 800, color: sd.color, textAlign: "center" }}
+                    sx={{
+                      fontWeight: 800,
+                      color: sd.color,
+                      textAlign: "center",
+                    }}
                   >
                     {sd.label}
                   </Typography>
@@ -630,10 +696,13 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           </Box>
 
           {/* Recipient Outputs (cap 4 inline) */}
-          {(() => { recipientOutputRefs.current = []; return null; })()}
+          {(() => {
+            recipientOutputRefs.current = [];
+            return null;
+          })()}
           {flowData.recipientOutputs.slice(0, 4).map((output, idx) => {
             const amount = BigNumber(output.amount);
-              return (
+            return (
               <Box key={`recipient-${idx}`}>
                 <Box
                   sx={{
@@ -666,12 +735,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     recipientOutputRefs.current[idx] = el;
                   }}
                 >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={1}
-                    mb={1}
-                  >
+                  <Box display="flex" alignItems="center" gap={1} mb={1}>
                     <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
                     <Typography
                       variant="caption"
@@ -686,26 +750,27 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       Payment
                     </Typography>
                   </Box>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={0.5}
-                    mb={1}
-                  >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      fontFamily: "monospace",
-                      fontSize: "0.75rem",
-                      mb: 1,
-                      position: "relative",
-                      zIndex: 1,
-                    }}
-                  >
-                    {formatAddress(output.address)}
-                  </Typography>
-                  <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
+                  <Box display="flex" alignItems="center" gap={0.5} mb={1}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        fontFamily: "monospace",
+                        fontSize: "0.75rem",
+                        mb: 1,
+                        position: "relative",
+                        zIndex: 1,
+                      }}
+                    >
+                      {formatAddress(output.address)}
+                    </Typography>
+                    <Tooltip
+                      title={
+                        copiedAddress === output.address
+                          ? "Copied!"
+                          : "Copy address"
+                      }
+                    >
                       <IconButton
                         size="small"
                         onClick={() => handleCopyAddress(output.address)}
@@ -772,7 +837,12 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 },
               }}
             >
-              <Box display="flex" alignItems="center" gap={1} justifyContent="center">
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={1}
+                justifyContent="center"
+              >
                 <ExpandMore />
                 <Typography
                   variant="body2"
@@ -790,7 +860,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           {/* Change Outputs */}
           {flowData.changeOutputs.map((output, idx) => {
             const amount = BigNumber(output.amount);
-              return (
+            return (
               <Box key={`change-${idx}`}>
                 <Box
                   sx={{
@@ -823,13 +893,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     changeOutputRefs.current[idx] = el;
                   }}
                 >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={1}
-                    mb={1}
-                  >
-                    <Savings sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+                  <Box display="flex" alignItems="center" gap={1} mb={1}>
+                    <Savings
+                      sx={{ fontSize: 18, color: theme.palette.primary.main }}
+                    />
                     <Typography
                       variant="caption"
                       sx={{
@@ -843,12 +910,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                       Change
                     </Typography>
                   </Box>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={0.5}
-                    mb={1}
-                  >
+                  <Box display="flex" alignItems="center" gap={0.5} mb={1}>
                     <Typography
                       variant="body2"
                       sx={{
@@ -859,7 +921,13 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     >
                       {formatAddress(output.address)}
                     </Typography>
-                    <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
+                    <Tooltip
+                      title={
+                        copiedAddress === output.address
+                          ? "Copied!"
+                          : "Copy address"
+                      }
+                    >
                       <IconButton
                         size="small"
                         onClick={() => handleCopyAddress(output.address)}
@@ -883,7 +951,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   >
                     <Typography
                       variant="h6"
-                      sx={{ fontWeight: 700, color: theme.palette.primary.main }}
+                      sx={{
+                        fontWeight: 700,
+                        color: theme.palette.primary.main,
+                      }}
                     >
                       {amount.toFixed(8)} BTC
                     </Typography>
@@ -903,110 +974,281 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   </Box>
                 </Box>
 
-    {/* Inputs Drawer */}
-    <Drawer
-      anchor="right"
-      open={inputsDrawerOpen}
-      onClose={() => setInputsDrawerOpen(false)}
-      PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>All Inputs ({flowData.inputCount})</Typography>
-        <IconButton onClick={() => setInputsDrawerOpen(false)} sx={{ color: "inherit" }}>
-          <Close />
-        </IconButton>
-      </Box>
-      <Divider />
-      <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {inputs.map((input, idx) => {
-          const inputAmount = BigNumber(satoshisToBitcoins(input.amountSats.toString()));
-          const scriptType =
-            input.multisig?.name?.includes("p2wsh")
-              ? "P2WSH"
-              : input.multisig?.name?.includes("p2sh")
-                ? "P2SH"
-                : "Unknown";
-          return (
-            <Box
-              key={`drawer-input-${input.txid}-${input.index}-${idx}`}
-              sx={{
-                backgroundColor: "#fff",
-                border: `2px solid ${theme.palette.divider}`,
-                borderRadius: 1,
-                p: 1.5,
-              }}
-            >
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={0.5}>
-                <Box display="flex" alignItems="center" gap={0.5} flex={1}>
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500, fontFamily: "monospace", fontSize: "0.7rem" }}>
-                    {formatAddress(input.txid)}:{input.index}
-                  </Typography>
-                  <IconButton size="small" href={blockExplorerTransactionURL(input.txid, network as Network)} target="_blank" rel="noopener noreferrer" sx={{ padding: 0.25, "& svg": { fontSize: "0.875rem" } }}>
-                    <OpenInNew fontSize="inherit" />
-                  </IconButton>
-                </Box>
-                <Chip label={scriptType} size="small" sx={{ height: 20, fontSize: "0.65rem", backgroundColor: getScriptTypeColor(scriptType), color: "#fff", fontWeight: 600 }} />
-              </Box>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
-                  {inputAmount.toFixed(8)} BTC
-                </Typography>
-                <Box sx={{ "& .MuiChip-root": { height: 22, fontSize: "0.7rem" } }}>
-                  <DustChip amountSats={parseInt(input.amountSats)} scriptType={input.multisig?.name} />
-                </Box>
-              </Box>
-            </Box>
-          );
-        })}
-      </Box>
-    </Drawer>
+                {/* Inputs Drawer */}
+                <Drawer
+                  anchor="right"
+                  open={inputsDrawerOpen}
+                  onClose={() => setInputsDrawerOpen(false)}
+                  PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 2,
+                    }}
+                  >
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      All Inputs ({flowData.inputCount})
+                    </Typography>
+                    <IconButton
+                      onClick={() => setInputsDrawerOpen(false)}
+                      sx={{ color: "inherit" }}
+                    >
+                      <Close />
+                    </IconButton>
+                  </Box>
+                  <Divider />
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1.5,
+                    }}
+                  >
+                    {inputs.map((input, idx) => {
+                      const inputAmount = BigNumber(
+                        satoshisToBitcoins(input.amountSats.toString()),
+                      );
+                      const scriptType = input.multisig?.name?.includes("p2wsh")
+                        ? "P2WSH"
+                        : input.multisig?.name?.includes("p2sh")
+                          ? "P2SH"
+                          : "Unknown";
+                      return (
+                        <Box
+                          key={`drawer-input-${input.txid}-${input.index}-${idx}`}
+                          sx={{
+                            backgroundColor: "#fff",
+                            border: `2px solid ${theme.palette.divider}`,
+                            borderRadius: 1,
+                            p: 1.5,
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="flex-start"
+                            mb={0.5}
+                          >
+                            <Box
+                              display="flex"
+                              alignItems="center"
+                              gap={0.5}
+                              flex={1}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: theme.palette.text.secondary,
+                                  fontWeight: 500,
+                                  fontFamily: "monospace",
+                                  fontSize: "0.7rem",
+                                }}
+                              >
+                                {formatAddress(input.txid)}:{input.index}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                href={blockExplorerTransactionURL(
+                                  input.txid,
+                                  network as Network,
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  padding: 0.25,
+                                  "& svg": { fontSize: "0.875rem" },
+                                }}
+                              >
+                                <OpenInNew fontSize="inherit" />
+                              </IconButton>
+                            </Box>
+                            <Chip
+                              label={scriptType}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: "0.65rem",
+                                backgroundColor: getScriptTypeColor(scriptType),
+                                color: "#fff",
+                                fontWeight: 600,
+                              }}
+                            />
+                          </Box>
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 700,
+                                color: theme.palette.primary.main,
+                              }}
+                            >
+                              {inputAmount.toFixed(8)} BTC
+                            </Typography>
+                            <Box
+                              sx={{
+                                "& .MuiChip-root": {
+                                  height: 22,
+                                  fontSize: "0.7rem",
+                                },
+                              }}
+                            >
+                              <DustChip
+                                amountSats={parseInt(input.amountSats)}
+                                scriptType={input.multisig?.name}
+                              />
+                            </Box>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Drawer>
 
-    {/* Outputs Drawer (recipient outputs only) */}
-    <Drawer
-      anchor="right"
-      open={outputsDrawerOpen}
-      onClose={() => setOutputsDrawerOpen(false)}
-      PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>All Payment Outputs ({flowData.recipientOutputs.length})</Typography>
-        <IconButton onClick={() => setOutputsDrawerOpen(false)} sx={{ color: "inherit" }}>
-          <Close />
-        </IconButton>
-      </Box>
-      <Divider />
-      <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {flowData.recipientOutputs.map((output, idx) => {
-          const amount = BigNumber(output.amount);
-          return (
-            <Box key={`drawer-recipient-${idx}`} sx={{ backgroundColor: "#fff", border: `2px solid #ea9c0d`, borderRadius: 1, p: 2 }}>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: "uppercase", letterSpacing: 0.5, fontSize: "0.7rem" }}>Payment</Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap={0.5} mb={1}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontFamily: "monospace", fontSize: "0.75rem" }}>
-                  {formatAddress(output.address)}
-                </Typography>
-                <Tooltip title={copiedAddress === output.address ? "Copied!" : "Copy address"}>
-                  <IconButton size="small" onClick={() => handleCopyAddress(output.address)} sx={{ padding: 0.25, color: theme.palette.text.secondary, "&:hover": { color: theme.palette.primary.main }, "& svg": { fontSize: "0.75rem" } }}>
-                    <ContentCopy fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" sx={{ fontWeight: 700, color: "#ea9c0d" }}>
-                  {amount.toFixed(8)} BTC
-                </Typography>
-                {output.scriptType && (
-                  <Chip label={formatScriptType(output.scriptType)} size="small" variant="outlined" sx={{ height: 22, fontSize: "0.65rem", borderColor: theme.palette.divider, color: theme.palette.text.secondary }} />
-                )}
-              </Box>
-            </Box>
-          );
-        })}
-      </Box>
-    </Drawer>
+                {/* Outputs Drawer (recipient outputs only) */}
+                <Drawer
+                  anchor="right"
+                  open={outputsDrawerOpen}
+                  onClose={() => setOutputsDrawerOpen(false)}
+                  PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 2,
+                    }}
+                  >
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      All Payment Outputs ({flowData.recipientOutputs.length})
+                    </Typography>
+                    <IconButton
+                      onClick={() => setOutputsDrawerOpen(false)}
+                      sx={{ color: "inherit" }}
+                    >
+                      <Close />
+                    </IconButton>
+                  </Box>
+                  <Divider />
+                  <Box
+                    sx={{
+                      p: 2,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1.5,
+                    }}
+                  >
+                    {flowData.recipientOutputs.map((output, idx) => {
+                      const amount = BigNumber(output.amount);
+                      return (
+                        <Box
+                          key={`drawer-recipient-${idx}`}
+                          sx={{
+                            backgroundColor: "#fff",
+                            border: `2px solid #ea9c0d`,
+                            borderRadius: 1,
+                            p: 2,
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            mb={1}
+                          >
+                            <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 600,
+                                color: theme.palette.text.secondary,
+                                textTransform: "uppercase",
+                                letterSpacing: 0.5,
+                                fontSize: "0.7rem",
+                              }}
+                            >
+                              Payment
+                            </Typography>
+                          </Box>
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={0.5}
+                            mb={1}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontFamily: "monospace",
+                                fontSize: "0.75rem",
+                              }}
+                            >
+                              {formatAddress(output.address)}
+                            </Typography>
+                            <Tooltip
+                              title={
+                                copiedAddress === output.address
+                                  ? "Copied!"
+                                  : "Copy address"
+                              }
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleCopyAddress(output.address)
+                                }
+                                sx={{
+                                  padding: 0.25,
+                                  color: theme.palette.text.secondary,
+                                  "&:hover": {
+                                    color: theme.palette.primary.main,
+                                  },
+                                  "& svg": { fontSize: "0.75rem" },
+                                }}
+                              >
+                                <ContentCopy fontSize="inherit" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 700, color: "#ea9c0d" }}
+                            >
+                              {amount.toFixed(8)} BTC
+                            </Typography>
+                            {output.scriptType && (
+                              <Chip
+                                label={formatScriptType(output.scriptType)}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  height: 22,
+                                  fontSize: "0.65rem",
+                                  borderColor: theme.palette.divider,
+                                  color: theme.palette.text.secondary,
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Drawer>
               </Box>
             );
           })}
@@ -1041,13 +1283,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             }}
             ref={feeRef}
           >
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={1}
-              mb={0.5}
-            >
-              <LocalGasStation sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+            <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+              <LocalGasStation
+                sx={{ fontSize: 16, color: theme.palette.text.secondary }}
+              />
               <Typography
                 variant="caption"
                 sx={{
@@ -1111,7 +1350,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 borderRadius: 0.5,
               }}
             />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+            <Typography
+              variant="caption"
+              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
+            >
               Payment Output
             </Typography>
           </Box>
@@ -1125,7 +1367,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 borderRadius: 0.5,
               }}
             />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+            <Typography
+              variant="caption"
+              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
+            >
               Change Output
             </Typography>
           </Box>
@@ -1139,12 +1384,15 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 borderRadius: 0.5,
               }}
             />
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+            <Typography
+              variant="caption"
+              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
+            >
               Network Fee
             </Typography>
           </Box>
         </Box>
-        
+
         {/* Dust Status Explanation */}
         <Box
           sx={{
@@ -1168,32 +1416,56 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           </Typography>
           <Box display="flex" gap={2} flexWrap="wrap">
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Economical" color="success" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              <Chip
+                label="Economical"
+                color="success"
+                size="small"
+                sx={{ height: 20, fontSize: "0.7rem" }}
+              />
+              <Typography
+                variant="caption"
+                sx={{ color: theme.palette.text.secondary }}
+              >
                 = Cost-effective to spend
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Warning" color="warning" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              <Chip
+                label="Warning"
+                color="warning"
+                size="small"
+                sx={{ height: 20, fontSize: "0.7rem" }}
+              />
+              <Typography
+                variant="caption"
+                sx={{ color: theme.palette.text.secondary }}
+              >
                 = Consider batching
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip label="Dust" color="error" size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              <Chip
+                label="Dust"
+                color="error"
+                size="small"
+                sx={{ height: 20, fontSize: "0.7rem" }}
+              />
+              <Typography
+                variant="caption"
+                sx={{ color: theme.palette.text.secondary }}
+              >
                 = Costs more to spend than value
               </Typography>
             </Box>
           </Box>
         </Box>
         {/* SUMMARY Section - Moved Below */}
-      <Box
-        sx={{
-          mt: 3,
-          mb: 3,
-        }}
-      >
+        <Box
+          sx={{
+            mt: 3,
+            mb: 3,
+          }}
+        >
           <Typography
             variant="h6"
             sx={{
@@ -1209,46 +1481,14 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
               gap: 2,
             }}
           >
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              backgroundColor: theme.palette.grey[50],
-              border: `1px solid ${theme.palette.divider}`,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.text.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                fontWeight: 600,
-              }}
-            >
-              Total Sending
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: "#ea9c0d",
-                mt: 0.5,
-              }}
-            >
-              {flowData.recipientOutputs
-                .reduce((sum, o) => sum.plus(BigNumber(o.amount)), BigNumber(0))
-                .toFixed(8)}{" "}
-              BTC
-            </Typography>
-          </Paper>
-
-          {flowData.changeOutputs.length > 0 && (
             <Paper
               elevation={0}
               sx={{
@@ -1267,17 +1507,17 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   fontWeight: 600,
                 }}
               >
-                Change Returning
+                Total Sending
               </Typography>
               <Typography
                 variant="h5"
                 sx={{
                   fontWeight: 700,
-                  color: theme.palette.primary.main,
+                  color: "#ea9c0d",
                   mt: 0.5,
                 }}
               >
-                {flowData.changeOutputs
+                {flowData.recipientOutputs
                   .reduce(
                     (sum, o) => sum.plus(BigNumber(o.amount)),
                     BigNumber(0),
@@ -1286,80 +1526,124 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 BTC
               </Typography>
             </Paper>
-          )}
 
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              backgroundColor: theme.palette.grey[50],
-              border: `1px solid ${theme.palette.divider}`,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.text.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                fontWeight: 600,
-              }}
-            >
-              Network Fee
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: theme.palette.error.main,
-                mt: 0.5,
-              }}
-            >
-              {flowData.feeBtc.toFixed(8)} BTC
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.text.secondary,
-                display: "block",
-                mt: 0.5,
-              }}
-            >
-              {(flowData.feeBtc.dividedBy(flowData.totalInputBtc).multipliedBy(100).toNumber() || 0).toFixed(2)}% of
-              total
-            </Typography>
-          </Paper>
+            {flowData.changeOutputs.length > 0 && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  backgroundColor: theme.palette.grey[50],
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 2,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  Change Returning
+                </Typography>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 700,
+                    color: theme.palette.primary.main,
+                    mt: 0.5,
+                  }}
+                >
+                  {flowData.changeOutputs
+                    .reduce(
+                      (sum, o) => sum.plus(BigNumber(o.amount)),
+                      BigNumber(0),
+                    )
+                    .toFixed(8)}{" "}
+                  BTC
+                </Typography>
+              </Paper>
+            )}
 
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: theme.palette.primary.main,
-              borderRadius: 2,
-              color: "#fff",
-            }}
-          >
-            <Typography
-              variant="caption"
+            <Paper
+              elevation={0}
               sx={{
-                color: "rgba(255,255,255,0.8)",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                fontWeight: 600,
+                p: 2,
+                backgroundColor: theme.palette.grey[50],
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 2,
               }}
             >
-              Total Input
-            </Typography>
-            <Typography
-              variant="h5"
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.secondary,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontWeight: 600,
+                }}
+              >
+                Network Fee
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: theme.palette.error.main,
+                  mt: 0.5,
+                }}
+              >
+                {flowData.feeBtc.toFixed(8)} BTC
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.secondary,
+                  display: "block",
+                  mt: 0.5,
+                }}
+              >
+                {(
+                  flowData.feeBtc
+                    .dividedBy(flowData.totalInputBtc)
+                    .multipliedBy(100)
+                    .toNumber() || 0
+                ).toFixed(2)}
+                % of total
+              </Typography>
+            </Paper>
+
+            <Box
               sx={{
-                fontWeight: 700,
-                mt: 0.5,
+                p: 2,
+                backgroundColor: theme.palette.primary.main,
+                borderRadius: 2,
+                color: "#fff",
               }}
             >
-              {flowData.totalInputBtc.toFixed(8)} BTC
-            </Typography>
-          </Box>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "rgba(255,255,255,0.8)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontWeight: 600,
+                }}
+              >
+                Total Input
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  mt: 0.5,
+                }}
+              >
+                {flowData.totalInputBtc.toFixed(8)} BTC
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Box>

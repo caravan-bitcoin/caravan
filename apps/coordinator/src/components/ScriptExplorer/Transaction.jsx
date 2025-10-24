@@ -156,6 +156,7 @@ Transaction.propTypes = {
   inputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   outputs: PropTypes.arrayOf(PropTypes.shape({})).isRequired,
   setTxid: PropTypes.func.isRequired,
+  setBroadcastingFlag: PropTypes.func.isRequired,
   signatureImporters: PropTypes.shape({}).isRequired,
   getBlockchainClient: PropTypes.func.isRequired,
   enableRBF: PropTypes.bool.isRequired,

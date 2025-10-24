@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { connect, useSelector } from "react-redux";
-import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
@@ -12,20 +10,12 @@ import {
   Chip,
   Typography,
   Paper,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
-  WarningAmber,
 } from "@mui/icons-material";
-import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import {
@@ -35,7 +25,6 @@ import {
 } from "../../actions/transactionActions";
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
-import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
 import TransactionFlowDiagram from "./TransactionFlowDiagram";
 
 /**
@@ -197,7 +186,6 @@ class TransactionPreview extends React.Component {
 
   render() {
     const {
-      feeRate,
       fee,
       inputsTotalSats,
       editTransaction,
@@ -211,22 +199,6 @@ class TransactionPreview extends React.Component {
       txid,
       spendingStep,
     } = this.props;
-
-    // Get wallet script type for fingerprint analysis
-    const walletScriptType = this.props.addressType || "";
-    const outputsForAnalysis = (outputs || []).map((o) => ({
-      scriptType: o.scriptType,
-      amount: o.amount, // BTC as string/number
-      address: o.address,
-    }));
-    const fingerprint = walletFingerprintAnalysis(
-      outputsForAnalysis,
-      walletScriptType,
-    );
-    const fingerprintMsg =
-      fingerprint.reason ||
-      "This output matches your wallet's address type and is likely to be identified as change by on-chain observers.";
-    const tooltipSx = { verticalAlign: "middle" };
 
     return (
       <Box>
@@ -244,7 +216,11 @@ class TransactionPreview extends React.Component {
             const rs = requiredSigners || 0;
             const signedCount = signatureImporters
               ? Object.values(signatureImporters).filter(
-                  (importer) => importer && importer.finalized && importer.signature && importer.signature.length > 0,
+                  (importer) =>
+                    importer &&
+                    importer.finalized &&
+                    importer.signature &&
+                    importer.signature.length > 0,
                 ).length
               : 0;
             const isFullySigned = signedCount >= rs && rs > 0;
@@ -255,7 +231,11 @@ class TransactionPreview extends React.Component {
             } else if (txid && txid.length > 0) {
               this._flowStatus = "unconfirmed";
             } else {
-              this._flowStatus = isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+              this._flowStatus = isFullySigned
+                ? "ready"
+                : hasPartial
+                  ? "partial"
+                  : "draft";
             }
             return null;
           })()}
@@ -334,6 +314,10 @@ TransactionPreview.propTypes = {
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
   signatureImporters: PropTypes.shape({}),
+  broadcasting: PropTypes.bool,
+  txid: PropTypes.string,
+  spendingStep: PropTypes.number,
+  network: PropTypes.string,
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,
