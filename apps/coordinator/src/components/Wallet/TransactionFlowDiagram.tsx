@@ -235,8 +235,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
     return `${address.slice(0, 10)}...${address.slice(-8)}`;
   };
 
-  // (removed unused getHeightPercentage)
-
   const getStatusDisplay = () => {
     switch (status) {
       case "draft":
