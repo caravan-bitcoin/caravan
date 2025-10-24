@@ -1603,12 +1603,16 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                   mt: 0.5,
                 }}
               >
-                {(
-                  flowData.feeBtc
-                    .dividedBy(flowData.totalInputBtc)
-                    .multipliedBy(100)
-                    .toNumber() || 0
-                ).toFixed(2)}
+                {(() => {
+                  const pct =
+                    flowData.feeBtc
+                      .dividedBy(flowData.totalInputBtc)
+                      .multipliedBy(100)
+                      .toNumber() || 0;
+                  const pctStr = pct.toFixed(2);
+                  const approx = pct > 0 && pctStr === "0.00" ? "~" : "";
+                  return `${approx}${pctStr}`;
+                })()}
                 % of total
               </Typography>
             </Paper>
