@@ -44,6 +44,7 @@ import {
   SET_CLIENT_PASSWORD_ERROR,
 } from "../../actions/clientActions";
 import { MAX_FETCH_UTXOS_ERRORS, MAX_TRAILING_EMPTY_NODES } from "./constants";
+import { getWalletDetailsText } from "../../selectors/wallet";
 
 class WalletGenerator extends React.Component {
   constructor(props) {
@@ -363,6 +364,8 @@ class WalletGenerator extends React.Component {
       client,
       generating,
       extendedPublicKeyImporters,
+      walletDetailsText,
+      walletName,
     } = this.props;
     const { connectSuccess, unknownClient } = this.state;
     const hasConflict = Object.values(extendedPublicKeyImporters).some(
@@ -400,6 +403,8 @@ class WalletGenerator extends React.Component {
               <WalletConfigInteractionButtons
                 onClearFn={(e) => this.toggleImporters(e, true)}
                 onDownloadFn={downloadWalletDetails}
+                walletConfig={walletDetailsText}
+                walletName={walletName}
               />
               {unknownClient && (
                 <Box my={5}>
@@ -540,6 +545,8 @@ WalletGenerator.propTypes = {
   updateChangeSlice: PropTypes.func.isRequired,
   updateDepositSlice: PropTypes.func.isRequired,
   getBlockchainClient: PropTypes.func.isRequired,
+  walletDetailsText: PropTypes.string.isRequired,
+  walletName: PropTypes.string.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -549,6 +556,7 @@ function mapStateToProps(state) {
     ...state.quorum,
     ...state.wallet,
     ...state.wallet.common,
+    walletDetailsText: getWalletDetailsText(state),
   };
 }
 
