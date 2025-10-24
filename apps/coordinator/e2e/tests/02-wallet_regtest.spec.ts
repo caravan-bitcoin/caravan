@@ -130,20 +130,28 @@ test.describe("Wallet Regtest Configuration", () => {
       }
 
       //Should update to the next index when a deposit is received
-      await expect.poll(async () => {
-        const currentPathSuffix = await getCurrentPathSuffix(page);
-        const pathIndex = currentPathSuffix.split("/")[2];
-        return pathIndex;
-      }, {
-        message: 'Path index should be 4',
-        timeout: 30000,
-        intervals: [2000, 2000, 2000],
-      }).toBe("4");
+      await expect
+        .poll(
+          async () => {
+            const currentPathSuffix = await getCurrentPathSuffix(page);
+            const pathIndex = currentPathSuffix.split("/")[2];
+            return pathIndex;
+          },
+          {
+            message: "Path index should be 4",
+            timeout: 30000,
+            intervals: [2000, 2000, 2000],
+          },
+        )
+        .toBe("4");
 
       // Wait for pending transactions button to be stable
-      const pendingTxButton = page.locator("button[role=tab][type=button]:has-text('Pending Transactions')");
-      await expect(pendingTxButton).toBeVisible({ timeout: 15000 });
-      await pendingTxButton.click({ timeout: 15000 });
+      const txButton = page.locator(
+        "button[role=tab][type=button]:has-text('Transactions')",
+      );
+
+      await expect(txButton).toBeVisible({ timeout: 15000 });
+      await txButton.click({ timeout: 15000 });
 
       await page.locator("button[type=button]:has-text('Refresh')").click();
 
@@ -175,8 +183,9 @@ test.describe("Wallet Regtest Configuration", () => {
 
       await page.locator("button[type=button]:has-text('Refresh')").click();
 
-      await expect(page.locator('[data-cy="balance"]'))
-      .toContainText("8 BTC", { timeout: 15000 });
+      await expect(page.locator('[data-cy="balance"]')).toContainText("8 BTC", {
+        timeout: 15000,
+      });
     } catch (error) {
       throw new Error(`Error in wallet import: ${error}`);
     }

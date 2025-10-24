@@ -21,6 +21,8 @@ import { clientPropTypes } from "../../proptypes";
 import { CARAVAN_CONFIG } from "./constants";
 
 import ImportAddressesButton from "../ImportAddressesButton";
+import { useQueryClient } from "@tanstack/react-query";
+import { transactionKeys } from "clients/transactions";
 
 const useStyles = makeStyles(() => ({
   card: {
@@ -74,9 +76,14 @@ const WalletActionsPanel = ({
   walletActivated,
 }) => {
   const classes = useStyles();
+  const queryClient = useQueryClient();
   const handleClearClick = (e) => {
     e.preventDefault();
     if (sessionStorage) sessionStorage.removeItem(CARAVAN_CONFIG);
+    queryClient.removeQueries({
+      queryKey: transactionKeys.all,
+      exact: false,
+    });
     onClearConfig(e);
   };
   return (
