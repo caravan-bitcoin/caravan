@@ -38,6 +38,7 @@ interface AccelerationModalState {
 
   // RBF configuration
   rbfType: RbfType;
+  enableFullRBF: boolean;
 
   // CPFP configuration
   cpfp: {
@@ -63,7 +64,8 @@ type AccelerationModalAction =
   | { type: "SET_STRATEGY"; payload: FeeBumpStrategy }
   | { type: "SET_RBF_TYPE"; payload: RbfType }
   | { type: "SET_FEE_BUMP_RESULT"; payload: FeeBumpResult | null }
-  | { type: "SET_DOWNLOAD_CLICKED"; payload: boolean };
+  | { type: "SET_DOWNLOAD_CLICKED"; payload: boolean }
+  | { type: "SET_ENABLE_FULL_RBF"; payload: boolean };
 
 // =============================================================================
 // INITIAL STATE
@@ -85,6 +87,7 @@ const initialState: AccelerationModalState = {
   analysisIsError: null,
   selectedStrategy: null,
   rbfType: "accelerate" as RbfType,
+  enableFullRBF: false,
   feeBumpResult: null,
 };
 
@@ -151,6 +154,12 @@ function accelerationModalReducer(
         downloadClicked: action.payload,
       };
 
+    case "SET_ENABLE_FULL_RBF":
+      return {
+        ...state,
+        enableFullRBF: action.payload,
+      };
+
     default:
       return state;
   }
@@ -186,6 +195,7 @@ interface AccelerationModalContextType {
   setRbfType: (type: RbfType) => void;
   setFeeBumpResult: (result: FeeBumpResult | null) => void;
   setDownloadClicked: (downloaded: boolean) => void;
+  setEnableFullRBF: (enabled: boolean) => void;
 }
 
 // =============================================================================
@@ -256,6 +266,10 @@ export function AccelerationModalProvider({
     dispatch({ type: "SET_DOWNLOAD_CLICKED", payload: downloaded });
   }, []);
 
+  const setEnableFullRBF = useCallback((enabled: boolean) => {
+    dispatch({ type: "SET_ENABLE_FULL_RBF", payload: enabled });
+  }, []);
+
   const contextValue: AccelerationModalContextType = {
     transaction,
     txHex,
@@ -267,6 +281,7 @@ export function AccelerationModalProvider({
     resetWizard,
     setStrategy,
     setRbfType,
+    setEnableFullRBF,
     setFeeBumpResult,
     setDownloadClicked,
     analysis,

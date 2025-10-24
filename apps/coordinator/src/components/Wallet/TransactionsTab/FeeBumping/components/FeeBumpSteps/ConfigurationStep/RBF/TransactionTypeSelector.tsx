@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Box,
   FormControl,
@@ -9,16 +9,28 @@ import {
   Typography,
   Divider,
 } from "@mui/material";
-import { AddressInputSection } from "./AddressInputSection";
+import { AddressInputSection } from "../AddressInputSection";
 import { RBF_TYPES, RbfType } from "../../../../types";
+
+interface AddressOption {
+  value: string;
+  label: string;
+  type: "predefined" | "custom";
+}
+
+interface AddressInputHook {
+  address: string;
+  selectionType: "predefined" | "custom";
+  handleSelectionTypeChange: (type: "predefined" | "custom") => void;
+  handleAddressChange: (value: string) => void;
+}
 
 interface TransactionTypeSelectorProps {
   rbfType: RbfType;
   onRbfTypeChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  cancelAddress: string;
-  onCancelAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  changeAddress: string;
-  onChangeAddressChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  cancelAddressInput: AddressInputHook;
+  changeAddressInput: AddressInputHook;
+  addressOptions: AddressOption[];
 }
 
 // Transaction option label component
@@ -41,11 +53,48 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
     ({
       rbfType,
       onRbfTypeChange,
-      cancelAddress,
-      onCancelAddressChange,
-      changeAddress,
-      onChangeAddressChange,
+      cancelAddressInput,
+      changeAddressInput,
+      addressOptions,
     }) => {
+      const isCancel = rbfType === RBF_TYPES.CANCEL;
+      const addressInputProps = useMemo(() => {
+        if (isCancel) {
+          // Configuration for cancel transactions
+          return {
+            title: "Cancel Address",
+            description: "Select where to receive all funds (minus fees)",
+            address: cancelAddressInput.address,
+            onAddressChange: cancelAddressInput.handleAddressChange,
+            addressOptions,
+            selectionType: cancelAddressInput.selectionType,
+            onSelectionTypeChange: cancelAddressInput.handleSelectionTypeChange,
+            required: true,
+            helperText:
+              "Enter a valid Bitcoin address to receive all funds (minus fees)",
+            warningMessage:
+              "This will cancel the original transaction and send all funds (minus fees) to this address.",
+          };
+        } else {
+          // Configuration for accelerate transactions
+          return {
+            title: "Change Address",
+            description:
+              "Select where to receive the remaining funds after fees (optional)",
+            address: changeAddressInput.address,
+            onAddressChange: changeAddressInput.handleAddressChange,
+            addressOptions,
+            selectionType: changeAddressInput.selectionType,
+            onSelectionTypeChange: changeAddressInput.handleSelectionTypeChange,
+            required: false,
+            helperText:
+              "Leave empty to use the default change address from the transaction",
+            infoMessage:
+              "The change address receives any leftover funds after sending the payment and fees. Using a custom address is optional.",
+          };
+        }
+      }, [isCancel, cancelAddressInput, changeAddressInput, addressOptions]);
+
       return (
         <>
           <Box mb={3}>
@@ -85,13 +134,7 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> =
 
           <Divider sx={{ my: 2 }} />
 
-          <AddressInputSection
-            rbfType={rbfType}
-            cancelAddress={cancelAddress}
-            onCancelAddressChange={onCancelAddressChange}
-            changeAddress={changeAddress}
-            onChangeAddressChange={onChangeAddressChange}
-          />
+          <AddressInputSection {...addressInputProps} />
 
           <Divider sx={{ my: 2 }} />
         </>

@@ -9,7 +9,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
   Alert,
 } from "@mui/material";
 import { useSelector } from "react-redux";
@@ -20,10 +19,11 @@ import { useFeeEstimates } from "clients/fees";
 import { getChangeAddresses } from "selectors/wallet";
 import { FeeLevelType, FEE_LEVELS, FeeBumpResult } from "../../../../types";
 import { useAccelerationModal } from "../../../AccelerationModalContext";
-import { useCreateCPFP } from "../../../hooks";
+import { useCreateCPFP, useAddressInput } from "../../../hooks";
 import { FeeComparison } from "../RBF/FeeComparison";
 import { ErrorDialog } from "../../../ErrorDialog";
 import { CPFPFeeSlider } from "./CPFPFeeSlider";
+import { AddressInputSection } from "../AddressInputSection";
 
 // Calculate original fee rate helper function
 const calculateOriginalFeeRate = (transaction: TransactionDetails): number => {
@@ -47,20 +47,27 @@ export const CPFPForm: React.FC = () => {
 
   const { data: feeEstimates } = useFeeEstimates();
   const changeAddresses = useSelector(getChangeAddresses);
-
   const [spendableOutputIndex, setSpendableOutputIndex] = useState<number>(
     changeOutputIndex || 0,
   );
-  const [changeAddress, setChangeAddress] = useState<string>("");
   const [, setCurrentFeeLevel] = useState<FeeLevelType>(FEE_LEVELS.MEDIUM);
-  const [addressSelectionType, setAddressSelectionType] = useState<
-    "predefined" | "custom"
-  >("predefined");
+
   // Error state
   const [error, setError] = useState<string>("");
   const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
 
   const { createCPFP } = useCreateCPFP(transaction!, txHex, availableUtxos);
+  const changeAddressInput = useAddressInput({
+    availableAddresses: changeAddresses,
+  });
+
+  const addressOptions = useMemo(() => {
+    return changeAddresses.map((addr, index) => ({
+      value: addr,
+      label: `Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
+      type: "predefined" as const,
+    }));
+  }, [changeAddresses]);
 
   const originalFee = transaction!.fee;
   const originalFeeRate = calculateOriginalFeeRate(transaction!);
@@ -119,7 +126,7 @@ export const CPFPForm: React.FC = () => {
       return;
     }
 
-    if (!changeAddress.trim()) {
+    if (!changeAddressInput.address.trim()) {
       setError("Change address is required for CPFP");
       setShowErrorDetails(true);
       return;
@@ -135,7 +142,7 @@ export const CPFPForm: React.FC = () => {
       const psbtBase64 = createCPFP(
         feeBumpRate,
         spendableOutputIndex,
-        changeAddress,
+        changeAddressInput.address,
       );
 
       const result: FeeBumpResult = {
@@ -168,48 +175,6 @@ export const CPFPForm: React.FC = () => {
       1000, // Maximum ceiling of 1000 sats/vB
     );
   }, [minimumFeeRate, feeEstimates]);
-
-  // Prepare address options for dropdown
-  const addressOptions = useMemo(() => {
-    const options = changeAddresses.map((addr, index) => ({
-      value: addr,
-      label: `Change Address ${index + 1}: ${addr.slice(0, 8)}...${addr.slice(-6)}`,
-      type: "predefined" as const,
-    }));
-
-    return [
-      ...options,
-      {
-        value: "custom",
-        label: "Enter Custom Address",
-        type: "custom" as const,
-      },
-    ];
-  }, [changeAddresses]);
-
-  const handleAddressSelectionChange = (value: string) => {
-    if (value === "custom") {
-      setAddressSelectionType("custom");
-      setChangeAddress("");
-    } else {
-      setAddressSelectionType("predefined");
-      setChangeAddress(value);
-    }
-  };
-
-  const handleCustomAddressChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setChangeAddress(event.target.value);
-  };
-
-  // Set initial change address if available
-  React.useEffect(() => {
-    if (changeAddresses.length > 0 && !changeAddress) {
-      setChangeAddress(changeAddresses[0]);
-      setAddressSelectionType("predefined");
-    }
-  }, [changeAddresses, changeAddress]);
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -264,45 +229,17 @@ export const CPFPForm: React.FC = () => {
       </Box>
 
       {/* Change Address Input */}
-      <Box mb={3}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="change-address-select-label">
-            Change Address
-          </InputLabel>
-          <Select
-            labelId="change-address-select-label"
-            value={addressSelectionType === "custom" ? "custom" : changeAddress}
-            onChange={(e) => handleAddressSelectionChange(e.target.value)}
-            label="Change Address"
-          >
-            {addressOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Custom Address Input */}
-        {addressSelectionType === "custom" && (
-          <TextField
-            fullWidth
-            label="Custom Change Address"
-            value={changeAddress}
-            onChange={handleCustomAddressChange}
-            placeholder="Enter the address to receive the change"
-            helperText="Enter a custom address where the remaining funds will be sent after fees"
-            required
-          />
-        )}
-
-        {/* Selected Address Display */}
-        {addressSelectionType === "predefined" && changeAddress && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Selected: {changeAddress}
-          </Typography>
-        )}
-      </Box>
+      <AddressInputSection
+        title="Change Address"
+        description="Select where to receive the remaining funds after fees"
+        address={changeAddressInput.address}
+        onAddressChange={changeAddressInput.handleAddressChange}
+        addressOptions={addressOptions}
+        selectionType={changeAddressInput.selectionType}
+        onSelectionTypeChange={changeAddressInput.handleSelectionTypeChange}
+        required={true}
+        infoMessage="The change address receives any leftover funds after the child transaction fee is paid."
+      />
 
       <Divider sx={{ my: 2 }} />
 
@@ -359,7 +296,7 @@ export const CPFPForm: React.FC = () => {
           onClick={handleProcessCPFP}
           size="large"
           disabled={
-            !changeAddress.trim() ||
+            !changeAddressInput.address.trim() ||
             spendableOutputs.length === 0 ||
             feeBumpRate < minimumFeeRate
           }
