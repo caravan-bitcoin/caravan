@@ -183,9 +183,13 @@ class IndirectSignatureImporter extends React.Component {
       });
 
       this.setState({ signatureError: "" });
-      validateAndSetSignature(signatures, (signatureError) => {
-        this.setState({ signatureError });
-      }, data);
+      validateAndSetSignature(
+        signatures,
+        (signatureError) => {
+          this.setState({ signatureError });
+        },
+        data,
+      );
     } catch (e) {
       e.errorType = "Coldcard Signing Error";
       this.setState({ signatureError: e.message });

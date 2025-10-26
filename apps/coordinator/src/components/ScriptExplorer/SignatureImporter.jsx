@@ -8,6 +8,7 @@ import {
   validateBIP32Path,
   getMaskedDerivation,
   P2SH,
+  addSignaturesToPSBT,
 } from "@caravan/bitcoin";
 import {
   JADE,
@@ -47,7 +48,6 @@ import {
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
-import { addSignaturesToPSBT } from "@caravan/bitcoin";
 import { Buffer } from "buffer";
 
 const TEXT = "text";
