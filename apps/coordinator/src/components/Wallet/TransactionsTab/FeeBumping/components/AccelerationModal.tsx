@@ -106,6 +106,7 @@ const AccelerationModalContent: React.FC<
       showErrorDetails,
       selectedStrategy,
       feeBumpResult,
+      enableFullRBF,
     },
     analysis,
     cpfp,
@@ -174,7 +175,8 @@ const AccelerationModalContent: React.FC<
     if (!selectedStrategy || !analysis) return true;
 
     if (selectedStrategy === FeeBumpStrategy.RBF) {
-      return !analysis.canRBF;
+      // Allow RBF if it's signaled OR if Full RBF is enabled
+      return !analysis.canRBF && !enableFullRBF;
     }
     if (selectedStrategy === FeeBumpStrategy.CPFP) {
       return !analysis.canCPFP || !cpfp?.feeRate;
