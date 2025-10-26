@@ -11,7 +11,7 @@ import {
   mapSignaturesToImporters,
   extractSignaturesFromPSBT,
   createInputIdentifier,
-} from "utils/psbtUtils";
+} from "../utils/psbtUtils";
 
 // ====================
 // SELECTORS
