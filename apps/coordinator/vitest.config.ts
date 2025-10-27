@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
 
 export default defineConfig({
   test: {
@@ -10,6 +11,14 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['text'],
       exclude: ['node_modules/**', 'build/**'],
+    }
+  },
+  resolve: {
+    alias: {
+      utils: resolve(__dirname, 'src/utils'),
+      selectors: resolve(__dirname, 'src/selectors'),
+      clients: resolve(__dirname, 'src/clients'),
+      hooks: resolve(__dirname, 'src/hooks'),
     }
   }
 });

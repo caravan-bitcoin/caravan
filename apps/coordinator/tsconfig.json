@@ -46,11 +46,6 @@
     "vite-env.d.ts",
     "declarations.d.ts"
   ],
-  "exclude": [
-    "src/**/*.test.*",
-    "src/**/*.spec.*",
-    "src/**/__tests__/**"
-  ],
   "references": [
     {
       "path": "./tsconfig.node.json"
