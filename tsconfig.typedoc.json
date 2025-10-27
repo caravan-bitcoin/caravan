@@ -1,0 +1,46 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "es2020",
+    "target": "es2020",
+    "allowJs": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": false,
+    "outDir": "temp",
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "paths": {
+      "src/*": ["packages/caravan-psbt/src/*"],
+      "@caravan/bitcoin": ["packages/caravan-bitcoin/src"],
+      "@caravan/bitcoin/*": ["packages/caravan-bitcoin/src/*"],
+      "@caravan/clients": ["packages/caravan-clients/src"],
+      "@caravan/clients/*": ["packages/caravan-clients/src/*"],
+      "@caravan/fees": ["packages/caravan-fees/src"],
+      "@caravan/fees/*": ["packages/caravan-fees/src/*"],
+      "@caravan/health": ["packages/caravan-health/src"],
+      "@caravan/health/*": ["packages/caravan-health/src/*"],
+      "@caravan/psbt": ["packages/caravan-psbt/src"],
+      "@caravan/psbt/*": ["packages/caravan-psbt/src/*"],
+      "@caravan/wallets": ["packages/caravan-wallets/src"],
+      "@caravan/wallets/*": ["packages/caravan-wallets/src/*"],
+      "@caravan/bip32": ["packages/bip32/src"],
+      "@caravan/bip32/*": ["packages/bip32/src/*"],
+      "@caravan/multisig": ["packages/multisig/src"],
+      "@caravan/multisig/*": ["packages/multisig/src/*"]
+    }
+  },
+  "include": ["packages/**/index.ts"],
+  "exclude": [
+    "packages/eslint-config",
+    "packages/typescript-config",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/node_modules",
+    "docs",
+    "temp"
+  ]
+}

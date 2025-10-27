@@ -352,8 +352,7 @@ export class TransactionAnalyzer {
    * - One-Shot Replace-By-Fee-Rate proposal: https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2024-January/022298.html
    *
    * @returns {Satoshis} The minimum total fee required for the replacement transaction in satoshis.
-   *                     This is always at least the current fee plus the minimum required increase.
-   * @note This getter does not consider the user's target fee rate. It's the responsibility
+   *                     This is always at least the current fee plus the minimum required increase.     * Note: This getter does not consider the user's target fee rate. It's the responsibility
    *       of the RBF function to ensure that the new transaction's fee is the maximum of
    *       this minimum fee and the fee calculated using the user's target fee rate.
    */
