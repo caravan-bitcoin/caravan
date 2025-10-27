@@ -20,14 +20,7 @@ export const transactionKeys = {
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  confirmedHistory: (addresses?: string[]) => {
-    if (!addresses || addresses.length === 0) {
-      return [...transactionKeys.all, "confirmed"] as const;
-    }
-    // Sort addresses for consistent cache keys
-    const sortedAddresses = [...addresses].sort().join(",");
-    return [...transactionKeys.all, "confirmed", sortedAddresses] as const;
-  },
+  confirmedHistory: () => [...transactionKeys.all, "confirmed"] as const,
 };
 
 // Service function for fetching transaction details
