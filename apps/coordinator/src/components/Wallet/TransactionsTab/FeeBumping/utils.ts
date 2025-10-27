@@ -1,4 +1,4 @@
-import { UTXO as FeeUTXO } from "@caravan/fees";
+import { UTXO as FeeUTXO } from "@caravan/transactions";
 import { PsbtV2 } from "@caravan/psbt";
 
 // =============================================================================

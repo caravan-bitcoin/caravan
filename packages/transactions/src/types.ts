@@ -34,7 +34,7 @@ export interface InputDerivation {
  * Represents an Unspent Transaction Output (UTXO) with essential information for PSBT creation.
  *
  * @remarks
- * **TXID Format Convention for @caravan/fees Package:**
+ * **TXID Format Convention for @caravan/transactions Package:**
  *
  * Throughout this entire package, all input TXIDs are expected to be in **big-endian**
  * format (human-readable format). This includes:

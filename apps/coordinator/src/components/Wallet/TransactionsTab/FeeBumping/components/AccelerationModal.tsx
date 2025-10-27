@@ -15,7 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 
 import {
   ConfigurationStep,
