@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
 import {
@@ -73,24 +73,6 @@ const TransactionsTab: React.FC = () => {
   const currentPagePendingTxs = getCurrentPageItems(sortedPendingTxs);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
-  // Now we filter out pending transactions from confirmed transactions
-  // This ensures we don't show the same transaction in both tabs
-  const filteredConfirmedTransactions = useMemo(() => {
-    const pendingTxids = new Set(pendingTransactions.map((tx) => tx.txid));
-    const seenTxids = new Set<string>();
-
-    return confirmedTransactions.filter((tx) => {
-      // Filter out duplicates (can happen with multiple wallets on private nodes)
-      if (seenTxids.has(tx.txid)) {
-        return false;
-      }
-      seenTxids.add(tx.txid);
-
-      // Filter out transactions that are in pending
-      return !pendingTxids.has(tx.txid);
-    });
-  }, [confirmedTransactions, pendingTransactions]);
-
   // Handle acceleration button click
   const handleAccelerateTransaction = async (tx: any) => {
     if (!tx || !blockchainClient) return;
@@ -140,7 +122,7 @@ const TransactionsTab: React.FC = () => {
               aria-controls="pending-tabpanel"
             />
             <Tab
-              label={`Confirmed (${filteredConfirmedTransactions.length})`}
+              label={`Confirmed (${confirmedTransactions.length})`}
               id="confirmed-tab"
               aria-controls="completed-tabpanel"
             />
@@ -254,7 +236,7 @@ const TransactionsTab: React.FC = () => {
       >
         {tabValue === 1 && (
           <ConfirmedTransactionsView
-            transactions={filteredConfirmedTransactions}
+            transactions={confirmedTransactions}
             isLoading={confirmedIsLoading}
             error={confirmedError}
             network={network}
