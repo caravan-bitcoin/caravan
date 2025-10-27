@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.15.0
+
+### Minor Changes
+
+- [#404](https://github.com/caravan-bitcoin/caravan/pull/404) [`7489629`](https://github.com/caravan-bitcoin/caravan/commit/7489629fa3f51531ff62c128cf7aec170aef2319) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Adds support for Full RBF, allowing users to replace transactions that did not originally signal RBF support (BIP 125).
+
+### Patch Changes
+
+- [#398](https://github.com/caravan-bitcoin/caravan/pull/398) [`c68e10b`](https://github.com/caravan-bitcoin/caravan/commit/c68e10befdb5d973e9b1c2b68f788802761f8166) Thanks [@ChayanDass](https://github.com/ChayanDass)! - Fix footer position so it sticks to the bottom on short pages and moves down naturally on long pages.
+
 ## 1.14.0
 
 ### Minor Changes

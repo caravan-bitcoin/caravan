@@ -17,6 +17,7 @@ import {
   getWalletAddresses,
   selectWalletConfig,
   getWalletSlices,
+  Slice,
 } from "selectors/wallet";
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -24,6 +25,11 @@ import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
 import { buildUtxoFromSpendingTransaction } from "utils/uxtoReconstruction";
 import { DUST_IN_SATOSHIS } from "utils/constants";
+
+interface UseAddressInputProps {
+  availableAddresses: string[];
+  initialSelectionType?: "predefined" | "custom";
+}
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
@@ -212,6 +218,7 @@ export const useCreateAcceleratedRBF = (
   transaction: TransactionDetails,
   txHex: string,
   availableUtxos: UTXO[],
+  fullRBF: boolean = false,
 ) => {
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
@@ -245,7 +252,7 @@ export const useCreateAcceleratedRBF = (
         dustThreshold: DUST_IN_SATOSHIS.toString(),
         ...(changeAddress ? { changeAddress } : { changeIndex }),
         strict: false, // Less strict validation for better user experience
-        fullRBF: true, // TODO: Change to false and/or use configurable option
+        fullRBF,
         reuseAllInputs: true, // Safer option to prevent replacement cycle attacks
         globalXpubs,
       };
@@ -272,6 +279,7 @@ export const useCreateCancelRBF = (
   transaction: TransactionDetails,
   txHex: string,
   availableUtxos: UTXO[],
+  fullRBF: boolean = false,
 ) => {
   const { network, addressType, requiredSigners, totalSigners } =
     useSelector(selectWalletConfig);
@@ -300,7 +308,7 @@ export const useCreateCancelRBF = (
         cancelAddress,
         dustThreshold: DUST_IN_SATOSHIS.toString(),
         strict: false,
-        fullRBF: true,
+        fullRBF,
         reuseAllInputs: true,
         requiredSigners,
         totalSigners,
@@ -362,7 +370,7 @@ export const useCreateCPFP = (
         transaction,
         spendableOutputIndex,
         txHex,
-        walletSlices,
+        walletSlices as Slice[],
       ) as UTXO;
       const cpfpOptions: CPFPOptions = {
         originalTx: txHex,
@@ -396,4 +404,48 @@ export const useCreateCPFP = (
   );
 
   return { createCPFP };
+};
+
+export const useAddressInput = ({
+  availableAddresses,
+  initialSelectionType = "predefined",
+}: UseAddressInputProps) => {
+  const [address, setAddress] = useState<string>("");
+  const [selectionType, setSelectionType] = useState<"predefined" | "custom">(
+    initialSelectionType,
+  );
+
+  // Initialize with first available address if using predefined
+  useEffect(() => {
+    if (
+      availableAddresses.length > 0 &&
+      !address &&
+      selectionType === "predefined"
+    ) {
+      setAddress(availableAddresses[0]);
+    }
+  }, [availableAddresses, address, selectionType]);
+
+  const handleSelectionTypeChange = useCallback(
+    (type: "predefined" | "custom") => {
+      setSelectionType(type);
+      if (type === "custom") {
+        setAddress("");
+      } else if (availableAddresses.length > 0) {
+        setAddress(availableAddresses[0]);
+      }
+    },
+    [availableAddresses],
+  );
+
+  const handleAddressChange = useCallback((value: string) => {
+    setAddress(value);
+  }, []);
+
+  return {
+    address,
+    selectionType,
+    handleSelectionTypeChange,
+    handleAddressChange,
+  };
 };

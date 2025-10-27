@@ -37,7 +37,14 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className="App" style={{ display: "flex", flexDirection: "column" }}>
+      <div
+        className="App"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100vh",
+        }}
+      >
         <SnackbarProvider maxSnack={3}>
           <Router basename="/">
             <AppContent />
@@ -129,6 +136,8 @@ const AppContent = () => {
         component="main"
         sx={{
           flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
           bgcolor: "background.default",
           p: { xs: 1, sm: 2, md: 3 },
           marginLeft: !showDrawer ? 0 : { xs: 0, md: `${DRAWER_WIDTH}px` },
@@ -154,8 +163,12 @@ const AppContent = () => {
             </Switch>
             <ErrorNotification />
           </ErrorBoundary>
-          {location.pathname !== "/" && <Footer />}
         </Box>
+        {location.pathname !== "/" && (
+          <Box component="footer" sx={{ mt: "auto", width: "100%" }}>
+            <Footer />
+          </Box>
+        )}
       </Box>
     </>
   );
