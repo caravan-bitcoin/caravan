@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/fees";
+import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/transactions";
 import { useAnalyzeTransaction } from "./hooks";
 import { RbfType, FeeBumpResult } from "../types";
 

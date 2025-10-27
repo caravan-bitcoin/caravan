@@ -12,7 +12,7 @@ import {
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { InfoOutlined } from "@mui/icons-material";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 import { useAccelerationModal } from "../../../components/AccelerationModalContext";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { HelpInformation } from "./HelpInformation";

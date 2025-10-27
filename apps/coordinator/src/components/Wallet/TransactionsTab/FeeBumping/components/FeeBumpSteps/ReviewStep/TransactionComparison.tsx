@@ -12,7 +12,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import CancelIcon from "@mui/icons-material/Cancel";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 
 import { useAccelerationModal } from "../../AccelerationModalContext";
 import { RBF_TYPES } from "../../../types";
