@@ -46,7 +46,7 @@ export const usePublicClientTransactions = () => {
     }
   }, [currentAddresses.length, clientType, queryClient]);
 
-  const query = useQuery({
+  return useQuery({
     queryKey: transactionKeys.confirmedHistory(),
     queryFn: async () => {
       // So we fetch all transactions in one call and let the blockchain client handle this efficiently
@@ -73,13 +73,6 @@ export const usePublicClientTransactions = () => {
     refetchInterval: 60000, // Refetch every minute
     refetchIntervalInBackground: false,
   });
-
-  return {
-    transactions: query.data || [],
-    isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
-  };
 };
 
 export const usePrivateClientTransactions = () => {
@@ -99,7 +92,7 @@ export const usePrivateClientTransactions = () => {
     }
   }, [walletAddresses.length, clientType, queryClient, blockchainClient]);
 
-  const query = useQuery({
+  return useQuery({
     queryKey: transactionKeys.confirmedHistory(),
     queryFn: async () => {
       // Fetch all transactions from the wallet in one call
@@ -137,13 +130,6 @@ export const usePrivateClientTransactions = () => {
     refetchInterval: 60000,
     refetchIntervalInBackground: false,
   });
-
-  return {
-    transactions: query.data || [],
-    isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
-  };
 };
 
 /**

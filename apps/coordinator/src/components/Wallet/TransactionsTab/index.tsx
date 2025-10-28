@@ -29,7 +29,7 @@ const TransactionsTab: React.FC = () => {
 
   // Fetch confirmed transactions - all of them, up to our `MAX_TRANSACTIONS_TO_FETCH`
   const {
-    transactions: confirmedTransactions = [],
+    data: confirmedTransactions = [],
     isLoading: confirmedIsLoading,
     error: confirmedError,
   } = useConfirmedTransactions();
