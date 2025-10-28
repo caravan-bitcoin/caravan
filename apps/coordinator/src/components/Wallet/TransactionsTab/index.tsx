@@ -5,8 +5,8 @@ import { Box, Tabs, Tab } from "@mui/material";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
 import { useConfirmedTransactions } from "clients/txHistory";
-import { ConfirmedTransactionsView } from "./ConfirmedTransactionsView";
-import { PendingTransactionsView } from "./PendingTransactionsView";
+import { ConfirmedTransactionsView } from "./TableComponents/ConfirmedTransactionsView";
+import { PendingTransactionsView } from "./TableComponents/PendingTransactionsView";
 import { useHandleTransactionExplorerLinkClick } from "./hooks";
 
 const TransactionsTab: React.FC = () => {

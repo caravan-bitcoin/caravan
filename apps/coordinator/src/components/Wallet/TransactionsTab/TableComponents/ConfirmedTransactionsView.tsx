@@ -6,8 +6,8 @@ import {
   useSortedTransactions,
   useHandleTransactionExplorerLinkClick,
   useTransactionPagination,
-} from "./hooks";
-import { Transaction } from "./types";
+} from "../hooks";
+import { Transaction } from "../types";
 import { useGetClient } from "hooks/client";
 
 interface Props {

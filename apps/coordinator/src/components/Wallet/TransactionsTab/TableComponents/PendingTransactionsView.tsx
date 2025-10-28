@@ -3,8 +3,8 @@ import { Box, Typography, CircularProgress } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
 import { usePendingTransactions } from "clients/transactions";
-import { useSortedTransactions, useTransactionPagination } from "./hooks";
-import { TransactionT } from "./types";
+import { useSortedTransactions, useTransactionPagination } from "../hooks";
+import { TransactionT } from "../types";
 
 interface Props {
   network?: string;
