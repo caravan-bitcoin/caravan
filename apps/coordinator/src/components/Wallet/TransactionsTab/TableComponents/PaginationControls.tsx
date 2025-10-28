@@ -7,8 +7,8 @@ import {
   MenuItem,
   Typography,
   Pagination,
-  SelectChangeEvent,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
 
 interface Props {
   totalItems: number;
