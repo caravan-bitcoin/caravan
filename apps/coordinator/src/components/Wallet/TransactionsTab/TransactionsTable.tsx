@@ -237,7 +237,7 @@ const TransactionTableHeader: React.FC<{
   </TableHead>
 );
 
-// A single transaction row - Updated to handle showAcceleration prop
+// A single transaction row with optional showAcceleration column
 const TransactionTableRow: React.FC<{
   tx: TransactionT;
   showAcceleration: boolean;

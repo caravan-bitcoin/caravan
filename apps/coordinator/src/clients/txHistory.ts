@@ -57,7 +57,7 @@ export const usePublicClientTransactions = () => {
           0,
         );
 
-      // for public clients we don't expect the deduplication problem we have for private nodes so we don't handle that
+      // for public clients we don't expect the duplication problem we have for private nodes so we don't handle that
       return selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
