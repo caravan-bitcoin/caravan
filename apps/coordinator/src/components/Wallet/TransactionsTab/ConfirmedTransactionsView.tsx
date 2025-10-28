@@ -1,15 +1,7 @@
 import React from "react";
-import {
-  CircularProgress,
-  Typography,
-  Box,
-  Pagination,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material";
+import { CircularProgress, Typography, Box } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
+import { PaginationControls } from "./PaginationControls";
 import {
   useSortedTransactions,
   useHandleTransactionExplorerLinkClick,
@@ -101,45 +93,15 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
       />
 
       {/* Standard Pagination Controls (for loaded transactions) */}
-      {sortedTransactions.length > 0 && (
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mt={2}
-          px={1}
-        >
-          {/* Rows per page dropdown */}
-          <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="rows-per-page-label">Rows</InputLabel>
-            <Select
-              labelId="rows-per-page-label"
-              value={rowsPerPage.toString()}
-              onChange={handleRowsPerPageChange}
-              label="Rows"
-            >
-              <MenuItem value="10">10</MenuItem>
-              <MenuItem value="25">25</MenuItem>
-              <MenuItem value="50">50</MenuItem>
-              <MenuItem value="100">100</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Page info and navigation */}
-          <Box display="flex" alignItems="center">
-            <Typography variant="body2" color="textSecondary" mr={2}>
-              {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
-            </Typography>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={handlePageChange}
-              color="primary"
-              size="small"
-            />
-          </Box>
-        </Box>
-      )}
+      <PaginationControls
+        totalItems={sortedTransactions.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+      />
     </Box>
   );
 };
