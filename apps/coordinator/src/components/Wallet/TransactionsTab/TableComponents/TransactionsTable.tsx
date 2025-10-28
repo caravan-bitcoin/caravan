@@ -29,7 +29,7 @@ import {
   ValueDisplayProps,
   SortBy,
   SortDirection,
-} from "./types";
+} from "../types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
