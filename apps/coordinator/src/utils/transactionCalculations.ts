@@ -40,7 +40,6 @@ export const calculateValueFromDetails = (details: any[]): number => {
     if (["receive", "generate", "immature", "send"].includes(detail.category)) {
       return valueToWallet + amountInSats;
     }
-
     return valueToWallet;
   }, 0);
 };
@@ -178,7 +177,35 @@ export const calculateTransactionValue = (
     return calculateValueFromDetails(tx.details) - fees;
   }
 
-  // CASE 2: Public client or private client without details field
+  // CASE 2: Simplified wallet transaction format for private clients
+  // This handles transactions from listtransactions/listsinceblock RPC calls
+  // These have amount/fee/category but sometimes empty vin/vout arrays
+  if (
+    tx.amount !== undefined &&
+    typeof tx.amount === "number" &&
+    tx.category !== undefined
+  ) {
+    // The 'amount' field is in BTC, so we need to convert it to satoshis
+    const amountInSats = Math.round(tx.amount * 1e8);
+
+    // For received transactions (category: "receive"), amount is positive
+    // For sent transactions (category: "send"), amount is negative
+    // The fee is already factored into the amount for sent transactions,
+    // but we need to be explicit about it for received transactions
+    if (tx.category === "receive") {
+      // For received transactions, we don't pay the fee, so just return the amount
+      return amountInSats;
+    } else if (tx.category === "send") {
+      // For sent transactions, the amount is already negative and includes the fee
+      // So we just convert to satoshis
+      return amountInSats;
+    } else {
+      // For other categories (like "generate"), just return the amount
+      return amountInSats;
+    }
+  }
+
+  // CASE 3: Public client or private client without details field
   if (tx.vin && tx.vout) {
     // Calculate sum of all outputs to wallet addresses
     const totalChange = calculateTotalChange(tx, walletAddresses);
@@ -191,6 +218,6 @@ export const calculateTransactionValue = (
     return estimateValueFromOutputs(tx, walletAddresses, totalChange);
   }
 
-  // CASE 3: Not enough data to calculate
+  // CASE 4: Not enough data to calculate
   return 0;
 };

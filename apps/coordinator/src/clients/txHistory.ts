@@ -10,6 +10,7 @@ import {
 } from "selectors/wallet";
 import { useGetClient } from "hooks/client";
 import { transactionKeys } from "clients/transactions";
+import { calculateTransactionValue } from "utils/transactionCalculations";
 
 // How many transactions to fetch in total
 // This is a reasonable limit that covers most use cases without overwhelming the browser and also prevents the
@@ -58,11 +59,17 @@ export const usePublicClientTransactions = () => {
         );
 
       // for public clients we don't expect the duplication problem we have for private nodes so we don't handle that
-      return selectProcessedTransactions(
+      const processedTransactions = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
         "confirmed",
       );
+
+      // We need to ensure every transaction has valueToWallet in satoshis for consistent sorting
+      return processedTransactions.map((tx) => ({
+        ...tx,
+        valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      }));
     },
     enabled:
       !!blockchainClient &&
@@ -122,7 +129,11 @@ export const usePrivateClientTransactions = () => {
         return true;
       });
 
-      return deduplicated;
+      // We need to ensure every transaction has valueToWallet in satoshis for consistent sorting
+      return deduplicated.map((tx) => ({
+        ...tx,
+        valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      }));
     },
     enabled: !!blockchainClient && clientType === "private",
     staleTime: TRANSACTION_STALE_TIME,
