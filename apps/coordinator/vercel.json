@@ -1,15 +1,27 @@
 {
-    "redirects": [
-      {
-        "source": "/:path*",
-        "has": [
-          {
-            "type": "host",
-            "value": "bip370.caravanmultisig.com"
-          }
-        ],
-        "destination": "https://bip370.org/",
-        "permanent": true
-      }
-    ]
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "bip370.caravanmultisig.com"
+        }
+      ],
+      "destination": "https://bip370.org/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "bip370.caravanmultisig.com"
+        }
+      ],
+      "destination": "https://bip370.org/",
+      "permanent": true
+    }
+  ]
+}
