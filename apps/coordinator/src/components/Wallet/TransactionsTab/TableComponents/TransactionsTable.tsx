@@ -27,7 +27,9 @@ import {
   TransactionTableProps,
   FeeDisplayProps,
   ValueDisplayProps,
-} from "./types";
+  SortBy,
+  SortDirection,
+} from "../types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -35,14 +37,17 @@ const formatRelativeTime = (timestamp?: number): string => {
   return formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true });
 };
 
-// Column definitions with sorting configuration
-const columns = [
+// Column definitions with sorting configuration - dynamic based on showAcceleration
+const getColumns = (showAcceleration: boolean) => [
   { id: "txid", label: "Transaction ID", sortable: false },
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "valueToWallet", label: "Value", sortable: true },
-  { id: "status", label: "Status", sortable: false },
+  { id: "status", label: "Status", sortable: true },
+  ...(showAcceleration
+    ? [{ id: "accelerate", label: "Accelerate", sortable: false }]
+    : []),
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -204,12 +209,12 @@ export const ValueDisplay: React.FC<ValueDisplayProps> = ({ valueInSats }) => {
   );
 };
 
-// Table header with sort labels
+// Table header with sort labels - Updated to use proper types
 const TransactionTableHeader: React.FC<{
   columns: Array<{ id: string; label: string; sortable: boolean }>;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
-  onSort: (property: keyof TransactionT) => void;
+  sortBy: SortBy;
+  sortDirection: SortDirection;
+  onSort: (property: SortBy) => void;
 }> = ({ columns, sortBy, sortDirection, onSort }) => (
   <TableHead>
     <TableRow>
@@ -218,8 +223,8 @@ const TransactionTableHeader: React.FC<{
           {column.sortable ? (
             <TableSortLabel
               active={sortBy === column.id}
-              direction={sortDirection}
-              onClick={() => onSort(column.id as keyof TransactionT)}
+              direction={sortBy === column.id ? sortDirection : "asc"}
+              onClick={() => onSort(column.id as SortBy)}
             >
               {column.label}
             </TableSortLabel>
@@ -232,9 +237,10 @@ const TransactionTableHeader: React.FC<{
   </TableHead>
 );
 
-// A single transaction row
+// A single transaction row with optional showAcceleration column
 const TransactionTableRow: React.FC<{
   tx: TransactionT;
+  showAcceleration: boolean;
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onAccelerateTransaction?: (tx: TransactionT) => void;
@@ -370,8 +376,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onClickTransaction,
   onAccelerateTransaction,
   renderActions,
+  showAcceleration = false, // Default to false for backward compatibility
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  // Get dynamic columns based on showAcceleration
+  const columns = getColumns(showAcceleration);
 
   return (
     <>
@@ -387,7 +397,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             {transactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
-                  No transactions found
+                  <Typography variant="body2" color="textSecondary" py={2}>
+                    No transactions found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
@@ -395,6 +407,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <TransactionTableRow
                   key={tx.txid}
                   tx={tx}
+                  showAcceleration={showAcceleration}
                   network={network}
                   onClickTransaction={onClickTransaction}
                   onAccelerateTransaction={onAccelerateTransaction}

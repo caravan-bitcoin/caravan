@@ -1,78 +1,47 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Pagination,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material";
-import { TransactionTable } from "./TransactionsTable";
+import { Box, Tabs, Tab } from "@mui/material";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
 import { usePendingTransactions } from "clients/transactions";
-import {
-  useSortedTransactions,
-  useTransactionPagination,
-  useHandleTransactionExplorerLinkClick,
-} from "./hooks";
-
-/**
- * TRANSACTIONS TAB - PENDING TRANSACTIONS ONLY
- *
- * This implementation currently only shows pending (unconfirmed) transactions.
- *
- * Tracking confirmed/spent transactions is challenging because as UTXOs are spent,
- * they disappear from the wallet state. In private clients, we need a different
- * approach to track historical transactions since we can't collect transaction IDs
- * directly from UTXO data that no longer exists in the wallet.
- *
- * When we add confirmed transaction support later, we can create separate tabs
- * and hooks for confirmed transactions.
- */
+import { useConfirmedTransactions } from "clients/txHistory";
+import { ConfirmedTransactionsView } from "./TableComponents/ConfirmedTransactionsView";
+import { PendingTransactionsView } from "./TableComponents/PendingTransactionsView";
+import { useHandleTransactionExplorerLinkClick } from "./hooks";
 
 const TransactionsTab: React.FC = () => {
   const network = useSelector((state: any) => state.settings.network);
 
-  // State for the selected transaction for acceleration
+  // Tab state for switching between pending and completed
+  const [tabValue, setTabValue] = useState(0);
+
+  // Acceleration modal state
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
     null,
   );
-  // State for the acceleration modal
   const [accelerationModalOpen, setAccelerationModalOpen] = useState(false);
-  // State for the raw tx hex
   const [txHex, setTxHex] = useState<string>("");
-  // Get blockchain client from Redux store
+
   const blockchainClient = useGetClient();
 
-  // Use our custom hooks for pending transactions
-  const { transactions, isLoading, error } = usePendingTransactions();
-  const { sortBy, sortDirection, handleSort, sortedTransactions } =
-    useSortedTransactions(transactions);
-  const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
+  // Fetch pending transactions
+  const { transactions: pendingTransactions = [] } = usePendingTransactions();
 
-  // Set up pagination for pending transactions
+  // Fetch confirmed transactions - all of them, up to our `MAX_TRANSACTIONS_TO_FETCH`
   const {
-    page,
-    rowsPerPage,
-    totalPages,
-    getCurrentPageItems,
-    handlePageChange,
-    handleRowsPerPageChange,
-  } = useTransactionPagination(sortedTransactions.length);
+    data: confirmedTransactions = [],
+    isLoading: confirmedIsLoading,
+    error: confirmedError,
+  } = useConfirmedTransactions();
 
-  // Get transactions for current page
-  const currentPageTxs = getCurrentPageItems(sortedTransactions);
+  const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
 
   // Handle acceleration button click
   const handleAccelerateTransaction = async (tx: any) => {
     if (!tx || !blockchainClient) return;
 
     try {
-      // Fetch the raw transaction he
+      // Fetch the raw transaction hex
       const txHex = await blockchainClient.getTransactionHex(tx.txid);
       if (!txHex || typeof txHex !== "string") {
         throw new Error("Invalid transaction hex received");
@@ -89,6 +58,10 @@ const TransactionsTab: React.FC = () => {
     }
   };
 
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   // Handle acceleration modal close
   const handleAccelerationModalClose = () => {
     setAccelerationModalOpen(false);
@@ -98,73 +71,63 @@ const TransactionsTab: React.FC = () => {
 
   return (
     <div>
-      {error && (
-        <Typography color="error" gutterBottom>
-          Error: {error}
-        </Typography>
-      )}
-
-      <Box mt={2}>
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" p={3}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            <TransactionTable
-              transactions={currentPageTxs}
-              onSort={handleSort}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              network={network}
-              onClickTransaction={handleExplorerLinkClick}
-              onAccelerateTransaction={handleAccelerateTransaction}
+      {/* Tab Navigation */}
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            aria-label="transaction tabs"
+          >
+            <Tab
+              label={`Pending (${pendingTransactions.length})`}
+              id="pending-tab"
+              aria-controls="pending-tabpanel"
             />
-            {/* Pagination controls */}
-            {sortedTransactions.length > 0 && (
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mt={2}
-                px={1}
-              >
-                <FormControl
-                  variant="outlined"
-                  size="small"
-                  sx={{ minWidth: 120 }}
-                >
-                  <InputLabel id="rows-per-page-label">Rows</InputLabel>
-                  <Select
-                    labelId="rows-per-page-label"
-                    value={rowsPerPage.toString()}
-                    onChange={handleRowsPerPageChange}
-                    label="Rows"
-                  >
-                    <MenuItem value="5">5</MenuItem>
-                    <MenuItem value="10">10</MenuItem>
-                    <MenuItem value="25">25</MenuItem>
-                    <MenuItem value="50">50</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <Box display="flex" alignItems="center">
-                  <Typography variant="body2" color="textSecondary" mr={2}>
-                    {`${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, sortedTransactions.length)} of ${sortedTransactions.length}`}
-                  </Typography>
-                  <Pagination
-                    count={totalPages}
-                    page={page}
-                    onChange={handlePageChange}
-                    color="primary"
-                    size="small"
-                  />
-                </Box>
-              </Box>
-            )}
-          </>
-        )}
+            <Tab
+              label={`Confirmed (${confirmedTransactions.length})`}
+              id="confirmed-tab"
+              aria-controls="completed-tabpanel"
+            />
+          </Tabs>
+        </Box>
       </Box>
+
+      {/* Pending Transactions Tab */}
+      <div
+        role="tabpanel"
+        hidden={tabValue !== 0}
+        id="pending-tabpanel"
+        aria-labelledby="pending-tab"
+      >
+        {tabValue === 0 && (
+          <PendingTransactionsView
+            network={network}
+            onClickTransaction={handleExplorerLinkClick}
+            onAccelerateTransaction={handleAccelerateTransaction}
+          />
+        )}
+      </div>
+
+      {/* Completed Transactions Tab */}
+      <div
+        role="tabpanel"
+        hidden={tabValue !== 1}
+        id="completed-tabpanel"
+        aria-labelledby="completed-tab"
+      >
+        {tabValue === 1 && (
+          <ConfirmedTransactionsView
+            transactions={confirmedTransactions}
+            isLoading={confirmedIsLoading}
+            error={confirmedError}
+            network={network}
+            onClickTransaction={handleExplorerLinkClick}
+          />
+        )}
+      </div>
+
+      {/* Acceleration Modal - only for pending transactions */}
       {selectedTransaction && (
         <AccelerationModal
           open={accelerationModalOpen}

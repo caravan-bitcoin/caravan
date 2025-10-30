@@ -292,6 +292,11 @@ export interface ListTransactionItem {
   "bip125-replaceable": "yes" | "no" | "unknown";
   trusted?: boolean;
 }
+export interface FullTransactionItem extends ListTransactionItem {
+    size?: number;
+    vsize?: number;
+    weight?: number;
+  }
 
 export async function bitcoindListSpentTransactions({
   url,

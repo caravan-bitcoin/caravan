@@ -1,24 +1,26 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { useMemo } from "react";
 import { BlockchainClient, TransactionDetails } from "@caravan/clients";
 import {
   getPendingTransactionIds,
   getWalletAddresses,
   Slice,
+  selectProcessedTransactions,
 } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
-// Query key factory for pending transactions
-const transactionKeys = {
+// Centralized query key factory for all transaction-related queries
+export const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
-  // all the coins for a given transaction
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
+  confirmedHistory: () => [...transactionKeys.all, "confirmed"] as const,
 };
 
 // Service function for fetching transaction details
@@ -32,6 +34,7 @@ const fetchTransactionDetails = async (
   return await client.getTransaction(txid);
 };
 
+// Basic hook for fetching single transaction details
 export const useFetchTransactionDetails = (txid: string) => {
   const blockchainClient = useGetClient();
   return useQuery({
@@ -41,6 +44,7 @@ export const useFetchTransactionDetails = (txid: string) => {
   });
 };
 
+// Hook for fetching pending transaction IDs and their details
 // Service function for fetching pending transaction fees
 const fetchPendingTransactionFee = async (
   txid: string,
@@ -82,6 +86,7 @@ const useFetchPendingTransactions = () => {
   });
 };
 
+// Hook for fetching transactions with their hex data
 export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
   return useQueries({
@@ -100,12 +105,11 @@ export const useTransactionsWithHex = (txids: string[]) => {
   });
 };
 
-// Hook for processed pending transactions with calculated values
-export const usePendingTransactions = () => {
+// Basic hook for raw pending transactions (no processing)
+export const useRawPendingTransactions = () => {
   const walletAddresses = useSelector(getWalletAddresses);
   const transactionQueries = useFetchPendingTransactions();
 
-  // Calculate loading and error states
   const isLoading = transactionQueries.some((query) => query.isLoading);
   const error = transactionQueries.find((query) => query.error)?.error;
 
@@ -130,9 +134,30 @@ export const usePendingTransactions = () => {
     isLoading,
     error,
     refetch: () => {
-      // Refetch all transaction queries
       transactionQueries.forEach((query) => query.refetch());
     },
+  };
+};
+
+// Hook for processed pending transactions - uses selector
+export const usePendingTransactions = () => {
+  const walletAddresses = useSelector(getWalletAddresses);
+  const rawPendingQuery = useRawPendingTransactions();
+
+  const transactions = useMemo(() => {
+    if (!rawPendingQuery.transactions) return [];
+    return selectProcessedTransactions(
+      rawPendingQuery.transactions,
+      walletAddresses,
+      "unconfirmed",
+    );
+  }, [rawPendingQuery.transactions, walletAddresses]);
+
+  return {
+    transactions,
+    isLoading: rawPendingQuery.isLoading,
+    error: rawPendingQuery.error,
+    refetch: rawPendingQuery.refetch,
   };
 };
 
@@ -149,9 +174,10 @@ export interface Coin {
 export const fetchTransactionCoins = async (
   txid: string,
   client: BlockchainClient,
-) => {
+): Promise<Map<string, Coin>> => {
   const transaction = await client.getTransaction(txid);
   const coins = new Map<string, Coin>();
+
   for (const input of transaction.vin) {
     const { txid, vout } = input;
 
