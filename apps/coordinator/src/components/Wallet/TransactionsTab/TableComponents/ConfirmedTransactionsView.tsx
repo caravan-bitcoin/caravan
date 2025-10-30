@@ -2,10 +2,12 @@ import React from "react";
 import { CircularProgress, Typography, Box } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
+import { TransactionFilter } from "./TransactionFilter";
 import {
   useSortedTransactions,
   useHandleTransactionExplorerLinkClick,
   useTransactionPagination,
+  useTransactionFilter,
 } from "../hooks";
 import { Transaction } from "../types";
 import { useGetClient } from "hooks/client";
@@ -25,10 +27,13 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
   network,
   onClickTransaction,
 }) => {
-  const { sortedTransactions, handleSort, sortBy, sortDirection } =
-    useSortedTransactions(transactions);
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
   const client = useGetClient();
+
+  const { filterType, setFilterType, filteredTransactions, counts } =
+    useTransactionFilter(transactions);
+  const { sortedTransactions, handleSort, sortBy, sortDirection } =
+    useSortedTransactions(filteredTransactions);
 
   // Set up pagination for the currently loaded transactions
   const {
@@ -82,26 +87,45 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
           </Typography>
         </Box>
       )}
-      <TransactionTable
-        transactions={Array.isArray(currentPageTxs) ? currentPageTxs : []}
-        sortBy={sortBy}
-        sortDirection={sortDirection}
-        onSort={handleSort}
-        showAcceleration={false} // Don't show acceleration for confirmed txs
-        network={network}
-        onClickTransaction={onClickTransaction || handleExplorerLinkClick}
+
+      <TransactionFilter
+        filterType={filterType}
+        onFilterChange={setFilterType}
+        counts={counts}
       />
 
-      {/* Standard Pagination Controls (for loaded transactions) */}
-      <PaginationControls
-        totalItems={sortedTransactions.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        rowsPerPageOptions={[10, 25, 50, 100]}
-      />
+      {/* Show message if filter results in no transactions */}
+      {filteredTransactions.length === 0 ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <Typography variant="body1" color="textSecondary">
+            No {filterType === "received" ? "received" : "sent"} transactions
+            found.
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <TransactionTable
+            transactions={Array.isArray(currentPageTxs) ? currentPageTxs : []}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            showAcceleration={false} // Don't show acceleration for confirmed txs
+            network={network}
+            onClickTransaction={onClickTransaction || handleExplorerLinkClick}
+          />
+
+          {/* Standard Pagination Controls (for loaded transactions) */}
+          <PaginationControls
+            totalItems={sortedTransactions.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+          />
+        </>
+      )}
     </Box>
   );
 };

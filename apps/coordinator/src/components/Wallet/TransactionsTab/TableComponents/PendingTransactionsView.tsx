@@ -2,8 +2,13 @@ import React from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
+import { TransactionFilter } from "./TransactionFilter";
 import { usePendingTransactions } from "clients/transactions";
-import { useSortedTransactions, useTransactionPagination } from "../hooks";
+import {
+  useSortedTransactions,
+  useTransactionPagination,
+  useTransactionFilter,
+} from "../hooks";
 import { TransactionT } from "../types";
 
 interface Props {
@@ -23,8 +28,11 @@ export const PendingTransactionsView: React.FC<Props> = ({
     error,
   } = usePendingTransactions();
 
+  const { filterType, setFilterType, filteredTransactions, counts } =
+    useTransactionFilter(pendingTransactions);
+
   const { sortBy, sortDirection, handleSort, sortedTransactions } =
-    useSortedTransactions(pendingTransactions);
+    useSortedTransactions(filteredTransactions);
 
   const {
     page,
@@ -65,25 +73,42 @@ export const PendingTransactionsView: React.FC<Props> = ({
 
   return (
     <Box>
-      <TransactionTable
-        transactions={currentPageItems}
-        onSort={handleSort}
-        sortBy={sortBy}
-        sortDirection={sortDirection}
-        network={network}
-        onClickTransaction={onClickTransaction}
-        onAccelerateTransaction={onAccelerateTransaction}
-        showAcceleration={true}
+      <TransactionFilter
+        filterType={filterType}
+        onFilterChange={setFilterType}
+        counts={counts}
       />
-      <PaginationControls
-        totalItems={sortedTransactions.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handleRowsPerPageChange}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-      />
+      {/* Show message if filter results in no transactions */}
+      {filteredTransactions.length === 0 ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <Typography variant="body1" color="textSecondary">
+            No {filterType === "received" ? "received" : "sent"} transactions
+            found.
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <TransactionTable
+            transactions={currentPageItems}
+            onSort={handleSort}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            network={network}
+            onClickTransaction={onClickTransaction}
+            onAccelerateTransaction={onAccelerateTransaction}
+            showAcceleration={true}
+          />
+          <PaginationControls
+            totalItems={sortedTransactions.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </>
+      )}
     </Box>
   );
 };
