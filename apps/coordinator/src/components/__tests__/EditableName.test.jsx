@@ -11,7 +11,7 @@ describe("EditableName", () => {
   let spy;
 
   beforeEach(() => {
-    spy = jest.fn();
+    spy = vi.fn();
     const element = render(
       <EditableName number={0} name={nameValue} setName={spy} />,
     );
