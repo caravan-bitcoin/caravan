@@ -20,6 +20,7 @@ import {
 
 import { BCUR2Decoder } from "./decoder";
 import { BCUR2Encoder } from "./encoder";
+import type { MultisigWalletConfig } from "../types";
 
 /**
  * Factory function type for creating BCUR2Decoder instances
@@ -569,5 +570,112 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
       this.qrCodeFrames = this.encoder.encodePSBT();
     }
     return this.qrCodeFrames;
+  }
+}
+
+/**
+ * Interaction class for confirming a multisig address with BCUR2-compatible devices.
+ * This interaction displays the address details as QR codes and waits for confirmation
+ * from the airgapped signing device.
+ *
+ * @extends BCUR2Interaction
+ */
+export class BCUR2ConfirmMultisigAddress extends BCUR2Interaction {
+  private bip32Path: string;
+
+  private address: string;
+
+  private walletConfig: MultisigWalletConfig;
+
+  private confirmed: boolean = false;
+
+  /**
+   * Creates a new BCUR2 address confirmation interaction
+   * @param {Object} params - Parameters for the interaction
+   * @param {string} params.bip32Path - BIP32 derivation path for the address
+   * @param {string} params.address - The multisig address to confirm
+   * @param {BitcoinNetwork} params.network - The Bitcoin network
+   * @param {Object} params.walletConfig - Wallet configuration including quorum info
+   * @param {BCUR2Decoder} params.decoder - Decoder instance
+   */
+  constructor({
+    bip32Path,
+    address,
+    network = Network.MAINNET,
+    walletConfig,
+    decoder,
+  }: {
+    bip32Path: string;
+    address: string;
+    network?: BitcoinNetwork;
+    walletConfig: MultisigWalletConfig;
+    decoder?: BCUR2Decoder;
+  }) {
+    super(network, decoder);
+    this.bip32Path = bip32Path;
+    this.address = address;
+    this.walletConfig = walletConfig;
+    this.workflow = ["request", "parse"];
+  }
+
+  /**
+   * Provides messages for the address confirmation process
+   */
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "bcur2.address_confirmation_request",
+      text: "Display the address QR code to your signing device for confirmation",
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "bcur2.address_scanning",
+      text: "Scan the confirmation response from your signing device",
+    });
+
+    return messages;
+  }
+
+  /**
+   * Generates the request data for address confirmation
+   * @returns {Object} Request data containing address and wallet config
+   */
+  request() {
+    return {
+      instruction: "Confirm this address on your signing device",
+      address: this.address,
+      bip32Path: this.bip32Path,
+      walletConfig: this.walletConfig,
+      network: this.network,
+    };
+  }
+
+  /**
+   * Parses the confirmation response
+   * @param {string} data - Confirmation string (e.g., "confirmed")
+   * @returns {Object} The result with address and confirmation status
+   */
+  parse(data: string) {
+    if (data === "confirmed") {
+      this.confirmed = true;
+    }
+    return {
+      address: this.address,
+      serializedPath: this.bip32Path,
+      confirmed: this.confirmed,
+    };
+  }
+
+  /**
+   * Checks if the address has been confirmed
+   * @returns {boolean} True if address is confirmed
+   */
+  isConfirmed(): boolean {
+    return this.confirmed;
   }
 }
