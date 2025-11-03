@@ -57,7 +57,7 @@
     "vite-plugin-wasm": "^3.3.0",
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.29",
-    "jsdom": "^24.0.0",
+    "jsdom": "^26.1.0",
     "tsx": "^4.19.4"
   },
   "scripts": {
