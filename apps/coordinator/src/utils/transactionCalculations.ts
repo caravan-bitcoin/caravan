@@ -178,31 +178,15 @@ export const calculateTransactionValue = (
   }
 
   // CASE 2: Simplified wallet transaction format for private clients
-  // This handles transactions from listtransactions/listsinceblock RPC calls
-  // These have amount/fee/category but sometimes empty vin/vout arrays
+  // These transactions (from listtransactions/listsinceblock RPCs) include `amount`, `fee`, and `category`.
+  // - `amount` is in BTC and already signed: positive for "receive", negative for "send" (fee included).
+  // - Therefore, we only need to convert it to satoshis; no category-specific adjustments required.
   if (
     tx.amount !== undefined &&
     typeof tx.amount === "number" &&
     tx.category !== undefined
   ) {
-    // The 'amount' field is in BTC, so we need to convert it to satoshis
-    const amountInSats = Math.round(tx.amount * 1e8);
-
-    // For received transactions (category: "receive"), amount is positive
-    // For sent transactions (category: "send"), amount is negative
-    // The fee is already factored into the amount for sent transactions,
-    // but we need to be explicit about it for received transactions
-    if (tx.category === "receive") {
-      // For received transactions, we don't pay the fee, so just return the amount
-      return amountInSats;
-    } else if (tx.category === "send") {
-      // For sent transactions, the amount is already negative and includes the fee
-      // So we just convert to satoshis
-      return amountInSats;
-    } else {
-      // For other categories (like "generate"), just return the amount
-      return amountInSats;
-    }
+    return Number(bitcoinsToSatoshis(tx.amount));
   }
 
   // CASE 3: Public client or private client without details field
