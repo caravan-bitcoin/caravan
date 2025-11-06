@@ -78,22 +78,37 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   // For received transactions, show fee in green with a note , also fee comes in BTC format - convert to sats
   if (isReceived) {
     // feeInSats is actually in BTC format when isReceived is true
-    const feeInBTC = satoshisToBitcoins(feeInSats!) || "0";
+    const feeInBTC = satoshisToBitcoins(feeInSats!);
     const actualFeeInSats = Number(feeInSats);
+
+    const shouldShowPlaceholder =
+      !feeInSats || actualFeeInSats === 0 || isNaN(actualFeeInSats); // Note we added explicit check so we can handle case when fee's is 0 ( as for pending we do populate fees for even received Tx), as 0 is a valid number (truthy in the ?? chain)
 
     return (
       <Tooltip title="You did not spend this fee" placement="top">
         <Box display="flex" flexDirection="column">
-          <Typography variant="body2" sx={{ color: "green", fontWeight: 500 }}>
-            {actualFeeInSats?.toLocaleString() ?? "--"} sats
-          </Typography>
-          {feeInBTC && (
+          {shouldShowPlaceholder ? (
             <Typography
-              variant="caption"
-              sx={{ color: "green", fontWeight: 400 }}
+              variant="body2"
+              sx={{ color: "green", fontWeight: 500 }}
             >
-              {feeInBTC} BTC
+              --
             </Typography>
+          ) : (
+            <>
+              <Typography
+                variant="body2"
+                sx={{ color: "green", fontWeight: 500 }}
+              >
+                {actualFeeInSats.toLocaleString()} sats
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: "green", fontWeight: 400 }}
+              >
+                {feeInBTC} BTC
+              </Typography>
+            </>
           )}
         </Box>
       </Tooltip>
