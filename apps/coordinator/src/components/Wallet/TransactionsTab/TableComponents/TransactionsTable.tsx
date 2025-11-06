@@ -82,7 +82,7 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
     const actualFeeInSats = Number(feeInSats);
 
     const shouldShowPlaceholder =
-      !feeInSats || actualFeeInSats === 0 || isNaN(actualFeeInSats); // Note we added explicit check so we can handle case when fee's is 0 ( as for pending we do populate fees for even received Tx), as 0 is a valid number (truthy in the ?? chain)
+      !feeInSats || actualFeeInSats === 0 || isNaN(actualFeeInSats); // Note we added explicit check so we can handle case when the fee is 0 (for pending we do populate fees for even received Tx), as 0 is a valid number (truthy in the ?? chain)
 
     return (
       <Tooltip title="You did not spend this fee" placement="top">
