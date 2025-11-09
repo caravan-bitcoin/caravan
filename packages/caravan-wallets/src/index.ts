@@ -21,6 +21,7 @@ import {
   BCUR2ExportExtendedPublicKey,
   BCUR2EncodeTransaction,
   BCUR2SignMultisigTransaction,
+  BCUR2ConfirmMultisigAddress,
 } from "./bcur2/interactions";
 import {
   BITBOX,
@@ -624,6 +625,17 @@ export function ConfirmMultisigAddress({
         expected: multisig.address,
         bip32Path,
         policyHmac,
+      });
+    }
+    case BCUR2: {
+      const braidDetails: BraidDetails = JSON.parse(multisig.braidDetails);
+      const _walletConfig =
+        walletConfig || braidDetailsToWalletConfig(braidDetails);
+      return new BCUR2ConfirmMultisigAddress({
+        address: multisig.address,
+        bip32Path,
+        network,
+        walletConfig: _walletConfig,
       });
     }
     default:
