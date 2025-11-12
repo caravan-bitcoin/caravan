@@ -17,7 +17,7 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
- *  TO-DO: Make all the various UTXO types we have in @caravan/client and @caravan/fees in sync
+ *  TO-DO: Make all the various UTXO types we have in @caravan/client and @caravan/transactions in sync
  */
 export interface UTXO {
   confirmed: boolean;

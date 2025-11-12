@@ -10,7 +10,7 @@ import {
   Chip,
   Paper,
 } from "@mui/material";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 import { formatFee } from "../../../utils";
 
 interface StrategyConfig {

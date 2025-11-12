@@ -105,7 +105,7 @@
     "@caravan/clients": "*",
     "@caravan/descriptors": "^0.1.1",
     "@caravan/health": "*",
-    "@caravan/fees": "*",
+    "@caravan/transactions": "*",
     "@caravan/psbt": "*",
     "@caravan/typescript-config": "*",
     "@caravan/wallets": "*",

@@ -1,6 +1,6 @@
 import { WasteMetrics, getSpendTypeScore } from "@caravan/health";
 import { walletFingerprintAnalysis } from "../utils/privacyUtils";
-import type { UTXO } from "@caravan/fees";
+import type { UTXO } from "@caravan/transactions";
 import type { MultisigAddressType } from "@caravan/bitcoin";
 
 export interface Output {

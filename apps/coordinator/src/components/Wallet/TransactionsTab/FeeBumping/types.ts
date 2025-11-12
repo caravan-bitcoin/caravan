@@ -1,4 +1,4 @@
-import { FeeBumpStrategy, Satoshis } from "@caravan/fees";
+import { FeeBumpStrategy, Satoshis } from "@caravan/transactions";
 import { FeePriority } from "clients/fees";
 
 /**

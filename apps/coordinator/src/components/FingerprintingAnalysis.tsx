@@ -6,7 +6,7 @@ import DustChip from "./ScriptExplorer/DustChip";
 import OutputFingerprintChip from "./OutputFingerprintChip";
 import ScriptTypeChip from "./ScriptTypeChip";
 import { useSelector } from "react-redux";
-import type { UTXO } from "@caravan/fees";
+import type { UTXO } from "@caravan/transactions";
 import type { WalletState } from "selectors/wallet";
 
 // Local type for transaction outputs (UI only)
