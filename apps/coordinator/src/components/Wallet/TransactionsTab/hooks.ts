@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Transaction, SortDirection, SortBy } from "./types";
 import { getTransactionExplorerUrl } from "selectors/wallet";
@@ -96,7 +96,7 @@ export const useSortedTransactions = (transactions: Transaction[]) => {
  */
 export const useTransactionPagination = (totalItems: number) => {
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Reset page when total items changes
   useEffect(() => {
@@ -176,4 +176,45 @@ export const useHandleTransactionExplorerLinkClick = () => {
     },
     [client, network, getExplorerUrl],
   );
+};
+
+/**
+ * Custom hook to manage transaction filtering by type
+ */
+export const useTransactionFilter = (transactions: Transaction[]) => {
+  const [filterType, setFilterType] = useState<"all" | "received" | "sent">(
+    "all",
+  );
+
+  const filteredTransactions = useMemo(() => {
+    if (filterType === "all") return transactions;
+
+    return transactions.filter((tx) => {
+      if (filterType === "received") {
+        return tx.isReceived === true;
+      } else {
+        // sent transactions
+        return tx.isReceived === false || tx.isReceived === undefined;
+      }
+    });
+  }, [transactions, filterType]);
+
+  // Get counts for each filter type
+  const counts = useMemo(
+    () => ({
+      all: transactions.length,
+      received: transactions.filter((tx) => tx.isReceived === true).length,
+      sent: transactions.filter(
+        (tx) => tx.isReceived === false || tx.isReceived === undefined,
+      ).length,
+    }),
+    [transactions],
+  );
+
+  return {
+    filterType,
+    setFilterType,
+    filteredTransactions,
+    counts,
+  };
 };

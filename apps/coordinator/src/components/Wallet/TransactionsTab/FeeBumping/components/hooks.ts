@@ -35,8 +35,9 @@ export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
     utxos: pendingUtxos,
     isLoading,
-    isError,
+    isError: isPendingUtxosError,
   } = usePendingUtxos(transaction?.txid || "");
+
   const walletUtxos = useWalletUtxos();
 
   // Memoize the combined UTXOs so it only recalculates when dependencies change
@@ -45,6 +46,11 @@ export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
     if (!transaction) return [];
     return extractUtxosForFeeBumping(pendingUtxos || [], walletUtxos || []);
   }, [pendingUtxos, walletUtxos, transaction]);
+
+  // Determine error state: error if usePendingUtxos failed and if extraction for UTXOs returned empty when it shouldn't
+  // This is especially true for CPFP or node-received transactions where usePendingUtxos might silently fail
+  const isError =
+    Boolean(transaction) && availableUtxos.length === 0 && isPendingUtxosError;
 
   return { availableUtxos, isLoading, isError };
 };
@@ -82,7 +88,9 @@ export const useAnalyzeTransaction = (
 
   useEffect(() => {
     if (isErrorAvailableUtxos) {
-      setError("There was an error getting available utxos");
+      setError(
+        "No available inputs found for this transaction — likely created by another wallet or not eligible for fee bumping.",
+      );
     } else {
       setError("");
     }
