@@ -88,7 +88,9 @@ export const useAnalyzeTransaction = (
 
   useEffect(() => {
     if (isErrorAvailableUtxos) {
-      setError("There was an error getting available utxos");
+      setError(
+        "No available inputs found for this transaction — likely created by another wallet or not eligible for fee bumping.",
+      );
     } else {
       setError("");
     }
