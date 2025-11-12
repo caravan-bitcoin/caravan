@@ -179,6 +179,7 @@ interface AccelerationModalContextType {
   } | null;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;
+  isRbfAvailable: boolean;
   analysisIsLoading: boolean;
   analysisError: string | null;
   availableUtxos: UTXO[];
@@ -230,6 +231,30 @@ export function AccelerationModalProvider({
     cpfp,
     changeOutputIndex,
   } = useAnalyzeTransaction(transaction, txHex);
+
+  // Check for fullRBF support
+  const isRbfAvailable = React.useMemo(() => {
+    // Must have a valid transaction
+    if (!transaction) return false;
+
+    // Must have at least one UTXO we can spend
+    if (!availableUtxos || availableUtxos.length === 0) return false;
+
+    // Check if any of the transaction inputs correspond to our spendable UTXOs
+    const hasSpendableInputs = transaction.vin?.some((input) =>
+      availableUtxos.some(
+        (utxo) => utxo.txid === input.txid && utxo.vout === input.vout,
+      ),
+    );
+
+    if (!hasSpendableInputs) return false;
+
+    // Finally, check if the transaction actually signals RBF
+    // (analysis.isRBFSignaled is set based on nSequence values by f)
+    const signalsRBF = analysis?.isRBFSignaled ?? false;
+
+    return signalsRBF;
+  }, [availableUtxos, transaction, analysis]);
 
   // Action creators
   const setActiveStep = useCallback((step: number) => {
@@ -285,6 +310,7 @@ export function AccelerationModalProvider({
     setFeeBumpResult,
     setDownloadClicked,
     analysis,
+    isRbfAvailable,
     cpfp,
     changeOutputIndex,
     availableUtxos,

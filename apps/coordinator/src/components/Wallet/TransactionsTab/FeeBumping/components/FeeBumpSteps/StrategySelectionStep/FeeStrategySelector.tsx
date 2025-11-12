@@ -30,6 +30,7 @@ export const FeeStrategySelector: React.FC = () => {
   const {
     setStrategy,
     setEnableFullRBF,
+    isRbfAvailable,
     state: { selectedStrategy, enableFullRBF },
     analysis,
     cpfp,
@@ -40,7 +41,7 @@ export const FeeStrategySelector: React.FC = () => {
   if (!analysis?.recommendedStrategy || isLoadingFeeEstimates) {
     return null;
   }
-  const signalsRBF = analysis?.isRBFSignaled ?? false;
+
   // Memoize strategy configuration array to prevent re-creation on every render
   const strategyConfigs = useMemo(
     () => [
@@ -95,7 +96,7 @@ export const FeeStrategySelector: React.FC = () => {
         Select Fee Bumping Strategy
       </Typography>
 
-      {!signalsRBF && (
+      {isRbfAvailable && (
         <Box
           sx={{
             mb: 3,
