@@ -1,7 +1,7 @@
 {
   "name": "caravan-coordinator",
   "private": true,
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
   "type": "module",
@@ -64,6 +64,7 @@
     "vite-plugin-wasm": "^3.3.0",
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.29",
+    "jsdom": "^26.1.0",
     "tsx": "^4.19.4"
   },
   "scripts": {
@@ -76,9 +77,9 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src/",
     "predeploy": "npm run build",
     "start": "HTTPS=true npm run preview",
-    "test": "__GIT_SHA__=`git rev-parse --short HEAD` jest",
-    "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` jest --watch",
-    "test:ci": "CI=true jest --coverage",
+    "test": "__GIT_SHA__=`git rev-parse --short HEAD` vitest run",
+    "test:watch": "__GIT_SHA__=`git rev-parse --short HEAD` vitest",
+    "test:ci": "CI=true vitest run --coverage",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
