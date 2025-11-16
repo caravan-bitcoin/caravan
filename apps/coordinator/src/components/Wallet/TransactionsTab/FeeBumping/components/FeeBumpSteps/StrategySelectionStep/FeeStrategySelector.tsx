@@ -54,7 +54,7 @@ export const FeeStrategySelector: React.FC = () => {
         learnMoreUrl: "https://bitcoinops.org/en/topics/replace-by-fee/",
         disabled: !analysis.canRBF && !enableFullRBF,
         disabledReason:
-          "We can’t replace this transaction. It doesn’t signal RBF, or the wallet cannot spend the inputs (needed for Full RBF)",
+          "We can’t replace this transaction. It doesn’t signal RBF or the wallet cannot spend the inputs (required for RBF)",
         minimumFee: new BigNumber(analysis.estimatedRBFFee).toNumber(),
         suggestedFeeRate: new BigNumber(analysis.estimatedRBFFee)
           .dividedBy(new BigNumber(analysis.vsize))
