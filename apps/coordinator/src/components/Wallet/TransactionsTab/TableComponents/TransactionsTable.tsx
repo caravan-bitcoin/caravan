@@ -27,7 +27,9 @@ import {
   TransactionTableProps,
   FeeDisplayProps,
   ValueDisplayProps,
-} from "./types";
+  SortBy,
+  SortDirection,
+} from "../types";
 
 // Helper function to format the relative time
 const formatRelativeTime = (timestamp?: number): string => {
@@ -35,14 +37,17 @@ const formatRelativeTime = (timestamp?: number): string => {
   return formatDistanceToNow(new Date(timestamp * 1000), { addSuffix: true });
 };
 
-// Column definitions with sorting configuration
-const columns = [
+// Column definitions with sorting configuration - dynamic based on showAcceleration
+const getColumns = (showAcceleration: boolean) => [
   { id: "txid", label: "Transaction ID", sortable: false },
   { id: "blockTime", label: "Time", sortable: true },
   { id: "size", label: "Size (vBytes)", sortable: true },
   { id: "fee", label: "Fee (sats)", sortable: true },
   { id: "valueToWallet", label: "Value", sortable: true },
-  { id: "status", label: "Status", sortable: false },
+  { id: "status", label: "Status", sortable: true },
+  ...(showAcceleration
+    ? [{ id: "accelerate", label: "Accelerate", sortable: false }]
+    : []),
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -73,22 +78,37 @@ export const FeeDisplay: React.FC<FeeDisplayProps> = ({
   // For received transactions, show fee in green with a note , also fee comes in BTC format - convert to sats
   if (isReceived) {
     // feeInSats is actually in BTC format when isReceived is true
-    const feeInBTC = satoshisToBitcoins(feeInSats!) || "0";
+    const feeInBTC = satoshisToBitcoins(feeInSats!);
     const actualFeeInSats = Number(feeInSats);
+
+    const shouldShowPlaceholder =
+      !feeInSats || actualFeeInSats === 0 || isNaN(actualFeeInSats); // Note we added explicit check so we can handle case when the fee is 0 (for pending we do populate fees for even received Tx), as 0 is a valid number (truthy in the ?? chain)
 
     return (
       <Tooltip title="You did not spend this fee" placement="top">
         <Box display="flex" flexDirection="column">
-          <Typography variant="body2" sx={{ color: "green", fontWeight: 500 }}>
-            {actualFeeInSats?.toLocaleString() ?? "--"} sats
-          </Typography>
-          {feeInBTC && (
+          {shouldShowPlaceholder ? (
             <Typography
-              variant="caption"
-              sx={{ color: "green", fontWeight: 400 }}
+              variant="body2"
+              sx={{ color: "green", fontWeight: 500 }}
             >
-              {feeInBTC} BTC
+              --
             </Typography>
+          ) : (
+            <>
+              <Typography
+                variant="body2"
+                sx={{ color: "green", fontWeight: 500 }}
+              >
+                {actualFeeInSats.toLocaleString()} sats
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: "green", fontWeight: 400 }}
+              >
+                {feeInBTC} BTC
+              </Typography>
+            </>
           )}
         </Box>
       </Tooltip>
@@ -204,12 +224,12 @@ export const ValueDisplay: React.FC<ValueDisplayProps> = ({ valueInSats }) => {
   );
 };
 
-// Table header with sort labels
+// Table header with sort labels - Updated to use proper types
 const TransactionTableHeader: React.FC<{
   columns: Array<{ id: string; label: string; sortable: boolean }>;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
-  onSort: (property: keyof TransactionT) => void;
+  sortBy: SortBy;
+  sortDirection: SortDirection;
+  onSort: (property: SortBy) => void;
 }> = ({ columns, sortBy, sortDirection, onSort }) => (
   <TableHead>
     <TableRow>
@@ -218,8 +238,8 @@ const TransactionTableHeader: React.FC<{
           {column.sortable ? (
             <TableSortLabel
               active={sortBy === column.id}
-              direction={sortDirection}
-              onClick={() => onSort(column.id as keyof TransactionT)}
+              direction={sortBy === column.id ? sortDirection : "asc"}
+              onClick={() => onSort(column.id as SortBy)}
             >
               {column.label}
             </TableSortLabel>
@@ -232,9 +252,10 @@ const TransactionTableHeader: React.FC<{
   </TableHead>
 );
 
-// A single transaction row
+// A single transaction row with optional showAcceleration column
 const TransactionTableRow: React.FC<{
   tx: TransactionT;
+  showAcceleration: boolean;
   network?: string;
   onClickTransaction?: (txid: string) => void;
   onAccelerateTransaction?: (tx: TransactionT) => void;
@@ -370,8 +391,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onClickTransaction,
   onAccelerateTransaction,
   renderActions,
+  showAcceleration = false, // Default to false for backward compatibility
 }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  // Get dynamic columns based on showAcceleration
+  const columns = getColumns(showAcceleration);
 
   return (
     <>
@@ -387,7 +412,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             {transactions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
-                  No transactions found
+                  <Typography variant="body2" color="textSecondary" py={2}>
+                    No transactions found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
@@ -395,6 +422,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <TransactionTableRow
                   key={tx.txid}
                   tx={tx}
+                  showAcceleration={showAcceleration}
                   network={network}
                   onClickTransaction={onClickTransaction}
                   onAccelerateTransaction={onAccelerateTransaction}
