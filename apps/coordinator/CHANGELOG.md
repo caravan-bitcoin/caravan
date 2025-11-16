@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.16.0
+
+### Minor Changes
+
+- [#352](https://github.com/caravan-bitcoin/caravan/pull/352) [`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910) Thanks [@ice-009](https://github.com/ice-009)! - Added the transaction history tab in the coordinator and some minor changes in the caravan-clients to meet that need
+
+### Patch Changes
+
+- Updated dependencies [[`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910)]:
+  - @caravan/clients@1.0.1
+
 ## 1.15.0
 
 ### Minor Changes
