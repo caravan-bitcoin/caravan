@@ -1,7 +1,7 @@
 {
   "name": "@caravan/build-plugins",
   "description": "utility library for plugins used in tsup builds for caravan packages. Primarily used for dealing with compatibility issues between node and browser environments.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
