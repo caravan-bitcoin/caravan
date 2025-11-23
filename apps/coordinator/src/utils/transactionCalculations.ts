@@ -40,7 +40,6 @@ export const calculateValueFromDetails = (details: any[]): number => {
     if (["receive", "generate", "immature", "send"].includes(detail.category)) {
       return valueToWallet + amountInSats;
     }
-
     return valueToWallet;
   }, 0);
 };
@@ -178,7 +177,19 @@ export const calculateTransactionValue = (
     return calculateValueFromDetails(tx.details) - fees;
   }
 
-  // CASE 2: Public client or private client without details field
+  // CASE 2: Simplified wallet transaction format for private clients
+  // These transactions (from listtransactions/listsinceblock RPCs) include `amount`, `fee`, and `category`.
+  // - `amount` is in BTC and already signed: positive for "receive", negative for "send" (fee included).
+  // - Therefore, we only need to convert it to satoshis; no category-specific adjustments required.
+  if (
+    tx.amount !== undefined &&
+    typeof tx.amount === "number" &&
+    tx.category !== undefined
+  ) {
+    return Number(bitcoinsToSatoshis(tx.amount));
+  }
+
+  // CASE 3: Public client or private client without details field
   if (tx.vin && tx.vout) {
     // Calculate sum of all outputs to wallet addresses
     const totalChange = calculateTotalChange(tx, walletAddresses);
@@ -191,6 +202,6 @@ export const calculateTransactionValue = (
     return estimateValueFromOutputs(tx, walletAddresses, totalChange);
   }
 
-  // CASE 3: Not enough data to calculate
+  // CASE 4: Not enough data to calculate
   return 0;
 };

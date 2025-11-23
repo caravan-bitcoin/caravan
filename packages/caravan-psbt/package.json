@@ -1,6 +1,6 @@
 {
   "name": "@caravan/psbt",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "typescript library for working with PSBTs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -65,6 +65,6 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@caravan/bitcoin": "0.4.1"
+    "@caravan/bitcoin": "0.4.2"
   }
 }

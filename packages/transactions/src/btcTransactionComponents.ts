@@ -13,7 +13,8 @@ export abstract class BtcTxComponent {
   protected _amountSats: BigNumber;
 
   /**
-   * @param amountSats - The amount in satoshis (as a string)
+   * Creates a new transaction component with the specified amount.
+   * @param {Satoshis} amountSats - The amount in satoshis (as a string)
    */
   constructor(amountSats: Satoshis) {
     this._amountSats = new BigNumber(amountSats);
@@ -75,10 +76,11 @@ export class BtcTxInputTemplate extends BtcTxComponent {
   private _bip32Derivations: InputDerivation[] = [];
 
   /**
-   * @param {Object} params - The parameters for creating a BtcTxInputTemplate
-   * @param {string} params.txid - The transaction ID of the UTXO (reversed, big-endian)
-   * @param {number} params.vout - The output index in the transaction
-   * @param {Satoshis} params.amountSats - The amount in satoshis
+   * Creates a new input template for use in a Bitcoin transaction.
+   * @param {Object} params - The parameters for creating the input template
+   * @param {string} params.txid - The transaction ID of the UTXO being spent (in reversed byte order)
+   * @param {number} params.vout - The output index within the transaction being spent
+   * @param {Satoshis} [params.amountSats] - The amount in satoshis. Optional since it may come from UTXO data.
    */
   constructor(params: { txid: string; vout: number; amountSats?: Satoshis }) {
     super(params.amountSats || "0");
@@ -333,11 +335,12 @@ export class BtcTxOutputTemplate extends BtcTxComponent {
   private _malleable: boolean = true;
 
   /**
-   * @param params - Output parameters
-   * @param params.address - Recipient address
-   * @param params.amountSats - Amount in satoshis  (as a string)
-   * @param params.locked - Whether the output is locked (immutable), defaults to false
-   * @throws Error if trying to create a locked output with zero amount
+   * Creates a new output template for use in a Bitcoin transaction.
+   * @param {Object} params - The parameters for the output
+   * @param {string} params.address - The Bitcoin address to send funds to
+   * @param {Satoshis} [params.amountSats] - The amount to send in satoshis (as a string). Optional for malleable outputs.
+   * @param {boolean} [params.locked=false] - Whether the output amount is locked (immutable)
+   * @throws {Error} If trying to create a locked output with zero amount
    */
   constructor(params: {
     address: string;

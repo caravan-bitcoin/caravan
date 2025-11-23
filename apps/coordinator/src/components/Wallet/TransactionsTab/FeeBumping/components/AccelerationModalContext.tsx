@@ -179,6 +179,7 @@ interface AccelerationModalContextType {
   } | null;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;
+  isRbfAvailable: boolean;
   analysisIsLoading: boolean;
   analysisError: string | null;
   availableUtxos: UTXO[];
@@ -230,6 +231,34 @@ export function AccelerationModalProvider({
     cpfp,
     changeOutputIndex,
   } = useAnalyzeTransaction(transaction, txHex);
+
+  // Check for fullRBF support
+  const isRbfAvailable = React.useMemo(() => {
+    if (!transaction) return false;
+
+    // Check if the wallet controls at least one input from this transaction.
+    // We need to own at least one input to be able to bump the fee.
+    const hasSpendableInputs =
+      transaction.vin?.some((input) =>
+        availableUtxos?.some(
+          (utxo) => utxo.txid === input.txid && utxo.vout === input.vout,
+        ),
+      ) ?? false;
+
+    // Without any spendable inputs, we cannot create a replacement transaction
+    if (!hasSpendableInputs) return false;
+
+    // Case 1: Transaction explicitly signals RBF (BIP 125)
+    // This is the standard, opt-in RBF approach where sequence < 0xfffffffe
+    if (analysis?.isRBFSignaled) return false;
+
+    // Case 2: Full RBF scenario
+    // Even if the transaction doesn't signal RBF, if we control the inputs,
+    // we can attempt a replacement. This relies on the node supporting
+    // full RBF (mempoolfullrbf=1) or the transaction eventually being
+    // replaceable through other means.
+    return true;
+  }, [transaction, availableUtxos, analysis]);
 
   // Action creators
   const setActiveStep = useCallback((step: number) => {
@@ -285,6 +314,7 @@ export function AccelerationModalProvider({
     setFeeBumpResult,
     setDownloadClicked,
     analysis,
+    isRbfAvailable,
     cpfp,
     changeOutputIndex,
     availableUtxos,

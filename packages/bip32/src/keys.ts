@@ -61,13 +61,14 @@ export const setXpubNetwork = (xpub: string, network?: Network): string => {
 };
 
 /**
- * @description Derive a masked key origin from an xpub. Useful for generating
+ * Derive a masked key origin from an xpub. Useful for generating
  * descriptors and wallet configurations for keys that don't need to have their
  * key origin info revealed.
  * Bip32 path will use all 0s for the depth of the given xpub and the
  * root fingerprint will be set to the parent fingerprint of the xpub
+ * 
  * @param xpub {string} - xpub to mask
- * @returns
+ * @returns {KeyOrigin} masked key origin
  */
 export const getMaskedKeyOrigin = (xpub: string): KeyOrigin => {
   const { parentFingerprint, depth } = ExtendedPublicKey.fromBase58(xpub);
@@ -112,10 +113,11 @@ export const getRandomChildXpub = (
 };
 
 /**
- * @description Given a source xpub, derive a blinded xpub at a random path.
+ * Given a source xpub, derive a blinded xpub at a random path.
  * Will target 128 bits of entropy for the path with a depth of 4.
+ * 
  * @param rawXpub {string} - xpub to blind
- * @returns
+ * @returns {KeyOrigin} blinded key origin
  */
 export const getBlindedXpub = (rawXpub: string): KeyOrigin => {
   const xpub = ExtendedPublicKey.fromBase58(rawXpub);

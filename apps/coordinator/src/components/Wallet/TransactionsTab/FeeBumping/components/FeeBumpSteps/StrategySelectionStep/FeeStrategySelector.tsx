@@ -30,6 +30,7 @@ export const FeeStrategySelector: React.FC = () => {
   const {
     setStrategy,
     setEnableFullRBF,
+    isRbfAvailable,
     state: { selectedStrategy, enableFullRBF },
     analysis,
     cpfp,
@@ -40,7 +41,7 @@ export const FeeStrategySelector: React.FC = () => {
   if (!analysis?.recommendedStrategy || isLoadingFeeEstimates) {
     return null;
   }
-  const signalsRBF = analysis?.isRBFSignaled ?? false;
+
   // Memoize strategy configuration array to prevent re-creation on every render
   const strategyConfigs = useMemo(
     () => [
@@ -53,7 +54,7 @@ export const FeeStrategySelector: React.FC = () => {
         learnMoreUrl: "https://bitcoinops.org/en/topics/replace-by-fee/",
         disabled: !analysis.canRBF && !enableFullRBF,
         disabledReason:
-          "This transaction does not signal RBF and cannot be replaced",
+          "We can’t replace this transaction. It doesn’t signal RBF or the wallet cannot spend the inputs (required for RBF)",
         minimumFee: new BigNumber(analysis.estimatedRBFFee).toNumber(),
         suggestedFeeRate: new BigNumber(analysis.estimatedRBFFee)
           .dividedBy(new BigNumber(analysis.vsize))
@@ -95,7 +96,7 @@ export const FeeStrategySelector: React.FC = () => {
         Select Fee Bumping Strategy
       </Typography>
 
-      {!signalsRBF && (
+      {isRbfAvailable && (
         <Box
           sx={{
             mb: 3,
