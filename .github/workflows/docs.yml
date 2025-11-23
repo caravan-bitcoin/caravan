@@ -52,7 +52,7 @@ jobs:
 
           # Stage and commit
           git add .
-          git commit -m "chore(docs): update typedocs [skip ci]"
+          git commit --no-verify -m "chore(docs): update typedocs [skip ci]" # To prevent precommit hook check
 
           # Force push to create/update the docs branch
           git push -f origin docs
