@@ -47,6 +47,9 @@ jobs:
           # Save the generated docs to a temp location
           mv docs docs_temp
 
+          # Disable git hooks so Husky doesn't fail after we delete files
+          git config core.hooksPath /dev/null
+
           # Create and switch to an orphan docs branch
           git checkout --orphan docs
 
@@ -58,7 +61,7 @@ jobs:
 
           # Stage and commit
           git add .
-          git commit --no-verify -m "chore(docs): update typedocs [skip ci]" # To prevent precommit hook check
+          git commit -m "chore(docs): update typedocs [skip ci]" --no-verify
 
           # Force push to create/update the docs branch
           git push -f origin docs
