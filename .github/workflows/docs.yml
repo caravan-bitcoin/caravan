@@ -38,6 +38,12 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
+          # Verify docs were generated
+          if [ ! -d "docs" ] || [ -z "$(ls -A docs)" ]; then
+            echo "Error: docs directory is empty or doesn't exist"
+            exit 1
+          fi
+
           # Save the generated docs to a temp location
           mv docs docs_temp
 
