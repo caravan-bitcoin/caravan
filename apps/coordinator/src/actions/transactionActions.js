@@ -19,6 +19,7 @@ import {
 
 import { DUST_IN_BTC } from "../utils/constants";
 import { loadPsbt } from "../utils/psbtUtils";
+import { transactionKeys } from "clients/transactions";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
 
@@ -592,5 +593,18 @@ export function importLegacyPSBT(psbtText) {
       throw new Error("Could not parse PSBT.");
     }
     return psbt;
+  };
+}
+
+// Action for invalidating transaction queries
+export function invalidateTransactionQueries() {
+  return (dispatch, getState, { queryClient }) => {
+    if (queryClient) {
+      // Force immediate refetch of all active transaction queries
+      queryClient.removeQueries({
+        queryKey: transactionKeys.all,
+        exact: false,
+      });
+    }
   };
 }

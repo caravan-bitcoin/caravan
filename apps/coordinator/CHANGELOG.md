@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.16.1
+
+### Patch Changes
+
+- [#412](https://github.com/caravan-bitcoin/caravan/pull/412) [`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4)]:
+  - @caravan/bip32@1.0.2
+  - @caravan/bitcoin@0.4.2
+  - @caravan/clients@1.0.2
+  - @caravan/fees@1.0.2
+  - @caravan/health@1.0.0
+  - @caravan/psbt@2.0.3
+  - @caravan/wallets@0.9.1
+  - @caravan/typescript-config@0.0.1
+
+## 1.16.0
+
+### Minor Changes
+
+- [#352](https://github.com/caravan-bitcoin/caravan/pull/352) [`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910) Thanks [@ice-009](https://github.com/ice-009)! - Added the transaction history tab in the coordinator and some minor changes in the caravan-clients to meet that need
+
+### Patch Changes
+
+- Updated dependencies [[`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910)]:
+  - @caravan/clients@1.0.1
+
+## 1.15.0
+
+### Minor Changes
+
+- [#404](https://github.com/caravan-bitcoin/caravan/pull/404) [`7489629`](https://github.com/caravan-bitcoin/caravan/commit/7489629fa3f51531ff62c128cf7aec170aef2319) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Adds support for Full RBF, allowing users to replace transactions that did not originally signal RBF support (BIP 125).
+
+### Patch Changes
+
+- [#398](https://github.com/caravan-bitcoin/caravan/pull/398) [`c68e10b`](https://github.com/caravan-bitcoin/caravan/commit/c68e10befdb5d973e9b1c2b68f788802761f8166) Thanks [@ChayanDass](https://github.com/ChayanDass)! - Fix footer position so it sticks to the bottom on short pages and moves down naturally on long pages.
+
 ## 1.14.0
 
 ### Minor Changes
