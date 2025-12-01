@@ -10,7 +10,7 @@ import {
   selectAvailableInputsFromPSBT,
   selectMissingInputIdentifiersFromPSBT,
 } from "selectors/transaction";
-import { UTXO } from "@caravan/fees";
+import { UTXO } from "@caravan/transactions";
 import {
   Coin,
   fetchTransactionCoins,

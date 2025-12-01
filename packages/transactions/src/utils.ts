@@ -480,12 +480,12 @@ export function validateSequence(sequence: number): boolean {
  * in little-endian format, even though they are typically represented and
  * communicated externally in big-endian format.
  *
- * This function is particularly important in the `@caravan/fees` because input
+ * This function is particularly important in the `@caravan/transactions` because input
  * UTXOs provided by users often include transaction IDs in **big-endian** form
  * (as shown in block explorers or PSBT files), but Bitcoin Core and many raw
  * protocols internally require them in **little-endian**.
  *
- * Reversing the byte order ensures correct internal processing for our @caravan/fees-package, matching Bitcoin's
+ * Reversing the byte order ensures correct internal processing for our @caravan/transactions-package, matching Bitcoin's
  * expectations.
  *
  * For example:

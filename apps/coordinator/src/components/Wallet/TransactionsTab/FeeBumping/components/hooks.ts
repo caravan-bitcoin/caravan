@@ -7,7 +7,7 @@ import {
   UTXO,
   createCPFPTransaction,
   CPFPOptions,
-} from "@caravan/fees";
+} from "@caravan/transactions";
 import { extractUtxosForFeeBumping, validateTransactionInputs } from "../utils";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { MultisigAddressType, Network } from "@caravan/bitcoin";

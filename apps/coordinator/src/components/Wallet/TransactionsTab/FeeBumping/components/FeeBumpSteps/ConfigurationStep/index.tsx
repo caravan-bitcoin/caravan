@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, AlertTitle } from "@mui/material";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 import { RBFForm } from "./RBF/RBFForm";
 import { CPFPForm } from "./CPFP/CPFPForm";
 import { useAccelerationModal } from "../../AccelerationModalContext";
