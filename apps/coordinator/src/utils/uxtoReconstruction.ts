@@ -1,6 +1,6 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
-import { UTXO } from "@caravan/fees";
+import { UTXO } from "@caravan/transactions";
 import { Slice } from "selectors/wallet";
 import { Coin } from "clients/transactions";
 import { getUtxoFromCoin } from "hooks/utxos";
@@ -313,7 +313,7 @@ export function matchPsbtInputsToUtxos(
  * 2. **Reconstructs metadata**: Adds all the missing signing information from user wallet's
  *    slice data (multisig scripts, BIP32 derivation paths, etc.)
  * 3. **Formats for fees package**: Converts the result to the UTXO format expected by
- *    the @caravan/fees package for transaction creation
+ *    the @caravan/transactions package for transaction creation
  *
  *
  * @param parentTransaction - The unconfirmed transaction containing the output we want to spend
