@@ -1,6 +1,6 @@
 {
   "name": "@caravan/health",
-  "version": "1.0.0-beta",
+  "version": "1.0.0",
   "author": "Harshil Jani",
   "description": "The core logic for analysing wallet health for privacy concerns and nature of spending fees.",
   "private": true,

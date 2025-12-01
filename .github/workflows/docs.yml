@@ -1,0 +1,79 @@
+name: Publish Docs to Branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies from monorepo root
+        run: npm ci
+
+      - name: Build all workspace packages
+        run: npm run build
+
+      - name: Generate docs
+        run: npm run docs
+
+      - name: Switch to docs branch and publish
+        run: |
+          # Configure git
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          # Verify docs were generated
+          if [ ! -d "docs" ] || [ -z "$(ls -A docs)" ]; then
+            echo "Error: docs directory is empty or doesn't exist"
+            exit 1
+          fi
+
+          # Disable git hooks so Husky doesn't fail after we delete files
+          git config core.hooksPath /dev/null
+
+          # Save the generated docs to a temporary location outside the working directory
+          # This protects them from being deleted in the next steps
+          mv docs /tmp/docs_temp
+
+          # Create and switch to an orphan docs branch
+          git checkout --orphan docs
+
+          # Remove all tracked files from git's index
+          # Note: This doesn't delete untracked files like node_modules
+          git rm -rf . || true
+
+          # Physically remove all files including untracked ones (node_modules, etc.)
+          # The -f forces deletion, -r is recursive, and we exclude .git to preserve the repo
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          # Copy only the generated documentation into the clean working directory
+          cp -r /tmp/docs_temp/* .
+
+          # Create .nojekyll file to tell GitHub Pages to skip Jekyll processing
+          # This is crucial because TypeDoc output is already complete static HTML
+          touch .nojekyll
+
+          # Stage and commit
+          git add .
+
+          # Commit with skip ci flag to prevent infinite workflow loops and also no verify for the not running any git hooks
+          git commit -m "chore(docs): update typedocs [skip ci]" --no-verify
+
+          # Force push to create/update the docs branch
+          git push -f origin docs

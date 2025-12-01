@@ -36,7 +36,10 @@ import {
   updateWalletPolicyRegistrationsAction,
 } from "../../actions/walletActions";
 import { setExtendedPublicKeyImporterVisible } from "../../actions/extendedPublicKeyImporterActions";
-import { setIsWallet as setIsWalletAction } from "../../actions/transactionActions";
+import {
+  setIsWallet as setIsWalletAction,
+  invalidateTransactionQueries,
+} from "../../actions/transactionActions";
 import { wrappedActions } from "../../actions/utils";
 import {
   updateBlockchainClient,
@@ -304,7 +307,14 @@ class WalletGenerator extends React.Component {
   };
 
   refreshNodes = async () => {
-    const { change, deposits, resetNodesFetchErrors } = this.props;
+    const {
+      change,
+      deposits,
+      resetNodesFetchErrors,
+      invalidateTransactionQueries,
+    } = this.props;
+    // Invalidate transaction queries to refresh the cache
+    invalidateTransactionQueries();
     const allNodes = Object.values(deposits.nodes).concat(
       Object.values(change.nodes),
     );
@@ -540,6 +550,7 @@ WalletGenerator.propTypes = {
   updateChangeSlice: PropTypes.func.isRequired,
   updateDepositSlice: PropTypes.func.isRequired,
   getBlockchainClient: PropTypes.func.isRequired,
+  invalidateTransactionQueries: PropTypes.func.isRequired,
 };
 
 function mapStateToProps(state) {
@@ -561,6 +572,7 @@ const mapDispatchToProps = {
   resetWallet: resetWalletAction,
   resetNodesFetchErrors: resetNodesFetchErrorsAction,
   getBlockchainClient: updateBlockchainClient,
+  invalidateTransactionQueries,
   ...wrappedActions({
     setPassword: SET_CLIENT_PASSWORD,
     setPasswordError: SET_CLIENT_PASSWORD_ERROR,
