@@ -2,6 +2,7 @@
   "name": "@caravan/clients",
   "version": "1.0.2",
   "description": "A package for querying different bitcoin blockchain backends",
+  "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
