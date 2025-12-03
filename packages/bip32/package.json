@@ -14,7 +14,8 @@
     "./dist/index.js",
     "./dist/index.cjs",
     "./dist/index.d.ts",
-    "./dist/index.d.mts"
+    "./dist/index.d.mts",
+    "./dist/index.d.cts"
   ],
   "exports": {
     ".": {
@@ -23,7 +24,7 @@
         "default": "./dist/index.js"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
     }
