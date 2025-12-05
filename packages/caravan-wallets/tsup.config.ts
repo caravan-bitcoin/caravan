@@ -1,6 +1,8 @@
 import { defineConfig } from "tsup";
 import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import { provideNavigator, provideSelf } from "@caravan/build-plugins";
+import { copyFileSync, existsSync } from "fs";
+import { join } from "path";
 
 export default defineConfig({
   esbuildPlugins: [
@@ -20,4 +22,14 @@ export default defineConfig({
   // noExternal makes sure that certain packages are bundled
   // in the final package rather than independently installed
   noExternal: ["@caravan/psbt"],
+  onSuccess: async () => {
+    const distDir = join(process.cwd(), "dist");
+    const dtsFile = join(distDir, "index.d.ts");
+    const dmtsFile = join(distDir, "index.d.mts");
+
+    if (existsSync(dtsFile)) {
+      copyFileSync(dtsFile, dmtsFile);
+      console.log("✓ Generated index.d.mts");
+    }
+  },
 });
