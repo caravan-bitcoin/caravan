@@ -10,7 +10,7 @@ addresses.
 Caravan is also stateless. It does not itself store any data. You must
 safekeep the addresses (and redeem scripts & BIP32 paths) you create.
 
-[Try Caravan now!](https://caravan-bitcoin.github.io/caravan)
+[Try Caravan now!](https://www.caravanmultisig.com)
 
 ## Installation
 
@@ -20,7 +20,7 @@ be run in any web browser from a local or remote installation.
 ### Caravan Bitcoin Github
 
 The simplest way to use Caravan is to visit
-[https://caravan-bitcoin.github.io/caravan](https://caravan-bitcoin.github.io/caravan),
+[https://www.caravanmultisig.com](https://www.caravanmultisig.com),
 a copy of Caravan hosted on GitHub by
 [Unchained Capital](https://www.unchained.com).
 
