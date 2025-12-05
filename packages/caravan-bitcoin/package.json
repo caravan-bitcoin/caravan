@@ -65,7 +65,7 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts && node scripts/generate-mts-dts.js",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix",

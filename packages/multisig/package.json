@@ -34,7 +34,7 @@
   },
   "description": "A utility library for handling data related to caravan multisig wallet configurations",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts && node scripts/generate-mts-dts.js",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",

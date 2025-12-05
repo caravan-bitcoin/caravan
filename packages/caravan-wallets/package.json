@@ -70,7 +70,7 @@
   },
   "scripts": {
     "compile-images": "node images/compile.js",
-    "build": "tsup src/index.ts --format cjs,esm --dts && node scripts/generate-mts-dts.js",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
     "test": "vitest run",
