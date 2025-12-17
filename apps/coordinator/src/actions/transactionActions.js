@@ -16,6 +16,7 @@ import {
   setSignatureImporterFinalized,
   setSignatureImporterComplete,
 } from "./signatureImporterActions";
+import { detectPsbtVersion } from "@caravan/psbt";
 
 import { DUST_IN_BTC } from "../utils/constants";
 import { loadPsbt } from "../utils/psbtUtils";
@@ -55,6 +56,7 @@ export const SET_BALANCE_ERROR = "SET_BALANCE_ERROR";
 export const SPEND_STEP_CREATE = 0;
 export const SPEND_STEP_PREVIEW = 1;
 export const SPEND_STEP_SIGN = 2;
+export const SET_ORIGINAL_PSBT_VERSION = "SET_ORIGINAL_PSBT_VERSION";
 
 export function choosePerformSpend() {
   return {
@@ -263,6 +265,13 @@ export function setSpendStep(value) {
   return {
     type: SET_SPEND_STEP,
     value,
+  };
+}
+
+export function setOriginalPsbtVersion(version) {
+  return {
+    type: SET_ORIGINAL_PSBT_VERSION,
+    value: version,
   };
 }
 
@@ -487,7 +496,8 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
-
+    const originalVersion = detectPsbtVersion(psbtText);
+    dispatch(setOriginalPsbtVersion(originalVersion));
     // Handles both PSBTv0 and PSBTv2
     const psbt = loadPsbt(psbtText, network);
     if (!psbt) {
