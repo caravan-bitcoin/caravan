@@ -13,13 +13,33 @@ import {
   RESET_TRANSACTION,
 } from "../actions/transactionActions";
 
+/**
+ * Initial state for a single signature importer.
+ *
+ * In the PSBT Saga model, `signedPsbt` is the primary data field when available.
+ * The `signature` and `publicKeys` arrays are derived for display and backward
+ * compatibility with legacy signing flows.
+ */
 const initialSignatureImporterState = {
   name: "",
   method: "",
+  bip32Path: "",
+
+  // === PRIMARY: Signed PSBT (PSBT Saga) ===
+  // The complete signed PSBT from this signer.
+  // When present, this is used for PSBT combination instead of reconstruction.
+  // NULL when: legacy flow, or device doesn't return full PSBT (some Trezor flows)
+  signedPsbt: null,
+
+  // === DERIVED: For Display/Backward Compatibility ===
+  // These are extracted from signedPsbt when available, or set directly for legacy flows
   publicKeys: [],
   signature: [],
-  bip32Path: "",
+
+  // === State ===
   finalized: false,
+  // Timestamp when signature was collected (ISO string)
+  signedAt: null,
 };
 
 const initialState = {};
@@ -56,7 +76,12 @@ function finalizeSignatureImporterState(state, action) {
   const newState = {
     ...state,
   };
-  newState[action.number] = updateState(state[action.number], action.value);
+  // Merge all provided fields, including new signedPsbt and signedAt
+  newState[action.number] = updateState(state[action.number], {
+    ...action.value,
+    // Ensure signedAt is set if not provided
+    signedAt: action.value.signedAt || new Date().toISOString(),
+  });
   return newState;
 }
 
