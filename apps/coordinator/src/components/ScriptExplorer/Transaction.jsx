@@ -5,7 +5,13 @@ import {
   blockExplorerTransactionURL,
   addSignaturesToPSBT,
 } from "@caravan/bitcoin";
-
+import {
+  combinePsbts,
+  convertPsbtToVersion,
+  convertLegacyInput,
+  convertLegacyOutput,
+  getUnsignedMultisigPsbtV0,
+} from "@caravan/psbt";
 import {
   Typography,
   Box,
@@ -21,11 +27,6 @@ import { updateBlockchainClient } from "../../actions/clientActions";
 import Copyable from "../Copyable";
 import { externalLink } from "utils/ExternalLink";
 import { setTXID } from "../../actions/transactionActions";
-import {
-  convertLegacyInput,
-  convertLegacyOutput,
-  getUnsignedMultisigPsbtV0,
-} from "@caravan/psbt";
 import { Psbt } from "bitcoinjs-lib";
 import { Buffer } from "buffer";
 
@@ -39,24 +40,134 @@ class Transaction extends React.Component {
     };
   }
 
+  /**
+   * Builds a signed transaction ready for broadcast.
+   *
+   * Uses the PSBT-native flow when signed PSBTs are available from all signers,
+   * falling back to legacy reconstruction for backward compatibility.
+   *
+   * PSBT-native flow (preferred):
+   * 1. Collect signedPsbt from each signature importer
+   * 2. Use BIP174 COMBINER to merge them
+   * 3. Finalize and extract
+   *
+   * Legacy flow (fallback):
+   * 1. Reconstruct PSBT from inputs/outputs
+   * 2. Add signatures manually
+   * 3. Finalize and extract
+   */
   buildSignedTransaction = () => {
+    const { signatureImporters, originalPsbtVersion } = this.props;
+
+    // Collect finalized signature importers
+    const finalizedImporters = Object.values(signatureImporters).filter(
+      (importer) => importer.finalized,
+    );
+
+    if (finalizedImporters.length === 0) {
+      throw new Error("No finalized signatures available");
+    }
+
+    // Check if we can use PSBT-native flow
+    // All finalized importers must have signedPsbt
+    const signedPsbts = finalizedImporters
+      .map((importer) => importer.signedPsbt)
+      .filter((psbt) => psbt !== null);
+
+    if (signedPsbts.length === finalizedImporters.length) {
+      // ALL importers have signed PSBTs - use native flow
+      console.log(
+        "[Transaction] Using PSBT-native broadcast flow with",
+        signedPsbts.length,
+        "signed PSBTs",
+      );
+      return this.buildTransactionPsbtNative(signedPsbts, originalPsbtVersion);
+    } else if (signedPsbts.length === 0) {
+      // NO signed PSBTs - use legacy flow
+      console.log("[Transaction] Using legacy broadcast flow");
+      return this.buildTransactionLegacy();
+    } else {
+      // Mixed mode - fall back to legacy with warning
+      console.warn(
+        "[Transaction] Mixed signature modes detected.",
+        `${signedPsbts.length} signers provided PSBTs,`,
+        `${finalizedImporters.length - signedPsbts.length} provided only raw signatures.`,
+        "Using legacy reconstruction.",
+      );
+      return this.buildTransactionLegacy();
+    }
+  };
+
+  /**
+   * PSBT-Native transaction building using BIP174 COMBINER.
+   *
+   * This is the preferred path that uses standard PSBT roles:
+   * 1. COMBINE all signed PSBTs
+   * 2. FINALIZE inputs (construct scripts)
+   * 3. EXTRACT raw transaction
+   *
+   * @param {string[]} signedPsbts - Array of signed PSBTs from each signer
+   * @param {0|2} outputVersion - Original PSBT version for compatibility
+   * @returns {string} Raw transaction hex ready for broadcast
+   */
+  buildTransactionPsbtNative = (signedPsbts, outputVersion = 0) => {
+    // COMBINER: Merge all signed PSBTs using BIP174 combiner
+    const { combinedPsbt, signerCount, totalSignatures } = combinePsbts(
+      signedPsbts,
+      outputVersion,
+    );
+
+    console.log(
+      `[Transaction] Combined PSBT: ${signerCount} signers, ${totalSignatures} total signatures`,
+    );
+
+    // Parse the combined v0 PSBT for finalization
+    const psbt = Psbt.fromBase64(combinedPsbt);
+
+    // FINALIZER: Construct final scripts from partial signatures
+    psbt.finalizeAllInputs();
+
+    // EXTRACTOR: Produce raw transaction
+    const transaction = psbt.extractTransaction();
+
+    return transaction.toHex();
+  };
+
+  /**
+   * Legacy transaction building via reconstruction.
+   *
+   * Fallback path for backward compatibility when signed PSBTs
+   * are not available. This reconstructs the PSBT and manually
+   * adds signatures.
+   *
+   * @returns {string} Raw transaction hex ready for broadcast
+   */
+  buildTransactionLegacy = () => {
     const { network, inputs, outputs, signatureImporters, enableRBF } =
       this.props;
+
     const sequence = enableRBF ? 0xfffffffd : 0xffffffff;
+
+    // Reconstruct the PSBT from inputs/outputs
     const args = {
       network,
       inputs: inputs.map((input) => {
         const convertedInput = convertLegacyInput(input);
         return {
           ...convertedInput,
-          sequence: sequence, // Apply the same RBF sequence as in finalizeOutputs so if RBF signalling we don't lose that
+          sequence: sequence,
         };
       }),
       outputs: outputs.map(convertLegacyOutput),
     };
+
     const psbt = getUnsignedMultisigPsbtV0(args);
     let partiallySignedTransaction = psbt.toBase64();
+
+    // Add signatures from each importer
     for (const signatureImporter of Object.values(signatureImporters)) {
+      if (!signatureImporter.finalized) continue;
+
       partiallySignedTransaction = addSignaturesToPSBT(
         network,
         partiallySignedTransaction,
@@ -157,6 +268,7 @@ Transaction.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   getBlockchainClient: PropTypes.func.isRequired,
   enableRBF: PropTypes.bool.isRequired,
+  originalPsbtVersion: PropTypes.number,
 };
 
 function mapStateToProps(state) {
@@ -168,6 +280,7 @@ function mapStateToProps(state) {
     inputs: state.spend.transaction.inputs,
     outputs: state.spend.transaction.outputs,
     enableRBF: state.spend.transaction.enableRBF,
+    originalPsbtVersion: state.spend.transaction.originalPsbtVersion || 0,
   };
 }
 
