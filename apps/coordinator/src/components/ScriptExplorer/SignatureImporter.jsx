@@ -26,7 +26,7 @@ import {
   Box,
   FormControl,
   TextField,
-  Grid,
+  FormHelperText,
 } from "@mui/material";
 import Copyable from "../Copyable";
 import TextSignatureImporter from "./TextSignatureImporter";
@@ -46,7 +46,11 @@ import {
 } from "../../actions/signatureImporterActions";
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
-import { validateMultisigPsbtSignature } from "@caravan/psbt";
+import {
+  validateMultisigPsbtSignature,
+  validateSignedPsbt,
+  convertPsbtToVersion,
+} from "@caravan/psbt";
 
 const TEXT = "text";
 const BCUR2 = "bcur2";
@@ -328,7 +332,7 @@ class SignatureImporter extends React.Component {
   //
 
   renderSignature = () => {
-    const { signatureImporter, txid } = this.props;
+    const { signatureImporter, txid, originalPsbtVersion } = this.props;
     const { signedPsbt } = this.state;
     const signatureJSON = JSON.stringify(signatureImporter.signature);
     return (
@@ -337,17 +341,24 @@ class SignatureImporter extends React.Component {
         <Box>
           <Copyable text={signatureJSON} showIcon code />
         </Box>
+
+        {/* Per-signer PSBT download - PSBT Saga feature */}
         {signedPsbt && (
-          <Grid item>
+          <Box mt={2}>
             <Button
               variant="contained"
               color="primary"
-              onClick={() => this.handleDownloadPSBT(signedPsbt)}
+              onClick={() => this.handleDownloadSignerPsbt(signedPsbt)}
             >
-              Download Signed PSBT
+              Download This Signer&apos;s PSBT
             </Button>
-          </Grid>
+            <FormHelperText>
+              Downloads as {originalPsbtVersion === 2 ? "PSBTv2" : "PSBTv0"} to
+              match original format
+            </FormHelperText>
+          </Box>
         )}
+
         <Box mt={2}>
           <Button
             variant="contained"
@@ -363,11 +374,28 @@ class SignatureImporter extends React.Component {
     );
   };
 
+  /**
+   * Downloads the signer's PSBT in the original version format.
+   *
+   * Ensures version compatibility by converting to the original
+   * PSBT version before download.
+   *
+   * @param {string} signedPsbt - The signed PSBT to download
+   */
+  handleDownloadSignerPsbt = (signedPsbt) => {
+    const { originalPsbtVersion, number } = this.props;
+
+    // Convert to original version if needed for compatibility
+    const outputPsbt = convertPsbtToVersion(signedPsbt, originalPsbtVersion);
+
+    downloadFile(outputPsbt, `signed-signer-${number}.psbt`);
+  };
+
   handleDownloadPSBT = (psbtBase64) => {
     downloadFile(psbtBase64, "signed.psbt");
   };
 
-  validateAndSetSignature = (inputsSignatures, errback, signedPsbt) => {
+  validateAndSetSignature = (inputsSignatures, errback, signedPsbt = null) => {
     const {
       number,
       inputs,
@@ -376,7 +404,24 @@ class SignatureImporter extends React.Component {
       setSigningKey,
       unsignedPSBT,
     } = this.props;
-    this.setState({ signedPsbt });
+    // Store signedPsbt in component state for download button
+    if (signedPsbt) {
+      this.setState({ signedPsbt });
+    }
+
+    // === Validate signed PSBT if provided ===
+    if (signedPsbt && unsignedPSBT) {
+      const validation = validateSignedPsbt(signedPsbt, unsignedPSBT);
+      if (!validation.valid) {
+        console.warn(
+          "[SignatureImporter] Signed PSBT validation failed:",
+          validation.error,
+        );
+        // Don't fail - still try to use raw signatures
+        // The PSBT might have minor metadata differences but valid sigs
+      }
+    }
+
     if (!Array.isArray(inputsSignatures)) {
       errback("Signature is not an array of strings.");
       return;
@@ -402,11 +447,13 @@ class SignatureImporter extends React.Component {
       );
       return;
     }
-    const publicKeys = [];
+    // === Single signature set handling ===
     if (numSignatureSets === 1) {
+      const publicKeys = [];
       const finalizedSignatureImporters = Object.values(
         signatureImporters,
       ).filter((signatureImporter) => signatureImporter.finalized);
+
       for (
         let inputIndex = 0;
         inputIndex < inputsSignatures.length;
@@ -414,6 +461,7 @@ class SignatureImporter extends React.Component {
       ) {
         const inputNumber = inputIndex + 1;
         const inputSignature = inputsSignatures[inputIndex];
+
         if (validateHex(inputSignature) !== "") {
           errback(`Signature for input ${inputNumber} is not valid hex.`);
           return;
@@ -431,7 +479,9 @@ class SignatureImporter extends React.Component {
           errback(`Signature for input ${inputNumber} is invalid.`);
           return;
         }
+
         if (publicKey) {
+          // Check for duplicates
           for (
             let finalizedSignatureImporterNum = 0;
             finalizedSignatureImporterNum < finalizedSignatureImporters.length;
@@ -457,10 +507,14 @@ class SignatureImporter extends React.Component {
           return;
         }
       }
+
+      // === PSBT Saga: Store signedPsbt along with extracted data ===
       setComplete(number, {
-        signature: inputsSignatures,
-        publicKeys,
+        signedPsbt: signedPsbt || null, // PRIMARY: Complete signed PSBT
+        signature: inputsSignatures, // DERIVED: For display/legacy
+        publicKeys, // DERIVED: For display/legacy
         finalized: true,
+        signedAt: new Date().toISOString(),
       });
     } else {
       // We land here if a PSBT has been uploaded with multiple signature sets.
@@ -643,6 +697,7 @@ SignatureImporter.propTypes = {
   walletName: PropTypes.string.isRequired,
   walletUuid: PropTypes.string.isRequired,
   enableRBF: PropTypes.bool.isRequired,
+  originalPsbtVersion: PropTypes.number,
   // eslint-disable-next-line react/forbid-prop-types
   ledgerPolicyHmacs: PropTypes.array.isRequired,
 };
@@ -650,6 +705,7 @@ SignatureImporter.propTypes = {
 SignatureImporter.defaultProps = {
   extendedPublicKeyImporter: {},
   unsignedPSBT: "",
+  originalPsbtVersion: 0,
 };
 
 function mapStateToProps(state, ownProps) {
@@ -675,6 +731,7 @@ function mapStateToProps(state, ownProps) {
         xfp: key.rootXfp,
         xpub: key.extendedPublicKey,
       })),
+    originalPsbtVersion: state.spend.transaction.originalPsbtVersion || 0,
   };
 }
 

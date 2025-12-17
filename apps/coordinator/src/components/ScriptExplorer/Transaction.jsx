@@ -7,7 +7,6 @@ import {
 } from "@caravan/bitcoin";
 import {
   combinePsbts,
-  convertPsbtToVersion,
   convertLegacyInput,
   convertLegacyOutput,
   getUnsignedMultisigPsbtV0,
