@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.16.2
+
+### Patch Changes
+
+- [#419](https://github.com/caravan-bitcoin/caravan/pull/419) [`d9c92aa`](https://github.com/caravan-bitcoin/caravan/commit/d9c92aa9381774951f89f78bbfa691a804b5e301) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - fix importing of rbf psbts with signatures
+
 ## 1.16.1
 
 ### Patch Changes
