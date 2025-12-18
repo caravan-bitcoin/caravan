@@ -8,8 +8,6 @@ import {
   reverseTxidEndianness,
   getSequenceForInput,
   getInputIdentifiersFromPsbt,
-  mapSignaturesToImporters,
-  extractSignaturesFromPSBT,
   createInputIdentifier,
 } from "utils/psbtUtils";
 
@@ -89,20 +87,4 @@ export const selectMissingInputIdentifiersFromPSBT = createSelector(
       [...allRequiredInputIds].filter((id) => !availableInputIds.has(id)),
     );
   },
-);
-
-/**
- * Selector to extract signatures from PSBT
- */
-export const selectSignaturesFromPSBT = createSelector(
-  [selectAvailableInputsFromPSBT, (state: any, psbt: Psbt) => psbt],
-  (inputs, psbt) => extractSignaturesFromPSBT(psbt, inputs),
-);
-
-/**
- * Selector to get signatures formatted for importers
- */
-export const selectSignaturesForImporters = createSelector(
-  [selectSignaturesFromPSBT],
-  (signatureSets) => mapSignaturesToImporters(signatureSets),
 );

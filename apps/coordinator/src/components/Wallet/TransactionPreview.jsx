@@ -257,7 +257,7 @@ class TransactionPreview extends React.Component {
                     fingerprint.poisonedOutputIndex === idx;
                   return (
                     <TableRow
-                      key={output.address}
+                      key={`${output.address}-${idx}`}
                       style={isPoisoned ? { background: "#fff3e0" } : {}}
                     >
                       <TableCell>
