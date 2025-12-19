@@ -592,17 +592,17 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
    * On newer firmware, prefer descriptor parsing.
    */
   parsePayload(payload) {
-    // Newer Trezor firmware: descriptor present 
-    if ( payload.descriptor ) {
-      const parsed = this.ParseDescriptor(payload.descriptor);
-      return {
-        rootFingerprint: parsed.rootFingerprint,
-        pubkey: parsed.xpub,
-      }
-    }
+    // ✅ Newer firmware: descriptor present 
+    if (payload.descriptor) { 
+      const parsed = this.parseDescriptor(payload.descriptor); 
+      return { 
+        rootFingerprint: parsed.rootFingerprint, 
+        publicKey: parsed.xpub, 
+      }; 
+    } 
 
-    // Older Trezor firmware: no descriptor
-    if ( this.includeXFP && Array.isArray(payload) ) {
+    // ❌ Older firmware: bundle response
+    if (this.includeXFP) {
       const { rootFingerprint, keyMaterial } = this.extractDetailsFromPayload({
         payload,
         pubkey: true,
@@ -615,23 +615,30 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
     return payload.publicKey;
   }
 
-/** 
- * Helper to parse BIP-380 descriptor string into fingerprint + xpub. 
- * Example descriptor: pkh([d34db33f/48h/0h/0h/2h]xpub6CUGRU.../0/*) 
- */ 
-  ParseDescriptor(descriptor) { 
-    // Extract fingerprint inside brackets 
-    const match = descriptor.match(/ \[([0-9a-fA-F]+)\//); 
-    const rootFingerprint = match ? match[1] : ""; 
+  /** 
+   * Helper to parse BIP-380 descriptor string into fingerprint + xpub.
+   * Example descriptor: pkh([d34db33f/48h/0h/0h/2h]xpub6CUGRU.../0/*) 
+   */ 
+  parseDescriptor(descriptor: string) { 
+    let rootFingerprint = ""; let xpub = ""; 
+    // Extract fingerprint 
+    // (inside square brackets before the first slash) 
+    const fpMatch = descriptor.match(/ \[([0-9a-fA-F]+)\//); 
+    if (fpMatch) { rootFingerprint = fpMatch[1]; } 
     
-    // Extract xpub after the bracket 
-    const xpubMatch = descriptor.match(/(xpub[0-9A-Za-z]+)/); 
-    const xpub = xpubMatch ? xpubMatch[1] : ""; 
+    // Extract xpub (the base58 string starting with "xpub" or "tpub") 
+    const xpubMatch = descriptor.match(/(xpub[0-9A-Za-z]+|tpub[0-9A-Za-z]+)/); 
+    if (xpubMatch) { 
+      xpub = xpubMatch[1]; 
+    } 
     
-    return { rootFingerprint, xpub }; 
-  } 
+    return { 
+      rootFingerprint, 
+      xpub 
+    };
+  
+  }
 }
-
 
 /**
  * Returns the extended public key at a given BIP32 path.
