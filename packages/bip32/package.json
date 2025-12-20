@@ -35,6 +35,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
+    "postbuild": "node ./scripts/emit-dual-dts.js",
     "dev": "npm run build -- --watch",
     "lint": "eslint src/",
     "ci": "npm run lint && npm run test",
