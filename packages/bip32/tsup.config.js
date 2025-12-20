@@ -1,6 +1,6 @@
-import { execSync } from "child_process";
 import { polyfillNode } from "esbuild-plugin-polyfill-node";
 import { defineConfig } from "tsup";
+import { execSync } from "child_process";
 
 export default defineConfig({
   entry: ["src/index.ts"],
@@ -16,4 +16,3 @@ export default defineConfig({
     execSync("node ./scripts/emit-dual-dts.js", { stdio: "inherit" });
   },
 });
-import { execSync } from "child_process";
