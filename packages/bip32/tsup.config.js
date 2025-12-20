@@ -4,14 +4,11 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm", "cjs"],
-  dts: false,
-  experimentalDts: true,
+  dts: true,
+  experimentalDts: false,
   clean: true,
   outExtension({ format }) {
-    return {
-      js: format === "esm" ? ".js" : ".cjs",
-      dts: format === "esm" ? ".d.mts" : ".d.cts",
-    };
+    return { js: format === "esm" ? ".js" : ".cjs" };
   },
   esbuildPlugins: [polyfillNode({ polyfills: { crypto: false } })],
 });
