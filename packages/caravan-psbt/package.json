@@ -9,13 +9,12 @@
   "files": [
     "./dist/index.js",
     "./dist/index.mjs",
-    "./dist/index.d.ts",
-    "./dist/index.d.mts"
+    "./dist/index.d.ts"
   ],
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
+        "types": "./dist/index.d.ts",
         "default": "./dist/index.mjs"
       },
       "require": {
@@ -42,7 +41,8 @@
     "lint": "eslint src/",
     "lint:fix": "eslint --fix src/",
     "ci": "npm run lint && npm run test",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run"
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run",
+    "prepack": "npm run build"
   },
   "keywords": [
     "bitcoin",
