@@ -1,6 +1,6 @@
 {
-  "name": "@caravan/fees",
-  "version": "1.0.1",
+  "name": "@caravan/transactions",
+  "version": "1.0.0",
   "description": "Utility library for fee bumping bitcoin transactions",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,9 +30,25 @@
     "cpfp",
     "rbf",
     "feebumping",
-    "blockchain"
+    "blockchain",
+    "fee-estimation",
+    "replace-by-fee",
+    "child-pays-for-parent",
+    "transaction-builder",
+    "bitcoin-transaction",
+    "multisig",
+    "transaction-analysis",
+    "mempool",
+    "fee-acceleration",
+    "btc",
+    "cryptocurrency",
+    "wallet",
+    "utxo"
   ],
   "author": "Mrigesh Thakur",
+  "contributors": [
+    "Buck Perley"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=20"

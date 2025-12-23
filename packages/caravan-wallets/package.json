@@ -1,6 +1,6 @@
 {
   "name": "@caravan/wallets",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Unchained Capital's HWI Library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -82,7 +82,7 @@
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.29.8",
     "@trezor/connect-web": "^9.6.0",
-    "axios": "1.8.2",
+    "axios": "1.12.0",
     "bignumber.js": "^8.1.1",
     "bitbox-api": "^0.10.0",
     "bitcoinjs-lib": "^5.1.10",

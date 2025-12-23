@@ -5,11 +5,7 @@ import {
   satoshisToBitcoins,
 } from "@caravan/bitcoin";
 import { getSpendableSlices, getConfirmedBalance } from "../selectors/wallet";
-import {
-  selectAvailableInputsFromPSBT,
-  selectSignaturesFromPSBT,
-  selectSignaturesForImporters,
-} from "../selectors/transaction";
+import { selectAvailableInputsFromPSBT } from "../selectors/transaction";
 import {
   setSignatureImporterSignature,
   setSignatureImporterPublicKeys,
@@ -18,7 +14,11 @@ import {
 } from "./signatureImporterActions";
 
 import { DUST_IN_BTC } from "../utils/constants";
-import { loadPsbt } from "../utils/psbtUtils";
+import {
+  loadPsbt,
+  extractSignaturesFromPSBT,
+  mapSignaturesToImporters,
+} from "../utils/psbtUtils";
 import { transactionKeys } from "clients/transactions";
 
 export const CHOOSE_PERFORM_SPEND = "CHOOSE_PERFORM_SPEND";
@@ -399,19 +399,51 @@ function setOutputsFromPSBT(psbt) {
  */
 export function setSignaturesFromPsbt(psbt) {
   return (dispatch, getState) => {
-    // === STEP 1: Extract signature sets from the PSBT ===
-    // This uses our composed selectors to:
-    // - Get wallet UTXOs that match PSBT inputs (selectInputsFromPSBT)
-    // - Parse partial signatures from PSBT data
-    // - Group signatures by signer (one signer signs ALL inputs)
     const state = getState();
-    const signatureSets = selectSignaturesFromPSBT(state, psbt);
-    // === STEP 2: Process signatures if any were found ===
+    // === STEP 1: Get resolved inputs from Redux state ===
+    // CRITICAL: We rely on `state.spend.transaction.inputs` as the single source of truth.
+    // Whether inputs came from spendable slices (Standard) or were reconstructed from
+    // raw tx data (RBF/CPFP), they have been normalized into Redux by `setInputs`.
+    //
+    // This allows signature extraction to remain decoupled from the input's origin.
+    const resolvedInputs = state.spend?.transaction?.inputs || [];
+
+    // === STEP 2: Validate we have inputs to work with ===
+    // Pre-condition: `setInputs` must have successfully populated Redux before this thunk runs.
+    // If inputs are missing here, it indicates a race condition or programming error.
+    if (resolvedInputs.length === 0) {
+      throw new Error(
+        "[setSignaturesFromPsbt] No inputs available in Redux state. " +
+          "Ensure dispatch(setInputs()) was called before signature extraction.",
+      );
+    }
+
+    //  === STEP 3: Extract signatures from PSBT  ===
+    // The extraction logic is source-agnostic—it only needs inputs with:
+    //   - amountSats: For computing signature hashes
+    //   - multisig: For deriving expected pubkeys
+    //   - bip32Path: For identifying signers
+    //
+    // Both normal and reconstructed inputs provide these fields.
+    //
+    let signatureSets;
+    try {
+      signatureSets = extractSignaturesFromPSBT(psbt, resolvedInputs);
+    } catch (error) {
+      // extraction fails (user can still sign manually)
+      console.warn(
+        "[setSignaturesFromPsbt] Failed to extract signatures:",
+        error.message,
+      );
+      return;
+    }
+
+    // === STEP 4: Process signatures if any were found ===
     if (signatureSets.length > 0) {
       // Transform raw signature data into Caravan's signature importer format
       // This maps each signature set to an "importer" (numbered 1, 2, 3...)
       // that corresponds to Caravan's UI signature input slots
-      const importerData = selectSignaturesForImporters(state, psbt);
+      const importerData = mapSignaturesToImporters(signatureSets);
       // === STEP 3: Update Redux state for each signature set ===
       // For each complete signature set, we need to update multiple parts
       // of the signature importer state. This is Caravan's pattern for
@@ -491,7 +523,7 @@ export function setFeeAndFeeRateFromState(outputsTotalSats, psbt) {
   };
 }
 
-export function importPSBT(psbtText, inputs, hasPendingInputs) {
+export function importPSBT(psbtText, inputs) {
   return (dispatch, getState) => {
     let state = getState();
     const { network } = state.settings;
@@ -538,24 +570,7 @@ export function importPSBT(psbtText, inputs, hasPendingInputs) {
     dispatch(setFeeAndFeeRateFromState(outputsTotalSats, psbt));
 
     // ==== Extract and import signatures (If they are present)====
-
-    // We currently skip signature extraction for RBF PSBTs because:
-    // 1. The UTXOs required for signature verification might not be available in the current wallet state.
-    // 2. Signature extraction is tightly coupled to `selectAvailableInputsFromPSBT`, which relies on spendable slices.
-    // 3. In some flows (e.g., external RBF workflows), partially signed PSBTs may still be valid, but our logic doesn’t currently support those cases.
-    // 4. Attempting extraction without proper UTXO context may cause errors or incorrect behavior.
-    //
-    // NOTE: This is a limitation of the current implementation, not a fundamental restriction.
-    // It's entirely possible for RBF PSBTs to be partially signed—e.g., in shared wallets where one party creates and signs an RBF,
-    // then sends it to a co-signer for completion.
-    //
-    // TODO: Decouple signature extraction from wallet-bound spendable slices so we can support
-    // partial sig extraction for externally signed or collaboratively constructed PSBTs.
-    //
-    // For now, we skip extraction to avoid breaking flows that lack full UTXO context.
-    if (!hasPendingInputs) {
-      dispatch(setSignaturesFromPsbt(psbt));
-    }
+    dispatch(setSignaturesFromPsbt(psbt));
 
     // Finalize the transaction
     dispatch(finalizeOutputs(true));

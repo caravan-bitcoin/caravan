@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.16.2
+
+### Patch Changes
+
+- [#419](https://github.com/caravan-bitcoin/caravan/pull/419) [`d9c92aa`](https://github.com/caravan-bitcoin/caravan/commit/d9c92aa9381774951f89f78bbfa691a804b5e301) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - fix importing of rbf psbts with signatures
+
+## 1.16.1
+
+### Patch Changes
+
+- [#412](https://github.com/caravan-bitcoin/caravan/pull/412) [`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4)]:
+  - @caravan/bip32@1.0.2
+  - @caravan/bitcoin@0.4.2
+  - @caravan/clients@1.0.2
+  - @caravan/fees@1.0.2
+  - @caravan/health@1.0.0
+  - @caravan/psbt@2.0.3
+  - @caravan/wallets@0.9.1
+  - @caravan/typescript-config@0.0.1
+
+## 1.16.0
+
+### Minor Changes
+
+- [#352](https://github.com/caravan-bitcoin/caravan/pull/352) [`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910) Thanks [@ice-009](https://github.com/ice-009)! - Added the transaction history tab in the coordinator and some minor changes in the caravan-clients to meet that need
+
+### Patch Changes
+
+- Updated dependencies [[`4d5fd81`](https://github.com/caravan-bitcoin/caravan/commit/4d5fd8136126dc98d0baa20dd445ce80ae0a4910)]:
+  - @caravan/clients@1.0.1
+
 ## 1.15.0
 
 ### Minor Changes

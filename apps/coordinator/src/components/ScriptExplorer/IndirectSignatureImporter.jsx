@@ -85,9 +85,9 @@ class IndirectSignatureImporter extends React.Component {
 
   renderTargets = () => {
     const { outputs } = this.props;
-    return outputs.map((output) => {
+    return outputs.map((output, idx) => {
       return (
-        <TableRow hover key={output.address}>
+        <TableRow hover key={`${output.address}-${idx}`}>
           <TableCell>
             Address <code>{output.address}</code>
           </TableCell>
