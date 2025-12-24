@@ -1,6 +1,8 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { addSignaturesToPSBT } from "@caravan/bitcoin";
+import { Buffer } from "buffer";
 
 // Components
 import { Box, Button } from "@mui/material";
@@ -118,6 +120,37 @@ class WalletSign extends React.Component {
     }
   };
 
+  handleDownloadSignedPSBT = () => {
+    const { unsignedPSBT, signatureImporters, network } = this.props;
+
+    if (!unsignedPSBT) {
+      console.error("No unsigned PSBT available");
+      return;
+    }
+
+    try {
+      let psbtWithSigs = unsignedPSBT;
+      Object.values(signatureImporters)
+        .filter((imp) => imp.finalized)
+        .forEach((imp) => {
+          psbtWithSigs = addSignaturesToPSBT(
+            network,
+            psbtWithSigs,
+            imp.publicKeys.map((k) => Buffer.from(k, "hex")),
+            imp.signature.map((s) => Buffer.from(s, "hex")),
+          );
+        });
+      downloadFile(psbtWithSigs, "signed.psbt");
+    } catch (error) {
+      console.error("Failed to download signed PSBT:", error);
+    }
+  };
+
+  hasFinalizedSignatures = () => {
+    const { signatureImporters } = this.props;
+    return Object.values(signatureImporters).some((imp) => imp.finalized);
+  };
+
   render = () => {
     const { spent } = this.state;
     const { unsignedPSBT } = this.props;
@@ -150,6 +183,16 @@ class WalletSign extends React.Component {
               onClick={this.handleWalletConfigDownload}
             >
               Download Wallet Config
+            </Button>
+          )}
+
+          {unsignedPSBT && this.hasFinalizedSignatures() && (
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={this.handleDownloadSignedPSBT}
+            >
+              Download PSBT
             </Button>
           )}
         </Box>

@@ -469,24 +469,11 @@ class SignatureImporter extends React.Component {
         finalized: true,
       });
 
-      // Build a PSBT for download that includes all known signatures
+      // Build a PSBT for download that includes only this importer's signature
       try {
-        let psbtWithSigs = unsignedPSBT;
-        // include existing finalized importers
-        Object.values(signatureImporters)
-          .filter((imp) => imp.finalized)
-          .forEach((imp) => {
-            psbtWithSigs = addSignaturesToPSBT(
-              network,
-              psbtWithSigs,
-              imp.publicKeys.map((k) => Buffer.from(k, "hex")),
-              imp.signature.map((s) => Buffer.from(s, "hex")),
-            );
-          });
-        // include the newly provided set
-        psbtWithSigs = addSignaturesToPSBT(
+        const psbtWithSigs = addSignaturesToPSBT(
           network,
-          psbtWithSigs,
+          unsignedPSBT,
           publicKeys.map((k) => Buffer.from(k, "hex")),
           inputsSignatures.map((s) => Buffer.from(s, "hex")),
         );
@@ -583,22 +570,11 @@ class SignatureImporter extends React.Component {
           finalized: true,
         });
 
-        // Build a PSBT that includes all current signatures
+        // Build a PSBT that includes only this signature set
         try {
-          let psbtWithSigs = unsignedPSBT;
-          Object.values(signatureImporters)
-            .filter((imp) => imp.finalized)
-            .forEach((imp) => {
-              psbtWithSigs = addSignaturesToPSBT(
-                network,
-                psbtWithSigs,
-                imp.publicKeys.map((k) => Buffer.from(k, "hex")),
-                imp.signature.map((s) => Buffer.from(s, "hex")),
-              );
-            });
-          psbtWithSigs = addSignaturesToPSBT(
+          const psbtWithSigs = addSignaturesToPSBT(
             network,
-            psbtWithSigs,
+            unsignedPSBT,
             publicKeySet.map((k) => Buffer.from(k, "hex")),
             signatureSet.map((s) => Buffer.from(s, "hex")),
           );
