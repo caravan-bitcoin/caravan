@@ -588,8 +588,20 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
   /**
    * Parses the public key from the HD node response.
    *
+   * If asking for XFP, return object with publicKey and the root fingerprint.
+   * On newer firmware, prefer descriptor parsing.
    */
   parsePayload(payload) {
+    // ✅ Newer firmware: descriptor present 
+    if (payload.descriptor) { 
+      const parsed = this.parseDescriptor(payload.descriptor); 
+      return { 
+        rootFingerprint: parsed.rootFingerprint, 
+        publicKey: parsed.xpub, 
+      }; 
+    } 
+
+    // ❌ Older firmware: bundle response
     if (this.includeXFP) {
       const { rootFingerprint, keyMaterial } = this.extractDetailsFromPayload({
         payload,
@@ -601,6 +613,30 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
       };
     }
     return payload.publicKey;
+  }
+
+  /** 
+   * Helper to parse BIP-380 descriptor string into fingerprint + xpub.
+   * Example descriptor: pkh([d34db33f/48h/0h/0h/2h]xpub6CUGRU.../0/*) 
+   */ 
+  parseDescriptor(descriptor: string) { 
+    let rootFingerprint = ""; let xpub = ""; 
+    // Extract fingerprint 
+    // (inside square brackets before the first slash) 
+    const fpMatch = descriptor.match(/ \[([0-9a-fA-F]+)\//); 
+    if (fpMatch) { rootFingerprint = fpMatch[1]; } 
+    
+    // Extract xpub (the base58 string starting with "xpub" or "tpub") 
+    const xpubMatch = descriptor.match(/(xpub[0-9A-Za-z]+|tpub[0-9A-Za-z]+)/); 
+    if (xpubMatch) { 
+      xpub = xpubMatch[1]; 
+    } 
+    
+    return { 
+      rootFingerprint, 
+      xpub 
+    };
+  
   }
 }
 

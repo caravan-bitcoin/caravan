@@ -58,5 +58,9 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@caravan/bitcoin": "^0.4.2",
+    "@caravan/psbt": "^2.0.3"
+  }
 }

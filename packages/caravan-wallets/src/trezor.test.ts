@@ -243,6 +243,25 @@ describe("trezor", () => {
       );
     });
 
+    it("parses out fingerprint and xpub from descriptor payload", () => { 
+      const descriptorString = "wpkh([d34db33f/84h/0h/0h]xpub6CUGRUonZSQ4TWtTMmzXdrXDtyPWKi8.../0/*)"; 
+      const result = interactionBuilder().parsePayload({ descriptor: descriptorString }); 
+      
+      expect(result.rootFingerprint).toEqual("d34db33f"); 
+      expect(result.xpub.startsWith("xpub")).toBe(true); 
+    }); 
+      
+    it("falls back to bundle parsing when descriptor is not present", () => { 
+      const payload = [ 
+        { serializedPath: "m/48'/0'/0'", xpub: "xpubFoo" }, 
+        { serializedPath: "m", fingerprint: 12345678 }, 
+      ]; 
+      
+      const result = interactionBuilder().parsePayload(payload); 
+      expect(result.xpub).toEqual("xpubFoo"); 
+      expect(result.rootFingerprint).toMatch(/[0-9a-f]+/i); 
+    });
+
     it("uses TrezorConnect.getPublicKey", () => {
       const interaction = interactionBuilder();
       const [method, params] = interaction.connectParams();
