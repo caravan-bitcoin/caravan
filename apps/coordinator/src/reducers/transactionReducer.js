@@ -48,6 +48,7 @@ import {
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
   SET_ENABLE_RBF,
+  SET_ORIGINAL_PSBT_VERSION,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -112,6 +113,10 @@ export const initialState = () => ({
     error: null,
     lastUpdated: null,
   },
+
+  // The original version of the unsigned PSBT (0 or 2).
+  // Used to maintain version compatibility - downloads match original version.
+  originalPsbtVersion: 0,
 });
 
 function updateInputs(state, action) {
@@ -481,6 +486,8 @@ export default (state = initialState(), action) => {
           sequence: action.value ? 0xfffffffd : 0xffffffff,
         })),
       });
+    case SET_ORIGINAL_PSBT_VERSION:
+      return updateState(state, { originalPsbtVersion: action.value });
     default:
       return state;
   }
