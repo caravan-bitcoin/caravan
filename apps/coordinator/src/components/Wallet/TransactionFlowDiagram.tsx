@@ -40,6 +40,7 @@ interface TransactionFlowDiagramProps {
     txid: string;
     index: number;
     amountSats: string;
+    valueUnknown?: boolean; // Flag to indicate input value couldn't be determined
     multisig?: {
       name?: string;
     };
@@ -436,7 +437,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                 ? "P2WSH"
                 : input.multisig?.name?.includes("p2sh")
                   ? "P2SH"
-                  : "Unknown";
+                  : input.multisig?.name
+                    ? input.multisig.name.toUpperCase()
+                    : null;
+              const showValueUnknown = input.valueUnknown;
 
               return (
                 <Box
@@ -505,42 +509,64 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                         <OpenInNew fontSize="inherit" />
                       </IconButton>
                     </Box>
-                    <Chip
-                      label={scriptType}
-                      size="small"
-                      sx={{
-                        height: 20,
-                        fontSize: "0.65rem",
-                        backgroundColor: getScriptTypeColor(scriptType),
-                        color: "#fff",
-                        fontWeight: 600,
-                      }}
-                    />
+                    {scriptType && (
+                      <Chip
+                        label={scriptType}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: "0.65rem",
+                          backgroundColor: getScriptTypeColor(scriptType),
+                          color: "#fff",
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
                   </Box>
                   <Box
                     display="flex"
                     justifyContent="space-between"
                     alignItems="center"
                   >
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 700,
-                        color: theme.palette.primary.main,
-                      }}
-                    >
-                      {inputAmount.toFixed(8)} BTC
-                    </Typography>
-                    <Box
-                      sx={{
-                        "& .MuiChip-root": { height: 22, fontSize: "0.7rem" },
-                      }}
-                    >
-                      <DustChip
-                        amountSats={parseInt(input.amountSats)}
-                        scriptType={input.multisig?.name}
-                      />
-                    </Box>
+                    {showValueUnknown ? (
+                      <Tooltip title="Input value not available for historical transactions. Total is calculated from outputs + fee.">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color: theme.palette.text.secondary,
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Value from prev tx
+                        </Typography>
+                      </Tooltip>
+                    ) : (
+                      <>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 700,
+                            color: theme.palette.primary.main,
+                          }}
+                        >
+                          {inputAmount.toFixed(8)} BTC
+                        </Typography>
+                        <Box
+                          sx={{
+                            "& .MuiChip-root": {
+                              height: 22,
+                              fontSize: "0.7rem",
+                            },
+                          }}
+                        >
+                          <DustChip
+                            amountSats={parseInt(input.amountSats)}
+                            scriptType={input.multisig?.name}
+                          />
+                        </Box>
+                      </>
+                    )}
                   </Box>
                 </Box>
               );
@@ -1014,7 +1040,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                         ? "P2WSH"
                         : input.multisig?.name?.includes("p2sh")
                           ? "P2SH"
-                          : "Unknown";
+                          : input.multisig?.name
+                            ? input.multisig.name.toUpperCase()
+                            : null;
+                      const showValueUnknown = input.valueUnknown;
                       return (
                         <Box
                           key={`drawer-input-${input.txid}-${input.index}-${idx}`}
@@ -1064,45 +1093,63 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                                 <OpenInNew fontSize="inherit" />
                               </IconButton>
                             </Box>
-                            <Chip
-                              label={scriptType}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: "0.65rem",
-                                backgroundColor: getScriptTypeColor(scriptType),
-                                color: "#fff",
-                                fontWeight: 600,
-                              }}
-                            />
+                            {scriptType && (
+                              <Chip
+                                label={scriptType}
+                                size="small"
+                                sx={{
+                                  height: 20,
+                                  fontSize: "0.65rem",
+                                  backgroundColor:
+                                    getScriptTypeColor(scriptType),
+                                  color: "#fff",
+                                  fontWeight: 600,
+                                }}
+                              />
+                            )}
                           </Box>
                           <Box
                             display="flex"
                             justifyContent="space-between"
                             alignItems="center"
                           >
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 700,
-                                color: theme.palette.primary.main,
-                              }}
-                            >
-                              {inputAmount.toFixed(8)} BTC
-                            </Typography>
-                            <Box
-                              sx={{
-                                "& .MuiChip-root": {
-                                  height: 22,
-                                  fontSize: "0.7rem",
-                                },
-                              }}
-                            >
-                              <DustChip
-                                amountSats={parseInt(input.amountSats)}
-                                scriptType={input.multisig?.name}
-                              />
-                            </Box>
+                            {showValueUnknown ? (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 500,
+                                  color: theme.palette.text.secondary,
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                Value from prev tx
+                              </Typography>
+                            ) : (
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: theme.palette.primary.main,
+                                  }}
+                                >
+                                  {inputAmount.toFixed(8)} BTC
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    "& .MuiChip-root": {
+                                      height: 22,
+                                      fontSize: "0.7rem",
+                                    },
+                                  }}
+                                >
+                                  <DustChip
+                                    amountSats={parseInt(input.amountSats)}
+                                    scriptType={input.multisig?.name}
+                                  />
+                                </Box>
+                              </>
+                            )}
                           </Box>
                         </Box>
                       );

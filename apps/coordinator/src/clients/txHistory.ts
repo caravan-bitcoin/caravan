@@ -58,15 +58,24 @@ export const usePublicClientTransactions = () => {
           0,
         );
 
-      // for public clients we don't expect the duplication problem we have for private nodes so we don't handle that
       const processedTransactions = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
         "confirmed",
       );
 
+      // Added later by @jbrauck-unchained for deduplication on public clients like mempool.space
+      const seenTxids = new Set<string>();
+      const deduplicated = processedTransactions.filter((tx) => {
+        if (seenTxids.has(tx.txid)) {
+          return false;
+        }
+        seenTxids.add(tx.txid);
+        return true;
+      });
+
       // We need to ensure every transaction has valueToWallet in satoshis for consistent sorting
-      return processedTransactions.map((tx) => ({
+      return deduplicated.map((tx) => ({
         ...tx,
         valueToWallet: calculateTransactionValue(tx, walletAddresses),
       }));
