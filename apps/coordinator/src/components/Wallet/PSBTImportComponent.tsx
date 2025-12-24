@@ -27,11 +27,7 @@ import { WalletState } from "selectors/wallet";
 import BCUR2Reader from "../BCUR2/BCUR2Reader";
 
 interface PSBTImportComponentProps {
-  onImport: (
-    psbtText: string,
-    inputs: any[],
-    hasPendingInputs: boolean,
-  ) => void;
+  onImport: (psbtText: string, inputs: any[]) => void;
   showMethodSelector?: boolean; // New prop to control method selector visibility
 }
 
@@ -176,7 +172,7 @@ export const PSBTImportComponent: React.FC<PSBTImportComponentProps> = ({
     // Auto-import when inputs are resolved
     if (resolvedInputsCount > 0 && resolvedInputsCount === totalPsbtInputs) {
       try {
-        onImport(psbtText, allInputs, hasPendingInputs);
+        onImport(psbtText, allInputs);
         // Clear state after successful import
         setPsbtText("");
         setParsedPsbt(null);

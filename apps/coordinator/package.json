@@ -1,7 +1,7 @@
 {
   "name": "caravan-coordinator",
   "private": true,
-  "version": "1.16.1",
+  "version": "1.16.2",
   "description": "Unchained Capital's Bitcoin Multisig Coordinator Application",
   "main": "index.jsx",
   "type": "module",
@@ -60,7 +60,7 @@
     "standard-version": "^9.0.0",
     "ts-jest": "^29.0.5",
     "typescript": "^5.0.2",
-    "vite": "6.3.4",
+    "vite": "6.4.1",
     "vite-plugin-wasm": "^3.3.0",
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.29",
