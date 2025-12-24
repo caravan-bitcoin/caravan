@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.17.0
+
+### Minor Changes
+
+- [#401](https://github.com/caravan-bitcoin/caravan/pull/401) [`50a972e`](https://github.com/caravan-bitcoin/caravan/commit/50a972ef10fc6e2c612b25c913f7859cd9b991bc) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - add download psbt with signatures functionality on a per key basis and for full tx. Also fixes bug on psbt importer where multiple keys signed for are not imported (only one sig being imported)
+
+### Patch Changes
+
+- [#429](https://github.com/caravan-bitcoin/caravan/pull/429) [`be36c5a`](https://github.com/caravan-bitcoin/caravan/commit/be36c5ae1e2110e22da31fabca6b439fd557af0d) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - I fixed duplicaiton bug in txhistory when using a public client
+
 ## 1.16.2
 
 ### Patch Changes
