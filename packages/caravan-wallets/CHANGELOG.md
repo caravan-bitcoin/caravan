@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2
+
+### Patch Changes
+
+- [#432](https://github.com/caravan-bitcoin/caravan/pull/432) [`815aa3a`](https://github.com/caravan-bitcoin/caravan/commit/815aa3a550612a97785922461d5e255a525d320c) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Generalize BCUR2 encoder. Add support for `bytes` registry item.
+
 ## 0.9.1
 
 ### Patch Changes
