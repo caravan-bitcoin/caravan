@@ -4,12 +4,12 @@
  * specifically focused on PSBT (Partially Signed Bitcoin Transaction) format used by hardware wallets.
  */
 
-import { CryptoPSBT } from "@keystonehq/bc-ur-registry";
+import { Bytes, CryptoPSBT, RegistryItem } from "@keystonehq/bc-ur-registry";
 
 /**
- * Factory function type for creating CryptoPSBT instances
+ * Factory function type for creating RegistryItem instances
  */
-export type CryptoPSBTFactory = (buffer: Buffer) => CryptoPSBT;
+export type RegistryItemFactory = (buffer: Buffer) => RegistryItem;
 
 /**
  * Class for encoding Bitcoin transaction data into BCUR2 QR codes.
@@ -19,24 +19,37 @@ export type CryptoPSBTFactory = (buffer: Buffer) => CryptoPSBT;
 export class BCUR2Encoder {
   private _data: string;
 
+  private _buffer: Buffer;
+
   private _maxFragmentLength: number;
 
-  private cryptoPSBTFactory: CryptoPSBTFactory;
+  private registryItemFactory: RegistryItemFactory;
 
   /**
    * Creates a new BCUR2 encoder instance
    * @param data - The data to encode (e.g., base64 PSBT string)
    * @param maxFragmentLength - Maximum length of each QR code fragment (default: 100)
-   * @param cryptoPSBTFactory - Factory function for creating CryptoPSBT instances
+   * @param registryFactory - Factory function for creating RegistryItem instances
    */
   constructor(
     data: string,
     maxFragmentLength: number = 100,
-    cryptoPSBTFactory: CryptoPSBTFactory = (buffer) => new CryptoPSBT(buffer)
+    registyType: "crypto-psbt" | "bytes" = "crypto-psbt",
   ) {
     this._data = data;
     this._maxFragmentLength = maxFragmentLength;
-    this.cryptoPSBTFactory = cryptoPSBTFactory;
+    switch (registyType) {
+      case "crypto-psbt":
+        this._buffer = Buffer.from(data.trim(), "base64");
+        this.registryItemFactory = (buffer) => new CryptoPSBT(buffer);
+        break;
+      case "bytes":
+        this._buffer = Buffer.from(data.trim(), "utf8");
+        this.registryItemFactory = (buffer) => new Bytes(buffer);
+        break;
+      default:
+        throw new Error(`Unsupported registry type: ${registyType}`);
+    }
   }
 
   /**
@@ -46,22 +59,7 @@ export class BCUR2Encoder {
    */
   encodePSBT(): string[] {
     try {
-      // Convert base64 PSBT to buffer
-      const psbtBuffer = Buffer.from(this._data.trim(), "base64");
-
-      // Create CryptoPSBT object
-      const cryptoPSBT = this.cryptoPSBTFactory(psbtBuffer);
-
-      // Use CryptoPSBT's built-in UREncoder with fragment length
-      const encoder = cryptoPSBT.toUREncoder(this._maxFragmentLength);
-
-      // Generate all fragments
-      const frames: string[] = [];
-      for (let i = 0; i < encoder.fragmentsLength; i++) {
-        frames.push(encoder.nextPart());
-      }
-
-      return frames;
+      return this.qrFragments;
     } catch (err: any) {
       throw new Error(`Failed to encode PSBT: ${err.message}`);
     }
@@ -95,16 +93,27 @@ export class BCUR2Encoder {
     return this._maxFragmentLength;
   }
 
+  private get encoder(): ReturnType<RegistryItem["toUREncoder"]> {
+    return this.registryItemFactory(this._buffer).toUREncoder(
+      this._maxFragmentLength,
+    );
+  }
+
+  get qrFragments(): string[] {
+    const frames: string[] = [];
+    for (let i = 0; i < this.encoder.fragmentsLength; i++) {
+      frames.push(this.encoder.nextPart());
+    }
+    return frames;
+  }
+
   /**
    * Estimates the number of QR code fragments that will be generated
    * @returns Estimated number of fragments
    */
   estimateFragmentCount(): number {
     try {
-      const psbtBuffer = Buffer.from(this._data.trim(), "base64");
-      const cryptoPSBT = this.cryptoPSBTFactory(psbtBuffer);
-      const encoder = cryptoPSBT.toUREncoder(this._maxFragmentLength);
-      return encoder.fragmentsLength;
+      return this.encoder.fragmentsLength;
     } catch (err: any) {
       throw new Error(`Failed to estimate fragment count: ${err.message}`);
     }
