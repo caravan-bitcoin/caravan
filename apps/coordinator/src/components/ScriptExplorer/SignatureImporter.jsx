@@ -8,6 +8,7 @@ import {
   validateBIP32Path,
   getMaskedDerivation,
   P2SH,
+  addSignaturesToPSBT,
 } from "@caravan/bitcoin";
 import {
   JADE,
@@ -47,6 +48,7 @@ import {
 import { setSigningKey as setSigningKeyAction } from "../../actions/transactionActions";
 import { downloadFile } from "../../utils";
 import { validateMultisigPsbtSignature } from "@caravan/psbt";
+import { Buffer } from "buffer";
 
 const TEXT = "text";
 const BCUR2 = "bcur2";
@@ -375,8 +377,12 @@ class SignatureImporter extends React.Component {
       setComplete,
       setSigningKey,
       unsignedPSBT,
+      network,
     } = this.props;
-    this.setState({ signedPsbt });
+    // If a signed PSBT was provided (via device/QR/file), prefer offering that for download
+    if (signedPsbt) {
+      this.setState({ signedPsbt });
+    }
     if (!Array.isArray(inputsSignatures)) {
       errback("Signature is not an array of strings.");
       return;
@@ -462,6 +468,20 @@ class SignatureImporter extends React.Component {
         publicKeys,
         finalized: true,
       });
+
+      // Build a PSBT for download that includes only this importer's signature
+      try {
+        const psbtWithSigs = addSignaturesToPSBT(
+          network,
+          unsignedPSBT,
+          publicKeys.map((k) => Buffer.from(k, "hex")),
+          inputsSignatures.map((s) => Buffer.from(s, "hex")),
+        );
+        this.setState({ signedPsbt: psbtWithSigs });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to construct signed PSBT:", e);
+      }
     } else {
       // We land here if a PSBT has been uploaded with multiple signature sets.
       // In case we already have some signatures saved, e.g. first a singly-signed
@@ -549,6 +569,20 @@ class SignatureImporter extends React.Component {
           publicKeySet,
           finalized: true,
         });
+
+        // Build a PSBT that includes only this signature set
+        try {
+          const psbtWithSigs = addSignaturesToPSBT(
+            network,
+            unsignedPSBT,
+            publicKeySet.map((k) => Buffer.from(k, "hex")),
+            signatureSet.map((s) => Buffer.from(s, "hex")),
+          );
+          this.setState({ signedPsbt: psbtWithSigs });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error("Failed to construct signed PSBT:", e);
+        }
         // Send signatures to this method again, since now some of them are marked
         // as finalized, and they will be filtered out.
         signaturesToCheck = this.filterKnownSignatures(inputsSignatures);
