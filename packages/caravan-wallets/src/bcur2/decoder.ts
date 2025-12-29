@@ -215,6 +215,10 @@ export class BCUR2Decoder {
     return this.decoder.isComplete() || Boolean(this.error);
   }
 
+  percentComplete(): number {
+    return this.decoder.getProgress() * 100;
+  }
+
   /**
    * Gets the current progress of the decoding process
    * @returns {string} The progress message
@@ -234,9 +238,11 @@ export class BCUR2Decoder {
   /**
    * Gets the decoded wallet data, if available
    * @param {BitcoinNetwork} network - The Bitcoin network to use for decoding
-   * @returns {ExtendedPublicKeyData|null} The decoded data or null
+   * @returns {ExtendedPublicKeyData|string|null} The decoded data or null
    */
-  getDecodedData(network: BitcoinNetwork): ExtendedPublicKeyData | null {
+  getDecodedData(
+    network: BitcoinNetwork = Network.MAINNET,
+  ): ExtendedPublicKeyData | string | null {
     if (!this.decoder.isComplete()) return null;
 
     try {
@@ -249,13 +255,8 @@ export class BCUR2Decoder {
       const decodedResult = this.handleDecodedResult(
         result.type,
         Buffer.from(result.cbor.buffer),
-        network
+        network,
       );
-
-      // Only return ExtendedPublicKeyData, not PSBT strings
-      if (typeof decodedResult === "string") {
-        throw new Error("Use getDecodedPSBT() to get PSBT data");
-      }
 
       return decodedResult;
     } catch (err: any) {
@@ -269,29 +270,16 @@ export class BCUR2Decoder {
    * @returns {string|null} The PSBT in base64 format or null
    */
   getDecodedPSBT(): string | null {
-    if (!this.decoder.isComplete()) return null;
-
     try {
-      const result = this.decoder.resultUR();
-
-      if (!isSupportedURType(result.type)) {
-        throw new Error(`Unsupported UR type: ${result.type}`);
-      }
-
-      if (result.type !== "crypto-psbt") {
+      const decodedResult = this.getDecodedData(
+        Network.MAINNET, // Network doesn't matter for PSBT decoding
+      );
+      if (this.decoder.resultUR().type !== "crypto-psbt") {
         throw new Error("QR code does not contain PSBT data");
       }
-
-      const decodedResult = this.handleDecodedResult(
-        result.type,
-        Buffer.from(result.cbor.buffer),
-        Network.MAINNET // Network doesn't matter for PSBT decoding
-      );
-
       if (typeof decodedResult !== "string") {
         throw new Error("Expected PSBT string data");
       }
-
       return decodedResult;
     } catch (err: any) {
       this.error = err.message || String(err);
