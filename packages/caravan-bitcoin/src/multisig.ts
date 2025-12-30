@@ -65,6 +65,14 @@ export const MULTISIG_ADDRESS_TYPES = {
  * Return an M-of-N [`Multisig`]{@link module:multisig.MULTISIG}
  * object by specifying the total number of signers (M) and the public
  * keys (N total).
+ *
+ * **Important:** Public keys are used in the order passed. For `sortedmulti`
+ * compatibility (required by most hardware wallets and standard in descriptors),
+ * sort public keys lexicographically before calling this function:
+ *
+ * @example
+ * const sortedPubkeys = [...publicKeys].sort();
+ * const multisig = generateMultisigFromPublicKeys(network, addressType, m, ...sortedPubkeys);
  */
 export function generateMultisigFromPublicKeys(
   network,
