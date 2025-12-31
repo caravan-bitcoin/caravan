@@ -65,6 +65,90 @@ export const LEDGER = "ledger";
 
 export const LEDGER_V2 = "ledger_v2";
 
+/**
+ * Map of Ledger status codes to human-readable error messages.
+ *
+ * These codes are returned by Ledger devices when operations fail.
+ * The keys can be either hex status codes (e.g., "6e00") or decimal
+ * error codes (e.g., "21781").
+ */
+export const LEDGER_ERROR_MESSAGES: Record<string, string> = {
+  // Status Word errors (returned as hex in error messages)
+  "6985": "User denied the request on the Ledger device.",
+  "6a80": "Invalid data received. Please check the transaction format.",
+  "6a82": "Application not found. Please open the Bitcoin app on your Ledger.",
+  "6b00": "Invalid parameter. The request may be malformed.",
+  "6d00": "Operation not supported by the current app. Make sure the Bitcoin app is open.",
+  "6e00":
+    "Device is locked or wrong app is open. Please unlock your Ledger and open the Bitcoin app.",
+  "6f00": "An unknown error occurred on the device.",
+  "6faa": "Device is locked. Please unlock your Ledger.",
+
+  // Decimal error codes (from ledger-bitcoin library)
+  "21761":
+    "User denied the request on the Ledger device.", // 0x5501 - SW_DENY
+  "21762": "Device is locked. Please unlock your Ledger.", // 0x5502 - SW_LOCKED
+  "21781":
+    "User denied the request on the Ledger device.", // 0x5515 - SW_SWAP_CHECKING_FAIL
+  "28161":
+    "Device is locked or wrong app is open. Please unlock your Ledger and open the Bitcoin app.", // 0x6e01
+  "28416":
+    "Device is locked or wrong app is open. Please unlock your Ledger and open the Bitcoin app.", // 0x6f00
+
+  // Common transport-level errors
+  disconnected:
+    "Ledger device disconnected. Please reconnect and try again.",
+  "cannot open device":
+    "Cannot open Ledger device. Please make sure it's connected, unlocked, and not being used by another application (like Ledger Live).",
+  "device is busy":
+    "Ledger device is busy. Please wait for the current operation to complete or reconnect your device.",
+  "invalid channel":
+    "Communication error with Ledger. Please reconnect your device.",
+  "access denied":
+    "Access to Ledger device was denied. Please reconnect and approve access in your browser.",
+};
+
+/**
+ * Translates a Ledger error into a human-readable message.
+ *
+ * Attempts to match the error message or status code against known
+ * Ledger error codes and returns a user-friendly message.
+ *
+ * @param error - The error object or message from a Ledger interaction
+ * @returns A human-readable error message
+ */
+export function translateLedgerError(error: Error | string): string {
+  const errorMessage =
+    typeof error === "string" ? error : error.message || String(error);
+  const lowerMessage = errorMessage.toLowerCase();
+
+  // Check for status code patterns in the error message
+  // Ledger errors often contain hex status codes like "0x6e00" or "6e00"
+  const hexMatch = lowerMessage.match(/(?:0x)?([0-9a-f]{4})(?:\s|$|[^0-9a-f])/i);
+  if (hexMatch) {
+    const statusCode = hexMatch[1].toLowerCase();
+    if (LEDGER_ERROR_MESSAGES[statusCode]) {
+      return LEDGER_ERROR_MESSAGES[statusCode];
+    }
+  }
+
+  // Check for decimal error codes (e.g., "21781")
+  const decimalMatch = errorMessage.match(/\b(2[0-9]{4})\b/);
+  if (decimalMatch && LEDGER_ERROR_MESSAGES[decimalMatch[1]]) {
+    return LEDGER_ERROR_MESSAGES[decimalMatch[1]];
+  }
+
+  // Check for known error phrases
+  for (const [key, message] of Object.entries(LEDGER_ERROR_MESSAGES)) {
+    if (lowerMessage.includes(key.toLowerCase())) {
+      return message;
+    }
+  }
+
+  // Return original message if no translation found
+  return errorMessage;
+}
+
 
 /**
  * Constant representing the action of pushing the left button on a
@@ -190,17 +274,22 @@ export class LedgerInteraction extends DirectKeystoreInteraction {
     } catch (err: unknown) {
       const e = err as DeviceError;
       if (e.message) {
+        // Handle specific known messages first
         if (e.message === "No device selected.") {
-          e.message = `Select your device in the WebUSB dialog box. Make sure it's plugged in, unlocked, and has the Bitcoin app open.`;
+          throw new Error(
+            `Select your device in the WebUSB dialog box. Make sure it's plugged in, unlocked, and has the Bitcoin app open.`
+          );
         }
         if (
           e.message ===
           "undefined is not an object (evaluating 'navigator.usb.getDevices')"
         ) {
-          e.message = `Safari is not a supported browser.`;
+          throw new Error(`Safari is not a supported browser.`);
         }
+        // Translate any other Ledger errors to human-readable messages
+        throw new Error(translateLedgerError(e));
       }
-      throw new Error(e.message);
+      throw new Error(translateLedgerError(e));
     }
   }
 

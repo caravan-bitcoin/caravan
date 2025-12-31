@@ -12,6 +12,8 @@ import {
   LedgerConfirmMultisigAddress,
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
+  LEDGER_ERROR_MESSAGES,
+  translateLedgerError,
 } from "./ledger";
 
 function itHasStandardMessages(interactionBuilder) {
@@ -542,6 +544,60 @@ describe("ledger", () => {
         interaction.policyHmac,
         interaction.progressCallback
       );
+    });
+  });
+
+  describe("translateLedgerError", () => {
+    it("has defined error messages for common status codes", () => {
+      expect(LEDGER_ERROR_MESSAGES["6985"]).toBeDefined();
+      expect(LEDGER_ERROR_MESSAGES["6e00"]).toBeDefined();
+      expect(LEDGER_ERROR_MESSAGES["21781"]).toBeDefined();
+    });
+
+    it("translates hex status codes in error messages", () => {
+      const result = translateLedgerError("Error: 0x6e00");
+      expect(result).toContain("unlock");
+      expect(result).toContain("Bitcoin app");
+    });
+
+    it("translates hex status codes without 0x prefix", () => {
+      const result = translateLedgerError("Ledger error 6985");
+      expect(result).toContain("denied");
+    });
+
+    it("translates decimal error codes", () => {
+      const result = translateLedgerError("Error code 21781 occurred");
+      expect(result).toContain("denied");
+    });
+
+    it("translates known error phrases", () => {
+      const result = translateLedgerError(
+        "The device disconnected during operation"
+      );
+      expect(result).toContain("reconnect");
+    });
+
+    it("returns original message for unknown errors", () => {
+      const originalMessage = "Something completely unexpected happened";
+      const result = translateLedgerError(originalMessage);
+      expect(result).toEqual(originalMessage);
+    });
+
+    it("handles Error objects", () => {
+      const error = new Error("0x6985 transaction rejected");
+      const result = translateLedgerError(error);
+      expect(result).toContain("denied");
+    });
+
+    it("translates device busy errors", () => {
+      const result = translateLedgerError("device is busy please wait");
+      expect(result).toContain("busy");
+    });
+
+    it("translates access denied errors", () => {
+      const result = translateLedgerError("WebUSB access denied by user");
+      expect(result).toContain("denied");
+      expect(result).toContain("browser");
     });
   });
 });
