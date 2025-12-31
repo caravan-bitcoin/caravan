@@ -295,6 +295,193 @@ environment variable set to `true` (e.g. `TREZOR_DEV=true npm run start`).
 Currently this will tell the Trezor interaction to access connect at `https://localhost:8088`
 which is the default. Custom ports not currently supported.
 
+### Ledger v2 API (Bitcoin App 2.1.0+)
+
+Ledger's Bitcoin app version 2.1.0 and later introduced a new API that requires
+wallet policy registration before signing transactions. This section covers the
+key differences and provides examples for common operations.
+
+#### Key Differences from Legacy API
+
+1. **Wallet Registration Required**: Before signing, you must register your
+   multisig wallet policy with the device
+2. **Policy HMAC**: The device returns an HMAC that should be stored and reused
+   for subsequent operations
+3. **Address Confirmation**: Uses the registered policy to verify addresses
+
+#### Registering a Wallet Policy
+
+Before signing transactions, register your wallet configuration:
+
+```typescript
+import {
+  LedgerRegisterWalletPolicy,
+  MAINNET,
+  P2WSH
+} from "@caravan/wallets";
+
+const walletConfig = {
+  name: "My Multisig",
+  addressType: P2WSH,
+  network: MAINNET,
+  quorum: {
+    requiredSigners: 2,
+    totalSigners: 3,
+  },
+  extendedPublicKeys: [
+    {
+      xfp: "1234abcd",
+      bip32Path: "m/48'/0'/0'/2'",
+      xpub: "xpub6E...",
+    },
+    {
+      xfp: "5678efgh",
+      bip32Path: "m/48'/0'/0'/2'",
+      xpub: "xpub6F...",
+    },
+    {
+      xfp: "9abcijkl",
+      bip32Path: "m/48'/0'/0'/2'",
+      xpub: "xpub6G...",
+    },
+  ],
+};
+
+const interaction = new LedgerRegisterWalletPolicy(walletConfig);
+
+try {
+  // User must approve on device - displays wallet name, policy, and key info
+  const policyHmac = await interaction.run();
+
+  // Store this HMAC for future signing operations
+  console.log("Policy registered! HMAC:", policyHmac);
+} catch (error) {
+  console.error("Registration failed:", error.message);
+}
+```
+
+#### Signing with Ledger v2
+
+Use `LedgerV2SignMultisigTransaction` for the v2 API, or use the standard
+`LedgerSignMultisigTransaction` with `v2Options` for automatic fallback:
+
+```typescript
+import {
+  LedgerV2SignMultisigTransaction,
+  MAINNET
+} from "@caravan/wallets";
+
+const interaction = new LedgerV2SignMultisigTransaction({
+  ...walletConfig,
+  policyHmac: storedPolicyHmac,  // From registration step
+  psbt: unsignedPsbtBase64,
+  progressCallback: () => {
+    console.log("Signature received for an input");
+  },
+});
+
+try {
+  const signedPsbt = await interaction.run();
+  console.log("Signed PSBT:", signedPsbt);
+} catch (error) {
+  console.error("Signing failed:", error.message);
+}
+```
+
+#### Confirming Multisig Addresses
+
+Verify a receive address on the Ledger display:
+
+```typescript
+import { LedgerConfirmMultisigAddress } from "@caravan/wallets";
+
+const interaction = new LedgerConfirmMultisigAddress({
+  ...walletConfig,
+  policyHmac: storedPolicyHmac,
+  bip32Path: "m/48'/0'/0'/2'/0/5",  // Path to the specific address
+  expected: "bc1q...",  // Optional: expected address to verify
+});
+
+try {
+  const confirmedAddress = await interaction.run();
+  console.log("User confirmed address:", confirmedAddress);
+} catch (error) {
+  console.error("Address confirmation failed:", error.message);
+}
+```
+
+#### Using the High-Level API with Ledger v2
+
+The `SignMultisigTransaction` function automatically handles v2 when provided
+with the necessary options:
+
+```typescript
+import {
+  SignMultisigTransaction,
+  LEDGER,
+  MAINNET
+} from "@caravan/wallets";
+
+const interaction = SignMultisigTransaction({
+  keystore: LEDGER,
+  network: MAINNET,
+  psbt: unsignedPsbtBase64,
+  keyDetails: {
+    xfp: "1234abcd",
+    path: "m/48'/0'/0'/2'",
+  },
+  walletConfig: walletConfig,
+  policyHmac: storedPolicyHmac,  // If already registered
+  progressCallback: () => console.log("Progress..."),
+});
+
+const signedPsbt = await interaction.run();
+```
+
+#### Error Handling
+
+Ledger v2 operations can fail for various reasons. Use `translateLedgerError`
+for user-friendly messages:
+
+```typescript
+import { translateLedgerError } from "@caravan/wallets";
+
+try {
+  await interaction.run();
+} catch (error) {
+  const friendlyMessage = translateLedgerError(error);
+  // Shows "User denied the request" instead of "0x6985"
+  showErrorToUser(friendlyMessage);
+}
+```
+
+#### Troubleshooting Connection Issues
+
+Use the diagnostic utilities to help users troubleshoot:
+
+```typescript
+import {
+  runWebUSBDiagnostics,
+  getDiagnosticReport
+} from "@caravan/wallets";
+
+// Get comprehensive diagnostics
+const diagnostics = await runWebUSBDiagnostics();
+
+if (!diagnostics.browser.supportsWebUSB) {
+  console.log("Browser doesn't support WebUSB");
+}
+
+if (diagnostics.issues.length > 0) {
+  console.log("Issues found:", diagnostics.issues);
+  console.log("Steps to fix:", diagnostics.troubleshootingSteps);
+}
+
+// Or get a formatted report for display
+const report = await getDiagnosticReport();
+console.log(report);
+```
+
 ### DirectInteraction classes
 
 Some devices (such as a Trezor) support "direct" interactions --
