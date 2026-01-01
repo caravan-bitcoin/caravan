@@ -94,6 +94,12 @@ export const WalletDescriptorImporter = () => {
     // Reset file input
     e.target.value = "";
 
+    const maxSize = 5 * 1024; // 5KB
+    if (file.size > maxSize) {
+      setDescriptorError(`File too large. Maximum size is 10KB.`);
+      return;
+    }
+
     try {
       const text = await file.text();
       await processDescriptorInput(text);

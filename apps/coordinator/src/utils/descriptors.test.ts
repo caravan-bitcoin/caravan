@@ -213,7 +213,7 @@ wsh(sortedmulti(...))#abc12345`;
     it("should preserve checksum when present", () => {
       const input = "wsh(sortedmulti(...))#abc12345";
       const result = parsePlainDescriptor(input);
-      expect(result).toContain("#abc12345");
+      expect(result).toBe("wsh(sortedmulti(...))#abc12345");
     });
   });
 

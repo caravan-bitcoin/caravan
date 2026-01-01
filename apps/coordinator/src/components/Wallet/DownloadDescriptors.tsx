@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import { useSelector } from "react-redux";
-import { Button, Menu, MenuItem } from "@mui/material";
+import { Alert, Button, Menu, MenuItem } from "@mui/material";
 
 import { getWalletConfig } from "../../selectors/wallet";
 import { downloadFile } from "../../utils";
@@ -23,9 +23,11 @@ export const DownloadDescriptors = () => {
   const walletConfig = useSelector(getWalletConfig);
   const descriptors = useGetDescriptors();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [error, setError] = useState<string | null>(null);
   const open = Boolean(anchorEl);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setError(null);
     setAnchorEl(event.currentTarget);
   };
 
@@ -34,6 +36,7 @@ export const DownloadDescriptors = () => {
   };
 
   const handleDownloadSparrow = async () => {
+    setError(null);
     try {
       const content = await formatSparrowExport(descriptors);
       const filename = getDescriptorFileName(
@@ -43,13 +46,15 @@ export const DownloadDescriptors = () => {
       );
       downloadFile(content, filename);
       handleClose();
-    } catch (error) {
-      console.error("Error generating Sparrow format:", error);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unknown error occurred";
+      setError(`Error generating Sparrow format: ${message}`);
       handleClose();
     }
   };
 
   const handleDownloadJson = async () => {
+    setError(null);
     try {
       const content = await formatJsonExport(descriptors);
       const filename = getDescriptorFileName(
@@ -59,8 +64,9 @@ export const DownloadDescriptors = () => {
       );
       downloadFile(content, filename);
       handleClose();
-    } catch (error) {
-      console.error("Error generating JSON format:", error);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unknown error occurred";
+      setError(`Error generating JSON format: ${message}`);
       handleClose();
     }
   };
@@ -85,6 +91,11 @@ export const DownloadDescriptors = () => {
           Download JSON Format (.json)
         </MenuItem>
       </Menu>
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
     </>
   );
 };

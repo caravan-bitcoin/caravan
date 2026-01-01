@@ -167,8 +167,7 @@ export function parsePlainDescriptor(text: string): string {
   // Extract descriptor (preserve checksum if present - getWalletFromDescriptor validates it)
   // Checksum format: descriptor#checksum (checksum is 8 alphanumeric chars after #)
   // If checksum is present, preserve exact format; otherwise normalize whitespace
-  const hasChecksum = withoutComments.includes("#");
-  if (hasChecksum) {
+  if (hasChecksum(withoutComments)) {
     // Preserve exact format when checksum is present to maintain checksum validity
     return withoutComments.trim();
   }
