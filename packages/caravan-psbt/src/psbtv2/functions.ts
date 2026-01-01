@@ -98,7 +98,7 @@ export function parseDerivationPathNodesToBytes(path: string): Buffer {
  * separator (keyLen 0x00 byte).
  */
 export function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
-  const nextByte: Buffer = br.readBytes(1);
+  const nextByte = br.readBytes(1);
   if (nextByte.equals(PSBT_MAP_SEPARATOR)) {
     return;
   }
