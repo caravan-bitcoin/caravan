@@ -77,7 +77,8 @@ export abstract class PsbtV2Maps {
       serializeMap(map, bw);
     }
 
-    return bw.render().toString(format);
+    // Explicitly wrap to ensure Buffer typing for the encoding overload
+    return Buffer.from(bw.render()).toString(format);
   }
 
   /**
