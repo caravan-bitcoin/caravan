@@ -114,8 +114,8 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
               ),
             },
             feeRate: {
-              original: originalFeeRate.toFixed(1),
-              new: `${feeBumpResult.newFeeRate.toFixed(1)} (package rate)`,
+              original: originalFeeRate.toFixed(2),
+              new: `${feeBumpResult.newFeeRate.toFixed(2)} (package rate)`,
               difference: (
                 <Typography
                   component="span"
@@ -124,7 +124,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  +{(feeBumpResult.newFeeRate - originalFeeRate).toFixed(1)}
+                  +{(feeBumpResult.newFeeRate - originalFeeRate).toFixed(2)}
                 </Typography>
               ),
             },
@@ -165,8 +165,8 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
               ),
             },
             feeRate: {
-              original: originalFeeRate.toFixed(1),
-              new: feeBumpResult.newFeeRate.toFixed(1),
+              original: originalFeeRate.toFixed(2),
+              new: feeBumpResult.newFeeRate.toFixed(2),
               difference: (
                 <Typography
                   component="span"

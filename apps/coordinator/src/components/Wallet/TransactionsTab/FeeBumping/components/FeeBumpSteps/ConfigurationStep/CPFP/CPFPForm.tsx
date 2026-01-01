@@ -77,17 +77,36 @@ export const CPFPForm: React.FC = () => {
   const estimatedChildVsize = cpfp?.childSize;
   const combinedVsize = cpfp?.estimatedPackageSize;
   const minimumFeeRate = useMemo(() => {
-    const cpfpTargetRate = cpfp?.feeRate ? parseFloat(cpfp.feeRate) : null;
+    const cpfpTargetRate = cpfp?.targetFeeRate
+      ? parseFloat(cpfp.targetFeeRate.toString())
+      : null;
 
     return Math.ceil(
       cpfpTargetRate || Math.max(originalFeeRate + 1, feeEstimates?.medium, 1),
     );
   }, [cpfp, originalFeeRate, feeEstimates]);
 
-  const [feeBumpRate, setFeeBumpRate] = useState<number>(minimumFeeRate);
+  const minimumChildFeeRate = useMemo(() => {
+    return cpfp?.feeRate ? parseFloat(cpfp.feeRate) : 0;
+  }, [cpfp]);
 
-  const targetCombinedFee = Math.ceil(combinedVsize! * feeBumpRate);
+  const [childFeeRate, setChildFeeRate] = useState<number>(minimumChildFeeRate);
+
+  const childFee = useMemo(() => {
+    if (!estimatedChildVsize) return 0;
+    return Math.ceil(childFeeRate * estimatedChildVsize);
+  }, [childFeeRate, estimatedChildVsize]);
+
+  const targetCombinedFee = useMemo(() => {
+    return originalFee + childFee;
+  }, [originalFee, childFee]);
+
   const childFeeNeeded = Math.max(0, targetCombinedFee - originalFee);
+
+  const combinedEffectiveRate = useMemo(() => {
+    if (!combinedVsize || combinedVsize === 0) return 0;
+    return targetCombinedFee / combinedVsize;
+  }, [targetCombinedFee, combinedVsize]);
 
   const spendableOutputs = useMemo(() => {
     if (!transaction?.vout) return [];
@@ -101,14 +120,14 @@ export const CPFPForm: React.FC = () => {
   }, [transaction, analysis]);
 
   const handleSliderChange = (_: Event, newValue: number | number[]) => {
-    setFeeBumpRate(newValue as number);
+    setChildFeeRate(newValue as number);
     setCurrentFeeLevel(FEE_LEVELS.CUSTOM);
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(event.target.value);
     if (!isNaN(value) && value >= minimumFeeRate) {
-      setFeeBumpRate(value);
+      setChildFeeRate(value);
     }
   };
 
@@ -118,9 +137,9 @@ export const CPFPForm: React.FC = () => {
     setShowErrorDetails(false);
 
     // Validate form
-    if (feeBumpRate < minimumFeeRate) {
+    if (childFeeRate < minimumChildFeeRate) {
       setError(
-        `Fee rate must be at least ${minimumFeeRate.toFixed(1)} sats/vB`,
+        `Child fee rate must be at least ${minimumChildFeeRate.toFixed(2)} sats/vB`,
       );
       setShowErrorDetails(true);
       return;
@@ -140,7 +159,7 @@ export const CPFPForm: React.FC = () => {
 
     try {
       const psbtBase64 = createCPFP(
-        feeBumpRate,
+        combinedEffectiveRate,
         spendableOutputIndex,
         changeAddressInput.address,
       );
@@ -148,7 +167,7 @@ export const CPFPForm: React.FC = () => {
       const result: FeeBumpResult = {
         psbtBase64,
         newFee: targetCombinedFee.toString(),
-        newFeeRate: feeBumpRate,
+        newFeeRate: combinedEffectiveRate,
         strategy: selectedStrategy!,
         isCancel: false,
         createdAt: new Date().toISOString(),
@@ -246,20 +265,23 @@ export const CPFPForm: React.FC = () => {
       {/* Fee Rate Selection */}
       <Box mb={3}>
         <CPFPFeeSlider
-          feeBumpRate={feeBumpRate}
+          feeBumpRate={childFeeRate}
           onSliderChange={handleSliderChange}
           onInputChange={handleInputChange}
-          minimumFeeRate={minimumFeeRate}
+          minimumFeeRate={minimumChildFeeRate}
           maxFeeRate={maxFeeRate}
           feeEstimates={feeEstimates || {}}
         />
 
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Parent fee rate: {originalFeeRate.toFixed(1)} sats/vB
+            Parent fee rate: {originalFeeRate.toFixed(2)} sats/vB
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Target combined rate: {feeBumpRate.toFixed(1)} sats/vB
+            Child fee rate: {childFeeRate.toFixed(2)} sats/vB
+          </Typography>
+          <Typography variant="body2" fontWeight="medium">
+            Combined effective rate: {combinedEffectiveRate.toFixed(2)} sats/vB
           </Typography>
         </Box>
       </Box>
@@ -298,7 +320,7 @@ export const CPFPForm: React.FC = () => {
           disabled={
             !changeAddressInput.address.trim() ||
             spendableOutputs.length === 0 ||
-            feeBumpRate < minimumFeeRate
+            childFeeRate < minimumFeeRate
           }
         >
           Create CPFP Transaction

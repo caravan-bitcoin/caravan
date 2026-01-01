@@ -76,6 +76,7 @@ export const FeeStrategySelector: React.FC = () => {
           : new BigNumber(analysis.estimatedCPFPFee)
               .dividedBy(new BigNumber(analysis.vsize))
               .toNumber(),
+        targetFeeRate: cpfp?.targetFeeRate,
       },
     ],
     [analysis, enableFullRBF],

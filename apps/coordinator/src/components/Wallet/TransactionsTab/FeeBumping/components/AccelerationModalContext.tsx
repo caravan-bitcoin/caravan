@@ -45,6 +45,7 @@ interface AccelerationModalState {
     feeRate: string;
     childSize: number;
     combinedEstimatedSize: number;
+    targetFeeRate: number | undefined;
   } | null;
 
   // Fee bump PSBT
@@ -176,6 +177,7 @@ interface AccelerationModalContextType {
     feeRate: string | undefined;
     childSize: number | undefined;
     estimatedPackageSize: number | undefined;
+    targetFeeRate: number | undefined;
   } | null;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;

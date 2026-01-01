@@ -96,6 +96,13 @@ export const useAnalyzeTransaction = (
     }
   }, [isErrorAvailableUtxos]);
 
+  const targetFeeRate = useMemo(
+    () =>
+      feeEstimates[FeePriority.MEDIUM] ??
+      (transaction?.vsize ? transaction.fee / transaction.vsize : 250),
+    [feeEstimates, transaction],
+  );
+
   const analysis = useMemo(() => {
     if (
       !transaction ||
@@ -111,9 +118,7 @@ export const useAnalyzeTransaction = (
       const analyzer = new TransactionAnalyzer({
         txHex,
         network: network as Network,
-        targetFeeRate:
-          feeEstimates[FeePriority.MEDIUM] ??
-          (transaction.vsize ? transaction.fee / transaction.vsize : 250),
+        targetFeeRate: targetFeeRate,
         absoluteFee: transaction.fee.toString(),
         availableUtxos,
         requiredSigners,
@@ -129,6 +134,7 @@ export const useAnalyzeTransaction = (
           feeRate: analyzer.cpfpFeeRate,
           childSize: analyzer.estimatedCPFPChildSize,
           estimatedPackageSize: analyzer.CPFPPackageSize,
+          targetFeeRate: targetFeeRate,
         };
       } catch (cpfpError) {
         console.warn("CPFP calculation failed:", cpfpError);
