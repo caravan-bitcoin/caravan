@@ -108,7 +108,7 @@ export abstract class PsbtV2Maps {
   }
 
   private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
-    from.forEach((v, k) => to.set(k, Buffer.from(v)));
+    from.forEach((v, k) => to.set(k, Buffer.from(v as any)));
   }
 }
 
