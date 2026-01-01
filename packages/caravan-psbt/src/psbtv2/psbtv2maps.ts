@@ -77,8 +77,9 @@ export abstract class PsbtV2Maps {
       serializeMap(map, bw);
     }
 
-    // Explicitly wrap to ensure Buffer typing for the encoding overload
-    return Buffer.from(bw.render()).toString(format);
+    // Cast bw.render() to Buffer and explicitly specify encoding type
+    const rendered = bw.render() as Buffer;
+    return rendered.toString(format as BufferEncoding);
   }
 
   /**
