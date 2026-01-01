@@ -24,7 +24,7 @@ export abstract class PsbtV2Maps {
     }
 
     const buf = bufferize(psbt);
-    const br = new BufferReader(buf);
+    const br = new BufferReader(buf as any);
     if (!br.readBytes(PSBT_MAGIC_BYTES.length, true).equals(PSBT_MAGIC_BYTES)) {
       throw Error("PsbtV2 magic bytes are incorrect.");
     }

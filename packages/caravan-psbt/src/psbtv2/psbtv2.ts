@@ -418,7 +418,7 @@ export class PsbtV2 extends PsbtV2Maps {
       if (!value) {
         throw Error("PSBT_OUT_AMOUNT not set for an output");
       }
-      const br = new BufferReader(value);
+      const br = new BufferReader(value as any);
       indices.push(br.readBigI64(value));
     }
     return indices;
@@ -1269,7 +1269,7 @@ export class PsbtV2 extends PsbtV2Maps {
    * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#signer
    */
   private handleSighashType(sig: Buffer) {
-    const br = new BufferReader(sig.slice(-1));
+    const br = new BufferReader(sig.slice(-1) as any);
     let sighashVal = br.readU8();
     let modifiable = this.PSBT_GLOBAL_TX_MODIFIABLE;
 

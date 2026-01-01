@@ -179,7 +179,7 @@ export function autoLoadPSBT(psbtFromFile, options?: any) {
     return null;
   }
   try {
-    const br = new BufferReader(psbtBuff);
+    const br = new BufferReader(psbtBuff as any);
     if (!br.readBytes(PSBT_MAGIC_BYTES.length, true).equals(PSBT_MAGIC_BYTES)) {
       return null;
     }
