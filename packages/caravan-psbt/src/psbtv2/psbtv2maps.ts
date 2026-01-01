@@ -77,9 +77,8 @@ export abstract class PsbtV2Maps {
       serializeMap(map, bw);
     }
 
-    // Cast bw.render() to Buffer and explicitly specify encoding type
-    const rendered = bw.render() as Buffer;
-    return rendered.toString(format as BufferEncoding);
+    // Cast to silence dts build type errors
+    return (bw.render() as any).toString(format);
   }
 
   /**
