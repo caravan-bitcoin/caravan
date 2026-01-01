@@ -138,7 +138,7 @@ export function serializeMap(map: Map<Key, Value>, bw: BufferWriter): void {
 export function getPsbtVersionNumber(psbt: string | Buffer): number {
   const map = new Map<Key, Value>();
   const buf = bufferize(psbt);
-  const br = new BufferReader(new Uint8Array(buf.slice(PSBT_MAGIC_BYTES.length)));
+  const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length) as Uint8Array);
   readAndSetKeyPairs(map, br);
   return map.get(KeyType.PSBT_GLOBAL_VERSION)?.readUInt32LE(0) || 0;
 }

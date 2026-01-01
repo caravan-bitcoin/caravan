@@ -16,9 +16,8 @@ const source = readFileSync(dtsPath, "utf8");
 // ESM declarations can mirror the base .d.ts
 writeFileSync(dmtsPath, source, "utf8");
 
-// Best-effort CJS declarations: keep shape, swap default export to export =
+// CJS declarations: transform default export to export =
 let cjsDecl = source;
-// Handle `export default <identifier>` and `export default class/function` roughly
 cjsDecl = cjsDecl.replace(/export default ([^;\n]+)/g, "declare const _default: $1\nexport = _default;");
 writeFileSync(dctsPath, cjsDecl, "utf8");
 
