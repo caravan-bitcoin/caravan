@@ -138,14 +138,9 @@ export function serializeMap(map: Map<Key, Value>, bw: BufferWriter): void {
 export function getPsbtVersionNumber(psbt: string | Buffer): number {
   const map = new Map<Key, Value>();
   const buf = bufferize(psbt);
-  // Use a view on the same ArrayBuffer to satisfy BufferReader's Uint8Array typing
-  const br = new BufferReader(
-    new Uint8Array(
-      buf.buffer,
-      buf.byteOffset + PSBT_MAGIC_BYTES.length,
-      buf.byteLength - PSBT_MAGIC_BYTES.length,
-    ),
-  );
+  // BufferReader expects Buffer at runtime, but TypeScript dts generation is strict
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length) as any);
   readAndSetKeyPairs(map, br);
   return map.get(KeyType.PSBT_GLOBAL_VERSION)?.readUInt32LE(0) || 0;
 }
