@@ -2,6 +2,7 @@
   "name": "@caravan/clients",
   "version": "1.0.2",
   "description": "A package for querying different bitcoin blockchain backends",
+  "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
@@ -11,6 +12,18 @@
     "./dist/index.mjs",
     "./dist/index.d.ts"
   ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

@@ -618,7 +618,7 @@ export class BtcTransactionTemplate {
       }
 
       const input = new BtcTxInputTemplate({
-        txid: Buffer.from(txid, "hex").reverse().toString("hex"),
+        txid: (Buffer.from(txid, "hex").reverse() as any).toString("hex"),
         vout,
       });
 

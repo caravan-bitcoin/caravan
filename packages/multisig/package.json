@@ -3,6 +3,7 @@
   "version": "1.0.1",
   "author": "unchained capital",
   "license": "MIT",
+  "type": "commonjs",
   "private": false,
   "engines": {
     "node": ">=20"
@@ -20,9 +21,14 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
   "description": "A utility library for handling data related to caravan multisig wallet configurations",
