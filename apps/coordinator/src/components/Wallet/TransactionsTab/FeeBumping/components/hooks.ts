@@ -126,7 +126,7 @@ export const useAnalyzeTransaction = (
       const analyzer = new TransactionAnalyzer({
         txHex,
         network: network as Network,
-        targetFeeRate: targetFeeRate,
+        targetFeeRate,
         absoluteFee: transaction.fee.toString(),
         availableUtxos,
         requiredSigners,
@@ -145,7 +145,7 @@ export const useAnalyzeTransaction = (
           childFeeRate: analyzer.cpfpFeeRate,
           childSize: analyzer.estimatedCPFPChildSize,
           estimatedPackageSize: analyzer.CPFPPackageSize,
-          targetFeeRate: targetFeeRate,
+          targetFeeRate,
         };
       } catch (cpfpError) {
         console.warn("CPFP calculation failed:", cpfpError);
