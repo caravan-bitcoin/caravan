@@ -1,5 +1,4 @@
 ---
-"@caravan/transactions": patch
 "caravan-coordinator": patch
 ---
 
