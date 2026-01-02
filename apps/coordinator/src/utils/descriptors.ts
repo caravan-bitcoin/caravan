@@ -69,6 +69,8 @@ export function parseSparrowFormat(text: string): ParsedSparrowFormat {
     if (!line) continue;
 
     // Check for section headers
+    // NOTE: This could be brittle to changes in how sparrow formats its descriptor .txt
+    // file. If it changes in the future we can react accordingly to come up with something more robust.
     if (
       line.includes("Receive and change descriptor") ||
       line.includes("BIP389")
