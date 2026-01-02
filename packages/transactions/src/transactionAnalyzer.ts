@@ -397,7 +397,7 @@ export class TransactionAnalyzer {
    */
   get minimumCPFPFee(): Satoshis {
     // so we want to know the extra fees that child has to pay,
-    // remember when miner takes in this tx ( along with the parent) they are rewarded minimumCPFPFee + ParentFee
+    // remember when miner takes in this tx (along with the parent) they are rewarded minimumCPFPFee + ParentFee
     return new BigNumber(this.cpfpFeeRate)
       .multipliedBy(this.estimatedCPFPChildSize)
       .toString();
