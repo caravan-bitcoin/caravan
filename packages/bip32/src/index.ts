@@ -13,4 +13,5 @@ export {
   getMaskedKeyOrigin,
   setXpubNetwork,
   getBlindedXpub,
+  ensureXpubAtPath,
 } from "./keys";

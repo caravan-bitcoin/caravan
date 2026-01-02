@@ -100,11 +100,7 @@ export class BCUR2Encoder {
   }
 
   get qrFragments(): string[] {
-    const frames: string[] = [];
-    for (let i = 0; i < this.encoder.fragmentsLength; i++) {
-      frames.push(this.encoder.nextPart());
-    }
-    return frames;
+    return this.encoder.encodeWhole();
   }
 
   /**

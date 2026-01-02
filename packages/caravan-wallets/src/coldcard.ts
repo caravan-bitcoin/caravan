@@ -8,15 +8,14 @@
  * * ColdcardSignMultisigTransaction
  * * ColdcardMultisigWalletConfig
  */
+import { ensureXpubAtPath } from "@caravan/bip32";
 import {
-  deriveChildExtendedPublicKey,
   fingerprintToFixedLengthHex,
   parseSignaturesFromPSBT,
   ExtendedPublicKey,
   Network,
   validateBIP32Path,
   getRelativeBIP32Path,
-  convertExtendedPublicKey,
   getMaskedDerivation,
   MultisigAddressType,
   P2SH,
@@ -283,29 +282,32 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
    */
   deriveDeeperXpubIfNecessary(result: Record<string, unknown> | string) {
     const knownColdcardChroot = this.chrootForBIP32Path(this.bip32Path);
-    let relativePath =
-      knownColdcardChroot &&
-      getRelativeBIP32Path(knownColdcardChroot, this.bip32Path);
     let addressType = "";
     if (knownColdcardChroot !== null) {
       addressType = COLDCARD_BASE_BIP32_PATHS[knownColdcardChroot];
     }
+    if (!knownColdcardChroot) {
+      throw new Error(
+        `Unable to determine Coldcard script type from ${this.bip32Path}`,
+      );
+    }
+
     // result could have p2wsh_p2sh or p2sh_p2wsh based on firmware version. Blah!
     if (addressType.includes("_") && !result[addressType.toLowerCase()]) {
       // Firmware < v3.2.0
       addressType = "p2wsh_p2sh";
     }
 
-    const prefix = this.network === Network.TESTNET ? "tpub" : "xpub";
-    // If the addressType is segwit, the imported key will not be in the xpub/tpub format,
-    // so convert it.
-    const baseXpub = addressType.toLowerCase().includes("w")
-      ? convertExtendedPublicKey(result[addressType.toLowerCase()], prefix)
-      : result[addressType.toLowerCase()];
-
-    return relativePath && relativePath.length
-      ? deriveChildExtendedPublicKey(baseXpub, relativePath, this.network)
-      : baseXpub;
+    // NOTE: If the addressType is segwit, the imported key will not be in the xpub/tpub formats
+    // this will convert it.
+    return ensureXpubAtPath(
+      {
+        xpub: result[addressType.toLowerCase()],
+        bip32Path: knownColdcardChroot,
+      },
+      this.bip32Path,
+      this.network,
+    );
   }
 }
 
