@@ -25,11 +25,19 @@ import { TransactionDetails } from "@caravan/clients";
 import { usePendingUtxos, useWalletUtxos } from "hooks/utxos";
 import { buildUtxoFromSpendingTransaction } from "utils/uxtoReconstruction";
 import { DUST_IN_SATOSHIS } from "utils/constants";
+import { NormalizedCPFP } from "../types";
 
 interface UseAddressInputProps {
   availableAddresses: string[];
   initialSelectionType?: "predefined" | "custom";
 }
+
+const DEFAULT_CPFP: NormalizedCPFP = {
+  childFeeRate: "0",
+  childSize: 0,
+  estimatedPackageSize: 0,
+  targetFeeRate: 0,
+};
 
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
@@ -126,12 +134,15 @@ export const useAnalyzeTransaction = (
         addressType: addressType as MultisigAddressType,
         ...(changeOutputIndex !== undefined && { changeOutputIndex }),
       });
-      let cpfpData = null;
+      let cpfpData: NormalizedCPFP = {
+        ...DEFAULT_CPFP,
+        targetFeeRate,
+      };
       try {
         // added here in case `analyzer.cpfpFeeRate` throws an error
         cpfpData = {
           // we need this because for CPFP we cannot calculate feeRate simply as in RBF by using vsize and RBFFees
-          feeRate: analyzer.cpfpFeeRate,
+          childFeeRate: analyzer.cpfpFeeRate,
           childSize: analyzer.estimatedCPFPChildSize,
           estimatedPackageSize: analyzer.CPFPPackageSize,
           targetFeeRate: targetFeeRate,
@@ -172,7 +183,7 @@ export const useAnalyzeTransaction = (
 
   return {
     analysis: analysis?.analysis ?? null,
-    cpfp: analysis?.cpfpData ?? null,
+    cpfp: analysis?.cpfpData ?? DEFAULT_CPFP,
     changeOutputIndex,
     availableUtxos,
     error,
