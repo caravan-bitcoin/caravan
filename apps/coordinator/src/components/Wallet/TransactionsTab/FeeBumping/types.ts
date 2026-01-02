@@ -57,3 +57,11 @@ export const FEE_LEVEL_COLORS = {
   [FEE_LEVELS.HIGH]: "#f44336", // Red
   [FEE_LEVELS.CUSTOM]: "#2196f3", // Blue
 };
+
+// Note not naming this as CPFP to avoid conflicts with transaction package CPFP type
+export interface NormalizedCPFP {
+  childFeeRate: string; // as returned by transaction package as string
+  childSize: number;
+  estimatedPackageSize: number;
+  targetFeeRate: number;
+}

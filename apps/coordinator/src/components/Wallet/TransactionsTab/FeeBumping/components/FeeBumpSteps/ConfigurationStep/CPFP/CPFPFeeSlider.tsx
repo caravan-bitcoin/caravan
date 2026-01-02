@@ -76,9 +76,9 @@ export const CPFPFeeSlider: React.FC<CPFPFeeSliderProps> = ({
   return (
     <Box className="swa-slider-container">
       <Typography variant="subtitle1" className="potential-fee-waste-title">
-        Target Combined Fee Rate
+        Child Transaction Fee Rate
         <Tooltip
-          title="This is the desired fee rate for the parent + child transactions combined. Higher rates will confirm faster."
+          title="The fee rate for the new child transaction being created. This will be higher than the target combined rate to pull up the parent transaction."
           arrow
         >
           <IconButton size="small" className="info-icon-button">
@@ -91,7 +91,7 @@ export const CPFPFeeSlider: React.FC<CPFPFeeSliderProps> = ({
         {/* Current rate display */}
         <Box className="waste-amount-container">
           <Typography variant="h4" className="waste-amount-text">
-            {feeBumpRate.toFixed(1)}
+            {feeBumpRate.toFixed(2)}
           </Typography>
           <Typography variant="body2" className="waste-amount-units">
             sats/vB
@@ -133,7 +133,7 @@ export const CPFPFeeSlider: React.FC<CPFPFeeSliderProps> = ({
           {feeMarkers.map((marker) => (
             <Tooltip
               key={marker.label}
-              title={`${marker.label}: ${marker.value.toFixed(1)} sats/vB`}
+              title={`${marker.label}: ${marker.value.toFixed(2)} sats/vB`}
               arrow
             >
               <Typography
@@ -152,7 +152,7 @@ export const CPFPFeeSlider: React.FC<CPFPFeeSliderProps> = ({
         <TextField
           label="Custom Fee Rate (sats/vB)"
           type="number"
-          value={feeBumpRate}
+          value={feeBumpRate.toFixed(2)}
           onChange={onInputChange}
           size="small"
           inputProps={{
@@ -164,7 +164,7 @@ export const CPFPFeeSlider: React.FC<CPFPFeeSliderProps> = ({
         />
 
         <Typography variant="body2" className="fee-estimate-text">
-          Minimum required: {minimumFeeRate.toFixed(1)} sats/vB
+          Minimum required: {minimumFeeRate.toFixed(2)} sats/vB
           <Tooltip title="This is the minimum combined fee rate needed to incentivize miners to confirm both parent and child transactions together">
             <IconButton size="small" className="info-icon-button">
               <InfoOutlined className="info-icon" />

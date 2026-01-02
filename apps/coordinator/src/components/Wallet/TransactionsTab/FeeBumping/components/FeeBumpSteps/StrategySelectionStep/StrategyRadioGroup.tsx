@@ -6,12 +6,11 @@ import {
   RadioGroup,
   Box,
   Typography,
-  Grid,
   Chip,
-  Paper,
 } from "@mui/material";
 import { FeeBumpStrategy } from "@caravan/transactions";
-import { formatFee } from "../../../utils";
+import { CpfpStrategyDetails } from "./CpfpStrategyDetails";
+import { StandardStrategyDetails } from "./StandardStrategyDetails";
 
 interface StrategyConfig {
   strategy: FeeBumpStrategy;
@@ -23,100 +22,8 @@ interface StrategyConfig {
   disabledReason?: string;
   minimumFee: number;
   suggestedFeeRate: number;
+  targetFeeRate?: number;
 }
-
-interface StrategyRadioOptionProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  isSelected: boolean;
-  isRecommended: boolean;
-  isDisabled: boolean;
-  disabledReason?: string;
-  minimumFee: number;
-  suggestedFeeRate: number;
-}
-
-export const StrategyRadioOption: React.FC<StrategyRadioOptionProps> = ({
-  title,
-  description,
-  icon,
-  isSelected,
-  isRecommended,
-  isDisabled,
-  disabledReason,
-  minimumFee,
-  suggestedFeeRate,
-}) => {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        mb: 2,
-        opacity: isDisabled ? 0.7 : 1,
-        border: isSelected
-          ? "2px solid #1976d2"
-          : "1px solid rgba(0, 0, 0, 0.12)",
-      }}
-    >
-      <Box>
-        <Box display="flex" alignItems="center">
-          {icon}
-          <Box ml={1}>
-            <Typography variant="h6">
-              {title}
-              {isRecommended && (
-                <Chip
-                  label="Recommended"
-                  color="primary"
-                  size="small"
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {description}
-            </Typography>
-          </Box>
-        </Box>
-
-        {!isDisabled && (
-          <Box mt={2}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Minimum fee required:
-                </Typography>
-                <Typography variant="body2">
-                  {formatFee(minimumFee.toString())}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Suggested fee rate:
-                </Typography>
-                <Typography variant="body2">
-                  {suggestedFeeRate} sat/vB
-                </Typography>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-
-        {isDisabled && disabledReason && (
-          <Typography
-            variant="caption"
-            color="error"
-            sx={{ display: "block", mt: 1 }}
-          >
-            {disabledReason}
-          </Typography>
-        )}
-      </Box>
-    </Paper>
-  );
-};
 
 interface StrategyRadioGroupProps {
   strategies: StrategyConfig[];
@@ -173,24 +80,19 @@ export const StrategyRadioGroup: React.FC<StrategyRadioGroupProps> = ({
 
                 {!config.disabled && (
                   <Box mt={2}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Minimum fee required:
-                        </Typography>
-                        <Typography variant="body2">
-                          {formatFee(config.minimumFee.toString())}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Suggested fee rate:
-                        </Typography>
-                        <Typography variant="body2">
-                          {config.suggestedFeeRate.toFixed(2)} sats/vB
-                        </Typography>
-                      </Grid>
-                    </Grid>
+                    {config.strategy === "CPFP" ? (
+                      <CpfpStrategyDetails
+                        minimumFee={config.minimumFee}
+                        suggestedFeeRate={config.suggestedFeeRate}
+                        targetFeeRate={config.targetFeeRate!}
+                      />
+                    ) : (
+                      // RBF or other strategies
+                      <StandardStrategyDetails
+                        minimumFee={config.minimumFee}
+                        suggestedFeeRate={config.suggestedFeeRate}
+                      />
+                    )}
                   </Box>
                 )}
 

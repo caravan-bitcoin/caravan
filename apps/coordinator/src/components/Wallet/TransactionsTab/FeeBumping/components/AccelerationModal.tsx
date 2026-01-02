@@ -179,7 +179,7 @@ const AccelerationModalContent: React.FC<
       return !analysis.canRBF && !enableFullRBF;
     }
     if (selectedStrategy === FeeBumpStrategy.CPFP) {
-      return !analysis.canCPFP || !cpfp?.feeRate;
+      return !analysis.canCPFP || !cpfp.childFeeRate;
     }
 
     return false;

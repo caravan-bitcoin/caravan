@@ -104,7 +104,7 @@ export const RBFForm: React.FC = () => {
     // Validate form before proceeding
     if (feeBumpRate < minimumFeeRate) {
       console.error("Fee rate is below minimum required");
-      alert(`Fee rate must be at least ${minimumFeeRate.toFixed(1)} sats/vB`);
+      alert(`Fee rate must be at least ${minimumFeeRate.toFixed(2)} sats/vB`);
       return false;
     }
 
@@ -294,10 +294,10 @@ export const RBFForm: React.FC = () => {
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Current fee rate: {originalFeeRate.toFixed(1)} sats/vB
+            Current fee rate: {originalFeeRate.toFixed(2)} sats/vB
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Minimum required: {minimumFeeRate.toFixed(1)} sats/vB (per RBF
+            Minimum required: {minimumFeeRate.toFixed(2)} sats/vB (per RBF
             rules)
           </Typography>
         </Box>
