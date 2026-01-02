@@ -189,7 +189,7 @@ export const FeeStrategySelector: React.FC = () => {
           <Box mt={1}>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee rate:{" "}
-              <strong>{analysis.feeRate?.toFixed(1)} sats/vB</strong>
+              <strong>{analysis.feeRate?.toFixed(2)} sats/vB</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee :{" "}

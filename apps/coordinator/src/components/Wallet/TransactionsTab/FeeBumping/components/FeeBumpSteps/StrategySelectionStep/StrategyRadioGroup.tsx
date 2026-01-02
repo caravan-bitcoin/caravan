@@ -246,7 +246,7 @@ export const StrategyRadioGroup: React.FC<StrategyRadioGroupProps> = ({
                               </Tooltip>
                             </Box>
                             <Typography variant="body2" fontWeight="medium">
-                              {config.suggestedFeeRate.toFixed(1)} sat/vB
+                              {config.suggestedFeeRate.toFixed(2)} sat/vB
                             </Typography>
                           </Grid>
                         </Grid>
