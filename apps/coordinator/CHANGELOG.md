@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.18.0
+
+### Minor Changes
+
+- [#434](https://github.com/caravan-bitcoin/caravan/pull/434) [`ed8cb67`](https://github.com/caravan-bitcoin/caravan/commit/ed8cb6740ad0a8068e8056195fddd210454b7004) Thanks [@bucko13](https://github.com/bucko13)! - Adds backward compatible support for multipath, BIP389 style descriptors. Improves compatibility with Sparrow
+
+### Patch Changes
+
+- Updated dependencies [[`3073ec8`](https://github.com/caravan-bitcoin/caravan/commit/3073ec833140cc45b058a375e06e4830d73c78e4)]:
+  - @caravan/bitcoin@0.4.3
+  - @caravan/psbt@2.0.4
+
 ## 1.17.0
 
 ### Minor Changes
