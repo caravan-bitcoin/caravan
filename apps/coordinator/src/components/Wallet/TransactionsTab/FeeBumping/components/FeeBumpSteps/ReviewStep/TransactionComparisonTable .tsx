@@ -115,7 +115,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
             },
             feeRate: {
               original: originalFeeRate.toFixed(2),
-              new: `${feeBumpResult.newFeeRate.toFixed(2)} (package rate)`,
+              new: `${feeBumpResult.newFeeRate.toFixed(2)} (child Tx FeeRate)`,
               difference: (
                 <Typography
                   component="span"

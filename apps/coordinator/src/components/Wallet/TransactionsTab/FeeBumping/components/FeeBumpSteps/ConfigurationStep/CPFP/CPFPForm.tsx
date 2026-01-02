@@ -167,7 +167,7 @@ export const CPFPForm: React.FC = () => {
       const result: FeeBumpResult = {
         psbtBase64,
         newFee: targetCombinedFee.toString(),
-        newFeeRate: combinedEffectiveRate,
+        newFeeRate: childFeeRate,
         strategy: selectedStrategy!,
         isCancel: false,
         createdAt: new Date().toISOString(),
