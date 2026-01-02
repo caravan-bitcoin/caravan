@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3
+
+### Patch Changes
+
+- [#435](https://github.com/caravan-bitcoin/caravan/pull/435) [`3073ec8`](https://github.com/caravan-bitcoin/caravan/commit/3073ec833140cc45b058a375e06e4830d73c78e4) Thanks [@bensig](https://github.com/bensig)! - Add documentation for sortedmulti public key ordering
+
+  Clarifies that `generateMultisigFromPublicKeys` uses public keys in the order passed,
+  and that callers must sort keys lexicographically for `sortedmulti` compatibility
+  (required by hardware wallets like Ledger and Trezor, and standard in descriptors).
+
+  Updated both the README and JSDoc comments with examples showing proper usage.
+
 ## 0.4.2
 
 ### Patch Changes
