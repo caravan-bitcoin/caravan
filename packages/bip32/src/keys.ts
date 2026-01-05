@@ -2,9 +2,11 @@ import {
   ExtendedPublicKey,
   Network,
   bip32SequenceToPath,
+  convertExtendedPublicKey,
   deriveChildExtendedPublicKey,
   deriveChildPublicKey,
   getNetworkFromPrefix,
+  getRelativeBIP32Path,
 } from "@caravan/bitcoin";
 import { Bip32Derivation } from "bip174/src/lib/interfaces";
 
@@ -132,4 +134,38 @@ export const getBlindedXpub = (rawXpub: string): KeyOrigin => {
     bip32Path: `*/${secretPath.split("/").slice(1).join("/")}`,
     rootFingerprint: xpub?.parentFingerprint?.toString(16) || "",
   };
+};
+
+/**
+ * Derives an extended public key to the target BIP32 path if necessary.
+ * Ensures the xpub is in the correct format for the network and derives
+ * child keys along the relative path from source to target.
+ * @param source - The source object containing the xpub and its BIP32 path.
+ * @param targetBip32Path - The target BIP32 path to derive to.
+ * @param network - The network (e.g., TESTNET or REGTEST).
+ * @returns The derived xpub at the target path, or the source xpub if no derivation is needed.
+ */
+export const ensureXpubAtPath = (
+  source: {
+    xpub: string;
+    bip32Path: string;
+  },
+  targetBip32Path: string,
+  network: Network,
+): string => {
+  const prefix = [Network.TESTNET, Network.REGTEST].includes(network)
+    ? "tpub"
+    : "xpub";
+  const xpub = source.xpub.startsWith(prefix)
+    ? source.xpub
+    : convertExtendedPublicKey(source.xpub, prefix);
+
+  if (typeof xpub !== "string") {
+    throw new Error(`Unable to convert extended public key to ${prefix}`);
+  }
+
+  const relativePath = getRelativeBIP32Path(source.bip32Path, targetBip32Path);
+  return !relativePath?.length
+    ? source.xpub
+    : deriveChildExtendedPublicKey(xpub, relativePath, network);
 };
