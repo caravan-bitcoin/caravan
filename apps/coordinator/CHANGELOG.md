@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.18.1
+
+### Patch Changes
+
+- [#439](https://github.com/caravan-bitcoin/caravan/pull/439) [`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Added `deriveXpubToPath` function for BIP32 key derivation and enhanced BCUR2 decoder with progress tracking and refactoring.
+
+- Updated dependencies [[`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e)]:
+  - @caravan/wallets@0.9.3
+  - @caravan/bip32@1.0.3
+
 ## 1.18.0
 
 ### Minor Changes
