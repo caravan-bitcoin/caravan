@@ -1434,4 +1434,42 @@ export class PsbtV2 extends PsbtV2Maps {
     bw.writeU8(this.outputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
+
+  /**
+   * Validates this PsbtV2 and the one it's being combined with are ready for
+   * the Combiner role. Also, the calculated unsigned transaction IDs of the two
+   * must be the same.
+   */
+  private validateCombine(psbt: PsbtV2) {
+    if (!psbt.isReadyForCombiner) {
+      throw Error(`Provided PsbtV2 is not ready for Combiner role.`);
+    }
+
+    const checkThis = new PsbtConversionMaps(this.serialize());
+    const checkOther = new PsbtConversionMaps(psbt.serialize());
+    if (checkThis.getTransactionId() !== checkOther.getTransactionId()) {
+      throw Error("Cannot combine PSBTs for different unsigned transactions.");
+    }
+  }
+
+  /**
+   * Combines multiple PsbtV2 objects into this one with the latest index taking
+   * precedence over earlier indices of the provided list.
+   */
+  public combine(psbts: PsbtV2[]) {
+    if (!this.isReadyForCombiner) {
+      throw Error("This PsbtV2 is not ready for Combiner role.");
+    }
+    for (const psbt of psbts) {
+      // Validate all first
+      this.validateCombine(psbt);
+    }
+    try {
+      for (const psbt of psbts) {
+        this.combineMaps(psbt);
+      }
+    } catch (error) {
+      throw Error("Failed to combine PSBTs. WARNING: This PSBT may be in an invalid state.");
+    }
+  }
 }

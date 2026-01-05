@@ -109,6 +109,48 @@ export abstract class PsbtV2Maps {
   private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
     from.forEach((v, k) => to.set(k, Buffer.from(v)));
   }
+
+  /**
+   * For a given map, set the value to the given key if the value is not empty.
+   * This overrides the value at that key as long as the value will not be
+   * empty.
+   */
+  private combineValue(map: Map<Key, Value>, value: Buffer, toKey: Key) {
+    if (value && value.length > 0) {
+      map.set(toKey, value);
+    }
+  }
+
+  /**
+   * Combines the maps in the provided PsbtV2Maps object into this one. Using
+   * this without validation may produce a PSBT in an invalid state.
+   */
+  protected combineMaps(from: PsbtV2Maps) {
+    // Combine global maps - merge all key-value pairs
+    for (const [key, value] of from.globalMap) {
+      this.combineValue(this.globalMap, value, key);
+    }
+
+    // Combine input maps - merge all key-value pairs for each input
+    for (let i = 0; i < from.inputMaps.length; i++) {
+      if (!this.inputMaps[i]) {
+        this.inputMaps[i] = new Map();
+      }
+      for (const [key, value] of from.inputMaps[i]) {
+        this.combineValue(this.inputMaps[i], value, key);
+      }
+    }
+
+    // Combine output maps - merge all key-value pairs for each output
+    for (let i = 0; i < from.outputMaps.length; i++) {
+      if (!this.outputMaps[i]) {
+        this.outputMaps[i] = new Map();
+      }
+      for (const [key, value] of from.outputMaps[i]) {
+        this.combineValue(this.outputMaps[i], value, key);
+      }
+    }
+  }
 }
 
 /**
@@ -217,4 +259,8 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       this.v0delete(outputMap, KeyType.PSBT_OUT_SCRIPT);
     }
   };
+
+  public getTransactionId() {
+    return Transaction.fromBuffer(this.buildUnsignedTx()).getId();
+  }
 }
