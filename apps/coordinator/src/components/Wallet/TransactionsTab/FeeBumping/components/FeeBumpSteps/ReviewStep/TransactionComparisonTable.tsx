@@ -100,7 +100,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
             },
             fee: {
               original: parseInt(originalTx.fee.toString()).toLocaleString(),
-              new: `${feeDifference.toLocaleString()} (child only)`,
+              new: `${feeDifference.toLocaleString()}`,
               difference: (
                 <Typography
                   component="span"
@@ -115,7 +115,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
             },
             feeRate: {
               original: originalFeeRate.toFixed(2),
-              new: `${feeBumpResult.newFeeRate.toFixed(2)} (child Tx FeeRate)`,
+              new: `${feeBumpResult.newFeeRate.toFixed(2)}`,
               difference: (
                 <Typography
                   component="span"
@@ -237,7 +237,6 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
               : "The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners.",
             originalValue: comparisonData.feeRate.original,
             newValue: comparisonData.feeRate.new,
-            difference: comparisonData.feeRate.difference,
           },
         ],
         [comparisonData, isCPFP],
