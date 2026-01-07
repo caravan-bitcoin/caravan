@@ -9,12 +9,13 @@
   "files": [
     "./dist/index.js",
     "./dist/index.mjs",
-    "./dist/index.d.ts"
+    "./dist/index.d.ts",
+    "./dist/index.d.mts"
   ],
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.mts",
         "default": "./dist/index.mjs"
       },
       "require": {
@@ -42,7 +43,8 @@
     "lint:fix": "eslint --fix src/",
     "ci": "npm run lint && npm run test",
     "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "postbuild": "node -e \"const fs=require('fs');fs.copyFileSync('dist/index.d.ts','dist/index.d.mts');\""
   },
   "keywords": [
     "bitcoin",

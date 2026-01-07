@@ -10,12 +10,13 @@
   "files": [
     "./dist/index.js",
     "./dist/index.mjs",
-    "./dist/index.d.ts"
+    "./dist/index.d.ts",
+    "./dist/index.d.mts"
   ],
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.mts",
         "default": "./dist/index.mjs"
       },
       "require": {
@@ -30,6 +31,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
+    "postbuild": "node ./scripts/emit-mts.js",
     "dev": "npm run build -- --watch",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
