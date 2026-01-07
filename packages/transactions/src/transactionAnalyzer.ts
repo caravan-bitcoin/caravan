@@ -564,7 +564,7 @@ export class TransactionAnalyzer {
   protected deserializeInputs(): BtcTxInputTemplate[] {
     return this._rawTx.ins.map((input) => {
       const template = new BtcTxInputTemplate({
-        txid: (Buffer.from(input.hash).reverse() as any).toString("hex"), // reversed (big-endian) format
+        txid: (Buffer.from(input.hash as any).reverse() as any).toString("hex"), // reversed (big-endian) format
         vout: input.index,
         amountSats: "0", // We don't have this information from the raw transaction
       });
