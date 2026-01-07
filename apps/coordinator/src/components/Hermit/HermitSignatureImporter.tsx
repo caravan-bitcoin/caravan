@@ -89,12 +89,12 @@ class HermitSignatureImporter extends React.Component<
 
   parseBinaryPath = (binPath: ArrayBuffer) => {
     let path = "m";
-    let pathData = Buffer.from(binPath);
+    let pathData = Buffer.from(binPath as any);
     while (pathData.length > 0) {
-      const childNum = Buffer.from(pathData.slice(0, 4)).readUIntLE(0, 4);
+      const childNum = Buffer.from(pathData.slice(0, 4) as any).readUIntLE(0, 4);
       path += this.childToPath(childNum);
 
-      pathData = pathData.subarray(4) as unknown as Buffer;
+      pathData = pathData.subarray(4) as any;
     }
     return path;
   };
@@ -158,8 +158,8 @@ class HermitSignatureImporter extends React.Component<
         .toString("hex")
         .split("de")
         .map((p) => [
-          Buffer.from(p.slice(0, 8), "hex"),
-          this.parseBinaryPath(Buffer.from(p.slice(8), "hex")),
+          Buffer.from(p.slice(0, 8) as any, "hex"),
+          this.parseBinaryPath(Buffer.from(p.slice(8) as any, "hex")),
         ]);
 
       // TODO: these need to be fixed with our new types for PSBT inputs and outputs
