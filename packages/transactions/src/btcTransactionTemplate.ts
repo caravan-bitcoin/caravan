@@ -769,8 +769,8 @@ export class BtcTransactionTemplate {
     // Add BIP32 derivation information if available
     if (input.bip32Derivations && input.bip32Derivations.length > 0) {
       inputData.bip32Derivation = input.bip32Derivations.map((derivation) => ({
-        pubkey: Buffer.from(derivation.pubkey),
-        masterFingerprint: Buffer.from(derivation.masterFingerprint),
+        pubkey: Buffer.from(derivation.pubkey as any),
+        masterFingerprint: Buffer.from(derivation.masterFingerprint as any),
         path: derivation.path,
       }));
     }
