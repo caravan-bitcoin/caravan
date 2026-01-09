@@ -31,7 +31,6 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "postbuild": "node ./scripts/emit-mts.js",
     "dev": "npm run build -- --watch",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",

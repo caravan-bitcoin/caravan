@@ -71,7 +71,6 @@
     "lint:fix": "eslint src/ --ext .ts --fix",
     "ci": "npm run lint && npm run test",
     "test": "vitest run",
-    "postbuild": "node -e \"const fs=require('fs');fs.copyFileSync('dist/index.d.ts','dist/index.d.mts');\"",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
     "test:ui": "vitest --ui --watch"

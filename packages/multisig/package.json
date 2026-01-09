@@ -41,8 +41,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
-    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run",
-    "postbuild": "node -e \"const fs=require('fs');fs.copyFileSync('dist/index.d.ts','dist/index.d.mts');\""
+    "test:debug": "node --inspect-brk ../../node_modules/.bin/vitest run"
   },
   "devDependencies": {
     "@caravan/bitcoin": "*",

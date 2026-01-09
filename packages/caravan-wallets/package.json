@@ -71,7 +71,6 @@
   "scripts": {
     "compile-images": "node images/compile.js",
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "postbuild": "node -e \"const fs=require('fs');fs.copyFileSync('dist/index.d.ts','dist/index.d.mts');\"",
     "ci": "npm run lint && npm run test",
     "dev": "npm run build -- --watch",
     "test": "vitest run",
