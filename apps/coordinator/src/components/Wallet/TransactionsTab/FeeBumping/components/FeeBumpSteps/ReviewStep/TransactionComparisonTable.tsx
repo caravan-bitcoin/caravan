@@ -14,6 +14,7 @@ import {
   Chip,
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import BigNumber from "bignumber.js";
 
 interface TransactionComparisonTableProps {
   originalTx: any;
@@ -124,7 +125,33 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  +{(feeBumpResult.newFeeRate - originalFeeRate).toFixed(2)}
+                  {(() => {
+                    const parentFee = new BigNumber(originalTx.fee.toString());
+                    const parentFeeRate = new BigNumber(originalFeeRate);
+
+                    const packageFee = new BigNumber(feeBumpResult.newFee);
+
+                    const childFee = packageFee.minus(parentFee);
+                    const childFeeRate = new BigNumber(
+                      feeBumpResult.newFeeRate,
+                    );
+
+                    // size = fee / fee_rate
+                    const parentSize = parentFee.dividedBy(parentFeeRate);
+                    const childSize = childFee.dividedBy(childFeeRate);
+                    console.log(
+                      "parentSize",
+                      parentSize.toString(),
+                      childSize.toString(),
+                    );
+
+                    // package_rate = (fee_A + fee_B) / (size_A + size_B)
+                    const totalFee = parentFee.plus(childFee);
+                    const totalSize = parentSize.plus(childSize);
+                    const packageFeeRate = totalFee.dividedBy(totalSize);
+
+                    return packageFeeRate.toFixed(2);
+                  })()}
                 </Typography>
               ),
             },
@@ -237,6 +264,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
               : "The amount of bitcoin paid per virtual byte of transaction data. Higher fee rates make your transaction more attractive to miners.",
             originalValue: comparisonData.feeRate.original,
             newValue: comparisonData.feeRate.new,
+            difference: comparisonData.feeRate.difference,
           },
         ],
         [comparisonData, isCPFP],
