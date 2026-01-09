@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
+const { readFileSync, writeFileSync, existsSync } = require("fs");
+const { join } = require("path");
 
 const distDir = join(process.cwd(), "dist");
 const dtsPath = join(distDir, "index.d.ts");
