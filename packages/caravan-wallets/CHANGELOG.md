@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.3
+
+### Patch Changes
+
+- [#439](https://github.com/caravan-bitcoin/caravan/pull/439) [`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Added `deriveXpubToPath` function for BIP32 key derivation and enhanced BCUR2 decoder with progress tracking and refactoring.
+
+## 0.9.2
+
+### Patch Changes
+
+- [#432](https://github.com/caravan-bitcoin/caravan/pull/432) [`815aa3a`](https://github.com/caravan-bitcoin/caravan/commit/815aa3a550612a97785922461d5e255a525d320c) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Generalize BCUR2 encoder. Add support for `bytes` registry item.
+
 ## 0.9.1
 
 ### Patch Changes

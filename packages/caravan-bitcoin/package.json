@@ -1,6 +1,6 @@
 {
   "name": "@caravan/bitcoin",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Unchained Capital's bitcoin utilities library.",
   "type": "commonjs",
   "main": "./dist/index.js",

@@ -85,9 +85,9 @@ class IndirectSignatureImporter extends React.Component {
 
   renderTargets = () => {
     const { outputs } = this.props;
-    return outputs.map((output) => {
+    return outputs.map((output, idx) => {
       return (
-        <TableRow hover key={output.address}>
+        <TableRow hover key={`${output.address}-${idx}`}>
           <TableCell>
             Address <code>{output.address}</code>
           </TableCell>
@@ -183,9 +183,13 @@ class IndirectSignatureImporter extends React.Component {
       });
 
       this.setState({ signatureError: "" });
-      validateAndSetSignature(signatures, (signatureError) => {
-        this.setState({ signatureError });
-      });
+      validateAndSetSignature(
+        signatures,
+        (signatureError) => {
+          this.setState({ signatureError });
+        },
+        data,
+      );
     } catch (e) {
       e.errorType = "Coldcard Signing Error";
       this.setState({ signatureError: e.message });
