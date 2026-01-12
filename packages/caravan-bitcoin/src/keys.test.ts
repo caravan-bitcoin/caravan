@@ -19,6 +19,7 @@ import {
   extendedPublicKeyRootFingerprint,
   validateExtendedPublicKeyForNetwork,
   getMaskedDerivation,
+  extractFingerprintFromBip380Descriptor,
 } from "./keys";
 import { Network } from "./networks";
 import { P2SH } from "./p2sh";
@@ -641,5 +642,43 @@ describe("keys", () => {
         expect(actual).toEqual(vect.path);
       }
     );
+  });
+
+  describe("extractFingerprintFromBip380Descriptor", () => {
+    it("should extract fingerprint from BIP380 descriptor with key origin", () => {
+      // Test vector from BIP380: wpkh with key origin
+      const descriptor =
+        "wpkh([d34db33f/44'/0'/0']xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1/*)";
+      const result = extractFingerprintFromBip380Descriptor(descriptor);
+      expect(result).toBe("d34db33f");
+    });
+
+    it("should extract fingerprint from BIP380 descriptor with sh(wpkh) and key origin", () => {
+      // Test vector from BIP380: sh(wpkh) with key origin
+      const descriptor =
+        "sh(wpkh([d34db33f/44'/0'/0']xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1/*))";
+      const result = extractFingerprintFromBip380Descriptor(descriptor);
+      expect(result).toBe("d34db33f");
+    });
+
+    it("should return null for BIP380 descriptor without key origin", () => {
+      // Test vector from BIP380: wpkh without key origin
+      const descriptor =
+        "wpkh(xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB/1/0)";
+      const result = extractFingerprintFromBip380Descriptor(descriptor);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for invalid descriptor", () => {
+      const descriptor = "invalid";
+      const result = extractFingerprintFromBip380Descriptor(descriptor);
+      expect(result).toBeNull();
+    });
+
+    it("should handle uppercase fingerprint and return lowercase", () => {
+      const descriptor = "wpkh([D34DB33F/44'/0'/0']xpub...)";
+      const result = extractFingerprintFromBip380Descriptor(descriptor);
+      expect(result).toBe("d34db33f");
+    });
   });
 });
