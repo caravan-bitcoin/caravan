@@ -35,6 +35,29 @@ interface ComparisonRowProps {
   showDifference?: boolean;
 }
 
+const calculatePackageFeeRate = (
+  originalTx: any,
+  originalFeeRate: number,
+  feeBumpResult: any,
+): string => {
+  const parentFee = new BigNumber(originalTx.fee.toString());
+  const parentFeeRate = new BigNumber(originalFeeRate);
+  const packageFee = new BigNumber(feeBumpResult.newFee);
+  const childFee = packageFee.minus(parentFee);
+  const childFeeRate = new BigNumber(feeBumpResult.newFeeRate);
+
+  // size = fee / fee_rate
+  const parentSize = parentFee.dividedBy(parentFeeRate);
+  const childSize = childFee.dividedBy(childFeeRate);
+
+  // package_rate = (fee_A + fee_B) / (size_A + size_B)
+  const totalFee = parentFee.plus(childFee);
+  const totalSize = parentSize.plus(childSize);
+  const packageFeeRate = totalFee.dividedBy(totalSize);
+
+  return packageFeeRate.toFixed(2);
+};
+
 const ComparisonRow: React.FC<ComparisonRowProps> = React.memo(
   ({
     label,
@@ -131,33 +154,11 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  {(() => {
-                    const parentFee = new BigNumber(originalTx.fee.toString());
-                    const parentFeeRate = new BigNumber(originalFeeRate);
-
-                    const packageFee = new BigNumber(feeBumpResult.newFee);
-
-                    const childFee = packageFee.minus(parentFee);
-                    const childFeeRate = new BigNumber(
-                      feeBumpResult.newFeeRate,
-                    );
-
-                    // size = fee / fee_rate
-                    const parentSize = parentFee.dividedBy(parentFeeRate);
-                    const childSize = childFee.dividedBy(childFeeRate);
-                    console.log(
-                      "parentSize",
-                      parentSize.toString(),
-                      childSize.toString(),
-                    );
-
-                    // package_rate = (fee_A + fee_B) / (size_A + size_B)
-                    const totalFee = parentFee.plus(childFee);
-                    const totalSize = parentSize.plus(childSize);
-                    const packageFeeRate = totalFee.dividedBy(totalSize);
-
-                    return packageFeeRate.toFixed(2);
-                  })()}
+                  {calculatePackageFeeRate(
+                    originalTx,
+                    originalFeeRate,
+                    feeBumpResult,
+                  )}
                 </Typography>
               ),
             },
