@@ -3,7 +3,12 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { map } from "lodash";
 import BigNumber from "bignumber.js";
-import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
+import {
+  bitcoinsToSatoshis,
+  satoshisToBitcoins,
+  estimateMultisigTransactionFeeRate,
+  estimateMultisigTransactionFee,
+} from "@caravan/bitcoin";
 import {
   Grid,
   Button,
@@ -56,6 +61,7 @@ class OutputsForm extends React.Component {
     super(props);
     this.state = {
       feeRateFetchError: "",
+      lastEditedFeeField: "rate", // Track which field was edited last: 'rate' or 'amount'
     };
   }
 
@@ -152,21 +158,87 @@ class OutputsForm extends React.Component {
   };
 
   handleFeeRateChange = (event) => {
-    const { setFeeRate } = this.props;
-    let rate = event.target.value;
+    const { setFeeRate, setFee, inputs, outputs } = this.props;
+    const { addressType, requiredSigners: m, totalSigners: n } = this.props;
 
+    let rate = event.target.value;
     if (
       rate === "" ||
       Number.isNaN(parseFloat(rate, 10)) ||
       parseFloat(rate, 10) < 1
     )
       rate = "0";
+
     setFeeRate(rate);
+    this.setState({ lastEditedFeeField: "rate" });
+
+    // Optional: Update fee amount if inputs are already selected
+    if (inputs.length > 0 && parseFloat(rate) > 0) {
+      const actualOutputs = outputs.filter(
+        (o) => o.amount && o.amount !== "",
+      ).length;
+      const estimatedFees = estimateMultisigTransactionFee({
+        addressType,
+        numInputs: inputs.length,
+        numOutputs: actualOutputs,
+        m,
+        n,
+        feesPerByteInSatoshis: rate,
+      });
+      console.log("estimatedFees", estimatedFees);
+      const feeInBTC = satoshisToBitcoins(estimatedFees);
+      setFee(feeInBTC);
+    }
   };
 
   handleFeeChange = (event) => {
-    const { setFee } = this.props;
-    setFee(event.target.value);
+    const { setFee, setFeeRate, inputs, outputs } = this.props;
+    const { addressType, requiredSigners: m, totalSigners: n } = this.props;
+
+    const feeAmount = event.target.value;
+    setFee(feeAmount);
+    this.setState({ lastEditedFeeField: "amount" });
+
+    // Calculate effective fee rate from the entered fee amount
+    if (
+      inputs.length > 0 &&
+      feeAmount &&
+      !Number.isNaN(parseFloat(feeAmount))
+    ) {
+      // Count actual outputs (excluding empty ones and change if auto-calculated)
+      const actualOutputs = outputs.filter(
+        (o) => o.amount && o.amount !== "",
+      ).length;
+      const feeSats = bitcoinsToSatoshis(new BigNumber(feeAmount));
+      const estimatedFeeRate = estimateMultisigTransactionFeeRate({
+        addressType,
+        numInputs: inputs.length,
+        numOutputs: actualOutputs,
+        m,
+        n,
+        feesInSatoshis: feeSats,
+      });
+
+      if (estimatedFeeRate > 0) {
+        // Update fee rate to show what rate this fee amount represents
+        setFeeRate(estimatedFeeRate);
+      }
+    }
+    console.log("fee", { setFee, setFeeRate, inputs, outputs });
+  };
+
+  // Helper to show effective fee rate when user edits fee amount
+  getFeeHelperText = () => {
+    const { feeError, inputs } = this.props;
+    const { lastEditedFeeField } = this.state;
+
+    if (feeError) return feeError;
+
+    if (lastEditedFeeField === "amount" && inputs.length > 0) {
+      return "Note: Fee rate shown is effective rate. Actual rate may vary after coin selection.";
+    }
+
+    return "";
   };
 
   handleFinalize = () => {
@@ -237,13 +309,12 @@ class OutputsForm extends React.Component {
       fee,
       finalizedOutputs,
       feeRateError,
-      feeError,
       balanceError,
       inputs,
       isWallet,
       autoSpend,
     } = this.props;
-    const { feeRateFetchError } = this.state;
+    const { feeRateFetchError, lastEditedFeeField } = this.state;
     const feeDisplay = inputs && inputs.length > 0 ? fee : "0.0000";
     const feeMt = 3;
     const totalMt = 7;
@@ -345,16 +416,26 @@ class OutputsForm extends React.Component {
                     disabled={finalizedOutputs}
                     value={feeDisplay}
                     variant="standard"
+                    type="number"
                     onChange={this.handleFeeChange}
                     error={this.hasFeeError()}
-                    helperText={feeError}
+                    helperText={this.getFeeHelperText()}
                     InputProps={OutputsForm.unitLabel("BTC", {
-                      readOnly: true,
-                      disableUnderline: true,
-                      style: { color: "gray" },
+                      readOnly: false,
+                      disableUnderline: false,
+                      style: { color: "inherit" },
                     })}
                   />
                 </Box>
+                {lastEditedFeeField === "amount" && inputs.length > 0 && (
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    sx={{ display: "block", mt: 0.5 }}
+                  >
+                    Effective rate: {feeRate} sats/vB
+                  </Typography>
+                )}
               </Grid>
             ) : (
               ""
@@ -488,6 +569,9 @@ OutputsForm.propTypes = {
   signatureImporters: PropTypes.shape({}).isRequired,
   updatesComplete: PropTypes.bool,
   getBlockchainClient: PropTypes.func.isRequired,
+  addressType: PropTypes.string.isRequired,
+  requiredSigners: PropTypes.number.isRequired,
+  totalSigners: PropTypes.number.isRequired,
 };
 
 OutputsForm.defaultProps = {
@@ -498,6 +582,9 @@ function mapStateToProps(state) {
   return {
     ...{
       network: state.settings.network,
+      addressType: state.settings.addressType,
+      requiredSigners: state.settings.requiredSigners,
+      totalSigners: state.settings.totalSigners,
       client: state.client,
     },
     ...state.spend.transaction,
