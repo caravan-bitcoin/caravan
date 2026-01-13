@@ -46,12 +46,18 @@ const ComparisonRow: React.FC<ComparisonRowProps> = React.memo(
   }) => (
     <TableRow>
       <TableCell>
-        <Box display="flex" alignItems="center">
-          {label}
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Typography
+            variant="body2"
+            component="span"
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {label}
+          </Typography>
           <Tooltip title={tooltip}>
             <HelpOutlineIcon
               fontSize="small"
-              sx={{ ml: 0.5, color: "text.secondary" }}
+              sx={{ color: "text.secondary", flexShrink: 0 }}
             />
           </Tooltip>
         </Box>
@@ -110,7 +116,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  Total: {parseInt(feeBumpResult.newFee).toLocaleString()}
+                  {parseInt(feeBumpResult.newFee).toLocaleString()}
                 </Typography>
               ),
             },
