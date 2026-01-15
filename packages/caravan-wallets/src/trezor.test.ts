@@ -210,7 +210,10 @@ describe("trezor", () => {
 
     it("parses out the public key from the response payload", () => {
       expect(
-        interactionBuilder().parsePayload({ publicKey: "foobar" })
+        interactionBuilder().parsePayload({
+          publicKey: "foobar",
+          serializedPath: bip32Path,
+        }),
       ).toEqual("foobar");
     });
 
@@ -238,9 +241,12 @@ describe("trezor", () => {
     itThrowsAnErrorOnAnUnsuccessfulRequest(interactionBuilder);
 
     it("parses out the extended public key from the response payload", () => {
-      expect(interactionBuilder().parsePayload({ xpub: "foobar" })).toEqual(
-        "foobar"
-      );
+      expect(
+        interactionBuilder().parsePayload({
+          xpub: "foobar",
+          serializedPath: bip32Path,
+        }),
+      ).toEqual("foobar");
     });
 
     it("uses TrezorConnect.getPublicKey", () => {
