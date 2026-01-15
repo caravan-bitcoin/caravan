@@ -49,6 +49,7 @@
     "bitcoinjs-lib-v6": "npm:bitcoinjs-lib@^6.1.5",
     "buffer": "^6.0.3",
     "bufio": "^1.2.1",
+    "@noble/curves": "^1.8.1",
     "uint8array-tools": "^0.0.7"
   },
   "author": "unchained capital",
