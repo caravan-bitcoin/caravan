@@ -33,6 +33,8 @@ export const EXTENDED_PUBLIC_KEY_VERSIONS = {
   Vpub: "02575483",
 } as const;
 
+const FINGERPRINT_REGEX = /\[([a-f0-9]+)\//i;
+
 /**
  * Validate whether or not a string is a valid extended public key prefix
  * @param {string} prefix string to be tested
@@ -60,6 +62,24 @@ export function validateRootFingerprint(rootFingerprint: string): void {
   const rootXfpError = validateHex(rootFingerprint);
   assert(!rootXfpError.length, `Root fingerprint must be valid hex`);
 }
+
+/**
+ * Extracts the key fingerprint from a BIP380 descriptor string.
+ * The fingerprint is part of the key origin information, enclosed in square brackets
+ * followed by a derivation path and a slash, as defined in BIP380.
+ *
+ * @param descriptor - The BIP380 descriptor string to parse.
+ * @returns The extracted fingerprint as a lowercase hex string, or null if not found.
+ */
+export const extractFingerprintFromBip380Descriptor = (
+  descriptor: string,
+): string | null => {
+  const xfp = descriptor.match(FINGERPRINT_REGEX)?.[1]?.toLowerCase() || null;
+  if (xfp){
+    validateRootFingerprint(xfp)
+  }
+  return xfp;
+};
 
 /**
  * Struct object for encoding and decoding extended public keys.

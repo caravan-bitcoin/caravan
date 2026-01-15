@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4
+
+### Patch Changes
+
+- [#446](https://github.com/caravan-bitcoin/caravan/pull/446) [`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Singular Trezor xpub export with model one fallback and BIP380 fingerprint extraction
+
+- Updated dependencies [[`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974)]:
+  - @caravan/bitcoin@0.4.4
+  - @caravan/psbt@2.0.5
+
 ## 0.9.3
 
 ### Patch Changes
