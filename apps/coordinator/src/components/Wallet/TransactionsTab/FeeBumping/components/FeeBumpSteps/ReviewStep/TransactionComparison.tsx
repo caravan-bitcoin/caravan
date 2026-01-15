@@ -17,7 +17,7 @@ import { FeeBumpStrategy } from "@caravan/transactions";
 import { useAccelerationModal } from "../../AccelerationModalContext";
 import { RBF_TYPES } from "../../../types";
 
-import { TransactionComparisonTable } from "./TransactionComparisonTable ";
+import { TransactionComparisonTable } from "./TransactionComparisonTable";
 
 /**
  * Component for comparing original and fee-bumped transactions
