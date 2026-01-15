@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 2.0.6
+
+### Patch Changes
+
+- [#452](https://github.com/caravan-bitcoin/caravan/pull/452) [`68ba6ee`](https://github.com/caravan-bitcoin/caravan/commit/68ba6eee7b20ad6f6574369255f2163e21e6a858) Thanks [@Shadouts](https://github.com/Shadouts)! - Reduced bundle sizes for those importing the psbt package by eliminating dependency on tiny-secp256k1-asmjs
+
 ## 2.0.5
 
 ### Patch Changes
