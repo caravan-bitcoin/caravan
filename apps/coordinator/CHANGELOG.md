@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.18.2
+
+### Patch Changes
+
+- [#441](https://github.com/caravan-bitcoin/caravan/pull/441) [`76773ed`](https://github.com/caravan-bitcoin/caravan/commit/76773edb584d9f16db7c94ce7fe2ef231fc691a8) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fixed the minimumCPFPFee calculation bug and UX details
+
+- Updated dependencies [[`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974)]:
+  - @caravan/bitcoin@0.4.4
+  - @caravan/wallets@0.9.4
+  - @caravan/psbt@2.0.5
+
 ## 1.18.1
 
 ### Patch Changes
