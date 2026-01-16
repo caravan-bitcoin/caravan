@@ -1,5 +1,11 @@
 # @caravan/psbt
 
+## 2.0.7
+
+### Patch Changes
+
+- [#454](https://github.com/caravan-bitcoin/caravan/pull/454) [`ddefb9d`](https://github.com/caravan-bitcoin/caravan/commit/ddefb9d08e9e93860901406337af54ed38a84354) Thanks [@Shadouts](https://github.com/Shadouts)! - Move @caravan/multisig to the proper dependency category in the psbt package.
+
 ## 2.0.6
 
 ### Patch Changes
