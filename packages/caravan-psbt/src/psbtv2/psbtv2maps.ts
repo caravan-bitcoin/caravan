@@ -121,35 +121,68 @@ export abstract class PsbtV2Maps {
     }
   }
 
+  private validateCombineMaps(from: PsbtV2Maps) {
+    // The following checks are not likely to be triggered because a PSBT
+    // combiner is only allowed to combine PSBTs with the same inputs and
+    // outputs. See PsbtV2.validateCombine.
+    if (from.inputMaps.length !== this.inputMaps.length) {
+      throw new Error(
+        `Cannot combine PSBTs with different input counts: ` +
+        `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`
+      );
+    }
+    if (from.outputMaps.length !== this.outputMaps.length) {
+      throw new Error(
+        `Cannot combine PSBTs with different output counts: ` +
+        `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`
+      );
+    }
+  }
+
   /**
    * Combines the maps in the provided PsbtV2Maps object into this one. Using
    * this without validation may produce a PSBT in an invalid state.
+   *
+   * This operation is atomic - if any error occurs, the original state is
+   * preserved.
    */
   protected combineMaps(from: PsbtV2Maps) {
+    this.validateCombineMaps(from);
+
+    // Build combined state in temporary copies for atomicity
+    const newGlobalMap = new Map(this.globalMap);
+    const newInputMaps = this.inputMaps.map((m) => new Map(m));
+    const newOutputMaps = this.outputMaps.map((m) => new Map(m));
+
     // Combine global maps - merge all key-value pairs
     for (const [key, value] of from.globalMap) {
-      this.combineValue(this.globalMap, value, key);
+      this.combineValue(newGlobalMap, value, key);
     }
 
     // Combine input maps - merge all key-value pairs for each input
     for (let i = 0; i < from.inputMaps.length; i++) {
-      if (!this.inputMaps[i]) {
-        this.inputMaps[i] = new Map();
+      if (!newInputMaps[i]) {
+        newInputMaps[i] = new Map();
       }
       for (const [key, value] of from.inputMaps[i]) {
-        this.combineValue(this.inputMaps[i], value, key);
+        this.combineValue(newInputMaps[i], value, key);
       }
     }
 
     // Combine output maps - merge all key-value pairs for each output
     for (let i = 0; i < from.outputMaps.length; i++) {
-      if (!this.outputMaps[i]) {
-        this.outputMaps[i] = new Map();
+      if (!newOutputMaps[i]) {
+        newOutputMaps[i] = new Map();
       }
       for (const [key, value] of from.outputMaps[i]) {
-        this.combineValue(this.outputMaps[i], value, key);
+        this.combineValue(newOutputMaps[i], value, key);
       }
     }
+
+    // All operations successful - commit the changes atomically
+    this.globalMap = newGlobalMap;
+    this.inputMaps = newInputMaps;
+    this.outputMaps = newOutputMaps;
   }
 }
 
