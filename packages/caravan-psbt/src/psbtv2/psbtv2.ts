@@ -1441,12 +1441,32 @@ export class PsbtV2 extends PsbtV2Maps {
    * must be the same.
    */
   private validateCombine(psbt: PsbtV2) {
+    if (!this.isReadyForCombiner) {
+      throw Error("This PsbtV2 is not ready for Combiner role.");
+    }
     if (!psbt.isReadyForCombiner) {
-      throw Error(`Provided PsbtV2 is not ready for Combiner role.`);
+      throw Error("Provided PsbtV2 is not ready for Combiner role.");
     }
 
-    const checkThis = new PsbtConversionMaps(this.serialize());
-    const checkOther = new PsbtConversionMaps(psbt.serialize());
+    // Set both sequence numbers to 0 before comparing if the PSBTs match. See:
+    // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#unique-identification
+    const tempThis = new PsbtV2(this.serialize());
+    const tempOther = new PsbtV2(psbt.serialize());
+    for (const [index, sequence] of tempThis.PSBT_IN_SEQUENCE.entries()) {
+      if (sequence !== 0) {
+        tempThis.setInputSequence(index, 0);
+      }
+    }
+    for (const [index, sequence] of tempOther.PSBT_IN_SEQUENCE.entries()) {
+      if (sequence !== 0) {
+        tempOther.setInputSequence(index, 0);
+      }
+    }
+
+    // Now, compare unsigned transaction IDs for both PSBTs to see if the are
+    // the same PSBT.
+    const checkThis = new PsbtConversionMaps(tempThis.serialize());
+    const checkOther = new PsbtConversionMaps(tempOther.serialize());
     if (checkThis.getTransactionId() !== checkOther.getTransactionId()) {
       throw Error("Cannot combine PSBTs for different unsigned transactions.");
     }
