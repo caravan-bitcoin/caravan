@@ -1693,10 +1693,28 @@ describe("PsbtV2.setInputSequence", () => {
     );
   });
 
-  it("Throws an error when PSBT is not ready for Updater", () => {
+  it("Throws an error when PSBT is not ready for Updater or Combiner", () => {
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = []; // Remove input modifiability
+    // Finalize the inputs so isReadyForSigner becomes false,
+    // which makes isReadyForCombiner false as well
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
+      Buffer.from([0x00]),
+    );
+    (psbt as any).inputMaps[0].set(
+      KeyType.PSBT_IN_NON_WITNESS_UTXO,
+      Buffer.from([0x00]),
+    );
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
+      Buffer.from([0x00]),
+    );
+    (psbt as any).inputMaps[1].set(
+      KeyType.PSBT_IN_NON_WITNESS_UTXO,
+      Buffer.from([0x00]),
+    );
     expect(() => psbt.setInputSequence(0, 0xfffffffd)).toThrow(
-      "PSBT is not ready for the Updater role.",
+      "PSBT is not ready for the Updater or Combiner role. Sequence cannot be changed.",
     );
   });
 
@@ -1854,3 +1872,421 @@ describe("PsbtV2 addOutput", () => {
   });
 });
 
+/**
+ * Test vectors for PsbtV2.combine based on BIP-174 Combiner role specification.
+ *
+ * From BIP-174:
+ * "The Combiner can accept 1 or many PSBTs. The Combiner must merge them into
+ * one PSBT (if possible), or fail. The resulting PSBT must contain all of the
+ * key-value pairs from each of the PSBTs. The Combiner must remove any
+ * duplicate key-value pairs, in accordance with the specification. It can pick
+ * arbitrarily when conflicts occur. A Combiner must not combine two different
+ * PSBTs."
+ */
+const BIP_174_COMBINER_VECTORS = {
+  // From BIP-174 test vectors: Given these two signed PSBTs, a combiner must
+  // create the combined PSBT
+  signer1Psbt: {
+    hex: "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000002202029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f473044022074018ad4180097b873323c0015720b3684cc8123891048e7dbcd9b55ad679c99022073d369b740e3eb53dcefa33823c8070514ca55a7dd9544f157c167913261118c01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e887220203089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc473044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
+    base64:
+      "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAAiAgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgf0cwRAIgdAGK1BgAl7hzMjwAFXILNoTMgSOJEEjn282bVa1nnJkCIHPTabdA4+tT3O+jOCPIBwUUylWn3ZVE8VfBZ5EyYRGMAQEDBAEAAAABBEdSIQKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfyEC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtdSriIGApWDvzmuCmCXR60Zmt3WNPphCFWdbFzTm0whg/GrluB/ENkMak8AAACAAAAAgAAAAIAiBgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU21xDZDGpPAAAAgAAAAIABAACAAAEBIADC6wsAAAAAF6kUt/X69A49QKWkWbHbNTXyty+pIeiHIgIDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtxHMEQCIGLrelVhB6fHP0WsSrWh3d9vcHX7EnWWmn84Pv/3hLyyAiAMBdu3Rw2/LwhVfdNWxzJcHtMJE+mWzThAlF2xIijaXwEBAwQBAAAAAQQiACCMI1MXN0O1ld+0oHtyuo5C43l9p06H/n2ddJfjsgKJAwEFR1IhAwidwQx6xttU+RMpr2FzM9s4jOrQwjH3IzedG5kDCwLcIQI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8Oc1KuIgYCOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnMQ2QxqTwAAAIAAAACAAwAAgCIGAwidwQx6xttU+RMpr2FzM9s4jOrQwjH3IzedG5kDCwLcENkMak8AAACAAAAAgAIAAIAAIgIDqaTDf1mW06ol26xrVwrwZQOUSSlCRgs1R1Ptnuylh3EQ2QxqTwAAAIAAAACABAAAgAAiAgJ/Y5l1fS7/VaE2rQLGhLGDi2VW5fG2s0KCqUtrUAUQlhDZDGpPAAAAgAAAAIAFAACAAA==",
+  },
+  signer2Psbt: {
+    hex: "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f618765000000220202dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d7483045022100f61038b308dc1da865a34852746f015772934208c6d24454393cd99bdf2217770220056e675a675a6d0a02b85b14e5e29074d8a25a9b5760bea2816f661910a006ea01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e8872202023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e73473044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d2010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
+    base64:
+      "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAAiAgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU210gwRQIhAPYQOLMI3B2oZaNIUnRvAVdyk0IIxtJEVDk82ZvfIhd3AiAFbmdaZ1ptCgK4WxTl4pB02KJam1dgvqKBb2YZEKAG6gEBAwQBAAAAAQRHUiEClYO/Oa4KYJdHrRma3dY0+mEIVZ1sXNObTCGD8auW4H8hAtq2H/SaFNtqfQKwzR+7ePxLGDErW05U2uTbovv+9TbXUq4iBgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfxDZDGpPAAAAgAAAAIAAAACAIgYC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtcQ2QxqTwAAAIAAAACAAQAAgAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohyICAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zRzBEAiBl9FulmYtZon/+GnvtAWrx8fkNVLOqj3RQql9WolEDvQIgf3JHA60e25ZoCyhLVtT/y4j3+3Weq74IqjDym4UTg9IBAQMEAQAAAAEEIgAgjCNTFzdDtZXftKB7crqOQuN5fadOh/59nXSX47ICiQMBBUdSIQMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3CECOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnNSriIGAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zENkMak8AAACAAAAAgAMAAIAiBgMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3BDZDGpPAAAAgAAAAIACAACAACICA6mkw39ZltOqJdusa1cK8GUDlEkpQkYLNUdT7Z7spYdxENkMak8AAACAAAAAgAQAAIAAIgICf2OZdX0u/1WhNq0CxoSxg4tlVuXxtrNCgqlLa1AFEJYQ2QxqTwAAAIAAAACABQAAgAA=",
+  },
+  // The expected combined result from BIP-174
+  combinedPsbt: {
+    hex: "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000002202029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f473044022074018ad4180097b873323c0015720b3684cc8123891048e7dbcd9b55ad679c99022073d369b740e3eb53dcefa33823c8070514ca55a7dd9544f157c167913261118c01220202dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d7483045022100f61038b308dc1da865a34852746f015772934208c6d24454393cd99bdf2217770220056e675a675a6d0a02b85b14e5e29074d8a25a9b5760bea2816f661910a006ea01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e887220203089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc473044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f012202023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e73473044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d2010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
+    base64:
+      "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAAiAgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgf0cwRAIgdAGK1BgAl7hzMjwAFXILNoTMgSOJEEjn282bVa1nnJkCIHPTabdA4+tT3O+jOCPIBwUUylWn3ZVE8VfBZ5EyYRGMASICAtq2H/SaFNtqfQKwzR+7ePxLGDErW05U2uTbovv+9TbXSDBFAiEA9hA4swjcHahlo0hSdG8BV3KTQgjG0kRUOTzZm98iF3cCIAVuZ1pnWm0KArhbFOXikHTYolqbV2C+ooFvZhkQoAbqAQEDBAEAAAABBEdSIQKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfyEC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtdSriIGApWDvzmuCmCXR60Zmt3WNPphCFWdbFzTm0whg/GrluB/ENkMak8AAACAAAAAgAAAAIAiBgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU21xDZDGpPAAAAgAAAAIABAACAAAEBIADC6wsAAAAAF6kUt/X69A49QKWkWbHbNTXyty+pIeiHIgIDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtxHMEQCIGLrelVhB6fHP0WsSrWh3d9vcHX7EnWWmn84Pv/3hLyyAiAMBdu3Rw2/LwhVfdNWxzJcHtMJE+mWzThAlF2xIijaXwEiAgI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8Oc0cwRAIgZfRbpZmLWaJ//hp77QFq8fH5DVSzqo90UKpfVqJRA70CIH9yRwOtHtuWaAsoS1bU/8uI9/t1nqu+CKow8puFE4PSAQEDBAEAAAABBCIAIIwjUxc3Q7WV37Sge3K6jkLjeX2nTof+fZ10l+OyAokDAQVHUiEDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwhAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zUq4iBgI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8OcxDZDGpPAAAAgAAAAIADAACAIgYDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwQ2QxqTwAAAIAAAACAAgAAgAAiAgOppMN/WZbTqiXbrGtXCvBlA5RJKUJGCzVHU+2e7KWHcRDZDGpPAAAAgAAAAIAEAACAACICAn9jmXV9Lv9VoTatAsaEsYOLZVbl8bazQoKpS2tQBRCWENkMak8AAACAAAAAgAUAAIAA",
+  },
+  // From BIP-174: PSBTs with unknown types to test key ordering
+  unknownTypes1: {
+    hex: "70736274ff01003f0200000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000ffffffff010000000000000000036a0100000000000af00102030405060708090f0102030405060708090a0b0c0d0e0f000af00102030405060708090f0102030405060708090a0b0c0d0e0f000af00102030405060708090f0102030405060708090a0b0c0d0e0f00",
+    base64:
+      "cHNidP8BAD8CAAAAAf//////////////////////////////////////////AAAAAAD/////AQAAAAAAAAAAA2oBAAAAAAAK8AECAwQFBgcICQ8BAgMEBQYHCAkKCwwNDg8ACvABAgMEBQYHCAkPAQIDBAUGBwgJCgsMDQ4PAArwAQIDBAUGBwgJDwECAwQFBgcICQoLDA0ODwA=",
+  },
+  unknownTypes2: {
+    hex: "70736274ff01003f0200000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000ffffffff010000000000000000036a0100000000000af00102030405060708100f0102030405060708090a0b0c0d0e0f000af00102030405060708100f0102030405060708090a0b0c0d0e0f000af00102030405060708100f0102030405060708090a0b0c0d0e0f00",
+    base64:
+      "cHNidP8BAD8CAAAAAf//////////////////////////////////////////AAAAAAD/////AQAAAAAAAAAAA2oBAAAAAAAK8AECAwQFBgcIEA8BAgMEBQYHCAkKCwwNDg8ACvABAgMEBQYHCBAPAQIDBAUGBwgJCgsMDQ4PAArwAQIDBAUGBwgQDwECAwQFBgcICQoLDA0ODwA=",
+  },
+  // Expected combined result with lexicographically ordered keys
+  combinedUnknownTypes: {
+    hex: "70736274ff01003f0200000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000ffffffff010000000000000000036a0100000000000af00102030405060708090f0102030405060708090a0b0c0d0e0f0af00102030405060708100f0102030405060708090a0b0c0d0e0f000af00102030405060708090f0102030405060708090a0b0c0d0e0f0af00102030405060708100f0102030405060708090a0b0c0d0e0f000af00102030405060708090f0102030405060708090a0b0c0d0e0f0af00102030405060708100f0102030405060708090a0b0c0d0e0f00",
+    base64:
+      "cHNidP8BAD8CAAAAAf//////////////////////////////////////////AAAAAAD/////AQAAAAAAAAAAA2oBAAAAAAAK8AECAwQFBgcICQ8BAgMEBQYHCAkKCwwNDg8K8AECAwQFBgcIEA8BAgMEBQYHCAkKCwwNDg8ACvABAgMEBQYHCAkPAQIDBAUGBwgJCgsMDQ4PCvABAgMEBQYHCBAPAQIDBAUGBwgJCgsMDQ4PAArwAQIDBAUGBwgJDwECAwQFBgcICQoLDA0ODwrwAQIDBAUGBwgQDwECAwQFBgcICQoLDA0ODwA=",
+  },
+};
+
+describe("PsbtV2.combine", () => {
+  describe("Combiner role validation", () => {
+    it("should throw when combining PSBTs with different transaction IDs", () => {
+      const psbt1 = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      // Create a psbt with different inputs to trigger the error
+      const differentPsbt = new PsbtV2();
+      differentPsbt.addInput({
+        previousTxId: Buffer.alloc(32, 0xff), // Different txid
+        outputIndex: 0,
+      });
+      differentPsbt.addOutput({
+        amount: 800000000,
+        script: Buffer.from(
+          "0014c430f64c4756da310dbd1a085572ef299926272c",
+          "hex",
+        ),
+      });
+      differentPsbt.addOutput({
+        amount: 199990155,
+        script: Buffer.from(
+          "00144dd193ac964a56ac1b9e1cca8454fe2f474f8513",
+          "hex",
+        ),
+      });
+
+      expect(() => psbt1.combine([differentPsbt])).toThrow(
+        "Cannot combine PSBTs for different unsigned transactions.",
+      );
+    });
+
+    it("should throw when combining empty PSBT with valid PSBT (different transactions)", () => {
+      // An empty PSBT and a valid PSBT represent different transactions
+      const psbt = new PsbtV2();
+      const validPsbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      expect(() => psbt.combine([validPsbt])).toThrow(
+        "Cannot combine PSBTs for different unsigned transactions.",
+      );
+    });
+
+    it("should throw when combining valid PSBT with empty PSBT (different transactions)", () => {
+      const psbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+      const emptyPsbt = new PsbtV2();
+
+      expect(() => psbt.combine([emptyPsbt])).toThrow(
+        "Cannot combine PSBTs for different unsigned transactions.",
+      );
+    });
+  });
+
+  describe("Basic combine operations", () => {
+    it("should successfully combine a PSBT with itself", () => {
+      const psbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+      const psbtCopy = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      // Should not throw
+      expect(() => psbt.combine([psbtCopy])).not.toThrow();
+
+      // The result should serialize to the same value
+      expect(psbt.serialize("hex")).toBe(BIP_370_VECTORS_VALID_PSBT[0].hex);
+    });
+
+    it("should combine multiple copies of the same PSBT", () => {
+      const psbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+      const copies = [
+        new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex),
+        new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex),
+        new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex),
+      ];
+
+      expect(() => psbt.combine(copies)).not.toThrow();
+    });
+
+    it("should combine an empty array without modification", () => {
+      const originalHex = BIP_370_VECTORS_VALID_PSBT[0].hex;
+      const psbt = new PsbtV2(originalHex);
+
+      psbt.combine([]);
+
+      expect(psbt.serialize("hex")).toBe(originalHex);
+    });
+  });
+
+  describe("BIP-174 Combiner test vectors (via PSBTv0 conversion)", () => {
+    it("should combine two signed PSBTs from different signers", () => {
+      // Convert PSBTv0 to PSBTv2 for testing
+      const signer1PsbtV2 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.signer1Psbt.base64,
+        true,
+      );
+      const signer2PsbtV2 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.signer2Psbt.base64,
+        true,
+      );
+
+      // Perform the combine
+      signer1PsbtV2.combine([signer2PsbtV2]);
+
+      // Verify the combined PSBT matches the expected BIP-174 test vector.
+      // Using map comparison since PsbtV2 does not order keys lexicographically
+      // and direct toV0 hex comparison fails due to key ordering differences.
+      const expectedCombined = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.combinedPsbt.base64,
+        true,
+      );
+
+      // Compare maps directly (breaking types to access protected members)
+      const combined = signer1PsbtV2 as any;
+      const expected = expectedCombined as any;
+
+      // Compare global map
+      expect(combined.globalMap.size).toBe(expected.globalMap.size);
+      for (const [key, value] of expected.globalMap) {
+        expect(combined.globalMap.get(key)?.toString("hex")).toBe(
+          value.toString("hex"),
+        );
+      }
+
+      // Compare input maps
+      expect(combined.inputMaps.length).toBe(expected.inputMaps.length);
+      for (let i = 0; i < expected.inputMaps.length; i++) {
+        expect(combined.inputMaps[i].size).toBe(expected.inputMaps[i].size);
+        for (const [key, value] of expected.inputMaps[i]) {
+          expect(combined.inputMaps[i].get(key)?.toString("hex")).toBe(
+            value.toString("hex"),
+          );
+        }
+      }
+
+      // Compare output maps
+      expect(combined.outputMaps.length).toBe(expected.outputMaps.length);
+      for (let i = 0; i < expected.outputMaps.length; i++) {
+        expect(combined.outputMaps[i].size).toBe(expected.outputMaps[i].size);
+        for (const [key, value] of expected.outputMaps[i]) {
+          expect(combined.outputMaps[i].get(key)?.toString("hex")).toBe(
+            value.toString("hex"),
+          );
+        }
+      }
+    });
+
+    it("should preserve all key-value pairs when combining", () => {
+      const signer1PsbtV2 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.signer1Psbt.base64,
+        true,
+      );
+      const signer2PsbtV2 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.signer2Psbt.base64,
+        true,
+      );
+
+      // Collect all keys from both PSBTs using type-breaking
+      const signer1 = signer1PsbtV2 as any;
+      const signer2 = signer2PsbtV2 as any;
+      const allInput0Keys = new Set([
+        ...signer1.inputMaps[0].keys(),
+        ...signer2.inputMaps[0].keys(),
+      ]);
+      const allInput1Keys = new Set([
+        ...signer1.inputMaps[1].keys(),
+        ...signer2.inputMaps[1].keys(),
+      ]);
+
+      signer1PsbtV2.combine([signer2PsbtV2]);
+
+      // Verify all keys from both signers are present in combined result
+      expect(signer1.inputMaps[0].size).toBe(allInput0Keys.size);
+      expect(signer1.inputMaps[1].size).toBe(allInput1Keys.size);
+      for (const key of allInput0Keys) {
+        expect(signer1.inputMaps[0].has(key)).toBe(true);
+      }
+      for (const key of allInput1Keys) {
+        expect(signer1.inputMaps[1].has(key)).toBe(true);
+      }
+    });
+
+    it("should combine PSBTs with unknown key types", () => {
+      // Convert the unknown types PSBTs to v2
+      const psbt1 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.unknownTypes1.base64,
+        true,
+      );
+      const psbt2 = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.unknownTypes2.base64,
+        true,
+      );
+
+      // Collect all keys from both PSBTs using type-breaking
+      const p1 = psbt1 as any;
+      const p2 = psbt2 as any;
+      const allGlobalKeys = new Set([
+        ...p1.globalMap.keys(),
+        ...p2.globalMap.keys(),
+      ]);
+      const allInput0Keys = new Set([
+        ...p1.inputMaps[0].keys(),
+        ...p2.inputMaps[0].keys(),
+      ]);
+      const allOutput0Keys = new Set([
+        ...p1.outputMaps[0].keys(),
+        ...p2.outputMaps[0].keys(),
+      ]);
+
+      // Perform the combine
+      psbt1.combine([psbt2]);
+
+      // Verify that unknown keys from both PSBTs are combined.
+      // Note: PsbtV2 does not order keys lexicographically, so we cannot
+      // compare directly to the BIP-174 combinedUnknownTypes test vector
+      // which specifies output for "a combiner which orders keys
+      // lexicographically". This test verifies that unknown keys are merged.
+      expect(p1.globalMap.size).toBe(allGlobalKeys.size);
+      expect(p1.inputMaps[0].size).toBe(allInput0Keys.size);
+      expect(p1.outputMaps[0].size).toBe(allOutput0Keys.size);
+
+      // Verify all keys from both PSBTs are present
+      for (const key of allGlobalKeys) {
+        expect(p1.globalMap.has(key)).toBe(true);
+      }
+      for (const key of allInput0Keys) {
+        expect(p1.inputMaps[0].has(key)).toBe(true);
+      }
+      for (const key of allOutput0Keys) {
+        expect(p1.outputMaps[0].has(key)).toBe(true);
+      }
+    });
+  });
+
+  describe("PSBTv2 specific combine tests", () => {
+    it("should combine PSBTv2 instances correctly", () => {
+      // Use valid PSBTv2 test vectors
+      const basePsbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[1].hex);
+      const otherPsbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[1].hex);
+
+      // Both should have the same number of inputs/outputs
+      expect(basePsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(
+        otherPsbt.PSBT_GLOBAL_INPUT_COUNT,
+      );
+      expect(basePsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(
+        otherPsbt.PSBT_GLOBAL_OUTPUT_COUNT,
+      );
+
+      // Combine should succeed
+      expect(() => basePsbt.combine([otherPsbt])).not.toThrow();
+
+      // Input/output counts should remain the same
+      expect(basePsbt.PSBT_GLOBAL_INPUT_COUNT).toBe(1);
+      expect(basePsbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(2);
+    });
+
+    it("should throw when combining PSBTs with different inputs (different transactions)", () => {
+      const psbt1 = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      // Create a PSBT with different inputs - this will be a different transaction
+      const psbt2 = new PsbtV2();
+      psbt2.addInput({
+        previousTxId: Buffer.from(
+          "c85f81844094f9f0eec1e41f8d63e0a99e9f73dc725d7319871c9c4121d90a0b",
+          "hex",
+        ),
+        outputIndex: 0,
+      });
+      psbt2.addInput({
+        previousTxId: Buffer.from(
+          "c85f81844094f9f0eec1e41f8d63e0a99e9f73dc725d7319871c9c4121d90a0b",
+          "hex",
+        ),
+        outputIndex: 1,
+      });
+      psbt2.addOutput({
+        amount: 800000000,
+        script: Buffer.from(
+          "0014c430f64c4756da310dbd1a085572ef299926272c",
+          "hex",
+        ),
+      });
+      psbt2.addOutput({
+        amount: 199990155,
+        script: Buffer.from(
+          "00144dd193ac964a56ac1b9e1cca8454fe2f474f8513",
+          "hex",
+        ),
+      });
+
+      // Different inputs means different transaction, so it should throw
+      expect(() => psbt1.combine([psbt2])).toThrow(
+        "Cannot combine PSBTs for different unsigned transactions.",
+      );
+    });
+
+    it("should throw when combining PSBTs with different outputs (different transactions)", () => {
+      const psbt1 = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      // Create a PSBT with same input but different output count
+      const psbt2 = new PsbtV2();
+      psbt2.addInput({
+        previousTxId: Buffer.from(
+          "c85f81844094f9f0eec1e41f8d63e0a99e9f73dc725d7319871c9c4121d90a0b",
+          "hex",
+        ),
+        outputIndex: 0,
+      });
+      // Only add one output instead of two
+      psbt2.addOutput({
+        amount: 800000000,
+        script: Buffer.from(
+          "0014c430f64c4756da310dbd1a085572ef299926272c",
+          "hex",
+        ),
+      });
+
+      // Different outputs means different transaction, so it should throw
+      expect(() => psbt1.combine([psbt2])).toThrow(
+        "Cannot combine PSBTs for different unsigned transactions.",
+      );
+    });
+  });
+
+  describe("Atomicity of combine operation", () => {
+    it("should not modify the original PSBT if combine fails mid-operation", () => {
+      const originalHex = BIP_370_VECTORS_VALID_PSBT[0].hex;
+      const psbt = new PsbtV2(originalHex);
+
+      // Create an incompatible PSBT that will cause failure
+      const incompatiblePsbt = new PsbtV2();
+      incompatiblePsbt.addInput({
+        previousTxId: Buffer.alloc(32, 0xff),
+        outputIndex: 0,
+      });
+      incompatiblePsbt.addOutput({
+        amount: 1000,
+        script: Buffer.alloc(22, 0),
+      });
+
+      // Attempt combine - should fail
+      try {
+        psbt.combine([incompatiblePsbt]);
+      } catch {
+        // Expected to throw
+      }
+
+      // Original PSBT should be unchanged
+      expect(psbt.serialize("hex")).toBe(originalHex);
+    });
+  });
+
+  describe("isReadyForCombiner property", () => {
+    it("should return true for a valid PSBTv2", () => {
+      const psbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+      expect(psbt.isReadyForCombiner).toBe(true);
+    });
+
+    it("should return true for an empty PSBT (ready for Constructor)", () => {
+      // An empty PSBT is ready for Constructor, which means it's also
+      // ready for Combiner per the implementation
+      const psbt = new PsbtV2();
+      expect(psbt.isReadyForCombiner).toBe(true);
+    });
+
+    it("should return true for a PSBT converted from v0", () => {
+      const psbt = PsbtV2.FromV0(
+        BIP_174_COMBINER_VECTORS.signer1Psbt.base64,
+        true,
+      );
+      expect(psbt.isReadyForCombiner).toBe(true);
+    });
+  });
+});

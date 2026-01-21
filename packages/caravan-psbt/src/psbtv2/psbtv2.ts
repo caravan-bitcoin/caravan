@@ -814,9 +814,9 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   public setInputSequence(inputIndex: number, sequence: number) {
     // Check if the PSBT is ready for the Updater role
-    if (!this.isReadyForUpdater) {
+    if (!this.isReadyForUpdater && !this.isReadyForCombiner) {
       throw new Error(
-        "PSBT is not ready for the Updater role. Sequence cannot be changed.",
+        "PSBT is not ready for the Updater or Combiner role. Sequence cannot be changed.",
       );
     }
 
@@ -1474,12 +1474,15 @@ export class PsbtV2 extends PsbtV2Maps {
 
   /**
    * Combines multiple PsbtV2 objects into this one with the latest index taking
-   * precedence over earlier indices of the provided list.
+   * precedence over earlier indices of the provided list. This action is
+   * atomic.
+   *
+   * WARNING: This method could potentially produce a PSBT in an bad state. For
+   * example, if a later PSBT has an input sequence without a signature, it
+   * could potentially invalidate signatures existing on this or earlier PSBTs
+   * in the list if the sequence numbers do not agree.
    */
   public combine(psbts: PsbtV2[]) {
-    if (!this.isReadyForCombiner) {
-      throw Error("This PsbtV2 is not ready for Combiner role.");
-    }
     for (const psbt of psbts) {
       // Validate all first
       this.validateCombine(psbt);
@@ -1489,7 +1492,8 @@ export class PsbtV2 extends PsbtV2Maps {
         this.combineMaps(psbt);
       }
     } catch (error) {
-      throw Error("Failed to combine PSBTs. WARNING: This PSBT may be in an invalid state.");
+      console.error(error);
+      throw Error("Failed to combine PSBTs.");
     }
   }
 }
