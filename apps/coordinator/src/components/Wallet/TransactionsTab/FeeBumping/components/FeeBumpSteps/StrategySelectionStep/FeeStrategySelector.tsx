@@ -12,7 +12,7 @@ import {
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { InfoOutlined } from "@mui/icons-material";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 import { useAccelerationModal } from "../../../components/AccelerationModalContext";
 import { FeePriority, useFeeEstimates } from "clients/fees";
 import { HelpInformation } from "./HelpInformation";
@@ -67,15 +67,16 @@ export const FeeStrategySelector: React.FC = () => {
           "Creates a new transaction that spends outputs from the original with a higher fee",
         icon: <ChildCareIcon fontSize="large" />,
         learnMoreUrl: "https://bitcoinops.org/en/topics/cpfp/",
-        disabled: !analysis.canCPFP || !cpfp?.feeRate, // Disable if no CPFP data
+        disabled: !analysis.canCPFP || !cpfp.childFeeRate, // Disable if no CPFP data
         disabledReason:
           "This transaction doesn't have suitable outputs for CPFP",
         minimumFee: new BigNumber(analysis.estimatedCPFPFee).toNumber(),
-        suggestedFeeRate: cpfp?.feeRate
-          ? new BigNumber(cpfp.feeRate).toNumber()
+        suggestedFeeRate: cpfp.childFeeRate
+          ? new BigNumber(cpfp.childFeeRate).toNumber()
           : new BigNumber(analysis.estimatedCPFPFee)
               .dividedBy(new BigNumber(analysis.vsize))
               .toNumber(),
+        targetFeeRate: cpfp.targetFeeRate,
       },
     ],
     [analysis, enableFullRBF],
@@ -188,7 +189,7 @@ export const FeeStrategySelector: React.FC = () => {
           <Box mt={1}>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee rate:{" "}
-              <strong>{analysis.feeRate?.toFixed(1)} sats/vB</strong>
+              <strong>{analysis.feeRate?.toFixed(2)} sats/vB</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Your transaction&apos;s current fee :{" "}

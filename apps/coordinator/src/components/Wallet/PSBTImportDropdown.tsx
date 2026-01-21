@@ -14,11 +14,7 @@ import { loadPsbt } from "../../utils/psbtUtils";
 import { useSelector } from "react-redux";
 
 interface PSBTImportDropdownProps {
-  onImport: (
-    psbtText: string,
-    inputs: any[],
-    hasPendingInputs: boolean,
-  ) => void;
+  onImport: (psbtText: string, inputs: any[]) => void;
 }
 
 const PSBTImportDropdown: React.FC<PSBTImportDropdownProps> = ({
@@ -71,7 +67,7 @@ const PSBTImportDropdown: React.FC<PSBTImportDropdownProps> = ({
 
         // For BCUR2 import, we don't have pre-resolved inputs,
         // so we'll pass empty array and let the import process handle it
-        onImport(psbtData, [], false);
+        onImport(psbtData, []);
 
         // Reset selection after successful import
         safeSetImportMethod("");

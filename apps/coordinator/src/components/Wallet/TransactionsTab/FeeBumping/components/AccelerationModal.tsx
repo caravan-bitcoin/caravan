@@ -15,7 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { FeeBumpStrategy } from "@caravan/fees";
+import { FeeBumpStrategy } from "@caravan/transactions";
 
 import {
   ConfigurationStep,
@@ -179,7 +179,7 @@ const AccelerationModalContent: React.FC<
       return !analysis.canRBF && !enableFullRBF;
     }
     if (selectedStrategy === FeeBumpStrategy.CPFP) {
-      return !analysis.canCPFP || !cpfp?.feeRate;
+      return !analysis.canCPFP || !cpfp.childFeeRate;
     }
 
     return false;

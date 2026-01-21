@@ -17,7 +17,7 @@ import { reverseBuffer } from "bitcoinjs-lib/src/bufferutils";
 
 /**
  * Interface for UTXO data structure (This one is how utxo's are stored in Redux)
- *  TO-DO: Make all the various UTXO types we have in @caravan/client and @caravan/fees in sync
+ *  TO-DO: Make all the various UTXO types we have in @caravan/client and @caravan/transactions in sync
  */
 export interface UTXO {
   confirmed: boolean;
@@ -635,15 +635,28 @@ export const extractSignaturesFromPSBT = (psbt: Psbt, inputs: Input[]) => {
           continue;
         }
 
-        const xfp = walletInput?.multisig?.bip32Derivation?.[0]
-          ?.masterFingerprint
-          ? walletInput.multisig.bip32Derivation[0].masterFingerprint.toString(
-              "hex",
-            )
-          : undefined;
+        // Find the bip32Derivation entry that matches this signature's pubkey
+        // to get the correct masterFingerprint for grouping by signer
+        let xfp: string | undefined;
+        const derivations = walletInput?.multisig?.bip32Derivation || [];
+        for (const derivation of derivations) {
+          const derivationPubkey =
+            derivation.pubkey instanceof Buffer
+              ? derivation.pubkey.toString("hex")
+              : derivation.pubkey;
+          if (derivationPubkey === pubkeyFromPsbt) {
+            xfp =
+              derivation.masterFingerprint instanceof Buffer
+                ? derivation.masterFingerprint.toString("hex")
+                : derivation.masterFingerprint;
+            break;
+          }
+        }
 
         if (!xfp) {
-          throw new Error(`No xfp found for input ${inputIndex}`);
+          throw new Error(
+            `No matching bip32Derivation found for pubkey ${pubkeyFromPsbt} in input ${inputIndex}`,
+          );
         }
 
         inputSignatures.push({

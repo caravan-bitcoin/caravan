@@ -14,6 +14,7 @@ import {
   Chip,
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import BigNumber from "bignumber.js";
 
 interface TransactionComparisonTableProps {
   originalTx: any;
@@ -34,6 +35,29 @@ interface ComparisonRowProps {
   showDifference?: boolean;
 }
 
+const calculatePackageFeeRate = (
+  originalTx: any,
+  originalFeeRate: number,
+  feeBumpResult: any,
+): string => {
+  const parentFee = new BigNumber(originalTx.fee.toString());
+  const parentFeeRate = new BigNumber(originalFeeRate);
+  const packageFee = new BigNumber(feeBumpResult.newFee);
+  const childFee = packageFee.minus(parentFee);
+  const childFeeRate = new BigNumber(feeBumpResult.newFeeRate);
+
+  // size = fee / fee_rate
+  const parentSize = parentFee.dividedBy(parentFeeRate);
+  const childSize = childFee.dividedBy(childFeeRate);
+
+  // package_rate = (fee_A + fee_B) / (size_A + size_B)
+  const totalFee = parentFee.plus(childFee);
+  const totalSize = parentSize.plus(childSize);
+  const packageFeeRate = totalFee.dividedBy(totalSize);
+
+  return packageFeeRate.toFixed(2);
+};
+
 const ComparisonRow: React.FC<ComparisonRowProps> = React.memo(
   ({
     label,
@@ -45,12 +69,18 @@ const ComparisonRow: React.FC<ComparisonRowProps> = React.memo(
   }) => (
     <TableRow>
       <TableCell>
-        <Box display="flex" alignItems="center">
-          {label}
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Typography
+            variant="body2"
+            component="span"
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {label}
+          </Typography>
           <Tooltip title={tooltip}>
             <HelpOutlineIcon
               fontSize="small"
-              sx={{ ml: 0.5, color: "text.secondary" }}
+              sx={{ color: "text.secondary", flexShrink: 0 }}
             />
           </Tooltip>
         </Box>
@@ -100,7 +130,7 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
             },
             fee: {
               original: parseInt(originalTx.fee.toString()).toLocaleString(),
-              new: `${feeDifference.toLocaleString()} (child only)`,
+              new: `${feeDifference.toLocaleString()}`,
               difference: (
                 <Typography
                   component="span"
@@ -109,13 +139,13 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  Total: {parseInt(feeBumpResult.newFee).toLocaleString()}
+                  {parseInt(feeBumpResult.newFee).toLocaleString()}
                 </Typography>
               ),
             },
             feeRate: {
-              original: originalFeeRate.toFixed(1),
-              new: `${feeBumpResult.newFeeRate.toFixed(1)} (package rate)`,
+              original: originalFeeRate.toFixed(2),
+              new: `${feeBumpResult.newFeeRate.toFixed(2)}`,
               difference: (
                 <Typography
                   component="span"
@@ -124,7 +154,11 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
                     fontWeight: "bold",
                   }}
                 >
-                  +{(feeBumpResult.newFeeRate - originalFeeRate).toFixed(1)}
+                  {calculatePackageFeeRate(
+                    originalTx,
+                    originalFeeRate,
+                    feeBumpResult,
+                  )}
                 </Typography>
               ),
             },
@@ -165,8 +199,8 @@ export const TransactionComparisonTable: React.FC<TransactionComparisonTableProp
               ),
             },
             feeRate: {
-              original: originalFeeRate.toFixed(1),
-              new: feeBumpResult.newFeeRate.toFixed(1),
+              original: originalFeeRate.toFixed(2),
+              new: feeBumpResult.newFeeRate.toFixed(2),
               difference: (
                 <Typography
                   component="span"

@@ -6,9 +6,9 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/fees";
+import { FeeBumpStrategy, TxAnalysis, UTXO } from "@caravan/transactions";
 import { useAnalyzeTransaction } from "./hooks";
-import { RbfType, FeeBumpResult } from "../types";
+import { RbfType, FeeBumpResult, NormalizedCPFP } from "../types";
 
 // =============================================================================
 // STATE TYPES
@@ -41,11 +41,7 @@ interface AccelerationModalState {
   enableFullRBF: boolean;
 
   // CPFP configuration
-  cpfp: {
-    feeRate: string;
-    childSize: number;
-    combinedEstimatedSize: number;
-  } | null;
+  cpfp: NormalizedCPFP;
 
   // Fee bump PSBT
   feeBumpResult: FeeBumpResult | null;
@@ -80,7 +76,12 @@ const initialState: AccelerationModalState = {
   transaction: null,
   txHex: "",
   analysis: null,
-  cpfp: null,
+  cpfp: {
+    childFeeRate: "0",
+    childSize: 0,
+    estimatedPackageSize: 0,
+    targetFeeRate: 0,
+  },
   changeOutputIndex: undefined,
   availableUtxos: [],
   analysisIsLoading: false,
@@ -172,11 +173,7 @@ function accelerationModalReducer(
 interface AccelerationModalContextType {
   transaction: TransactionDetails;
   txHex: string;
-  cpfp: {
-    feeRate: string | undefined;
-    childSize: number | undefined;
-    estimatedPackageSize: number | undefined;
-  } | null;
+  cpfp: NormalizedCPFP;
   changeOutputIndex: number | undefined;
   analysis: TxAnalysis | null;
   isRbfAvailable: boolean;

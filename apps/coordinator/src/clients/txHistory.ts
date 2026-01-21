@@ -58,15 +58,26 @@ export const usePublicClientTransactions = () => {
           0,
         );
 
-      // for public clients we don't expect the duplication problem we have for private nodes so we don't handle that
       const processedTransactions = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
         "confirmed",
       );
 
+      // Deduplication step — when querying multiple addresses, a transaction that
+      // touches more than one wallet address (e.g., send with change) will be returned
+      // by the API for each address. We deduplicate here at fetch time.
+      const seenTxids = new Set<string>();
+      const deduplicated = processedTransactions.filter((tx) => {
+        if (seenTxids.has(tx.txid)) {
+          return false;
+        }
+        seenTxids.add(tx.txid);
+        return true;
+      });
+
       // We need to ensure every transaction has valueToWallet in satoshis for consistent sorting
-      return processedTransactions.map((tx) => ({
+      return deduplicated.map((tx) => ({
         ...tx,
         valueToWallet: calculateTransactionValue(tx, walletAddresses),
       }));

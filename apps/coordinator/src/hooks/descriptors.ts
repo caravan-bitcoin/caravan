@@ -1,4 +1,7 @@
-import { encodeDescriptors } from "@caravan/descriptors";
+import {
+  encodeDescriptors,
+  encodeDescriptorWithMultipath,
+} from "@caravan/descriptors";
 import { KeyOrigin } from "@caravan/wallets";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -8,7 +11,14 @@ import { getMaskedDerivation } from "@caravan/bitcoin";
 export function useGetDescriptors() {
   const { quorum, extendedPublicKeys, addressType, network } =
     useSelector(getWalletConfig);
-  const [descriptors, setDescriptors] = useState({ change: "", receive: "" });
+  const [descriptors, setDescriptors] = useState<{
+    change: string;
+    receive: string;
+    multipath?: string;
+  }>({
+    change: "",
+    receive: "",
+  });
 
   useEffect(() => {
     const loadAsync = async () => {
@@ -24,8 +34,14 @@ export function useGetDescriptors() {
         addressType: addressType,
         network: network,
       };
-      const { change, receive } = await encodeDescriptors(multisigConfig);
-      setDescriptors({ change, receive });
+      const result = await encodeDescriptors(multisigConfig);
+      const multipath = await encodeDescriptorWithMultipath(multisigConfig);
+      const descriptors = {
+        change: result.change || "",
+        receive: result.receive || "",
+        multipath: multipath || undefined,
+      };
+      setDescriptors(descriptors);
     };
 
     loadAsync();

@@ -34,7 +34,7 @@ const createDecodeHandler = (mode: ScanMode, network?: BitcoinNetwork) => {
     return (decoder: BCUR2Decoder) => {
       const data = decoder.getDecodedData(network!);
 
-      if (!data) {
+      if (!data || typeof data === "string") {
         throw new Error("Failed to decode extended public key data.");
       }
       if (!data.bip32Path) {

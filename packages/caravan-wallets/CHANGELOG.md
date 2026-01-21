@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.9.4
+
+### Patch Changes
+
+- [#446](https://github.com/caravan-bitcoin/caravan/pull/446) [`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Singular Trezor xpub export with model one fallback and BIP380 fingerprint extraction
+
+- Updated dependencies [[`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974)]:
+  - @caravan/bitcoin@0.4.4
+  - @caravan/psbt@2.0.5
+
+## 0.9.3
+
+### Patch Changes
+
+- [#439](https://github.com/caravan-bitcoin/caravan/pull/439) [`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Added `deriveXpubToPath` function for BIP32 key derivation and enhanced BCUR2 decoder with progress tracking and refactoring.
+
+## 0.9.2
+
+### Patch Changes
+
+- [#432](https://github.com/caravan-bitcoin/caravan/pull/432) [`815aa3a`](https://github.com/caravan-bitcoin/caravan/commit/815aa3a550612a97785922461d5e255a525d320c) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Generalize BCUR2 encoder. Add support for `bytes` registry item.
+
+## 0.9.1
+
+### Patch Changes
+
+- [#412](https://github.com/caravan-bitcoin/caravan/pull/412) [`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`ee9e1dd`](https://github.com/caravan-bitcoin/caravan/commit/ee9e1dd3c5b99545b9007fc59239227fefe9a8a4)]:
+  - @caravan/bitcoin@0.4.2
+  - @caravan/psbt@2.0.3
+
 ## 0.9.0
 
 ### Minor Changes

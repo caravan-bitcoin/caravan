@@ -26,6 +26,7 @@ export default defineConfig({
       protocolImports: true,
       globals: {
         Buffer: true,
+        process: true,
       },
     }),
     wasm(),
@@ -56,5 +57,12 @@ export default defineConfig({
   optimizeDeps: {
     // needed for local development to support proper handling of wasm
     exclude: ["@caravan/descriptors"],
+    esbuildOptions: {
+      // Fix for readable-stream in hash-base: sets process.browser=true so it
+      // short-circuits past the process.version.slice() check that fails in browsers
+      define: {
+        "process.browser": "true",
+      },
+    },
   },
 });
