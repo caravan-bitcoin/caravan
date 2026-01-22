@@ -1,5 +1,31 @@
 # @caravan/psbt
 
+## 2.0.7
+
+### Patch Changes
+
+- [#454](https://github.com/caravan-bitcoin/caravan/pull/454) [`ddefb9d`](https://github.com/caravan-bitcoin/caravan/commit/ddefb9d08e9e93860901406337af54ed38a84354) Thanks [@Shadouts](https://github.com/Shadouts)! - Move @caravan/multisig to the proper dependency category in the psbt package.
+
+## 2.0.6
+
+### Patch Changes
+
+- [#452](https://github.com/caravan-bitcoin/caravan/pull/452) [`68ba6ee`](https://github.com/caravan-bitcoin/caravan/commit/68ba6eee7b20ad6f6574369255f2163e21e6a858) Thanks [@Shadouts](https://github.com/Shadouts)! - Reduced bundle sizes for those importing the psbt package by eliminating dependency on tiny-secp256k1-asmjs
+
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974)]:
+  - @caravan/bitcoin@0.4.4
+
+## 2.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`3073ec8`](https://github.com/caravan-bitcoin/caravan/commit/3073ec833140cc45b058a375e06e4830d73c78e4)]:
+  - @caravan/bitcoin@0.4.3
+
 ## 2.0.3
 
 ### Patch Changes

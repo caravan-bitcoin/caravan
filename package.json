@@ -7,8 +7,8 @@
   },
   "scripts": {
     "preinstall": "node scripts/check-node-versions.js",
-    "build": "turbo build",
-    "build:coordinator": "turbo build --filter=caravan-coordinator",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' turbo build",
+    "build:coordinator": "NODE_OPTIONS='--max-old-space-size=8192' turbo build --filter=caravan-coordinator",
     "changeset": "changeset",
     "ci": "turbo run build lint test",
     "clean": "rm -rf .turbo && rm -rf **/dist && rm -rf **/build && rm -rf **/.turbo",

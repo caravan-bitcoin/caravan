@@ -3,6 +3,7 @@ import { Bip32Derivation } from "bip174/src/lib/interfaces";
 import { Mock } from "vitest";
 
 import {
+  ensureXpubAtPath,
   getBlindedXpub,
   getMaskedKeyOrigin,
   getRandomChildXpub,
@@ -203,5 +204,35 @@ describe("getBlindedXpub", () => {
     const actual = await getBlindedXpub(parent.xpub);
     expect(actual.xpub).toEqual(child.xpub);
     expect(actual.bip32Path).toEqual("*/0/0");
+  });
+});
+
+describe("ensureXpubAtPath", () => {
+  it("should return the source xpub when no derivation is needed (same path)", () => {
+    const source = { xpub: "xpub...", bip32Path: "m/45'/0'/0'" };
+    const targetBip32Path = "m/45'/0'/0'";
+    const result = ensureXpubAtPath(source, targetBip32Path, Network.MAINNET);
+    expect(result).toBe(source.xpub);
+  });
+
+  it("should derive to a deeper path when necessary", () => {
+    const source = {
+      xpub: "xpub6GYTTMaaN8bSEhicdKq7ji9H7B2SL4un33obThv9aekop4J7L7B3snYMnJUuwXJiUmsbSVSyZydbqLC97JMWnj3R4MHz6JNunMJhjEBKovS",
+      bip32Path: "m/45'",
+    };
+    const targetBip32Path = "m/45'/1/0";
+    const result = ensureXpubAtPath(source, targetBip32Path, Network.TESTNET);
+    expect(result).toMatch(/^tpub/);
+  });
+
+  it("should throw an error if xpub conversion fails", () => {
+    const source = {
+      xpub: "xpub6GYTTMaaN8bSEhicdKq7ji9H7B2SL4un33obThv9aekop4J7L7B3snYMnJUuwXJiUmsbSVSyZydbqLC97JMWnj3R4MHz6JNunMJhjEBKovS",
+      bip32Path: "m/45'",
+    };
+    const targetBip32Path = "m/45'/0'/0'";
+    expect(() =>
+      ensureXpubAtPath(source, targetBip32Path, Network.MAINNET),
+    ).toThrow("Missing private key for hardened child key");
   });
 });
