@@ -39,11 +39,20 @@ import {
   validateBIP32Path,
   fingerprintToFixedLengthHex,
   addSignaturesToPSBT,
+  extractFingerprintFromBip380Descriptor,
   Network,
 } from "@caravan/bitcoin";
 import { translatePSBT } from "@caravan/psbt";
+import {
+  GetPublicKey,
+  HDNodeResponse,
+  getPublicKey,
+} from "@trezor/connect/lib/types/api/getPublicKey";
 import TrezorConnectDefault, {
+  Params,
+  BundledParams,
   TrezorConnect as TrezorConnectType,
+  TrezorConnect,
 } from "@trezor/connect-web";
 import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
@@ -518,41 +527,10 @@ export class TrezorExportHDNode extends TrezorInteraction {
     return messages;
   }
 
-  extractDetailsFromPayload({ payload, pubkey }) {
-    if (payload.length !== 2) {
-      throw new Error("Payload does not have two responses.");
-    }
-    let keyMaterial = "";
-    let rootFingerprint = "";
-    for (let i = 0; i < payload.length; i++) {
-      // Find the payload with bip32 = MULTISIG_ROOT to get xfp
-      if (payload[i].serializedPath === MULTISIG_ROOT) {
-        let fp = payload[i].fingerprint;
-        rootFingerprint = fingerprintToFixedLengthHex(fp);
-      } else {
-        keyMaterial = pubkey ? payload[i].publicKey : payload[i].xpub;
-      }
-    }
-    return {
-      rootFingerprint,
-      keyMaterial,
-    };
-  }
-
   /**
    * See {@link https://github.com/trezor/connect/blob/v8/docs/methods/getPublicKey.md}.
    */
-  connectParams() {
-    if (this.includeXFP) {
-      return [
-        TrezorConnect.getPublicKey,
-        {
-          bundle: [{ path: this.bip32Path }, { path: MULTISIG_ROOT }],
-          coin: this.trezorCoin,
-          crossChain: true,
-        },
-      ];
-    }
+  connectParams(): [typeof getPublicKey, Params<any>] {
     return [
       TrezorConnect.getPublicKey,
       {
@@ -561,6 +539,104 @@ export class TrezorExportHDNode extends TrezorInteraction {
         crossChain: true,
       },
     ];
+  }
+
+  /**
+   * Parses the extended public key from the HD node response.
+   *
+   * If asking for XFP, return object with xpub and the root fingerprint.
+   */
+  parsePayload(payload: HDNodeResponse | HDNodeResponse[]) {
+    if (this.includeXFP) {
+      return {
+        ...this.extractKeyMaterial(payload),
+        rootFingerprint: this.extractRootFingerprint(payload),
+      };
+    }
+
+    const keyMaterial = this.extractKeyMaterial(payload);
+    if (Object.keys(keyMaterial).length !== 1) {
+      throw new Error("Expected exactly one key in payload");
+    }
+    return Object.values(keyMaterial)[0];
+  }
+
+  extractKeyMaterial(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    payload: HDNodeResponse | HDNodeResponse[],
+  ): { xpub: string } | { publicKey: string } {
+    throw new Error(
+      "Override the `extractKeyMaterial` method on a subclass of TrezorInteraction.",
+    );
+  }
+
+  extractRootFingerprint(payload: HDNodeResponse[] | HDNodeResponse): string {
+    const xfp = Array.isArray(payload)
+      ? this._extractFingerprintFromBundle(payload)
+      : this._extractFingerprintFromNode(payload);
+    if (!xfp) {
+      throw new Error(
+        "Unable to extract root fingerprint from Trezor response.",
+      );
+    }
+    return xfp;
+  }
+
+  _extractFingerprintFromBundle(payload: HDNodeResponse[]): string | null {
+    const targetNode = this.findTargetNode(payload);
+    const rootNode = payload.find(
+      (node) => node.serializedPath === MULTISIG_ROOT,
+    );
+    const xfp =
+      (targetNode && this._extractFingerprintFromNode(targetNode)) ||
+      (rootNode && this._extractFingerprintFromNode(rootNode));
+    return xfp || null;
+  }
+
+  _extractFingerprintFromNode(payload: HDNodeResponse): string | null {
+    if (payload.serializedPath === MULTISIG_ROOT) {
+      return fingerprintToFixedLengthHex(payload.fingerprint);
+    }
+    const { descriptor } = payload;
+    return descriptor
+      ? extractFingerprintFromBip380Descriptor(descriptor)
+      : null;
+  }
+
+  findTargetNode(payload: HDNodeResponse | HDNodeResponse[]): HDNodeResponse {
+    const target = Array.isArray(payload)
+      ? payload.find(
+        (node: HDNodeResponse) => node.serializedPath === this.bip32Path,
+      )
+      : payload.serializedPath === this.bip32Path && payload;
+    if (!target) {
+      throw new Error(
+        `Unable to find HDNode with path ${this.bip32Path} in Trezor response.`,
+      );
+    }
+    return target;
+  }
+
+  async run() {
+    try {
+      return await super.run();
+    } catch (e) {
+      return await this._fallbackRunForModelOne();
+    }
+  }
+
+  async _fallbackRunForModelOne() {
+    const [method] = this.connectParams();
+    const params = {
+      bundle: [{ path: this.bip32Path }, { path: MULTISIG_ROOT }],
+      coin: this.trezorCoin,
+      crossChain: true,
+    } as BundledParams<GetPublicKey>;
+    const result = await method(params);
+    if (!result.success) {
+      throw new Error(result.payload.error);
+    }
+    return this.parsePayload(result.payload);
   }
 }
 
@@ -576,31 +652,11 @@ export class TrezorExportHDNode extends TrezorInteraction {
  * // "03..."
  */
 export class TrezorExportPublicKey extends TrezorExportHDNode {
-  constructor({ network, bip32Path, includeXFP = false }) {
-    super({
-      network,
-      bip32Path,
-      includeXFP,
-    });
-    this.includeXFP = includeXFP;
-  }
-
-  /**
-   * Parses the public key from the HD node response.
-   *
-   */
-  parsePayload(payload) {
-    if (this.includeXFP) {
-      const { rootFingerprint, keyMaterial } = this.extractDetailsFromPayload({
-        payload,
-        pubkey: true,
-      });
-      return {
-        rootFingerprint,
-        publicKey: keyMaterial,
-      };
-    }
-    return payload.publicKey;
+  extractKeyMaterial(payload: HDNodeResponse | HDNodeResponse[]): {
+    publicKey: string;
+  } {
+    const { publicKey } = this.findTargetNode(payload);
+    return { publicKey };
   }
 }
 
@@ -616,32 +672,11 @@ export class TrezorExportPublicKey extends TrezorExportHDNode {
  * // "xpub..."
  */
 export class TrezorExportExtendedPublicKey extends TrezorExportHDNode {
-  constructor({ network, bip32Path, includeXFP = false }) {
-    super({
-      network,
-      bip32Path,
-      includeXFP,
-    });
-    this.includeXFP = includeXFP;
-  }
-
-  /**
-   * Parses the extended public key from the HD node response.
-   *
-   * If asking for XFP, return object with xpub and the root fingerprint.
-   */
-  parsePayload(payload) {
-    if (this.includeXFP) {
-      const { rootFingerprint, keyMaterial } = this.extractDetailsFromPayload({
-        payload,
-        pubkey: false,
-      });
-      return {
-        rootFingerprint,
-        xpub: keyMaterial,
-      };
-    }
-    return payload.xpub;
+  extractKeyMaterial(payload: HDNodeResponse | HDNodeResponse[]): {
+    xpub: string;
+  } {
+    const { xpub } = this.findTargetNode(payload);
+    return { xpub };
   }
 }
 

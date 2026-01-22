@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.18.2
+
+### Patch Changes
+
+- [#441](https://github.com/caravan-bitcoin/caravan/pull/441) [`76773ed`](https://github.com/caravan-bitcoin/caravan/commit/76773edb584d9f16db7c94ce7fe2ef231fc691a8) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fixed the minimumCPFPFee calculation bug and UX details
+
+- Updated dependencies [[`8af88d7`](https://github.com/caravan-bitcoin/caravan/commit/8af88d78f628b2730ee9201a210a9bca1e837974)]:
+  - @caravan/bitcoin@0.4.4
+  - @caravan/wallets@0.9.4
+  - @caravan/psbt@2.0.5
+
+## 1.18.1
+
+### Patch Changes
+
+- [#439](https://github.com/caravan-bitcoin/caravan/pull/439) [`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Added `deriveXpubToPath` function for BIP32 key derivation and enhanced BCUR2 decoder with progress tracking and refactoring.
+
+- Updated dependencies [[`8b666ec`](https://github.com/caravan-bitcoin/caravan/commit/8b666ecd201f1e6987cba017f6dd99705454da8e)]:
+  - @caravan/wallets@0.9.3
+  - @caravan/bip32@1.0.3
+
+## 1.18.0
+
+### Minor Changes
+
+- [#434](https://github.com/caravan-bitcoin/caravan/pull/434) [`ed8cb67`](https://github.com/caravan-bitcoin/caravan/commit/ed8cb6740ad0a8068e8056195fddd210454b7004) Thanks [@bucko13](https://github.com/bucko13)! - Adds backward compatible support for multipath, BIP389 style descriptors. Improves compatibility with Sparrow
+
+### Patch Changes
+
+- Updated dependencies [[`3073ec8`](https://github.com/caravan-bitcoin/caravan/commit/3073ec833140cc45b058a375e06e4830d73c78e4)]:
+  - @caravan/bitcoin@0.4.3
+  - @caravan/psbt@2.0.4
+
+## 1.17.0
+
+### Minor Changes
+
+- [#401](https://github.com/caravan-bitcoin/caravan/pull/401) [`50a972e`](https://github.com/caravan-bitcoin/caravan/commit/50a972ef10fc6e2c612b25c913f7859cd9b991bc) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - add download psbt with signatures functionality on a per key basis and for full tx. Also fixes bug on psbt importer where multiple keys signed for are not imported (only one sig being imported)
+
+### Patch Changes
+
+- [#429](https://github.com/caravan-bitcoin/caravan/pull/429) [`be36c5a`](https://github.com/caravan-bitcoin/caravan/commit/be36c5ae1e2110e22da31fabca6b439fd557af0d) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - I fixed duplicaiton bug in txhistory when using a public client
+
 ## 1.16.2
 
 ### Patch Changes

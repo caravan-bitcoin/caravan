@@ -298,4 +298,11 @@ describe("BCUR2Decoder", () => {
       expect(decoder.isComplete()).toBe(false);
     });
   });
+
+  describe("percentComplete", () => {
+    it("should express progress as a percent", () => {
+      mockDecoder.getProgress.mockReturnValue(0.21);
+      expect(decoder.percentComplete()).toBe(21);
+    });
+  });
 });

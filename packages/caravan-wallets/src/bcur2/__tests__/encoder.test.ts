@@ -87,6 +87,19 @@ describe("BCUR2Encoder Dependency Injection", () => {
       expect(encoder1.maxFragmentLength).toBe(150);
       expect(encoder2.maxFragmentLength).toBe(300);
     });
+
+    it("should encode bytes registry type", () => {
+      const encoder = new BCUR2Encoder("placehodler", 21, "bytes");
+      const result = encoder.qrFragments;
+      expect(result).toBeDefined();
+      expect(result.length).toBe(1);
+    });
+
+    it("should throws on unknown type", () => {
+      expect(() => new BCUR2Encoder("invalid", 21, "other" as any)).toThrow(
+        "Unsupported registry type",
+      );
+    });
   });
 
   describe("Data Injection Patterns", () => {

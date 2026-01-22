@@ -11,21 +11,20 @@ import {
   P2WSH,
   signatureNoSighashType,
 } from "@caravan/bitcoin";
-import { Psbt, Transaction } from "bitcoinjs-lib-v6";
+import { Psbt, Transaction, initEccLib } from "bitcoinjs-lib-v6";
 import { MultisigWalletConfig } from "@caravan/multisig";
 import { toOutputScript } from "bitcoinjs-lib-v6/src/address.js";
 import { GlobalXpub } from "bip174/src/lib/interfaces.js";
-// asmjs version is less performant than wasm version however
-// it should avoid any configuration challenges. If these can
-// be sorted out and simplified then we can use the primary module with wasm
-import * as ecc from "../../vendor/tiny-secp256k1-asmjs/lib/index.js";
-import * as bitcoin from "bitcoinjs-lib-v6";
+import { ecc } from "../noble-ecc";
 import { bufferize } from "src/functions";
 import BigNumber from "bignumber.js";
 import { reverseBuffer } from "bitcoinjs-lib-v6/src/bufferutils.js";
 import { autoLoadPSBT } from "./utils";
 
-bitcoin.initEccLib(ecc);
+// Global mutation to inject the ecc object into bitcoinjs-lib-v6. Here, we are
+// not using the default tiny-secp256k1-asmjs library, but rather the
+// @noble/curves wrapper.
+initEccLib(ecc);
 
 export interface PsbtInput {
   hash: string | Buffer;
