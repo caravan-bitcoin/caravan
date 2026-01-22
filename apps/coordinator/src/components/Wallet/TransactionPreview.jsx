@@ -184,6 +184,26 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtData, "transaction.psbt");
   }
 
+  getTransactionStatus() {
+    const { signatureImporters, requiredSigners, broadcasting, txid } =
+      this.props;
+
+    if (broadcasting) return "broadcast-pending";
+    if (txid && txid.length > 0) return "unconfirmed";
+
+    const rs = requiredSigners || 0;
+    const signedCount = signatureImporters
+      ? Object.values(signatureImporters).filter(
+          (importer) => importer?.finalized && importer?.signature?.length > 0,
+        ).length
+      : 0;
+
+    const isFullySigned = signedCount >= rs && rs > 0;
+    const hasPartial = signedCount > 0 && signedCount < rs;
+
+    return isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+  }
+
   render() {
     const {
       fee,
@@ -211,34 +231,6 @@ class TransactionPreview extends React.Component {
 
         {/* Transaction Flow Diagram - Comprehensive View */}
         <Box mb={4}>
-          {(() => {
-            // derive signing/broadcast status without React hooks (class component)
-            const rs = requiredSigners || 0;
-            const signedCount = signatureImporters
-              ? Object.values(signatureImporters).filter(
-                  (importer) =>
-                    importer &&
-                    importer.finalized &&
-                    importer.signature &&
-                    importer.signature.length > 0,
-                ).length
-              : 0;
-            const isFullySigned = signedCount >= rs && rs > 0;
-            const hasPartial = signedCount > 0 && signedCount < rs;
-
-            if (broadcasting) {
-              this._flowStatus = "broadcast-pending";
-            } else if (txid && txid.length > 0) {
-              this._flowStatus = "unconfirmed";
-            } else {
-              this._flowStatus = isFullySigned
-                ? "ready"
-                : hasPartial
-                  ? "partial"
-                  : "draft";
-            }
-            return null;
-          })()}
           <TransactionFlowDiagram
             inputs={inputs || []}
             outputs={outputs || []}
@@ -246,7 +238,7 @@ class TransactionPreview extends React.Component {
             changeAddress={this.props.changeAddress}
             inputsTotalSats={inputsTotalSats}
             network={this.props.network}
-            status={this._flowStatus}
+            status={this.getTransactionStatus()}
           />
         </Box>
 

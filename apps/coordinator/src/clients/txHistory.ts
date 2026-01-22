@@ -64,7 +64,9 @@ export const usePublicClientTransactions = () => {
         "confirmed",
       );
 
-      // Added later by @jbrauck-unchained for deduplication on public clients like mempool.space
+      // Deduplication step — when querying multiple addresses, a transaction that
+      // touches more than one wallet address (e.g., send with change) will be returned
+      // by the API for each address. We deduplicate here at fetch time.
       const seenTxids = new Set<string>();
       const deduplicated = processedTransactions.filter((tx) => {
         if (seenTxids.has(tx.txid)) {
