@@ -22,10 +22,13 @@ import {
 } from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import {
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  OpenInNew,
+} from "@mui/icons-material";
 import { satoshisToBitcoins } from "@caravan/bitcoin";
 import { formatDistanceToNow } from "date-fns";
-import { OpenInNew } from "@mui/icons-material";
 import {
   TransactionT,
   TransactionTableProps,
@@ -384,7 +387,11 @@ const TransactionTableRow: React.FC<{
                   />
                   <HelpOutlineIcon
                     fontSize="small"
-                    sx={{ fontSize: "0.9rem", ml: 0.5, color: "text.secondary" }}
+                    sx={{
+                      fontSize: "0.9rem",
+                      ml: 0.5,
+                      color: "text.secondary",
+                    }}
                   />
                 </Box>
               </Tooltip>

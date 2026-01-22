@@ -14,7 +14,10 @@ const TRANSACTION_DETAILS_KEY = "transaction-details";
  * This is fetched on-demand (when user expands a transaction row) to avoid
  * the overhead of fetching prevout data for all transactions in the list.
  */
-export const useTransactionDetails = (txid: string | null, enabled: boolean) => {
+export const useTransactionDetails = (
+  txid: string | null,
+  enabled: boolean,
+) => {
   const blockchainClient = useGetClient();
 
   return useQuery(
@@ -95,4 +98,3 @@ export const usePrefetchTransactionDetails = () => {
 
   return prefetch;
 };
-

@@ -213,10 +213,6 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
       inputs,
       outputs,
-      signatureImporters,
-      requiredSigners,
-      broadcasting,
-      txid,
       spendingStep,
     } = this.props;
 

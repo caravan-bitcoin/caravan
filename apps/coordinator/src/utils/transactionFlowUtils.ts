@@ -222,7 +222,6 @@ export const transformTransactionToFlowDiagram = (
   let status: FlowDiagramProps["status"] = "unknown";
   if (tx.status) {
     if (tx.status.confirmed) {
-      const blockHeight = tx.status.blockHeight || tx.status.block_height;
       // If we have block height info, we could calculate confirmations
       // For now, just mark as confirmed
       status = "confirmed";
