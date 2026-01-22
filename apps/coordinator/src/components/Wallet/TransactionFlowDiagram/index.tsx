@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useState,
-  useRef,
-  useLayoutEffect,
-  useEffect,
-} from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   Box,
   Paper,
@@ -14,8 +8,6 @@ import {
   useTheme,
   Button,
   IconButton,
-  Drawer,
-  Divider,
 } from "@mui/material";
 import {
   ArrowForward,
@@ -25,7 +17,6 @@ import {
   ExpandMore,
   OpenInNew,
   ContentCopy,
-  Close,
 } from "@mui/icons-material";
 import BigNumber from "bignumber.js";
 import {
@@ -33,24 +24,33 @@ import {
   blockExplorerTransactionURL,
   Network,
 } from "@caravan/bitcoin";
-import DustChip from "../ScriptExplorer/DustChip";
+import DustChip from "../../ScriptExplorer/DustChip";
+import { useFlowPaths } from "./hooks";
+import {
+  formatAddress,
+  formatScriptType,
+  getScriptTypeColor,
+  getStatusDisplay,
+} from "./utils";
+import FlowDrawers from "./FlowDrawers";
+import FlowSummary from "./FlowSummary";
 
 interface TransactionFlowDiagramProps {
   inputs: Array<{
     txid: string;
     index: number;
     amountSats: string;
-    valueUnknown?: boolean; // Flag to indicate input value couldn't be determined
+    valueUnknown?: boolean;
     multisig?: {
       name?: string;
     };
   }>;
   outputs: Array<{
     address: string;
-    amount: string; // in BTC
+    amount: string;
     scriptType?: string;
   }>;
-  fee: string; // in BTC
+  fee: string;
   changeAddress?: string;
   inputsTotalSats: any;
   network?: string;
@@ -84,18 +84,26 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
   const [inputsDrawerOpen, setInputsDrawerOpen] = useState(false);
   const [outputsDrawerOpen, setOutputsDrawerOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  // Refs for SVG path calculations
   const svgRef = useRef<SVGSVGElement | null>(null);
   const centerRef = useRef<HTMLDivElement | null>(null);
   const inputRefs = useRef<(HTMLDivElement | null)[]>([]);
   const recipientOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
   const changeOutputRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [inputPaths, setInputPaths] = useState<string[]>([]);
-  const [outputPaths, setOutputPaths] = useState<string[]>([]);
-  const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
   const feeRef = useRef<HTMLDivElement | null>(null);
+
+  // Use custom hook for SVG path calculations
+  const { inputPaths, outputPaths, svgSize } = useFlowPaths(
+    inputRefs,
+    recipientOutputRefs,
+    changeOutputRefs,
+    feeRef,
+    centerRef,
+    svgRef,
+    inputs.length,
+    outputs.length,
+  );
 
   const handleCopyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -139,140 +147,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
       outputCount: outputs.length,
     };
   }, [inputs, outputs, fee, changeAddress, inputsTotalSats]);
-
-  // Build smooth cubic-bezier path from (x1,y1) to (x2,y2)
-  const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
-    const dx = Math.abs(x2 - x1);
-    const control = Math.max(dx * 0.25, 40);
-    const c1x = x1 + (x2 > x1 ? control : -control);
-    const c2x = x2 - (x2 > x1 ? control : -control);
-    return `M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
-  };
-
-  // Measure DOM and compute all paths
-  const computePaths = () => {
-    const svgEl = svgRef.current;
-    const centerEl = centerRef.current;
-    if (!svgEl || !centerEl) return;
-
-    const containerRect = svgEl.getBoundingClientRect();
-    const centerRect = centerEl.getBoundingClientRect();
-
-    setSvgSize({ width: containerRect.width, height: containerRect.height });
-
-    const centerLeftX = centerRect.left - containerRect.left;
-    const centerRightX = centerRect.right - containerRect.left;
-    const centerY = centerRect.top - containerRect.top + centerRect.height / 2;
-
-    const newInputPaths: string[] = [];
-    inputRefs.current.forEach((el) => {
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const x1 = r.right - containerRect.left;
-      const y1 = r.top - containerRect.top + r.height / 2;
-      newInputPaths.push(buildCurvePath(x1, y1, centerLeftX, centerY));
-    });
-
-    const newOutputPaths: string[] = [];
-    const allOutputs = [
-      ...recipientOutputRefs.current,
-      ...changeOutputRefs.current,
-      feeRef.current || null,
-    ];
-    allOutputs.forEach((el) => {
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const x2 = r.left - containerRect.left;
-      const y2 = r.top - containerRect.top + r.height / 2;
-      newOutputPaths.push(buildCurvePath(centerRightX, centerY, x2, y2));
-    });
-
-    setInputPaths(newInputPaths);
-    setOutputPaths(newOutputPaths);
-  };
-
-  useLayoutEffect(() => {
-    computePaths();
-  }, [inputs.length, outputs.length]);
-
-  useEffect(() => {
-    const onResize = () => computePaths();
-    window.addEventListener("resize", onResize);
-    const id = window.setTimeout(() => computePaths(), 0);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.clearTimeout(id);
-    };
-  }, []);
-
-  // Get script type color
-  const getScriptTypeColor = (scriptType?: string) => {
-    switch (scriptType?.toLowerCase()) {
-      case "p2wsh":
-        return theme.palette.success.main;
-      case "p2sh-p2wsh":
-      case "p2sh_p2wsh":
-        return theme.palette.info.main;
-      case "p2sh":
-        return theme.palette.warning.main;
-      case "p2wpkh":
-        return theme.palette.success.light;
-      case "p2pkh":
-        return theme.palette.warning.light;
-      default:
-        return theme.palette.grey[500];
-    }
-  };
-
-  // Format script type for display
-  const formatScriptType = (scriptType?: string) => {
-    if (!scriptType) return "Unknown";
-    return scriptType.toUpperCase().replace("_", "-");
-  };
-
-  // Format address for display (truncate middle)
-  const formatAddress = (address: string) => {
-    if (address.length <= 20) return address;
-    return `${address.slice(0, 10)}...${address.slice(-8)}`;
-  };
-
-  const getStatusDisplay = () => {
-    switch (status) {
-      case "draft":
-        return { label: "Draft", color: theme.palette.grey[500] };
-      case "partial":
-        return { label: "Partially Signed", color: theme.palette.info.main };
-      case "ready":
-        return {
-          label: "Ready to Broadcast",
-          color: theme.palette.primary.main,
-        };
-      case "broadcast-pending":
-        return { label: "Broadcast Pending", color: theme.palette.info.light };
-      case "unconfirmed":
-        return { label: "Unconfirmed", color: theme.palette.warning.main };
-      case "confirmed":
-        return {
-          label: `Confirmed${confirmations ? ` (${confirmations})` : ""}`,
-          color: theme.palette.success.main,
-        };
-      case "finalized":
-        return { label: "Finalized", color: theme.palette.success.dark };
-      case "rbf":
-        return {
-          label: "Replaced by Fee",
-          color: theme.palette.secondary.main,
-        };
-      case "dropped":
-        return { label: "Dropped", color: theme.palette.grey[400] };
-      case "conflicted":
-        return { label: "Conflicted", color: theme.palette.error.main };
-      case "rejected":
-        return { label: "Rejected", color: theme.palette.error.dark };
-      default:
-        return { label: "Unknown", color: theme.palette.grey[500] };
-    }
-  };
 
   return (
     <Paper
@@ -516,7 +390,10 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                         sx={{
                           height: 20,
                           fontSize: "0.65rem",
-                          backgroundColor: getScriptTypeColor(scriptType),
+                          backgroundColor: getScriptTypeColor(
+                            scriptType,
+                            theme,
+                          ),
                           color: "#fff",
                           fontWeight: 600,
                         }}
@@ -661,7 +538,7 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
             ref={centerRef}
           >
             {(() => {
-              const sd = getStatusDisplay();
+              const sd = getStatusDisplay(status, confirmations, theme);
               return (
                 <>
                   <Typography
@@ -997,303 +874,6 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
                     )}
                   </Box>
                 </Box>
-
-                {/* Inputs Drawer */}
-                <Drawer
-                  anchor="right"
-                  open={inputsDrawerOpen}
-                  onClose={() => setInputsDrawerOpen(false)}
-                  PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      p: 2,
-                    }}
-                  >
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      All Inputs ({flowData.inputCount})
-                    </Typography>
-                    <IconButton
-                      onClick={() => setInputsDrawerOpen(false)}
-                      sx={{ color: "inherit" }}
-                    >
-                      <Close />
-                    </IconButton>
-                  </Box>
-                  <Divider />
-                  <Box
-                    sx={{
-                      p: 2,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1.5,
-                    }}
-                  >
-                    {inputs.map((input, idx) => {
-                      const inputAmount = BigNumber(
-                        satoshisToBitcoins(input.amountSats.toString()),
-                      );
-                      const scriptType = input.multisig?.name?.includes("p2wsh")
-                        ? "P2WSH"
-                        : input.multisig?.name?.includes("p2sh")
-                          ? "P2SH"
-                          : input.multisig?.name
-                            ? input.multisig.name.toUpperCase()
-                            : null;
-                      const showValueUnknown = input.valueUnknown;
-                      return (
-                        <Box
-                          key={`drawer-input-${input.txid}-${input.index}-${idx}`}
-                          sx={{
-                            backgroundColor: "#fff",
-                            border: `2px solid ${theme.palette.divider}`,
-                            borderRadius: 1,
-                            p: 1.5,
-                          }}
-                        >
-                          <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="flex-start"
-                            mb={0.5}
-                          >
-                            <Box
-                              display="flex"
-                              alignItems="center"
-                              gap={0.5}
-                              flex={1}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  fontWeight: 500,
-                                  fontFamily: "monospace",
-                                  fontSize: "0.7rem",
-                                }}
-                              >
-                                {formatAddress(input.txid)}:{input.index}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                href={blockExplorerTransactionURL(
-                                  input.txid,
-                                  network as Network,
-                                )}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{
-                                  padding: 0.25,
-                                  "& svg": { fontSize: "0.875rem" },
-                                }}
-                              >
-                                <OpenInNew fontSize="inherit" />
-                              </IconButton>
-                            </Box>
-                            {scriptType && (
-                              <Chip
-                                label={scriptType}
-                                size="small"
-                                sx={{
-                                  height: 20,
-                                  fontSize: "0.65rem",
-                                  backgroundColor:
-                                    getScriptTypeColor(scriptType),
-                                  color: "#fff",
-                                  fontWeight: 600,
-                                }}
-                              />
-                            )}
-                          </Box>
-                          <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                          >
-                            {showValueUnknown ? (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 500,
-                                  color: theme.palette.text.secondary,
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                Value from prev tx
-                              </Typography>
-                            ) : (
-                              <>
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 700,
-                                    color: theme.palette.primary.main,
-                                  }}
-                                >
-                                  {inputAmount.toFixed(8)} BTC
-                                </Typography>
-                                <Box
-                                  sx={{
-                                    "& .MuiChip-root": {
-                                      height: 22,
-                                      fontSize: "0.7rem",
-                                    },
-                                  }}
-                                >
-                                  <DustChip
-                                    amountSats={parseInt(input.amountSats)}
-                                    scriptType={input.multisig?.name}
-                                  />
-                                </Box>
-                              </>
-                            )}
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                </Drawer>
-
-                {/* Outputs Drawer (recipient outputs only) */}
-                <Drawer
-                  anchor="right"
-                  open={outputsDrawerOpen}
-                  onClose={() => setOutputsDrawerOpen(false)}
-                  PaperProps={{ sx: { width: { xs: "100vw", sm: 420 } } }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      p: 2,
-                    }}
-                  >
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      All Payment Outputs ({flowData.recipientOutputs.length})
-                    </Typography>
-                    <IconButton
-                      onClick={() => setOutputsDrawerOpen(false)}
-                      sx={{ color: "inherit" }}
-                    >
-                      <Close />
-                    </IconButton>
-                  </Box>
-                  <Divider />
-                  <Box
-                    sx={{
-                      p: 2,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1.5,
-                    }}
-                  >
-                    {flowData.recipientOutputs.map((output, idx) => {
-                      const amount = BigNumber(output.amount);
-                      return (
-                        <Box
-                          key={`drawer-recipient-${idx}`}
-                          sx={{
-                            backgroundColor: "#fff",
-                            border: `2px solid #ea9c0d`,
-                            borderRadius: 1,
-                            p: 2,
-                          }}
-                        >
-                          <Box
-                            display="flex"
-                            alignItems="center"
-                            gap={1}
-                            mb={1}
-                          >
-                            <CallMade sx={{ fontSize: 18, color: "#ea9c0d" }} />
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontWeight: 600,
-                                color: theme.palette.text.secondary,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.5,
-                                fontSize: "0.7rem",
-                              }}
-                            >
-                              Payment
-                            </Typography>
-                          </Box>
-                          <Box
-                            display="flex"
-                            alignItems="center"
-                            gap={0.5}
-                            mb={1}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: theme.palette.text.secondary,
-                                fontFamily: "monospace",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {formatAddress(output.address)}
-                            </Typography>
-                            <Tooltip
-                              title={
-                                copiedAddress === output.address
-                                  ? "Copied!"
-                                  : "Copy address"
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  handleCopyAddress(output.address)
-                                }
-                                sx={{
-                                  padding: 0.25,
-                                  color: theme.palette.text.secondary,
-                                  "&:hover": {
-                                    color: theme.palette.primary.main,
-                                  },
-                                  "& svg": { fontSize: "0.75rem" },
-                                }}
-                              >
-                                <ContentCopy fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                          <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                          >
-                            <Typography
-                              variant="h6"
-                              sx={{ fontWeight: 700, color: "#ea9c0d" }}
-                            >
-                              {amount.toFixed(8)} BTC
-                            </Typography>
-                            {output.scriptType && (
-                              <Chip
-                                label={formatScriptType(output.scriptType)}
-                                size="small"
-                                variant="outlined"
-                                sx={{
-                                  height: 22,
-                                  fontSize: "0.65rem",
-                                  borderColor: theme.palette.divider,
-                                  color: theme.palette.text.secondary,
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                </Drawer>
               </Box>
             );
           })}
@@ -1368,334 +948,27 @@ const TransactionFlowDiagram: React.FC<TransactionFlowDiagramProps> = ({
         </Box>
       </Box>
 
-      {/* Legend */}
-      <Box
-        sx={{
-          mt: 3,
-          pt: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            gap: { xs: 2, sm: 3 },
-            flexWrap: "wrap",
-            justifyContent: "center",
-            mb: 2,
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                border: "2px solid #ea9c0d",
-                backgroundColor: "#ea9c0d",
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography
-              variant="caption"
-              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
-            >
-              Payment Output
-            </Typography>
-          </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                border: `2px solid ${theme.palette.primary.main}`,
-                backgroundColor: theme.palette.primary.main,
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography
-              variant="caption"
-              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
-            >
-              Change Output
-            </Typography>
-          </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                border: `1px dashed ${theme.palette.divider}`,
-                backgroundColor: theme.palette.text.secondary,
-                borderRadius: 0.5,
-              }}
-            />
-            <Typography
-              variant="caption"
-              sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
-            >
-              Network Fee
-            </Typography>
-          </Box>
-        </Box>
+      {/* Drawers */}
+      <FlowDrawers
+        inputsDrawerOpen={inputsDrawerOpen}
+        setInputsDrawerOpen={setInputsDrawerOpen}
+        inputs={inputs}
+        inputCount={flowData.inputCount}
+        network={network}
+        outputsDrawerOpen={outputsDrawerOpen}
+        setOutputsDrawerOpen={setOutputsDrawerOpen}
+        recipientOutputs={flowData.recipientOutputs}
+        copiedAddress={copiedAddress}
+        handleCopyAddress={handleCopyAddress}
+      />
 
-        {/* Dust Status Explanation */}
-        <Box
-          sx={{
-            mt: 2,
-            p: 2,
-            backgroundColor: theme.palette.grey[50],
-            borderRadius: 1,
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              fontWeight: 600,
-              color: theme.palette.text.secondary,
-              display: "block",
-              mb: 1,
-            }}
-          >
-            Input Dust Status:
-          </Typography>
-          <Box display="flex" gap={2} flexWrap="wrap">
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip
-                label="Economical"
-                color="success"
-                size="small"
-                sx={{ height: 20, fontSize: "0.7rem" }}
-              />
-              <Typography
-                variant="caption"
-                sx={{ color: theme.palette.text.secondary }}
-              >
-                = Cost-effective to spend
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip
-                label="Warning"
-                color="warning"
-                size="small"
-                sx={{ height: 20, fontSize: "0.7rem" }}
-              />
-              <Typography
-                variant="caption"
-                sx={{ color: theme.palette.text.secondary }}
-              >
-                = Consider batching
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Chip
-                label="Dust"
-                color="error"
-                size="small"
-                sx={{ height: 20, fontSize: "0.7rem" }}
-              />
-              <Typography
-                variant="caption"
-                sx={{ color: theme.palette.text.secondary }}
-              >
-                = Costs more to spend than value
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-        {/* SUMMARY Section - Moved Below */}
-        <Box
-          sx={{
-            mt: 3,
-            mb: 3,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              color: theme.palette.text.primary,
-              mb: 2,
-            }}
-          >
-            Transaction Summary
-          </Typography>
-
-          {/* Summary Cards in Grid */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(4, 1fr)",
-              },
-              gap: 2,
-            }}
-          >
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                backgroundColor: theme.palette.grey[50],
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 2,
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  fontWeight: 600,
-                }}
-              >
-                Total Sending
-              </Typography>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  color: "#ea9c0d",
-                  mt: 0.5,
-                }}
-              >
-                {flowData.recipientOutputs
-                  .reduce(
-                    (sum, o) => sum.plus(BigNumber(o.amount)),
-                    BigNumber(0),
-                  )
-                  .toFixed(8)}{" "}
-                BTC
-              </Typography>
-            </Paper>
-
-            {flowData.changeOutputs.length > 0 && (
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  backgroundColor: theme.palette.grey[50],
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 2,
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  Change Returning
-                </Typography>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 700,
-                    color: theme.palette.primary.main,
-                    mt: 0.5,
-                  }}
-                >
-                  {flowData.changeOutputs
-                    .reduce(
-                      (sum, o) => sum.plus(BigNumber(o.amount)),
-                      BigNumber(0),
-                    )
-                    .toFixed(8)}{" "}
-                  BTC
-                </Typography>
-              </Paper>
-            )}
-
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                backgroundColor: theme.palette.grey[50],
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 2,
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  fontWeight: 600,
-                }}
-              >
-                Network Fee
-              </Typography>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  color: theme.palette.error.main,
-                  mt: 0.5,
-                }}
-              >
-                {flowData.feeBtc.toFixed(8)} BTC
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  display: "block",
-                  mt: 0.5,
-                }}
-              >
-                {(() => {
-                  const pct =
-                    flowData.feeBtc
-                      .dividedBy(flowData.totalInputBtc)
-                      .multipliedBy(100)
-                      .toNumber() || 0;
-                  const pctStr = pct.toFixed(2);
-                  const approx = pct > 0 && pctStr === "0.00" ? "~" : "";
-                  return `${approx}${pctStr}`;
-                })()}
-                % of total
-              </Typography>
-            </Paper>
-
-            <Box
-              sx={{
-                p: 2,
-                backgroundColor: theme.palette.primary.main,
-                borderRadius: 2,
-                color: "#fff",
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "rgba(255,255,255,0.8)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  fontWeight: 600,
-                }}
-              >
-                Total Input
-              </Typography>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  mt: 0.5,
-                }}
-              >
-                {flowData.totalInputBtc.toFixed(8)} BTC
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
+      {/* Summary */}
+      <FlowSummary
+        recipientOutputs={flowData.recipientOutputs}
+        changeOutputs={flowData.changeOutputs}
+        feeBtc={flowData.feeBtc}
+        totalInputBtc={flowData.totalInputBtc}
+      />
     </Paper>
   );
 };

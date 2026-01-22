@@ -250,3 +250,18 @@ export const transformTransactionToFlowDiagram = (
   };
 };
 
+/**
+ * Format satoshis to BTC with proper precision
+ */
+export const formatSats = (sats: number | string | BigNumber): string => {
+  const btc = satoshisToBitcoins(sats.toString());
+  return `${btc} BTC`;
+};
+
+/**
+ * Format address for display (truncate middle)
+ */
+export const formatAddress = (address: string): string => {
+  if (address.length <= 20) return address;
+  return `${address.slice(0, 10)}...${address.slice(-8)}`;
+};
