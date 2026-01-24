@@ -1970,6 +1970,25 @@ describe("PsbtV2.combine", () => {
         "Cannot combine PSBTs for different unsigned transactions.",
       );
     });
+
+    it("should throw informative error when PSBT has 0 inputs and 1 output (ambiguous format)", () => {
+      // A PSBT with 0 inputs and 1 output produces a transaction buffer that
+      // bitcoinjs-lib misinterprets as SegWit format (0x00 0x01 marker/flag)
+      const psbtWith0Inputs1Output = new PsbtV2();
+      psbtWith0Inputs1Output.addOutput({
+        amount: 100000000,
+        script: Buffer.from(
+          "0014c430f64c4756da310dbd1a085572ef299926272c",
+          "hex",
+        ),
+      });
+
+      const validPsbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
+
+      expect(() => psbtWith0Inputs1Output.combine([validPsbt])).toThrow(
+        "Cannot compute transaction ID: PSBT has 0 inputs and 1 output",
+      );
+    });
   });
 
   describe("Basic combine operations", () => {

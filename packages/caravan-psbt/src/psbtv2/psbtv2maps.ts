@@ -294,6 +294,34 @@ export class PsbtConversionMaps extends PsbtV2Maps {
   };
 
   public getTransactionId() {
-    return Transaction.fromBuffer(this.buildUnsignedTx()).getId();
+    const txBuf = this.buildUnsignedTx();
+    try {
+      return Transaction.fromBuffer(txBuf).getId();
+    } catch (e) {
+      const numInputs = this.inputMaps.length;
+      const numOutputs = this.outputMaps.length;
+
+      // Special case: 0 inputs with 1 output creates ambiguous serialization
+      // that bitcoinjs-lib misinterprets as SegWit (0x00 0x01 marker/flag)
+      if (numInputs === 0 && numOutputs === 1) {
+        console.error(
+          `Cannot compute transaction ID for PSBT with 0 inputs and 1 output. ` +
+            `The serialized transaction (${txBuf.toString("hex")}) is ambiguous ` +
+            `with SegWit format and cannot be parsed.`,
+        );
+        throw new Error(
+          "Cannot compute transaction ID: PSBT has 0 inputs and 1 output, " +
+            "which produces an ambiguous transaction format. "
+        );
+      }
+
+      console.error(
+        `Failed to parse transaction buffer: ${txBuf.toString("hex")}`,
+      );
+      throw new Error(
+        `Failed to compute transaction ID (${numInputs} inputs, ${numOutputs} outputs): ` +
+          `${e instanceof Error ? e.message : e}`,
+      );
+    }
   }
 }

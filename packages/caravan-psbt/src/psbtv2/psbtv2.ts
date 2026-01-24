@@ -1450,8 +1450,11 @@ export class PsbtV2 extends PsbtV2Maps {
 
     // Set both sequence numbers to 0 before comparing if the PSBTs match. See:
     // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#unique-identification
-    const tempThis = new PsbtV2(this.serialize());
-    const tempOther = new PsbtV2(psbt.serialize());
+    // Allow tx version 1 for these temporary comparison instances since the
+    // original PSBTs have already been validated at construction time. If the
+    // versions don't agree, then the PSBT identities will differ.
+    const tempThis = new PsbtV2(this.serialize(), true);
+    const tempOther = new PsbtV2(psbt.serialize(), true);
     for (const [index, sequence] of tempThis.PSBT_IN_SEQUENCE.entries()) {
       if (sequence !== 0) {
         tempThis.setInputSequence(index, 0);
