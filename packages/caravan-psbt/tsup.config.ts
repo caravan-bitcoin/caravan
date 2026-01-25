@@ -22,4 +22,17 @@ export default defineConfig({
     provideSelf(),
     provideNavigator(),
   ],
+  // Don't bundle these dependencies - let consumers install them separately
+  external: [
+    "bitcoinjs-lib-v6",
+    "bip174",
+    "bufio",
+    "@caravan/bitcoin",
+    "@caravan/bip32",
+    "@caravan/multisig",
+    "bignumber.js",
+    "buffer",
+    "@noble/curves",
+    "uint8array-tools",
+  ],
 });

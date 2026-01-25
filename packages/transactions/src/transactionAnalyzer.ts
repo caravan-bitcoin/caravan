@@ -294,6 +294,8 @@ export class TransactionAnalyzer {
 
   /**
    * Calculates and returns the fee rate required for a successful CPFP.
+   *
+   * @note By CPFP feeRate we mean the feeRate of the child tx only
    * @returns {string} The CPFP fee rate in satoshis per vbyte
    * @throws {Error} When CPFP is not needed or not possible
    */
@@ -366,11 +368,11 @@ export class TransactionAnalyzer {
   /**
    * Calculates the minimum total fee required for a successful CPFP (Child-Pays-For-Parent) operation.
    *
-   * This method calculates the  fee needed for a child transaction to boost the
+   * This method calculates the fee needed for a child transaction to boost the
    * fee rate of the current (parent) transaction using the CPFP technique. It considers:
    * 1. The current transaction's size and fee
    * 2. An estimated size for a simple child transaction (1 input, 1 output)
-   * 3. The target fee rate for the combined package (parent + child)
+   * 3. The target fee rate which the child has to pay to make the total package payload reach the desired targetFeeRate and incentivize miners to mine the tx.
    *
    * The calculation aims to determine how much additional fee the child transaction
    * needs to contribute to bring the overall package fee rate up to the target.
@@ -394,8 +396,10 @@ export class TransactionAnalyzer {
    *                     transaction's fee is already sufficient for the desired rate.
    */
   get minimumCPFPFee(): Satoshis {
+    // so we want to know the extra fees that child has to pay,
+    // remember when miner takes in this tx (along with the parent) they are rewarded minimumCPFPFee + ParentFee
     return new BigNumber(this.cpfpFeeRate)
-      .multipliedBy(this.CPFPPackageSize)
+      .multipliedBy(this.estimatedCPFPChildSize)
       .toString();
   }
 
