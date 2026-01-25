@@ -20,6 +20,38 @@ import {
 } from "bitcoinjs-lib-v6";
 
 /**
+ * Custom network configuration for Signet.
+ * Signet is a test network with centralized signing.
+ */
+const signet: BitcoinJSNetwork = {
+  messagePrefix: "\x18Bitcoin Signed Message:\n",
+  bech32: "tb",
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+/**
+ * Custom network configuration for Testnet4.
+ * Testnet4 is the latest Bitcoin testnet, replacing Testnet3.
+ */
+const testnet4: BitcoinJSNetwork = {
+  messagePrefix: "\x18Bitcoin Signed Message:\n",
+  bech32: "tb",
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+/**
  * Creates an output script for a given Bitcoin address.
  *
  * This function validates the provided address and creates an appropriate
@@ -47,8 +79,10 @@ export function createOutputScript(
   // Convert Caravan Network to bitcoinjs-lib network
   const networkMap = {
     [Network.TESTNET]: networks.testnet,
+    [Network.TESTNET4]: testnet4,
     [Network.REGTEST]: networks.regtest ?? networks.testnet,
     [Network.MAINNET]: networks.bitcoin,
+    [Network.SIGNET]: signet,
   };
 
   const bitcoinJsNetwork = networkMap[network];
@@ -373,14 +407,12 @@ export function mapCaravanNetworkToBitcoinJS(
       return networks.bitcoin;
     case Network.TESTNET:
       return networks.testnet;
+    case Network.TESTNET4:
+      return testnet4;
     case Network.REGTEST:
       return networks.regtest;
     case Network.SIGNET:
-      // As of the last check, bitcoinjs-lib doesn't have built-in support for signet.
-      // If signet support is crucial, you might need to define a custom network.
-      throw new Error(
-        "Signet is not directly supported in bitcoinjs-lib. Consider defining a custom network if needed.",
-      );
+      return signet;
     default:
       throw new Error(`Unsupported network: ${network}`);
   }
