@@ -13,12 +13,24 @@ if (!existsSync(dtsPath)) {
 
 const source = readFileSync(dtsPath, "utf8");
 
-// ESM declarations can mirror the base .d.ts
+// ESM can use the same declarations as the base .d.ts
 writeFileSync(dmtsPath, source, "utf8");
 
-// CJS declarations: transform default export to export =
+// CommonJS needs export = instead of export default
 let cjsDecl = source;
-cjsDecl = cjsDecl.replace(/export default ([^;\n]+)/g, "declare const _default: $1\nexport = _default;");
+
+// Convert class/interface/type/function declarations
+cjsDecl = cjsDecl.replace(
+  /export default ((?:class|interface|type|const|function)\s+\w+[\s\S]*?);/g,
+  (match, declaration) => `${declaration.trim()}\nexport = ${declaration.match(/\w+/)[0]};`
+);
+
+// Catch remaining default exports
+cjsDecl = cjsDecl.replace(
+  /export default ([^;\n]+);/g,
+  "declare const _default: typeof $1;\nexport = _default;"
+);
+
 writeFileSync(dctsPath, cjsDecl, "utf8");
 
 console.log("✓ Emitted index.d.mts and index.d.cts");
