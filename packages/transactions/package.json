@@ -6,6 +6,15 @@
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
   "private": true,
+  "files": [
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/index.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
