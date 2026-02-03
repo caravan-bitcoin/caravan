@@ -57,6 +57,26 @@ test.describe("Transaction Creation and Signing", () => {
       .locator("button[role=tab][type=button]:has-text('Send')")
       .click();
   });
+  test("should show error when uploading an invalid PSBT", async ({ page }) => {
+    const invalidPsbtPath = path.join(uploadDir, "invalid.psbt");
+    fs.writeFileSync(invalidPsbtPath, "this-is-not-a-valid-psbt");
+
+    await page.getByText("Import PSBT").scrollIntoViewIfNeeded();
+
+    await page.getByRole("combobox", { name: /import method/i }).click();
+    await page.getByRole("option", { name: /file upload/i }).click();
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(invalidPsbtPath);
+
+    await page.getByRole("button", { name: /import psbt file/i }).click();
+
+    await expect(page.getByRole("alert")).toBeVisible({ timeout: 10000 });
+
+    await expect(
+      page.getByRole("button", { name: /sign transaction/i }),
+    ).not.toBeVisible();
+  });
 
   test("should create and broadcast transaction with auto coin selection and signed psbt upload", async ({
     page,
