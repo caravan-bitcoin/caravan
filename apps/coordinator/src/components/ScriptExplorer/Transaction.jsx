@@ -1,10 +1,8 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import {
-  blockExplorerTransactionURL,
-  addSignaturesToPSBT,
-} from "@caravan/bitcoin";
+import { blockExplorerTransactionURL } from "@caravan/bitcoin";
+import { addSignaturesToPSBT } from "@caravan/psbt";
 
 import {
   Typography,

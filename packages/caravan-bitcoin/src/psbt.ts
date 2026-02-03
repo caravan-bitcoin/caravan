@@ -33,12 +33,22 @@ import { toHexString } from "./utils";
  * Represents an output in a PSBT transaction.
  */
 
+/**
+ * @deprecated Use PSBT_MAGIC_HEX from @caravan/psbt instead
+ */
 export const PSBT_MAGIC_HEX = "70736274ff";
+/**
+ * @deprecated Use PSBT_MAGIC_B64 from @caravan/psbt instead
+ */
 export const PSBT_MAGIC_B64 = "cHNidP8";
+/**
+ * @deprecated Use PSBT_MAGIC_BYTES from @caravan/psbt instead
+ */
 export const PSBT_MAGIC_BYTES = Buffer.from([0x70, 0x73, 0x62, 0x74, 0xff]);
 
 /**
  * Given a string, try to create a Psbt object based on MAGIC (hex or Base64)
+ * @deprecated Use autoLoadPSBT from @caravan/psbt instead
  */
 export function autoLoadPSBT(psbtFromFile, options?: any) {
   if (typeof psbtFromFile !== "string") return null;
@@ -328,6 +338,7 @@ function addSignatureToPSBT(psbt, inputIndex, pubkey, signature) {
  *
  * FIXME - maybe we add functionality of sending in a single pubkey as well,
  *         which would assume all of the signature(s) are for that pubkey.
+ * @deprecated Use addSignaturesToPSBT from @caravan/psbt instead
  */
 export function addSignaturesToPSBT(network, psbt, pubkeys, signatures) {
   let psbtWithSignatures = autoLoadPSBT(psbt, {
@@ -373,6 +384,7 @@ function getNumSigners(psbt) {
  *
  * that way if your braid only advanced one chain's (member's) index so that a pubkey
  * could be used in more than one address, everything would still function properly.
+ * @deprecated Use parseSignaturesFromPSBT from @caravan/psbt instead
  */
 export function parseSignaturesFromPSBT(psbtFromFile) {
   const psbt = autoLoadPSBT(psbtFromFile, {});
@@ -412,6 +424,7 @@ export function parseSignaturesFromPSBT(psbtFromFile) {
 
 /**
  * Extracts signatures in order of inputs and returns as array (or array of arrays if multiple signature sets)
+ * @deprecated Use parseSignatureArrayFromPSBT from @caravan/psbt instead
  */
 export function parseSignatureArrayFromPSBT(psbtFromFile) {
   const psbt = autoLoadPSBT(psbtFromFile);
