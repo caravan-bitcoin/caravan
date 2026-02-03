@@ -1,11 +1,8 @@
 import React from "react";
 import { connect } from "react-redux";
 
-import {
-  Network,
-  networkData,
-  parseSignatureArrayFromPSBT,
-} from "@caravan/bitcoin";
+import { Network, networkData } from "@caravan/bitcoin";
+import { parseSignatureArrayFromPSBT } from "@caravan/psbt";
 import {
   PENDING,
   UNSUPPORTED,

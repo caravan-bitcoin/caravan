@@ -8,8 +8,8 @@ import {
   validateBIP32Path,
   getMaskedDerivation,
   P2SH,
-  addSignaturesToPSBT,
 } from "@caravan/bitcoin";
+import { addSignaturesToPSBT } from "@caravan/psbt";
 import {
   JADE,
   BITBOX,
