@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
@@ -10,6 +11,7 @@ import {
   useTransactionFilter,
 } from "../hooks";
 import { TransactionT } from "../types";
+import { getWalletAddresses } from "selectors/wallet";
 
 interface Props {
   network?: string;
@@ -27,6 +29,7 @@ export const PendingTransactionsView: React.FC<Props> = ({
     isLoading,
     error,
   } = usePendingTransactions();
+  const walletAddresses = useSelector(getWalletAddresses);
 
   const { filterType, setFilterType, filteredTransactions, counts } =
     useTransactionFilter(pendingTransactions);
@@ -90,13 +93,16 @@ export const PendingTransactionsView: React.FC<Props> = ({
         <>
           <TransactionTable
             transactions={currentPageItems}
+            rawTransactions={pendingTransactions}
             onSort={handleSort}
             sortBy={sortBy}
             sortDirection={sortDirection}
             network={network}
+            walletAddresses={walletAddresses}
             onClickTransaction={onClickTransaction}
             onAccelerateTransaction={onAccelerateTransaction}
             showAcceleration={true}
+            expandable={true}
           />
           <PaginationControls
             totalItems={sortedTransactions.length}
