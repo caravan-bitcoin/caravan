@@ -114,7 +114,7 @@ describe("BlockchainClient", () => {
         provider: PublicBitcoinProvider.BLOCKSTREAM,
         network: Network.SIGNET,
       });
-    }).toThrow("Invalid network: Blockstream does not support Signet");
+    }).toThrow("Invalid network: Blockstream does not support Signet or Testnet4");
   });
 
   it("should set the mainnet host for a public client", () => {
@@ -161,6 +161,22 @@ describe("BlockchainClient", () => {
         network: Network.SIGNET,
       });
     }).toThrow("Invalid network");
+  });
+
+  it("should set the testnet4 host for a public client", () => {
+    const mempool = new BlockchainClient({
+      type: ClientType.PUBLIC,
+      provider: PublicBitcoinProvider.MEMPOOL,
+      network: Network.TESTNET4,
+    });
+    expect(mempool.host).toEqual("https://unchained.mempool.space/testnet4/api");
+    expect(() => {
+      new BlockchainClient({
+        type: ClientType.PUBLIC,
+        provider: PublicBitcoinProvider.BLOCKSTREAM,
+        network: Network.TESTNET4,
+      });
+    }).toThrow("Invalid network: Blockstream does not support Signet or Testnet4");
   });
 
   it("should default to mempool for public client if no provider is specified", () => {
