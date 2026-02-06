@@ -66,6 +66,7 @@ const getClientType = (client: ClientSettings): ClientType => {
     case "blockstream":
       return ClientType.PUBLIC;
     case "private":
+    case "umbrel":
       return ClientType.PRIVATE;
     default:
       return client.type as ClientType;

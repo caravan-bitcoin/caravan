@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import {
   Grid,
   Card,
@@ -30,7 +30,9 @@ import {
 } from "../../actions/clientActions";
 
 import PrivateClientSettings from "./PrivateClientSettings";
+import UmbrelClientSettings from "./UmbrelClientSettings";
 import { useGetClient } from "../../hooks";
+import { setClientWalletName } from "../../actions/clientActions";
 
 const ClientPicker = ({
   setType,
@@ -49,6 +51,7 @@ const ClientPicker = ({
   privateNotes,
   setProvider,
 }) => {
+  const dispatch = useDispatch();
   const [urlEdited, setUrlEdited] = useState(false);
   const [connectError, setConnectError] = useState("");
   const [connectSuccess, setConnectSuccess] = useState(false);
@@ -72,7 +75,16 @@ const ClientPicker = ({
 
   const handleTypeChange = async (event) => {
     const value = event.target.value;
-    if (value === ClientType.PRIVATE) {
+    if (value === "umbrel") {
+      const umbrelRpcUrl = `${window.location.origin}/rpc`;
+      setUrl(umbrelRpcUrl);
+      setUsername("");
+      setPassword("");
+      setUrlError("");
+      setUsernameError("");
+      setPasswordError("");
+      setType("umbrel");
+    } else if (value === ClientType.PRIVATE) {
       if (!urlEdited) {
         setUrl(
           `http://localhost:${network === "mainnet" ? 8332 : network === "testnet" ? 18332 : 18443}`,
@@ -176,6 +188,15 @@ const ClientPicker = ({
                 onChange={handleTypeChange}
                 checked={client.type === ClientType.PRIVATE}
               />
+              <FormControlLabel
+                id="umbrel"
+                control={<Radio color="primary" />}
+                name="clientType"
+                value="umbrel"
+                label={<strong>Umbrel</strong>}
+                onChange={handleTypeChange}
+                checked={client.type === "umbrel"}
+              />
             </RadioGroup>
             {client.type === ClientType.PRIVATE && (
               <PrivateClientSettings
@@ -187,6 +208,17 @@ const ClientPicker = ({
                 usernameError={usernameError}
                 passwordError={passwordError}
                 privateNotes={privateNotes}
+                connectSuccess={connectSuccess}
+                connectError={connectError}
+                testConnection={() => testConnection()}
+              />
+            )}
+            {client.type === "umbrel" && (
+              <UmbrelClientSettings
+                client={client}
+                handleWalletNameChange={(event) => {
+                  dispatch(setClientWalletName(event.target.value));
+                }}
                 connectSuccess={connectSuccess}
                 connectError={connectError}
                 testConnection={() => testConnection()}

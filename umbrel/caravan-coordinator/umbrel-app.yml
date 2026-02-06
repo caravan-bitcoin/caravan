@@ -1,0 +1,32 @@
+manifestVersion: 1
+id: caravan-coordinator
+category: bitcoin
+name: Caravan Coordinator
+version: "1.0.0"
+tagline: Stateless multisig Bitcoin coordinator
+description: >-
+  Caravan is a multi-signature coordinator for Bitcoin. It connects
+  directly to your Umbrel Bitcoin node to query UTXOs, estimate fees,
+  and broadcast transactions without relying on any third-party servers.
+
+  Caravan makes it easy to create and manage multisig wallets using
+  hardware wallets such as Ledger, Trezor, and Coldcard. It supports
+  P2SH, P2SH-P2WSH, and P2WSH address types, and works with any
+  BIP32-compatible key origin.
+
+  Your keys never leave your hardware devices. Caravan is stateless
+  and does not store any private key material.
+
+developer: Unchained
+website: https://github.com/caravan-bitcoin/caravan
+dependencies:
+  - bitcoin
+repo: https://github.com/caravan-bitcoin/caravan
+support: https://github.com/caravan-bitcoin/caravan/issues
+port: 8080
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: Caravan
+submission: ""

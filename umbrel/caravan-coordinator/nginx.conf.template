@@ -1,0 +1,39 @@
+server {
+    listen 8080;
+    server_name localhost;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Serve the Caravan static app
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy RPC requests to the Umbrel Bitcoin Core node
+    location /rpc {
+        # CORS preflight
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+        if ($request_method = 'POST') {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+            add_header 'Access-Control-Allow-Credentials' 'true';
+            add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+        }
+
+        proxy_pass http://${BITCOIN_RPC_HOST}:${BITCOIN_RPC_PORT}/;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization "Basic ${BITCOIN_RPC_AUTH}";
+        proxy_set_header Content-Type "application/json";
+    }
+}
