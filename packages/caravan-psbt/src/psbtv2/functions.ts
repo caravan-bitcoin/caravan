@@ -98,7 +98,7 @@ export function parseDerivationPathNodesToBytes(path: string): Buffer {
  * separator (keyLen 0x00 byte).
  */
 export function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
-  const nextByte: Buffer = br.readBytes(1);
+  const nextByte = br.readBytes(1);
   if (nextByte.equals(PSBT_MAP_SEPARATOR)) {
     return;
   }
@@ -138,7 +138,9 @@ export function serializeMap(map: Map<Key, Value>, bw: BufferWriter): void {
 export function getPsbtVersionNumber(psbt: string | Buffer): number {
   const map = new Map<Key, Value>();
   const buf = bufferize(psbt);
-  const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length));
+  // BufferReader expects Buffer at runtime, but TypeScript dts generation is strict
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length) as any);
   readAndSetKeyPairs(map, br);
   return map.get(KeyType.PSBT_GLOBAL_VERSION)?.readUInt32LE(0) || 0;
 }
