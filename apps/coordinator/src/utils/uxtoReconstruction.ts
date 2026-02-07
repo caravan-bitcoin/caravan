@@ -1,9 +1,9 @@
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
-import { coin } from "@caravan/transactions";
+import { UTXO } from "@caravan/transactions";
 import { Slice } from "selectors/wallet";
 import { Coin } from "clients/transactions";
-import { getcoinFromCoin } from "hooks/coins";
+import { getUtxoFromCoin } from "hooks/utxos";
 import { createInputIdentifier, Input } from "./psbtUtils";
 
 /**
@@ -47,18 +47,6 @@ export interface ReconstructedCoin {
     change: Slice["change"];
   }
 }
-
-// export interface Reconstructedcoins {
-//   txid: string;
-//   index: number;
-//   amountSats: string;
-//   amount: string;
-//   confirmed: boolean;
-//   transactionHex: string;
-//   multisig: Slice["multisig"];
-//   bip32Path: Slice["bip32Path"];
-//   change: Slice["change"];
-// }
 
 /**
  * Derives a list of transaction IDs that are required to reconstruct specific coins.
@@ -377,7 +365,7 @@ export const buildCoinFromSpendingTransaction = (
   }
   const coinForConversion = caravancoin;
   try {
-    return getcoinFromCoin(coinForConversion);
+    return getUtxoFromCoin(coinForConversion);
   } catch (error) {
     console.error(
       "Failed to convert reconstructed coin to fees format:",
