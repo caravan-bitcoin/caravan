@@ -351,4 +351,9 @@ test.describe("Transaction Creation and Signing", () => {
       throw new Error(error);
     }
   });
+
+  test("should not allow preview transaction when fee rate is invalid", async ({ page }) => {
+  // TODO
+});
+
 });
