@@ -353,7 +353,18 @@ test.describe("Transaction Creation and Signing", () => {
   });
 
   test("should not allow preview transaction when fee rate is invalid", async ({ page }) => {
-  // TODO
+  const receiverAddress = testStateManager.getReceiver().address;
+
+    // Destination
+  await page.locator('input[name="destination"]').fill(receiverAddress);
+
+    // Amount
+  await page.locator('input[name="amount"]').fill("1");
+
+  await page.locator('input[name="fee_rate"]').fill("-1");
+  const previewButton = page.locator('button:has-text("Preview Transaction")');
+
+  await expect(previewButton).toBeDisabled();
 });
 
 });
