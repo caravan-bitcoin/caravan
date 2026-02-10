@@ -12,13 +12,12 @@
   "types": "./dist/index.d.ts",
   "files": [
     "./dist/index.js",
-    "./dist/index.d.ts",
-    "./dist/index.d.mts"
+    "./dist/index.d.ts"
   ],
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
+        "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       }
     }
