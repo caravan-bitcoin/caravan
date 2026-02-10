@@ -8,5 +8,8 @@ export default defineConfig({
     resolve: true,
   },
   clean: true,
+  outExtension({ format }) {
+    return { js: ".js" };
+  },
   esbuildPlugins: [polyfillNode({ polyfills: { crypto: false } })],
 });
