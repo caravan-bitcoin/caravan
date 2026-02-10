@@ -91,7 +91,10 @@ class HermitSignatureImporter extends React.Component<
     let path = "m";
     let pathData = Buffer.from(binPath as any);
     while (pathData.length > 0) {
-      const childNum = Buffer.from(pathData.slice(0, 4) as any).readUIntLE(0, 4);
+      const childNum = Buffer.from(pathData.slice(0, 4) as any).readUIntLE(
+        0,
+        4,
+      );
       path += this.childToPath(childNum);
 
       pathData = pathData.subarray(4) as any;
