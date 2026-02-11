@@ -1,4 +1,4 @@
-import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { bitcoinsToSatoshis, MultisigAddressType } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
 import { UTXO } from "@caravan/transactions";
 import { Slice } from "selectors/wallet";
@@ -35,17 +35,28 @@ import { createInputIdentifier, Input } from "./psbtUtils";
  * supporting advanced Bitcoin features like RBF.
  */
 
+/**
+ * Unified type that serves both as a Coin representation and contains
+ * all the metadata required to be transformed into a spendable UTXO.
+ */
 export interface ReconstructedCoin {
-  txid: string,
-  index: number, 
-  amount: string,
-  confirmed: boolean
-  txHex: string,
-  slice: {
-    multisig: Slice["multisig"];
-    bip32Path: Slice["bip32Path"];
-    change: Slice["change"];
-  }
+  txid: string;
+  vout: number;
+  value: string;  // amount in satoshis
+  prevTxHex: string;
+  address: string;
+  confirmed: boolean;
+
+  // Metadata extracted from Slice for PSBT signing
+  bip32Derivations: any[];
+  addressType: MultisigAddressType;
+  redeemScript: string;
+  witnessScript: string;
+
+  // Metadata for UI/Tracking
+  bip32Path: string;
+  change: boolean;
+  _pendingTxid?: string; // Internal flag to track which pending tx consumed this
 }
 
 /**
@@ -62,30 +73,26 @@ export interface ReconstructedCoin {
  * @param neededInputIds - Set of input identifiers (in `txid:vout` format) that need reconstruction.
  * @returns Array of unique transaction IDs (`txid`s) required for reconstruction.
  */
+
 export function extractNeededTransactionIds(
   pendingTransactions: TransactionDetails[],
   neededInputIds: Set<string>,
 ): string[] {
-  // Set used to track unique txids of interest
   const txidSet = new Set<string>(
     pendingTransactions.flatMap((tx) => {
       if (!Array.isArray(tx.vin)) return [];
 
-      return (
-        tx.vin
-          // we only keep entries with both txid & vout
-          .filter((input) => !!input.txid && input.vout !== undefined)
-          // we only keep those tx's whose "txid:vout" is in the needed set
-          .filter((input) =>
-            neededInputIds.has(createInputIdentifier(input.txid!, input.vout!)),
-          )
-          .map((input) => input.txid!)
-      );
+      return tx.vin
+        .filter((input) => !!input.txid && input.vout !== undefined)
+        .filter((input) =>
+          neededInputIds.has(createInputIdentifier(input.txid!, input.vout!)),
+        )
+        .map((input) => input.txid!);
     }),
   );
-
   return Array.from(txidSet);
 }
+
 /**
  * Utility function that reconstructs a single coin from transaction data.
  *
@@ -99,6 +106,8 @@ export function extractNeededTransactionIds(
  * @param walletSlices - All wallet addresses to verify ownership
  * @returns Reconstructed coin object or null if not owned by wallet
  */
+
+
 function reconstructSingleCoin(
   input: { 
     txid: string; 
@@ -123,31 +132,40 @@ function reconstructSingleCoin(
     return null;
   }
   //  Check if that address is owned by any of our wallet slices.
-  const walletSliceForThisAddress = walletSlices.find(
-    (slice) => slice.multisig?.address === address,
+  const slice = walletSlices.find(
+    (s) => s.multisig?.address === address,
   );
 
-  if (!walletSliceForThisAddress) {
+  if (!slice || !slice.multisig) {
     // If not, we skip it — it's not part of our wallet.
     return null;
   }
 
-  // Step 3: Build the reconstructed coin with all properties needed for signing
+  // Step 3: Extract Braid details (e.g., P2SH, P2WSH) to determine signing logic
+  const { addressType }: { addressType: MultisigAddressType } = JSON.parse(
+    slice.multisig.braidDetails
+  )
+
+  // Step 4: Build the reconstructed coin with all properties needed for signing
   return {
     // Basic Coin properties
     txid: input.txid,
-    index: input.vout,
-    // amountSats: bitcoinsToSatoshis(originalOutput.value.toString()),
-    amount: originalOutput.value.toString(),
+    vout: input.vout,
+    value: bitcoinsToSatoshis(originalOutput.value.toString()),
+    prevTxHex: originalTransactionHex,
+    address: address,
     confirmed: originalTransaction.status?.confirmed || false,
-    txHex: originalTransactionHex,
 
     // Wallet-specific
-    slice: {
-      multisig: walletSliceForThisAddress.multisig,
-      bip32Path: walletSliceForThisAddress.bip32Path,
-      change: walletSliceForThisAddress.change,
-    }
+    addressType,
+    bip32Derivations: slice.multisig.bip32Derivation,
+    redeemScript: slice.multisig.redeem.output,
+    witnessScript: slice.multisig.redeem.output,
+    multisig: slice.multisig,
+
+    // UI Metadata
+    bip32Path: slice.bip32Path,
+    change: slice.change
   };
 }
 
@@ -247,7 +265,7 @@ export function reconstructCoinsFromPendingTransactions(
  * @param reconstructedcoins - coins rebuilt from pending transactions (the RBF case)
  * @returns Complete array of inputs with all metadata needed for transaction signing
  */
-export function matchPsbtInputsTocoins(
+export function matchPsbtInputsToUtxos(
   inputIdentifiers: Set<string>,
   availableInputs: Input[] = [],
   reconstructedCoins: ReconstructedCoin[] = [],
@@ -285,13 +303,10 @@ export function matchPsbtInputsTocoins(
   // this new RBF PSBT wants to replace" and also prevent user from reconstructing any coin's given in PSBT.
   //
   reconstructedCoins.forEach(
-    (reconstructedcoin) => {
+    (coin) => {
     
       // Iterating over each Coin stored in reconstructedCoins
-      const coinIdentifier = createInputIdentifier(
-      reconstructedcoin.txid,
-      reconstructedcoin.index,
-    );
+      const coinIdentifier = createInputIdentifier(coin.txid, coin.vout);
 
     // Two conditions must be met:
     // 1. The PSBT actually wants this coin
@@ -302,7 +317,19 @@ export function matchPsbtInputsTocoins(
     if (psbtWantsThis && notAlreadyFound) {
       // The reconstructed coin should already have all the wallet metadata
       // (multisig, bip32Path, etc.) from the reconstruction process.
-      matchedInputs.push(reconstructedcoin.slice as Input);
+
+      /**
+       * Instead of casting the slice (which lacks txid/hex), 
+       * we transform the reconstructed coin into a valid UTXO/Input.
+       */
+
+      // 1. Convert our coin to a formal UTXO structure
+      const utxo = getUtxoFromCoin(coin)
+
+      // 2. Map the UTXO input type
+      // We use 'unknown' as the bridge to satisfy TS checks
+      const formattedInput = (utxo as unknown) as Input;
+      matchedInputs.push(formattedInput);
       alreadyFoundInputs.add(coinIdentifier);
     }
   });
@@ -338,42 +365,50 @@ export const buildCoinFromSpendingTransaction = (
   spendableOutputIndex: number,
   txHex: string,
   walletSlices: Slice[],
-): coin | null => {
+): UTXO | null => {
   if (!parentTransaction || spendableOutputIndex === undefined || !txHex) {
     return null;
   }
 
-  const input = {
-    txid: parentTransaction.txid,
-    vout: spendableOutputIndex,
-  };
-
-  const caravancoin = reconstructSingleCoin(
-    input,
+  const coin = reconstructSingleCoin(
+    {
+      txid: parentTransaction.txid,
+      vout: spendableOutputIndex,
+    },
     parentTransaction,
     txHex,
     walletSlices,
   );
 
-  // If reconstruction failed, this output doesn't belong to our wallet
-  if (!caravancoin) {
-    console.warn(
-      `Failed to reconstruct coin for output ${spendableOutputIndex} of transaction ${parentTransaction.txid}. ` +
-        `This output may not belong to the wallet or wallet slice data may be incomplete.`,
-    );
-    return null;
-  }
-  const coinForConversion = caravancoin;
+  if (!coin) return null
+
   try {
-    return getUtxoFromCoin(coinForConversion);
+    return getUtxoFromCoin(coin)
   } catch (error) {
-    console.error(
-      "Failed to convert reconstructed coin to fees format:",
-      error,
-    );
+    console.error("Failed to convert reconstructed coin to UTXO format:", error);
     return null;
   }
 };
+
+// If reconstruction failed, this output doesn't belong to our wallet
+//   if (!caravancoin) {
+//     console.warn(
+//       `Failed to reconstruct coin for output ${spendableOutputIndex} of transaction ${parentTransaction.txid}. ` +
+//         `This output may not belong to the wallet or wallet slice data may be incomplete.`,
+//     );
+//     return null;
+//   }
+//   const coinForConversion = caravancoin;
+//   try {
+//     return getUtxoFromCoin(coinForConversion);
+//   } catch (error) {
+//     console.error(
+//       "Failed to convert reconstructed coin to fees format:",
+//       error,
+//     );
+//     return null;
+//   }
+// };
 
 // Eliminating utxo to coin conversion method
 
