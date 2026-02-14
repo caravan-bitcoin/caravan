@@ -196,23 +196,28 @@ export const createCPFPTransaction = (options: CPFPOptions): string => {
    * is attractive for miners to include in a block.
    */
 
-  for (const utxo of availableInputs) {
-    if (
-      isCPFPFeeSatisfied(txAnalyzer, childTxTemplate) &&
-      childTxTemplate.needsChange
-    ) {
-      break; // Stop adding inputs once CPFP fee requirements and change requirements (to ensure we don't end up with dust Output) are met
-    }
-    // Skip if this UTXO is already added
-    if (
-      childTxTemplate.inputs.some(
-        (input) => input.txid === utxo.txid && input.vout === utxo.vout,
-      )
-    ) {
-      continue;
-    }
-    childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
+ for (const utxo of availableInputs) {
+
+  // Skip if already added
+  if (
+    childTxTemplate.inputs.some(
+      (input) => input.txid === utxo.txid && input.vout === utxo.vout
+    )
+  ) {
+    continue;
   }
+
+  // Add input
+  childTxTemplate.addInput(BtcTxInputTemplate.fromUTXO(utxo));
+
+  // Recalculate change after adding input
+  childTxTemplate.adjustChangeOutput();
+
+  // Check if combined fee rate is satisfied
+  if (isCPFPFeeSatisfied(txAnalyzer, childTxTemplate)) {
+    break;
+  }
+}
 
   // needsChange returns true if there is enough left over greater than dust.
   // Since we already added a zero amount output for change, it takes into account the full size of the tx.
