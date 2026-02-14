@@ -2287,6 +2287,101 @@ describe("PsbtV2.combine", () => {
     });
   });
 
+  describe("Signed input sequence change warning", () => {
+    /**
+     * Helper to build two PSBTs sharing the same unsigned transaction but with
+     * independently configurable sequences and signatures. Both PSBTs will be
+     * valid for the Combiner role.
+     */
+    function buildCombinablePair({
+      thisSequence,
+      otherSequence,
+      addSigToThis,
+    }: {
+      thisSequence: number;
+      otherSequence: number;
+      addSigToThis: boolean;
+    }) {
+      const txId = Buffer.from(
+        "c85f81844094f9f0eec1e41f8d63e0a99e9f73dc725d7319871c9c4121d90a0b",
+        "hex",
+      );
+      const script = Buffer.from(
+        "0014c430f64c4756da310dbd1a085572ef299926272c",
+        "hex",
+      );
+
+      const thisPsbt = new PsbtV2();
+      thisPsbt.addInput({ previousTxId: txId, outputIndex: 0 });
+      thisPsbt.addOutput({ amount: 1000, script });
+      thisPsbt.setInputSequence(0, thisSequence);
+
+      const otherPsbt = new PsbtV2();
+      otherPsbt.addInput({ previousTxId: txId, outputIndex: 0 });
+      otherPsbt.addOutput({ amount: 1000, script });
+      otherPsbt.setInputSequence(0, otherSequence);
+
+      if (addSigToThis) {
+        // Stub handleSighashType so addPartialSig doesn't throw on sighash
+        // validation.
+        thisPsbt.handleSighashType = vi.fn();
+        thisPsbt.addPartialSig(
+          0,
+          Buffer.from([0x01]),
+          Buffer.from([0x02]),
+        );
+      }
+
+      return { thisPsbt, otherPsbt };
+    }
+
+    it("should warn when the other PSBT changes the sequence on a signed input", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { thisPsbt, otherPsbt } = buildCombinablePair({
+        thisSequence: 0xfffffffd,
+        otherSequence: 0xffffffff,
+        addSigToThis: true,
+      });
+
+      thisPsbt.combine([otherPsbt]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Combined PSBT updated sequence on signed input 0",
+        ),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("should not warn when the other PSBT has the same sequence as a signed input", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { thisPsbt, otherPsbt } = buildCombinablePair({
+        thisSequence: 0xfffffffd,
+        otherSequence: 0xfffffffd,
+        addSigToThis: true,
+      });
+
+      thisPsbt.combine([otherPsbt]);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it("should not warn when the other PSBT changes the sequence on an unsigned input", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { thisPsbt, otherPsbt } = buildCombinablePair({
+        thisSequence: 0xfffffffd,
+        otherSequence: 0xffffffff,
+        addSigToThis: false,
+      });
+
+      thisPsbt.combine([otherPsbt]);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
   describe("isReadyForCombiner property", () => {
     it("should return true for a valid PSBTv2", () => {
       const psbt = new PsbtV2(BIP_370_VECTORS_VALID_PSBT[0].hex);
