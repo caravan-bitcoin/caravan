@@ -28,6 +28,7 @@ A set of utilities for working with PSBTs.
       - [`public addPartialSig`](#public-addpartialsig)
       - [`public removePartialSig`](#public-removepartialsig)
       - [`public setProprietaryValue`](#public-setproprietaryvalue)
+      - [`public combine`](#public-combine)
       - [`static PsbtV2.FromV0`](#static-psbtv2fromv0)
     - [`function getPsbtVersionNumber`](#function-getpsbtversionnumber)
 - [Concepts](#concepts)
@@ -196,6 +197,23 @@ Args:
 - `valueData` accepts bytes which will be written as the proprietary value.
 
 From the provided args, a key with the following format will be generated: `0xFC<compact uint identifier length><bytes identifier><bytes subtype><bytes subkeydata>`
+
+##### `public combine`
+
+Combines multiple PSBTs into this PsbtV2. This implements the Combiner role as defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#user-content-Roles).
+
+Args:
+
+- `psbts` - An array of `PsbtV2` instances to combine into this PSBT.
+
+Before combining, this method validates that:
+1. This PsbtV2 is ready for the Combiner role (`isReadyForCombiner` returns `true`).
+2. Each PSBT in the provided array is also ready for the Combiner role.
+3. All PSBTs represent the same unsigned transaction. This is determined by comparing transaction IDs after setting all input sequence numbers to 0 (per [BIP 370](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#unique-identification) unique identification rules).
+
+When combining, later PSBTs in the array take precedence over earlier ones. The combination merges all global, input, and output map key-value pairs. This operation is atomic—if any error occurs during combination, the original state is preserved.
+
+**Warning:** This method could potentially produce a PSBT in a bad state. For example, if a later PSBT has an input sequence without a signature, it could potentially invalidate signatures existing on this or earlier PSBTs in the list if the sequence numbers do not agree.
 
 ##### `static PsbtV2.FromV0`
 

@@ -813,10 +813,10 @@ export class PsbtV2 extends PsbtV2Maps {
    *   https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
    */
   public setInputSequence(inputIndex: number, sequence: number) {
-    // Check if the PSBT is ready for the Updater role
-    if (!this.isReadyForUpdater) {
+    // Check if the PSBT is ready for the Updater or Combiner role
+    if (!this.isReadyForUpdater && !this.isReadyForCombiner) {
       throw new Error(
-        "PSBT is not ready for the Updater role. Sequence cannot be changed.",
+        "PSBT is not ready for the Updater or Combiner role. Sequence cannot be changed.",
       );
     }
 
@@ -1433,5 +1433,84 @@ export class PsbtV2 extends PsbtV2Maps {
     const bw = new BufferWriter();
     bw.writeU8(this.outputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
+  }
+
+  /**
+   * Validates this PsbtV2 and the one it's being combined with are ready for
+   * the Combiner role. Also, the calculated unsigned transaction IDs of the two
+   * must be the same.
+   */
+  private validateCombine(psbt: PsbtV2) {
+    if (!this.isReadyForCombiner) {
+      throw Error("This PsbtV2 is not ready for Combiner role.");
+    }
+    if (!psbt.isReadyForCombiner) {
+      throw Error("Provided PsbtV2 is not ready for Combiner role.");
+    }
+
+    // Set both sequence numbers to 0 before comparing if the PSBTs match. See:
+    // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#unique-identification
+    // Allow tx version 1 for these temporary comparison instances since the
+    // original PSBTs have already been validated at construction time. If the
+    // versions don't agree, then the PSBT identities will differ.
+    const tempThis = new PsbtV2(this.serialize(), true);
+    const tempOther = new PsbtV2(psbt.serialize(), true);
+    for (const [index, sequence] of tempThis.PSBT_IN_SEQUENCE.entries()) {
+      if (sequence !== 0) {
+        tempThis.setInputSequence(index, 0);
+      }
+    }
+    for (const [index, sequence] of tempOther.PSBT_IN_SEQUENCE.entries()) {
+      if (sequence !== 0) {
+        tempOther.setInputSequence(index, 0);
+      }
+    }
+
+    // Now, compare unsigned transaction IDs for both PSBTs to see if the are
+    // the same PSBT.
+    const checkThis = new PsbtConversionMaps(tempThis.serialize());
+    const checkOther = new PsbtConversionMaps(tempOther.serialize());
+    if (checkThis.getTransactionId() !== checkOther.getTransactionId()) {
+      throw Error("Cannot combine PSBTs for different unsigned transactions.");
+    }
+
+    // Warn if combining would update the sequence on a signed input.
+    for (const [index, sequence] of this.PSBT_IN_SEQUENCE.entries()) {
+      const otherSequence = psbt.PSBT_IN_SEQUENCE[index];
+      if (
+        otherSequence !== sequence &&
+        this.PSBT_IN_PARTIAL_SIG[index].some((sig) => sig !== null)
+      ) {
+        console.warn(
+          `Combined PSBT updated sequence on signed input ${index}. ` +
+            "This may invalidate the existing signature.",
+        );
+      }
+    }
+  }
+
+  /**
+   * Combines multiple PsbtV2 objects into this one with the latest index taking
+   * precedence over earlier indices of the provided list. This action is
+   * atomic.
+   *
+   * WARNING: This method could potentially produce a PSBT in an bad state. For
+   * example, if a later PSBT has an input sequence without a signature, it
+   * could potentially invalidate signatures existing on this or earlier PSBTs
+   * in the list if the sequence numbers do not agree.
+   */
+  public combine(psbts: PsbtV2[]) {
+    for (const psbt of psbts) {
+      // Validate all first
+      this.validateCombine(psbt);
+    }
+    try {
+      for (const psbt of psbts) {
+        this.combineMaps(psbt);
+      }
+    } catch (error) {
+      console.error(error);
+      throw Error("Failed to combine PSBTs.");
+    }
   }
 }
