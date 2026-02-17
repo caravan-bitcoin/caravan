@@ -16,8 +16,8 @@
   },
   "homepage": "https://github.com/caravan-bitcoin/caravan",
   "engines": {
-    "node": ">=20.18.0 <21.0.0",
-    "npm": ">=10.5.0 <11.0.0"
+    "node": ">=20.18.0",
+    "npm": ">=10.5.0"
   },
   "overrides": {
     "jspdf": "2.5.1"
