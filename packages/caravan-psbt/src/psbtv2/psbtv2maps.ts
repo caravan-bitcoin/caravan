@@ -24,7 +24,7 @@ export abstract class PsbtV2Maps {
     }
 
     const buf = bufferize(psbt);
-    const br = new BufferReader(buf);
+    const br = new BufferReader(buf as any);
     if (!br.readBytes(PSBT_MAGIC_BYTES.length, true).equals(PSBT_MAGIC_BYTES)) {
       throw Error("PsbtV2 magic bytes are incorrect.");
     }
@@ -77,7 +77,8 @@ export abstract class PsbtV2Maps {
       serializeMap(map, bw);
     }
 
-    return bw.render().toString(format);
+    // Cast to silence dts build type errors
+    return (bw.render() as any).toString(format);
   }
 
   /**
@@ -107,7 +108,7 @@ export abstract class PsbtV2Maps {
   }
 
   private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
-    from.forEach((v, k) => to.set(k, Buffer.from(v)));
+    from.forEach((v, k) => to.set(k, Buffer.from(v as any)));
   }
 
   /**

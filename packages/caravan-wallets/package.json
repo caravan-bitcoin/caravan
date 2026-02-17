@@ -2,24 +2,32 @@
   "name": "@caravan/wallets",
   "version": "0.9.4",
   "description": "Unchained Capital's HWI Library",
+  "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
   "files": [
     "./dist/index.js",
     "./dist/index.mjs",
-    "./dist/index.d.ts"
+    "./dist/index.d.ts",
+    "./dist/index.d.mts"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets"
+    "url": "git+https://github.com/caravan-bitcoin/caravan.git",
+    "directory": "packages/caravan-wallets"
   },
   "author": "Unchained Capital",
   "license": "MIT",
