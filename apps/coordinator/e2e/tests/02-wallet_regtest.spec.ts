@@ -190,4 +190,47 @@ test.describe("Wallet Regtest Configuration", () => {
       throw new Error(`Error in wallet import: ${error}`);
     }
   });
+  test("should allow user to edit and save wallet name", async ({ page }) => {
+  try {
+    await page.goto("/#/wallet");
+    await expect(page).toHaveURL(/.*\/wallet/);
+
+    // Wallet name should be visible (display mode)
+    let nameDisplay = page.locator('[data-cy="editable-name-value"]').first();
+    await expect(nameDisplay).toBeVisible();
+
+    const originalName = (await nameDisplay.textContent())?.trim();
+    if (!originalName) {
+      throw new Error("Wallet name is empty or not found");
+    }
+
+    const newName = `${originalName}-renamed-${Date.now()}`;
+
+    // Enter edit mode
+    const editButton = page.locator('[data-cy="edit-button"]').first();
+    await editButton.click();
+
+    // Edit input visible
+    const nameInput = page.getByLabel("Name");
+    await expect(nameInput).toBeVisible();
+
+    await nameInput.fill(newName);
+
+    // Save change
+    const saveButton = page.locator('[data-cy="save-button"]').first();
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    // UI exits edit mode
+    await expect(nameInput).not.toBeVisible();
+    await expect(editButton).toBeVisible();
+
+    // Updated name shown in display mode
+    nameDisplay = page.locator('[data-cy="editable-name-value"]').first();
+    await expect(nameDisplay).toHaveText(newName);
+
+  } catch (error) {
+    throw new Error(`Error in wallet name editing: ${error}`);
+  }
+});
 });
