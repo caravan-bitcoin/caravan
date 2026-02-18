@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import { CircularProgress, Typography, Box } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
@@ -11,6 +12,7 @@ import {
 } from "../hooks";
 import { Transaction } from "../types";
 import { useGetClient } from "hooks/client";
+import { getWalletAddresses } from "selectors/wallet";
 
 interface Props {
   transactions: Transaction[];
@@ -29,6 +31,7 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
 }) => {
   const handleExplorerLinkClick = useHandleTransactionExplorerLinkClick();
   const client = useGetClient();
+  const walletAddresses = useSelector(getWalletAddresses);
 
   const { filterType, setFilterType, filteredTransactions, counts } =
     useTransactionFilter(transactions);
@@ -106,11 +109,14 @@ export const ConfirmedTransactionsView: React.FC<Props> = ({
         <>
           <TransactionTable
             transactions={Array.isArray(currentPageTxs) ? currentPageTxs : []}
+            rawTransactions={transactions}
             sortBy={sortBy}
             sortDirection={sortDirection}
             onSort={handleSort}
             showAcceleration={false} // Don't show acceleration for confirmed txs
+            expandable={true} // Enable expandable rows with flow diagram
             network={network}
+            walletAddresses={walletAddresses}
             onClickTransaction={onClickTransaction || handleExplorerLinkClick}
           />
 
