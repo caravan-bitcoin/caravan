@@ -1,26 +1,32 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { BlockchainClient, TransactionDetails } from "@caravan/clients";
 import {
-  getPendingTransactionIds,
   getWalletAddresses,
+  getSpentSlices,
   Slice,
+  SliceWithLastUsed,
+  WalletState,
   selectProcessedTransactions,
 } from "selectors/wallet";
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
+const MAX_TRANSACTIONS_TO_FETCH = 500;
+
 // Centralized query key factory for all transaction-related queries
 export const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
   pending: () => [...transactionKeys.all, "pending"] as const,
+  pendingHistory: () => [...transactionKeys.all, "pending", "history"] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
-  confirmedHistory: () => [...transactionKeys.all, "confirmed"] as const,
+  confirmedHistory: () =>
+    [...transactionKeys.all, "confirmed", "history"] as const,
 };
 
 // Service function for fetching transaction details
@@ -44,48 +50,6 @@ export const useFetchTransactionDetails = (txid: string) => {
   });
 };
 
-// Hook for fetching pending transaction IDs and their details
-// Service function for fetching pending transaction fees
-const fetchPendingTransactionFee = async (
-  txid: string,
-  client: BlockchainClient,
-) => {
-  if (!client) {
-    throw new Error("No blockchain client available");
-  }
-  return await client.getFeesForPendingTransaction(txid);
-};
-
-// Hook for fetching all pending transactions
-const useFetchPendingTransactions = () => {
-  const pendingTransactionIds = useSelector(getPendingTransactionIds);
-  const blockchainClient = useGetClient();
-
-  return useQueries({
-    queries: pendingTransactionIds.map((txid) => ({
-      queryKey: transactionKeys.tx(txid),
-      queryFn: async () => {
-        const transaction = await fetchTransactionDetails(
-          txid,
-          blockchainClient,
-        );
-
-        // If transaction doesn't have a fee, fetch it
-        if (!transaction.fee) {
-          const fee = await fetchPendingTransactionFee(txid, blockchainClient);
-          return {
-            ...transaction,
-            fee: Number(fee),
-          };
-        }
-
-        return transaction;
-      },
-      enabled: !!blockchainClient && !!txid,
-    })),
-  });
-};
-
 // Hook for fetching transactions with their hex data
 export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
@@ -106,58 +70,126 @@ export const useTransactionsWithHex = (txids: string[]) => {
 };
 
 // Basic hook for raw pending transactions (no processing)
-export const useRawPendingTransactions = () => {
+export const usePublicClientPendingTransactions = () => {
+  const blockchainClient = useGetClient();
+  const clientType = blockchainClient?.type;
+  const queryClient = useQueryClient();
+
   const walletAddresses = useSelector(getWalletAddresses);
-  const transactionQueries = useFetchPendingTransactions();
+  const spentSlices = useSelector(getSpentSlices) as SliceWithLastUsed[];
 
-  const isLoading = transactionQueries.some((query) => query.isLoading);
-  const error = transactionQueries.find((query) => query.error)?.error;
+  const currentAddresses = useMemo(() => {
+    const spentAddresses =
+      spentSlices
+        ?.map((slice: SliceWithLastUsed) => slice.multisig?.address)
+        .filter(Boolean) || [];
+    return walletAddresses.length > 0 ? walletAddresses : spentAddresses;
+  }, [walletAddresses, spentSlices]);
 
-  // Process transactions with calculated values and filter out confirmed ones
-  const pendingTransactions = transactionQueries
-    .filter((query) => query.data && !query.data.status?.confirmed)
-    .map((query) => query.data!);
+  useEffect(() => {
+    if (currentAddresses.length > 0 && clientType === "public") {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.pendingHistory(),
+      });
+    }
+  }, [currentAddresses.length, clientType, queryClient]);
 
-  const transactions = pendingTransactions.map((tx) => {
-    return {
-      ...tx,
-      valueToWallet: calculateTransactionValue(tx, walletAddresses),
-      isReceived:
-        tx.isReceived !== undefined
-          ? tx.isReceived
-          : calculateTransactionValue(tx, walletAddresses) > 0,
-    };
-  });
+  return useQuery({
+    queryKey: transactionKeys.pendingHistory(),
+    queryFn: async () => {
+      const rawTransactions =
+        await blockchainClient.getAddressTransactionHistory(
+          currentAddresses,
+          MAX_TRANSACTIONS_TO_FETCH,
+          0,
+        );
 
-  return {
-    transactions,
-    isLoading,
-    error,
-    refetch: () => {
-      transactionQueries.forEach((query) => query.refetch());
+      const pendingTx = selectProcessedTransactions(
+        rawTransactions,
+        walletAddresses,
+        "pending",
+      );
+
+      const seenTxids = new Set<string>();
+      const deduplicated = pendingTx.filter((tx) => {
+        if (seenTxids.has(tx.txid)) return false;
+        seenTxids.add(tx.txid);
+        return true;
+      });
+
+      return deduplicated.map((tx) => ({
+        ...tx,
+        valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      }));
     },
-  };
+    enabled:
+      !!blockchainClient &&
+      clientType === "public" &&
+      currentAddresses.length > 0,
+    staleTime: 10000, // 10 seconds
+    refetchInterval: 30000, // 30 seconds
+  });
 };
 
-// Hook for processed pending transactions - uses selector
-export const usePendingTransactions = () => {
+export const usePrivateClientPendingTransactions = () => {
+  const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
-  const rawPendingQuery = useRawPendingTransactions();
+  const clientType = blockchainClient?.type;
+  const queryClient = useQueryClient();
 
-  const transactions = useMemo(() => {
-    if (!rawPendingQuery.transactions) return [];
-    return selectProcessedTransactions(
-      rawPendingQuery.transactions,
-      walletAddresses,
-      "unconfirmed",
-    );
-  }, [rawPendingQuery.transactions, walletAddresses]);
+  useEffect(() => {
+    if (clientType === "private" && blockchainClient) {
+      queryClient.invalidateQueries({
+        queryKey: transactionKeys.pendingHistory(),
+      });
+    }
+  }, [walletAddresses.length, clientType, queryClient, blockchainClient]);
+
+  return useQuery({
+    queryKey: transactionKeys.pendingHistory(),
+    queryFn: async () => {
+      const rawTransactions =
+        await blockchainClient.getWalletTransactionHistory(
+          MAX_TRANSACTIONS_TO_FETCH,
+          0,
+        );
+
+      const pendingTx = selectProcessedTransactions(
+        rawTransactions,
+        walletAddresses,
+        "pending",
+      );
+
+      const seenTxids = new Set<string>();
+      const deduplicated = pendingTx.filter((tx) => {
+        if (seenTxids.has(tx.txid)) return false;
+        seenTxids.add(tx.txid);
+        return true;
+      });
+
+      return deduplicated.map((tx) => ({
+        ...tx,
+        valueToWallet: calculateTransactionValue(tx, walletAddresses),
+      }));
+    },
+    enabled: !!blockchainClient && clientType === "private",
+    staleTime: 10000,
+    refetchInterval: 30000,
+  });
+};
+
+export const usePendingTransactions = () => {
+  const clientType = useSelector((state: WalletState) => state.client.type);
+  const privateQuery = usePrivateClientPendingTransactions();
+  const publicQuery = usePublicClientPendingTransactions();
+
+  const query = clientType === "private" ? privateQuery : publicQuery;
 
   return {
-    transactions,
-    isLoading: rawPendingQuery.isLoading,
-    error: rawPendingQuery.error,
-    refetch: rawPendingQuery.refetch,
+    transactions: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 };
 
