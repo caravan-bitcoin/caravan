@@ -4,7 +4,6 @@
 "@caravan/build-plugins": patch
 "@caravan/bitcoin": patch
 "@caravan/clients": patch
-"@caravan/fees": patch
 "@caravan/health": patch
 "@caravan/psbt": patch
 "@caravan/wallets": patch
