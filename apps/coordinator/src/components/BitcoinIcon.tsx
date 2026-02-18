@@ -6,6 +6,7 @@ interface BitcoinIconProps {
   network:
     | typeof Network.MAINNET
     | typeof Network.TESTNET
+    | typeof Network.TESTNET4
     | typeof Network.REGTEST
     | typeof Network.SIGNET;
 }
