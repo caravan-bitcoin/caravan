@@ -190,4 +190,70 @@ test.describe("Wallet Regtest Configuration", () => {
       throw new Error(`Error in wallet import: ${error}`);
     }
   });
+
+ test("should extract wallet descriptors", async ({ page }) => {
+  try {
+    const modifiedWalletFile = testStateManager.getDownloadedWalletFile();
+
+    if (!fs.existsSync(modifiedWalletFile)) {
+      throw new Error(`File does not exist at path: ${modifiedWalletFile}`);
+    }
+
+    // 1. Load wallet
+    await page.goto("/#/wallet");
+    await page.setInputFiles("input#upload-config", modifiedWalletFile);
+    // 2. Wait for password input to be available and fill it
+    await page.locator("#bitcoind-password").fill(clientConfig.password);
+    
+    // Wait for connection to be confirmed (optional but ensures state is settled)
+    await expect(page.locator("text=Connection confirmed with password!")).toBeVisible({ timeout: 10000 });
+
+    // 3. Click Download Descriptors button to open menu
+    // This button sits in the WalletConfigInteractionButtons component
+    const downloadDescriptorsBtn = page.locator("button:has-text('Download Descriptors')");
+    await expect(downloadDescriptorsBtn).toBeVisible({ timeout: 20000 });
+    await downloadDescriptorsBtn.click();
+
+    // 4. Select JSON format
+    const jsonOption = page.getByRole("menuitem", {
+      name: /download json format/i,
+    });
+    await expect(jsonOption).toBeVisible({ timeout: 20000 });
+
+    // Prepare download BEFORE clicking the final option
+    const downloadPromise = page.waitForEvent("download");
+    
+    await jsonOption.click();
+
+    // 5. Read downloaded file
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+
+    if (!downloadPath) {
+      throw new Error("Download path is null");
+    }
+
+    const fileContent = fs.readFileSync(downloadPath, "utf-8");
+    const descriptors = JSON.parse(fileContent);
+
+    // 6. Validate content
+    expect(descriptors).toHaveProperty("receive");
+    expect(descriptors).toHaveProperty("change");
+    
+    // Check that descriptors are non-empty strings
+    expect(typeof descriptors.receive).toBe("string");
+    expect(typeof descriptors.change).toBe("string");
+    expect(descriptors.receive.length).toBeGreaterThan(0);
+    expect(descriptors.change.length).toBeGreaterThan(0);
+
+    // Verify they look like descriptors with checksums
+    expect(descriptors.receive).toMatch(/#([a-z0-9]{8})$/i);
+    expect(descriptors.change).toMatch(/#([a-z0-9]{8})$/i);
+
+    // Optional: check for specific template if we know it (e.g. sh(sortedmulti...))
+    expect(descriptors.receive).toContain("sortedmulti");
+  } catch (error) {
+    throw new Error(`Error in extracting wallet descriptors: ${error}`);
+  }
+});
 });
