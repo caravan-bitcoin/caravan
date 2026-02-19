@@ -83,7 +83,7 @@
     "@ledgerhq/hw-transport-u2f": "^5.34.0",
     "@ledgerhq/hw-transport-webusb": "6.29.8",
     "@trezor/connect-web": "^9.6.0",
-    "axios": "1.12.0",
+    "axios": "1.13.5",
     "bignumber.js": "^8.1.1",
     "bitbox-api": "^0.10.0",
     "bitcoinjs-lib": "^5.1.10",
