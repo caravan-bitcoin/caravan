@@ -67,5 +67,10 @@
   },
   "peerDependencies": {
     "@caravan/bitcoin": "0.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caravan-bitcoin/caravan",
+    "directory": "packages/caravan-psbt"
   }
 }
