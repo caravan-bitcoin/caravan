@@ -19,7 +19,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/caravan-bitcoin/caravan/packages/caravan-bitcoin"
+    "url": "https://github.com/caravan-bitcoin/caravan",
+    "directory": "packages/caravan-bitcoin"
   },
   "author": "Unchained Capital",
   "license": "MIT",
