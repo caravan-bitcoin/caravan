@@ -750,6 +750,10 @@ export function ConfigAdapter({
         walletConfig,
       });
     }
+    case BCUR2:
+      return new ColdcardMultisigWalletConfig({
+        jsonConfig,
+      });
     case COLDCARD:
       return new ColdcardMultisigWalletConfig({
         jsonConfig,

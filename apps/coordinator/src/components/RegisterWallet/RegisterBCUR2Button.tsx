@@ -2,8 +2,8 @@ import React, { useMemo, useState } from "react";
 import { Button } from "@mui/material";
 import { useSelector } from "react-redux";
 import {
+  BCUR2,
   BCUR2Encoder,
-  COLDCARD,
   ColdcardMultisigWalletConfig,
   ConfigAdapter,
   MultisigWalletConfig,
@@ -13,13 +13,18 @@ import { BCUR2Encoder as BCUR2Display } from "../BCUR2";
 
 export const getColdcardConfig = (walletConfig: MultisigWalletConfig) => {
   const interaction = ConfigAdapter({
-    KEYSTORE: COLDCARD,
+    KEYSTORE: BCUR2,
     jsonConfig: walletConfig,
   });
   return (interaction as ColdcardMultisigWalletConfig).adapt();
 };
 
-export const RegisterBCUR2Button = ({ ...otherProps }) => {
+export const RegisterBCUR2Button = ({
+  title = "Register w/ BCUR2",
+  ...otherProps
+}: {
+  title: string;
+}) => {
   const [isActive, setIsActive] = useState(false);
   const walletConfig = useSelector(getWalletConfig);
 
@@ -44,7 +49,7 @@ export const RegisterBCUR2Button = ({ ...otherProps }) => {
         disabled={isActive}
         {...otherProps}
       >
-        Register w/ BCUR2
+        {title}
       </Button>
     </>
   );

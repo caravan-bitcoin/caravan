@@ -43,6 +43,7 @@ import InteractionMessages from "../InteractionMessages";
 import { slicePropTypes } from "../../proptypes";
 import { getWalletConfig } from "../../selectors/wallet";
 import { BCUR2Encoder } from "../BCUR2";
+import { RegisterBCUR2Button } from "../RegisterWallet/RegisterBCUR2Button";
 
 const TEXT = "text";
 
@@ -339,6 +340,7 @@ const ConfirmAddress = ({ slice, network }) => {
         qrCodeFrames={[`bitcoin:${slice.multisig.address}`]}
         title="Scan QR on Device to Confirm Address"
         instructions="Use your BCUR2-compatible wallet to scan the QR code and confirm the address on your device."
+        childActions={<RegisterBCUR2Button />}
       />
     </Grid>
   );
