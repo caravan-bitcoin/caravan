@@ -28,6 +28,8 @@ interface BCUR2EncoderProps {
   autoPlay?: boolean;
   initialInterval?: number;
   qrSize?: number;
+  instructions?: string;
+  childActions?: React.ReactNode;
 }
 
 /**
@@ -42,6 +44,8 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
   autoPlay = true,
   initialInterval = 1000,
   qrSize = 256,
+  instructions = "Scan these QR codes with your signing device to sign the transaction.",
+  childActions = null,
 }) => {
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
@@ -330,14 +334,14 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
           {/* Instructions */}
           <Box textAlign="center" maxWidth={400}>
             <Typography variant="body1" gutterBottom>
-              Scan these QR codes with your signing device to sign the
-              transaction.
+              {instructions}
             </Typography>
           </Box>
         </Box>
       </DialogContent>
 
       <DialogActions>
+        {childActions}
         <Button onClick={onClose} color="primary">
           Close
         </Button>

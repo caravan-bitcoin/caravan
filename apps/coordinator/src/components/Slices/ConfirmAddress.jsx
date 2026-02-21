@@ -25,6 +25,7 @@ import {
 } from "@caravan/bitcoin";
 import {
   JADE,
+  BCUR2,
   BITBOX,
   TREZOR,
   LEDGER,
@@ -41,6 +42,8 @@ import InteractionMessages from "../InteractionMessages";
 
 import { slicePropTypes } from "../../proptypes";
 import { getWalletConfig } from "../../selectors/wallet";
+import { BCUR2Encoder } from "../BCUR2";
+import { RegisterBCUR2Button } from "../RegisterWallet/RegisterBCUR2Button";
 
 const TEXT = "text";
 
@@ -101,6 +104,7 @@ const ConfirmAddress = ({ slice, network }) => {
     initialInteractionState,
   );
   const [interaction, setInteraction] = useState(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const addressType = multisigAddressType(slice.multisig);
   const requiredSigners = multisigRequiredSigners(slice.multisig);
@@ -195,8 +199,14 @@ const ConfirmAddress = ({ slice, network }) => {
   }
 
   async function confirmOnDevice() {
-    dispatch({ type: "SET_ACTIVE" });
     const { multisig } = slice;
+
+    if (state.deviceType === BCUR2) {
+      setQrModalOpen(true);
+      return;
+    }
+
+    dispatch({ type: "SET_ACTIVE" });
     try {
       let confirmed = await interaction.run();
       if (
@@ -242,6 +252,7 @@ const ConfirmAddress = ({ slice, network }) => {
               <MenuItem value={JADE}>Jade</MenuItem>
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
+              <MenuItem value={BCUR2}>BCUR2</MenuItem>
               <MenuItem value={COLDCARD} disabled>
                 Coldcard
               </MenuItem>
@@ -323,6 +334,19 @@ const ConfirmAddress = ({ slice, network }) => {
           )}
         </>
       )}
+      <BCUR2Encoder
+        open={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        qrCodeFrames={
+          new ConfirmMultisigAddress({
+            keystore: BCUR2,
+            multisig: slice.multisig,
+          }).request().qrCodeFrames
+        }
+        title="Scan QR on Device to Confirm Address"
+        instructions="Use your BCUR2-compatible wallet to scan the QR code and confirm the address on your device."
+        childActions={<RegisterBCUR2Button />}
+      />
     </Grid>
   );
 };
