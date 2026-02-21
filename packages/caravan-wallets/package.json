@@ -1,6 +1,6 @@
 {
   "name": "@caravan/wallets",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Unchained Capital's HWI Library",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +19,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/caravan-bitcoin/caravan/packages/caravan-wallets"
+    "url": "https://github.com/caravan-bitcoin/caravan",
+    "directory": "packages/caravan-wallets"
   },
   "author": "Unchained Capital",
   "license": "MIT",
