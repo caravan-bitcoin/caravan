@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
+import { Psbt } from "bitcoinjs-lib";
 import {
   getWalletSlices,
   Slice,
@@ -22,95 +23,108 @@ import { useGetClient } from "hooks/client";
 import { TransactionDetails } from "@caravan/clients";
 import {
   extractNeededTransactionIds,
-  reconstructUtxosFromPendingTransactions,
-  ReconstructedUtxos,
+  reconstructCoinsFromPendingTransactions,
+  ReconstructedCoin,
   matchPsbtInputsToUtxos,
-} from "utils/uxtoReconstruction";
-import { Psbt } from "bitcoinjs-lib";
+} from "utils/utxoReconstruction";
 import { getInputIdentifiersFromPsbt } from "utils/psbtUtils";
 
-/*
- * need to create a function that given a coin and a slice returns a utxo that can be used
- * to create a new transcation. a utxo needs to have:
- * - txid
- * - vout
- * - value
- * - prevTxHex
- * - nonWitnessUtxo
- * - witnessUtxo (script, value if segwit)
- * - bip32Derivations (array of objects with pubkey, masterFingerprint, path)
- * - witnessScript (script if segwit)
- * - redeemScript (script if p2sh)
- * - sequence number (optional)
+/**
+ * Converts a ReconstructedCoin to a UTXO format compatible with @caravan/transactions.
+ *
+ * This function takes a coin that has been reconstructed from transaction data and
+ * transforms it into the UTXO format required for PSBT signing. The specific fields
+ * included depend on the address type (P2SH, P2WSH, or P2SH-P2WSH).
+ *
+ * @param coin - The reconstructed coin with all necessary metadata
+ * @returns A properly formatted UTXO object ready for transaction signing
+ * @throws Error if the address type is unsupported
  */
-export const getUtxoFromCoin = (coin: Coin): UTXO => {
-  const { slice } = coin;
-  if (!slice) {
-    throw new Error("Slice not found in coin");
-  }
-  const { addressType }: { addressType?: MultisigAddressType } = JSON.parse(
-    slice.multisig.braidDetails,
-  );
-
-  if (!addressType) {
-    throw new Error("Address type not found in braid details");
-  }
-
+export const getUtxoFromCoin = (coin: ReconstructedCoin): UTXO => {
   const baseUtxo = {
-    txid: coin.prevTxId,
+    txid: coin.txid,
     vout: coin.vout,
+    index: coin.vout,
     value: coin.value,
+    amountSats: coin.value,
     prevTxHex: coin.prevTxHex,
-    bip32Derivations: slice.multisig.bip32Derivation,
+    transactionHex: coin.prevTxHex,
+    confirmed: coin.confirmed,
+    bip32Derivations: coin.bip32Derivations,
+
+    // Wallet metadata to satisfy the 'Input' type
+    multisig: coin.multisig,
+    bip32Path: coin.bip32Path,
+    change: coin.change,
   };
+
   const nonWitnessUtxo = Buffer.from(coin.prevTxHex, "hex");
   const witnessUtxo = {
-    script: slice.multisig.redeem.output,
+    script: Buffer.from(coin.witnessScript, "hex"),
     value: parseInt(coin.value),
   };
-  const redeemScript = slice.multisig.redeem.output;
-  const witnessScript = slice.multisig.redeem.output;
-  switch (addressType) {
+
+  switch (coin.addressType) {
     case P2SH:
       return {
         ...baseUtxo,
         nonWitnessUtxo,
-        redeemScript,
-      };
+        redeemScript: Buffer.from(coin.redeemScript, "hex"),
+      } as UTXO;
     case P2WSH:
       return {
         ...baseUtxo,
-        witnessScript,
+        witnessScript: Buffer.from(coin.witnessScript, "hex"),
         witnessUtxo,
-      };
+      } as UTXO;
     case P2SH_P2WSH:
       return {
         ...baseUtxo,
         nonWitnessUtxo,
-        redeemScript,
-        witnessScript,
-      };
+        redeemScript: Buffer.from(coin.redeemScript, "hex"),
+        witnessScript: Buffer.from(coin.witnessScript, "hex"),
+        witnessUtxo,
+      } as UTXO;
     default:
-      throw new Error(`Unsupported address type: ${addressType}`);
+      throw new Error(`Unsupported address type: ${coin.addressType}`);
   }
 };
 
-// This is useful for flattening the utxos from a wallet into a list of coins
-const getCoinFromSliceUtxos = (slice: Slice): Coin[] => {
-  return slice.utxos.map((utxo: SliceUTXO) => {
-    return {
-      prevTxId: utxo.txid,
-      vout: utxo.index,
-      address: slice.multisig.address,
-      value: utxo.amountSats,
-      prevTxHex: utxo.transactionHex,
-      slice,
-    };
-  });
+/**
+ * Converts a wallet slice's UTXOs to ReconstructedCoin format.
+ *
+ * This flattens the UTXO data from a slice and enriches it with wallet metadata
+ * needed for transaction signing. Useful for getting all spendable coins from a wallet.
+ *
+ * @param slice - A wallet slice containing UTXOs and multisig information
+ * @returns Array of reconstructed coins from this slice
+ */
+const getCoinFromSliceUtxos = (slice: Slice): ReconstructedCoin[] => {
+  const { addressType } = JSON.parse(slice.multisig.braidDetails);
+
+  return slice.utxos.map((utxo: SliceUTXO) => ({
+    txid: utxo.txid,
+    vout: utxo.index,
+    value: utxo.amountSats,
+    prevTxHex: utxo.transactionHex,
+    address: slice.multisig.address,
+    confirmed: utxo.confirmed,
+
+    // Signing metadata
+    addressType,
+    bip32Derivations: slice.multisig.bip32Derivation,
+    redeemScript: slice.multisig.redeem.output,
+    witnessScript: slice.multisig.redeem.output,
+
+    // Wallet metadata
+    multisig: slice.multisig,
+    bip32Path: slice.bip32Path,
+    change: slice.change,
+  }));
 };
 
 /**
- * Efficiently combines and deduplicates UTXOs from multiple sources for fee bumping
+ * Efficiently combines and deduplicates UTXOs from multiple sources for fee bumping.
  *
  * This function merges UTXOs from pending transactions (required for RBF) with
  * additional wallet UTXOs (available for adding inputs). It uses an optimized
@@ -126,12 +140,6 @@ const getCoinFromSliceUtxos = (slice: Slice): Coin[] => {
  *
  * @performance Uses Set-based deduplication for O(1) lookup performance
  * @performance Processes UTXOs in single pass for optimal memory usage
- *
- * @example
- * const combinedUtxos = extractSpendableUtxos(
- *   pendingTransactionUtxos, // From usePendingUtxos hook
- *   availableWalletUtxos     // From useWalletUtxos hook
- * );
  */
 export const extractSpendableUtxos = (
   pendingUtxos: UTXO[],
@@ -185,7 +193,7 @@ export const usePendingUtxos = (txid: string) => {
       setIsLoading(true);
       fetchTransactionCoins(txid, client)
         .then(setCoins)
-        .catch(setIsError)
+        .catch(() => setIsError(true))
         .finally(() => setIsLoading(false));
     }
   }, [client, txid]);
@@ -195,7 +203,7 @@ export const usePendingUtxos = (txid: string) => {
       return [];
     }
 
-    // Build lookup map and process coins in one chain
+    // Build lookup map for efficient slice finding
     const addressToSlice = new Map<string, Slice>(
       walletSlices.map((slice) => [slice.multisig.address, slice]),
     );
@@ -203,8 +211,27 @@ export const usePendingUtxos = (txid: string) => {
     return Array.from(coins.values())
       .filter((coin) => addressToSlice.has(coin.address))
       .map((coin) => {
-        coin.slice = addressToSlice.get(coin.address);
-        return getUtxoFromCoin(coin);
+        const slice = addressToSlice.get(coin.address)!;
+        const { addressType } = JSON.parse(slice.multisig.braidDetails);
+
+        // Construct the unified type for pending tx inputs
+        const reconstructedCoin: ReconstructedCoin = {
+          txid: coin.prevTxId,
+          vout: coin.vout,
+          value: coin.value,
+          prevTxHex: coin.prevTxHex,
+          address: coin.address,
+          confirmed: false, // Pending inputs are by definition unconfirmed
+          addressType,
+          bip32Derivations: slice.multisig.bip32Derivation,
+          redeemScript: slice.multisig.redeem.output,
+          witnessScript: slice.multisig.redeem.output,
+          multisig: slice.multisig,
+          bip32Path: slice.bip32Path,
+          change: slice.change,
+        };
+
+        return getUtxoFromCoin(reconstructedCoin);
       });
   }, [coins, walletSlices]);
 
@@ -212,16 +239,30 @@ export const usePendingUtxos = (txid: string) => {
 };
 
 /**
- * @description Returns all the utxos from the current wallet.
- * Use with usePendingUtxos to get all available coins/utxos
+ * Returns all the UTXOs from the current wallet.
+ *
+ * Use with usePendingUtxos to get all available coins/UTXOs
  * that can be used in a fee bumping transaction.
- * @returns The utxos from the wallet
+ *
+ * @returns Array of UTXOs from all wallet slices
  */
-export const useWalletUtxos = () => {
+export const useWalletUtxos = (): UTXO[] => {
   const walletSlices = useSelector(getWalletSlices);
   return walletSlices.flatMap(getCoinFromSliceUtxos).map(getUtxoFromCoin);
 };
 
+/**
+ * Returns available UTXOs for a given transaction, combining pending and wallet UTXOs.
+ *
+ * This hook is useful for fee bumping scenarios where you need both the UTXOs
+ * from a pending transaction and additional wallet UTXOs.
+ *
+ * @param transaction - Optional transaction to get pending UTXOs for
+ * @returns Object containing:
+ *   - `availableUtxos`: Combined and deduplicated UTXOs
+ *   - `isLoading`: Whether data is still being fetched
+ *   - `isError`: Whether an error occurred
+ */
 export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
   const {
     utxos: pendingUtxos,
@@ -268,21 +309,12 @@ export const useGetAvailableUtxos = (transaction?: TransactionDetails) => {
  * 3. **Fetch**: Get the original transactions that created those UTXOs
  * 4. **Reconstruct**: Build complete UTXO objects with wallet metadata for signing
  *
- * ## Example Scenario:
- * ```
- * 1. You have UTXO A (txid:123, vout:0) in your wallet
- * 2. You create pending Transaction X that spends UTXO A
- * 3. Bitcoin Core hides UTXO A from listunspent (since it's "spent" by pending TX X)
- * 4. Someone gives you a PSBT that also wants to spend UTXO A (for RBF)
- * 5. This hook finds UTXO A by looking at what Transaction X consumed
- * 6. Returns reconstructed UTXO A ready for the new PSBT signing
- * ```
- *
  * @param pendingTransactions - Unconfirmed transactions currently in the wallet
  * @param allSlices - Wallet metadata (used to identify UTXO ownership and get signing info)
  * @param neededInputIds - Set of `txid:vout` strings representing specific UTXOs to reconstruct
  * @returns An object containing:
  *   - `utxos`: Array of reconstructed UTXO objects with wallet metadata
+ *   - `hasPendingInputs`: Whether any of the needed inputs were found in pending transactions
  *   - `isLoading`: Indicates if transaction data is still being fetched
  *   - `error`: Any error encountered during transaction retrieval
  */
@@ -304,7 +336,7 @@ export const useReconstructedUtxos = (
   const { reconstructedUtxos, hasPendingInputs } = useMemo(() => {
     if (transactionQueries.some((q) => q.isLoading)) {
       return {
-        reconstructedUtxos: [] as ReconstructedUtxos[],
+        reconstructedUtxos: [],
         hasPendingInputs: false,
       };
     }
@@ -315,7 +347,7 @@ export const useReconstructedUtxos = (
         .map((q) => [q.data!.txid, q.data!]),
     );
 
-    return reconstructUtxosFromPendingTransactions(
+    return reconstructCoinsFromPendingTransactions(
       pendingTransactions,
       txLookup,
       allSlices,
@@ -332,16 +364,26 @@ export const useReconstructedUtxos = (
 };
 
 /**
- * Custom hook to handle PSBT input resolution and reconstruction of UTXO's
- * @param  parsedPsbt - The parsed PSBT object
- * @returns  Contains allInputs, isRbfPSBT, loading/error states
+ * Custom hook to handle PSBT input resolution and reconstruction of UTXOs.
+ *
+ * This is the main hook for resolving all inputs needed to sign a PSBT. It handles
+ * both normal PSBTs (where inputs are available in the wallet) and RBF PSBTs (where
+ * inputs need to be reconstructed from pending transactions).
+ *
+ * @param parsedPsbt - The parsed PSBT object
+ * @returns Object containing:
+ *   - `allInputs`: All resolved inputs ready for signing
+ *   - `hasPendingInputs`: Whether any inputs came from pending transactions (indicates RBF)
+ *   - `reconstructionLoading`: Whether reconstruction is still in progress
+ *   - `reconstructionError`: Any error that occurred during reconstruction
+ *   - `psbtInputIdentifiers`: Set of all input identifiers in the PSBT
+ *   - `missingInputIds`: Set of input identifiers not found in the wallet
  */
 export const usePsbtInputs = (parsedPsbt: Psbt) => {
   const allSlices = useSelector(getWalletSlices);
 
   const psbtInputIdentifiers = useMemo(
-    () =>
-      parsedPsbt ? getInputIdentifiersFromPsbt(parsedPsbt) : new Set<string>(),
+    () => (parsedPsbt ? getInputIdentifiersFromPsbt(parsedPsbt) : new Set<string>()),
     [parsedPsbt],
   );
 
