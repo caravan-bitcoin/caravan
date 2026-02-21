@@ -337,7 +337,12 @@ const ConfirmAddress = ({ slice, network }) => {
       <BCUR2Encoder
         open={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        qrCodeFrames={[`bitcoin:${slice.multisig.address}`]}
+        qrCodeFrames={
+          new ConfirmMultisigAddress({
+            keystore: BCUR2,
+            multisig: slice.multisig,
+          }).request().qrCodeFrames
+        }
         title="Scan QR on Device to Confirm Address"
         instructions="Use your BCUR2-compatible wallet to scan the QR code and confirm the address on your device."
         childActions={<RegisterBCUR2Button />}
