@@ -40,10 +40,18 @@ export default defineConfig({
     },
 
     // Phase 3: Behavioral tests (depend on setup completing)
+    // Display verification runs BEFORE transactions spend funds
     {
-      name: "wallet-tests",
-      testMatch: /wallet-display|transaction-flow/,
+      name: "wallet-display",
+      testMatch: "wallet-display.spec.ts",
       dependencies: ["wallet-setup"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Transaction tests run AFTER display verification
+    {
+      name: "wallet-transactions",
+      testMatch: "transaction-flow.spec.ts",
+      dependencies: ["wallet-display"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],
