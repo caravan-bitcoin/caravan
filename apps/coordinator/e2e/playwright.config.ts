@@ -25,33 +25,30 @@ export default defineConfig({
   },
 
   projects: [
-    // Phase 1: Smoke tests (no external dependencies)
     {
       name: "smoke",
-      testMatch: "smoke.spec.ts",
+      testMatch: /\.smoke\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
-
-    // Phase 2: Infrastructure setup
     {
       name: "wallet-setup",
       testMatch: "wallet.setup.ts",
       use: { ...devices["Desktop Chrome"] },
     },
-
-    // Phase 3: Behavioral tests (depend on setup completing)
-    // Display verification runs BEFORE transactions spend funds
     {
-      name: "wallet-display",
-      testMatch: "wallet-display.spec.ts",
+      // Phase 1: Read-only tests that verify wallet state
+      // These expect the wallet to be untouched (8 BTC, 4 addresses, etc.)
+      name: "verify-wallet",
+      testMatch: /\.verify\.spec\.ts$/,
       dependencies: ["wallet-setup"],
       use: { ...devices["Desktop Chrome"] },
     },
-    // Transaction tests run AFTER display verification
     {
-      name: "wallet-transactions",
-      testMatch: "transaction-flow.spec.ts",
-      dependencies: ["wallet-display"],
+      // Phase 2: Tests that modify wallet state (send transactions, fee bumps)
+      // These run after verification because they change balances
+      name: "mutate-wallet",
+      testMatch: /\.mutate\.spec\.ts$/,
+      dependencies: ["verify-wallet"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

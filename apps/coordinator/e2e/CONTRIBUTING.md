@@ -126,6 +126,53 @@ await page.waitForFunction(() => {
 
 ---
 
+## Test File Naming Convention
+
+The Playwright config uses filename patterns to determine execution order.
+Choose the correct suffix when creating a new test file:
+
+| Suffix | When to Use | Example |
+|--------|------------|---------|
+| `.smoke.spec.ts` | Test does not require a funded wallet | `connection.smoke.spec.ts` |
+| `.verify.spec.ts` | Test only READS wallet state (addresses, balances, UI display) | `receive-tab.verify.spec.ts` |
+| `.mutate.spec.ts` | Test MODIFIES wallet state (sends transactions, fee bumps) | `cpfp.mutate.spec.ts` |
+
+Execution order: smoke → wallet-setup → verify → mutate
+
+The Playwright config matches these patterns with regexes.
+You do NOT need to modify playwright.config.ts when adding a new test file.
+Just pick the right suffix.
+
+### How to decide: verify or mutate?
+
+Eg: Ask -> "After my test runs, is the wallet balance different?"
+
+- No  → `.verify.spec.ts`
+- Yes → `.mutate.spec.ts`
+
+Use a **phase prefix** so files sort naturally in the IDE alongside the `testMatch` patterns we already have , Eg:
+
+```
+apps/coordinator/e2e/tests
+├── 0-smoke.smoke.spec.ts
+├── 1-wallet.setup.ts
+├── 2-wallet-display.verify.spec.ts
+├── 2-address-generation.verify.spec.ts
+├── 3-transaction-send.mutate.spec.ts
+├── 3-fee-bump-rbf.mutate.spec.ts
+└── 3-fee-bump-cpfp.mutate.spec.ts
+```
+
+The pattern is: **`{phase}-{feature}.{category}.spec.ts`**
+
+| Phase | Category | `testMatch` | Purpose |
+|-------|----------|-------------|---------|
+| `0-` | `.smoke.spec.ts` | `/\.smoke\.spec\.ts$/` | App loads, basic health |
+| `1-` | `.setup.ts` | `wallet.setup.ts` | Wallet import, fund addresses |
+| `2-` | `.verify.spec.ts` | `/\.verify\.spec\.ts$/` | Read-only assertions (balances, addresses, UTXO display) |
+| `3-` | `.mutate.spec.ts` | `/\.mutate\.spec\.ts$/` | State-changing ops (sends, fee bumps) |
+
+
 ## Future: data-testid Attributes
 
 When modifying React components that E2E tests interact with, add
