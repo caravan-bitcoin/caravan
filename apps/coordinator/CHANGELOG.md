@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.18.3
+
+### Patch Changes
+
+- [#445](https://github.com/caravan-bitcoin/caravan/pull/445) [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653), [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653)]:
+  - @caravan/bip32@1.0.4
+  - @caravan/bitcoin@0.4.5
+  - @caravan/clients@1.0.3
+  - @caravan/health@1.0.1
+  - @caravan/psbt@2.1.0
+  - @caravan/wallets@0.9.5
+  - @caravan/typescript-config@0.0.2
+
 ## 1.18.2
 
 ### Patch Changes
