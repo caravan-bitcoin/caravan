@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { connect, useSelector } from "react-redux";
-import BigNumber from "bignumber.js";
-import { satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Button,
   Box,
@@ -12,29 +10,22 @@ import {
   Chip,
   Typography,
   Paper,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Edit as EditIcon,
-  WarningAmber,
 } from "@mui/icons-material";
-import UTXOSet from "../ScriptExplorer/UTXOSet";
 import { downloadFile } from "../../utils";
 import UnsignedTransaction from "../UnsignedTransaction";
 import {
   finalizeOutputs as finalizeOutputsAction,
   setChangeOutputMultisig as setChangeOutputMultisigAction,
+  SPEND_STEP_PREVIEW,
 } from "../../actions/transactionActions";
 import FingerprintingAnalysis from "../FingerprintingAnalysis";
 import { TransactionAnalysis } from "./TransactionAnalysis";
-import { walletFingerprintAnalysis } from "../../utils/privacyUtils";
+import TransactionFlowDiagram from "./TransactionFlowDiagram";
 
 /**
  * Custom hook to get current signing state
@@ -193,9 +184,28 @@ class TransactionPreview extends React.Component {
     downloadFile(psbtData, "transaction.psbt");
   }
 
+  getTransactionStatus() {
+    const { signatureImporters, requiredSigners, broadcasting, txid } =
+      this.props;
+
+    if (broadcasting) return "broadcast-pending";
+    if (txid && txid.length > 0) return "unconfirmed";
+
+    const rs = requiredSigners || 0;
+    const signedCount = signatureImporters
+      ? Object.values(signatureImporters).filter(
+          (importer) => importer?.finalized && importer?.signature?.length > 0,
+        ).length
+      : 0;
+
+    const isFullySigned = signedCount >= rs && rs > 0;
+    const hasPartial = signedCount > 0 && signedCount < rs;
+
+    return isFullySigned ? "ready" : hasPartial ? "partial" : "draft";
+  }
+
   render() {
     const {
-      feeRate,
       fee,
       inputsTotalSats,
       editTransaction,
@@ -203,23 +213,8 @@ class TransactionPreview extends React.Component {
       unsignedPSBT,
       inputs,
       outputs,
+      spendingStep,
     } = this.props;
-
-    // Get wallet script type for fingerprint analysis
-    const walletScriptType = this.props.addressType || "";
-    const outputsForAnalysis = (outputs || []).map((o) => ({
-      scriptType: o.scriptType,
-      amount: o.amount, // BTC as string/number
-      address: o.address,
-    }));
-    const fingerprint = walletFingerprintAnalysis(
-      outputsForAnalysis,
-      walletScriptType,
-    );
-    const fingerprintMsg =
-      fingerprint.reason ||
-      "This output matches your wallet's address type and is likely to be identified as change by on-chain observers.";
-    const tooltipSx = { verticalAlign: "middle" };
 
     return (
       <Box>
@@ -230,81 +225,20 @@ class TransactionPreview extends React.Component {
         {/* Signature Status Section */}
         <SignatureStatus />
 
-        <UnsignedTransaction />
-
-        <h3>Inputs</h3>
-        <UTXOSet
-          inputs={inputs || []}
-          inputsTotalSats={inputsTotalSats}
-          showSelection={false}
-          finalizedOutputs
-        />
-        <h3>Outputs</h3>
-        <Box mb={2}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Address</TableCell>
-                <TableCell>Amount (BTC)</TableCell>
-                <TableCell>Script Type</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {outputs &&
-                outputs.map((output, idx) => {
-                  const isPoisoned =
-                    fingerprint.hasWalletFingerprinting &&
-                    fingerprint.poisonedOutputIndex === idx;
-                  return (
-                    <TableRow
-                      key={`${output.address}-${idx}`}
-                      style={isPoisoned ? { background: "#fff3e0" } : {}}
-                    >
-                      <TableCell>
-                        <code>{output.address}</code>
-                        {isPoisoned && (
-                          <Tooltip title={fingerprintMsg} sx={tooltipSx}>
-                            <WarningAmber
-                              color="warning"
-                              fontSize="small"
-                              style={{ marginLeft: 4, verticalAlign: "middle" }}
-                            />
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <code>{output.amount}</code>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={output.scriptType || ""}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ fontSize: "0.8rem", height: "26px" }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
+        {/* Transaction Flow Diagram - Comprehensive View */}
+        <Box mb={4}>
+          <TransactionFlowDiagram
+            inputs={inputs || []}
+            outputs={outputs || []}
+            fee={fee}
+            changeAddress={this.props.changeAddress}
+            inputsTotalSats={inputsTotalSats}
+            network={this.props.network}
+            status={this.getTransactionStatus()}
+          />
         </Box>
 
-        <Grid container>
-          <Grid item xs={4}>
-            <h3>Fee</h3>
-            <div>{BigNumber(fee).toFixed(8)} BTC </div>
-          </Grid>
-          <Grid item xs={4}>
-            <h3>Fee Rate</h3>
-            <div>{feeRate} sats/byte</div>
-          </Grid>
-          <Grid item xs={4}>
-            <h3>Total</h3>
-            <div>{satoshisToBitcoins(BigNumber(inputsTotalSats || 0))} BTC</div>
-          </Grid>
-        </Grid>
+        <UnsignedTransaction />
 
         <Box mt={2}>
           <TransactionAnalysis />
@@ -322,15 +256,17 @@ class TransactionPreview extends React.Component {
                 Edit Transaction
               </Button>
             </Grid>
-            <Grid item>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSignTransaction}
-              >
-                Sign Transaction
-              </Button>
-            </Grid>
+            {spendingStep === SPEND_STEP_PREVIEW && (
+              <Grid item>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSignTransaction}
+                >
+                  Sign Transaction
+                </Button>
+              </Grid>
+            )}
             {unsignedPSBT && (
               <Grid item>
                 <Button
@@ -366,6 +302,10 @@ TransactionPreview.propTypes = {
   setChangeOutputMultisig: PropTypes.func.isRequired,
   unsignedPSBT: PropTypes.string.isRequired,
   signatureImporters: PropTypes.shape({}),
+  broadcasting: PropTypes.bool,
+  txid: PropTypes.string,
+  spendingStep: PropTypes.number,
+  network: PropTypes.string,
   addressType: PropTypes.string,
   requiredSigners: PropTypes.number,
   totalSigners: PropTypes.number,
@@ -383,6 +323,9 @@ function mapStateToProps(state) {
     requiredSigners: state.settings.requiredSigners,
     addressType: state.settings.addressType,
     totalSigners: state.settings.totalSigners,
+    txid: state.spend.transaction.txid,
+    broadcasting: state.spend.transaction.broadcasting,
+    spendingStep: state.spend.transaction.spendingStep,
   };
 }
 
