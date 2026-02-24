@@ -14,6 +14,7 @@ import _ from "lodash";
 import { psbtArgsFromFixture } from "./utils";
 import assert from "assert";
 import { combineBip32Paths } from "@caravan/bip32";
+import { Psbt } from "bitcoinjs-lib-v6";
 
 describe("getUnsignedMultisigPsbtV0", () => {
   TEST_FIXTURES.transactions
@@ -93,6 +94,20 @@ describe("validateMultisigSignaturePsbt", () => {
             );
             expect(pubkey).toEqual(false);
           });
+        });
+
+        it("validates signature even if bip32Derivation is missing from the PSBT", () => {
+          const inputIndex = 0;
+          const psbtBuffer = Buffer.from(psbt, "hex");
+          const psbtObj = Psbt.fromBuffer(psbtBuffer);
+          delete psbtObj.data.inputs[inputIndex].bip32Derivation;
+          const pubkey = validateMultisigPsbtSignature(
+            psbtObj.toHex(),
+            inputIndex,
+            fixture.signature[inputIndex],
+            fixture.inputs[inputIndex].amountSats,
+          );
+          expect(pubkey).toEqual(fixture.publicKeys[inputIndex]);
         });
       });
     });

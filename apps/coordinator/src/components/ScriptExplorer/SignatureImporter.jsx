@@ -434,7 +434,7 @@ class SignatureImporter extends React.Component {
             inputs[inputIndex].amountSats,
           );
         } catch (e) {
-          errback(`Signature for input ${inputNumber} is invalid.`);
+          errback(`Signature for input ${inputNumber} is invalid: ${e.message}`);
           return;
         }
         if (publicKey) {
@@ -448,7 +448,7 @@ class SignatureImporter extends React.Component {
 
             if (
               finalizedSignatureImporter.signature[inputIndex] ===
-                inputSignature ||
+              inputSignature ||
               finalizedSignatureImporter.publicKeys[inputIndex] === publicKey
             ) {
               errback(
@@ -459,7 +459,9 @@ class SignatureImporter extends React.Component {
           }
           publicKeys.push(publicKey);
         } else {
-          errback(`Signature for input ${inputNumber} is invalid.`);
+          errback(
+            `Signature for input ${inputNumber} is invalid (no matching public key found).`,
+          );
           return;
         }
       }
@@ -541,7 +543,7 @@ class SignatureImporter extends React.Component {
               );
             } catch (e) {
               // eslint-disable-next-line no-console
-              console.error(e);
+              console.error(`Validation error for input ${inputIndex}:`, e);
             }
             // FIXME `&& publicKey is member of a particular root xpub/fingerprint` should be added here!
             if (publicKey) {
@@ -552,7 +554,9 @@ class SignatureImporter extends React.Component {
             }
           }
           if (!publicKey) {
-            errback(`No valid signature for input ${inputIndex} found.`);
+            errback(
+              `No valid signature for input ${inputIndex} found in the uploaded PSBT.`,
+            );
             return;
           }
         }
