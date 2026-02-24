@@ -15,6 +15,8 @@ import {
   InputAdornment,
   FormHelperText,
   Typography,
+  Box,
+  Button,
 } from "@mui/material";
 import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWallet";
 import { Delete, AddCircle, RemoveCircle } from "@mui/icons-material";
@@ -267,21 +269,37 @@ class OutputEntry extends React.Component {
           />
         </Grid>
         {this.displayBalanceAction() && (
-          <Grid item xs={1}>
-            <Tooltip
-              title={`${this.balanceAction()} to ${this.autoBalancedAmount().toString()}`}
-              placement="top"
-            >
-              <small>
-                <IconButton onClick={this.handleBalance}>
-                  {this.balanceAction() === "Increase" ? (
+          <Grid item xs={2}>
+            <Box>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={this.handleBalance}
+                startIcon={
+                  this.balanceAction() === "Increase" ? (
                     <AddCircle />
                   ) : (
                     <RemoveCircle />
-                  )}
-                </IconButton>
-              </small>
-            </Tooltip>
+                  )
+                }
+                sx={{
+                  textTransform: "none",
+                  fontSize: "0.75rem",
+                  whiteSpace: "nowrap",
+                  minWidth: "auto",
+                }}
+              >
+                Rebalance
+              </Button>
+              <Typography
+                variant="caption"
+                color="textSecondary"
+                sx={{ display: "block", mt: 0.5, fontSize: "0.65rem" }}
+              >
+                {this.balanceAction()} to {this.autoBalancedAmount()} BTC
+              </Typography>
+            </Box>
           </Grid>
         )}
 
