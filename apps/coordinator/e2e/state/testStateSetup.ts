@@ -1,3 +1,7 @@
+/**
+ * Creates the initial test state file during globalSetup.
+ * This runs BEFORE any test project, including wallet.setup.ts.
+ */
 import path from "path";
 import fs from "fs";
 import { TestState } from "./types";
@@ -8,7 +12,7 @@ export function createInitialTestState(
   senderAddress: string,
   receiverAddress: string,
 ): TestState {
-  const testState: TestState = {
+  return {
     downloadDir: path.join(process.cwd(), "e2e/downloads"),
     uploadDir: path.join(process.cwd(), "e2e/uploads"),
     downloadDirFiles: {
@@ -25,10 +29,9 @@ export function createInitialTestState(
       address: receiverAddress,
       walletName: walletNames[1],
     },
+    walletAddresses: [],
     timestamp: Date.now(),
   };
-
-  return testState;
 }
 
 export function createAndSaveTestState(
@@ -40,7 +43,6 @@ export function createAndSaveTestState(
   const testStateFile = path.join(process.cwd(), "e2e/temp/test-state.json");
   const tempDir = path.dirname(testStateFile);
 
-  // Ensure temp directory exists
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
@@ -52,8 +54,6 @@ export function createAndSaveTestState(
     receiverAddress,
   );
 
-  // Save state file
   fs.writeFileSync(testStateFile, JSON.stringify(testState, null, 2));
-
   return testStateFile;
 }
