@@ -263,18 +263,19 @@ export class BlockchainClient extends ClientBase {
       type === ClientType.PUBLIC &&
       network !== Network.MAINNET &&
       network !== Network.TESTNET &&
+      network !== Network.TESTNET4 &&
       network !== Network.SIGNET
     ) {
       throw new Error("Invalid network");
     }
 
-        // Blockstream does not support Signet
+        // Blockstream does not support Signet or Testnet4
     if (
       type === ClientType.PUBLIC &&
       provider === PublicBitcoinProvider.BLOCKSTREAM &&
-      network === Network.SIGNET
+      (network === Network.SIGNET || network === Network.TESTNET4)
     ) {
-      throw new Error("Invalid network: Blockstream does not support Signet");
+      throw new Error("Invalid network: Blockstream does not support Signet or Testnet4");
     }
 
     if (type === ClientType.PRIVATE && provider) {

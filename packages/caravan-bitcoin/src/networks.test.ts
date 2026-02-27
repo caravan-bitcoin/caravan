@@ -12,15 +12,22 @@ describe("networks", () => {
   describe("networkLabel", () => {
     it("returns a human-readable network name", () => {
       expect(networkLabel(Network.MAINNET)).toBe("Mainnet");
-      expect(networkLabel(Network.TESTNET)).toBe("Testnet");
+      expect(networkLabel(Network.TESTNET)).toBe("Testnet3");
+      expect(networkLabel(Network.TESTNET4)).toBe("Testnet4");
+      expect(networkLabel(Network.REGTEST)).toBe("Regtest");
+      expect(networkLabel(Network.SIGNET)).toBe("Signet");
       expect(networkLabel("foobar")).toBe("Testnet");
     });
   });
 
-  describe("networkLabel", () => {
-    it("returns a human-readable network name", () => {
+  describe("networkData", () => {
+    it("returns the correct network data object", () => {
       expect(networkData(Network.MAINNET)).toBe(networks.bitcoin);
       expect(networkData(Network.TESTNET)).toBe(networks.testnet);
+      expect(networkData(Network.REGTEST)).toBe(networks.regtest);
+      // Testnet4 and Signet return custom network objects
+      expect(networkData(Network.TESTNET4)).toHaveProperty("bech32", "tb");
+      expect(networkData(Network.SIGNET)).toHaveProperty("bech32", "tb");
       expect(networkData("foobar")).toBe(networks.testnet);
     });
   });

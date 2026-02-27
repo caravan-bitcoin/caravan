@@ -1,4 +1,4 @@
-import { networks } from "bitcoinjs-lib-v5";
+import { networks, Network as BitcoinJSNetwork } from "bitcoinjs-lib-v5";
 
 /**
  * This module exports network constants and provide some utility
@@ -9,8 +9,41 @@ import { networks } from "bitcoinjs-lib-v5";
 export enum Network {
   MAINNET = "mainnet",
   TESTNET = "testnet",
+  TESTNET4 = "testnet4",
   REGTEST = "regtest",
   SIGNET = "signet",
+}
+
+/**
+ * Custom network configuration for Signet.
+ * Signet is a test network with centralized signing.
+ */
+const signet: BitcoinJSNetwork = {
+  messagePrefix: "\x18Bitcoin Signed Message:\n",
+  bech32: "tb",
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+/**
+ * Custom network configuration for Testnet4.
+ * Testnet4 is the latest Bitcoin testnet, replacing Testnet3.
+ */
+const testnet4: BitcoinJSNetwork = {
+  messagePrefix: "\x18Bitcoin Signed Message:\n",
+  bech32: "tb",
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
 }
 
 /**
@@ -25,10 +58,12 @@ export function networkData(network: Network) {
       return networks.bitcoin;
     case Network.TESTNET:
       return networks.testnet;
+    case Network.TESTNET4:
+      return testnet4;
     case Network.REGTEST:
       return networks.regtest;
     case Network.SIGNET:
-      throw new Error("Signet is not supported yet");
+      return signet;
     default:
       return networks.testnet;
   }
@@ -42,7 +77,13 @@ export function networkLabel(network: Network) {
     case Network.MAINNET:
       return "Mainnet";
     case Network.TESTNET:
-      return "Testnet";
+      return "Testnet3";
+    case Network.TESTNET4:
+      return "Testnet4";
+    case Network.REGTEST:
+      return "Regtest";
+    case Network.SIGNET:
+      return "Signet";
     default:
       return "Testnet";
   }
