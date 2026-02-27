@@ -366,4 +366,36 @@ describe("Test transactionReducer", () => {
       expect(r.txid).toEqual(txid);
     });
   });
+  describe("reproduction for #58", () => {
+    it("should reject output address equal to input address when inputs are added AFTER output is set", () => {
+      const address = "2MzZgrQq6Qa7U1p24eNx6N2wrpCr8bEpdeH";
+      // 1. Set output address
+      let r = reducer(
+        {
+          ...initialState(),
+          inputs: [],
+          outputs: [initialOutputState()],
+          network: Network.TESTNET,
+        },
+        {
+          type: SET_OUTPUT_ADDRESS,
+          value: address,
+          number: 1,
+        },
+      );
+      expect(r.outputs[0].addressError).toEqual("");
+
+      // 2. Add input with same address
+      const input = { multisig: { address }, amountSats: BigNumber(100000) };
+      r = reducer(r, {
+        type: SET_INPUTS,
+        value: [input],
+      });
+
+      // Check if error is caught after adding inputs
+      expect(r.outputs[0].addressError).toEqual(
+        "Output address cannot equal input address.",
+      );
+    });
+  });
 });
