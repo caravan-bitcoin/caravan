@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { addSignaturesToPSBT } from "@caravan/bitcoin";
+import { addSignaturesToPSBT } from "@caravan/psbt";
 import { Buffer } from "buffer";
 
 // Components
