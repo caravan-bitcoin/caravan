@@ -1,7 +1,7 @@
 import React from "react";
 
 import { blockExplorerAddressURL, TEST_FIXTURES } from "@caravan/bitcoin";
-import { ConfirmMultisigAddress, LEDGER } from "@caravan/wallets";
+import { BCUR2, ConfirmMultisigAddress, LEDGER } from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 import { externalLink } from "utils/ExternalLink";
 
@@ -76,7 +76,9 @@ const addressTests = (keystore) =>
     .map((fixture) => {
       return new ConfirmMultisigAddressTest({
         ...fixture,
-        ...{ keystore },
+        keystore,
+        showQrReader: keystore !== BCUR2,
+        showQrDisplay: keystore === BCUR2,
         expected: fixture.address,
       });
     });
