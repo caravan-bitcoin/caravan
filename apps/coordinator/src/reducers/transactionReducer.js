@@ -70,6 +70,34 @@ function sortInputs(a, b) {
   return 0;
 }
 
+/**
+ * Validates an output address against the network, other outputs, and inputs.
+ *
+ * @param {string} address - The address to validate.
+ * @param {number} index - The index of the output in the outputs array.
+ * @param {Array} outputs - The full array of outputs.
+ * @param {Array} inputs - The full array of inputs.
+ * @param {string} network - The network (MAINNET or TESTNET).
+ * @returns {string} The error message, or an empty string if valid.
+ */
+function validateOutputAddress(address, index, outputs, inputs, network) {
+  if (address === "") return "";
+  let error = validateAddress(address, network);
+  if (error === "") {
+    for (let i = 0; i < inputs.length; i += 1) {
+      if (inputs[i].multisig && address === inputs[i].multisig.address) {
+        return "Output address cannot equal input address.";
+      }
+    }
+    for (let i = 0; i < outputs.length; i += 1) {
+      if (i !== index && outputs[i].address === address) {
+        return "Duplicate output address.";
+      }
+    }
+  }
+  return error;
+}
+
 export const initialOutputState = () => ({
   address: "",
   amount: "",
@@ -119,10 +147,12 @@ function updateInputs(state, action) {
     (accumulator, input) => accumulator.plus(input.amountSats),
     new BigNumber(0),
   );
-  return updateState(state, {
-    inputs: action.value.sort(sortInputs),
-    inputsTotalSats,
-  });
+  return validateTransaction(
+    updateState(state, {
+      inputs: action.value.sort(sortInputs),
+      inputsTotalSats,
+    }),
+  );
 }
 
 function calcOutputTotalSats(state) {
@@ -177,7 +207,7 @@ function updateFeeRate(state, action) {
   // problems when trying to author a CPFP.
   const fee =
     feeRateError === null ||
-    feeRateError === FeeValidationError.FEE_RATE_TOO_HIGH
+      feeRateError === FeeValidationError.FEE_RATE_TOO_HIGH
       ? setFeeForRate(state, feeRateString, state.outputs.length)
       : "";
 
@@ -219,41 +249,23 @@ function addOutput(state) {
 }
 
 function updateOutputAddress(state, action) {
-  const newOutputs = [...state.outputs];
+  const { outputs, inputs, network } = state;
+  const newOutputs = [...outputs];
   const address = action.value;
-  let error = validateAddress(address, state.network);
-  if (error === "") {
-    for (
-      let inputIndex = 0;
-      inputIndex < state.inputs.length;
-      inputIndex += 1
-    ) {
-      const input = state.inputs[inputIndex];
-      if (input.multisig && address === input.multisig.address) {
-        error = "Output address cannot equal input address.";
-        break;
-      }
-    }
-  }
-  if (error === "") {
-    for (
-      let outputIndex = 0;
-      outputIndex < state.outputs.length;
-      outputIndex += 1
-    ) {
-      if (outputIndex !== action.number - 1) {
-        if (state.outputs[outputIndex].address === address) {
-          error = "Duplicate output address.";
-          break;
-        }
-      }
-    }
-  }
-  newOutputs[action.number - 1].address = address;
-  newOutputs[action.number - 1].addressError = error;
-  newOutputs[action.number - 1].scriptType =
-    error === "" ? getAddressType(address, state.network) : "";
-  return { ...state, ...{ outputs: newOutputs } };
+  const error = validateOutputAddress(
+    address,
+    action.number - 1,
+    outputs,
+    inputs,
+    network,
+  );
+  newOutputs[action.number - 1] = {
+    ...newOutputs[action.number - 1],
+    address,
+    addressError: error,
+    scriptType: error === "" ? getAddressType(address, network) : "",
+  };
+  return { ...state, outputs: newOutputs };
 }
 
 function updateOutputMultisig(state, action) {
@@ -364,7 +376,28 @@ function resetTransactionState(state) {
 }
 
 function validateTransaction(state) {
-  let newState = { ...state };
+  const { outputs = [], inputs = [], network } = state;
+  const newOutputs = outputs.map((output, index) => {
+    const error = validateOutputAddress(
+      output.address,
+      index,
+      outputs,
+      inputs,
+      network,
+    );
+    if (error === output.addressError) {
+      return output;
+    }
+    return {
+      ...output,
+      addressError: error,
+      scriptType:
+        error === "" && output.address !== ""
+          ? getAddressType(output.address, network)
+          : "",
+    };
+  });
+  let newState = { ...state, outputs: newOutputs };
   // TODO: need less hacky way to suppress error
   if (
     newState.outputs.find(
@@ -420,7 +453,7 @@ export default (state = initialState(), action) => {
     case CHOOSE_PERFORM_SPEND:
       return updateState(state, { chosen: true });
     case SET_NETWORK:
-      return updateState(state, { network: action.value });
+      return validateTransaction(updateState(state, { network: action.value }));
     case SET_ADDRESS_TYPE:
       return updateState(state, { addressType: action.value });
     case SET_REQUIRED_SIGNERS:
@@ -428,7 +461,7 @@ export default (state = initialState(), action) => {
     case SET_TOTAL_SIGNERS:
       return updateState(state, { totalSigners: action.value });
     case SET_INPUTS:
-      return validateTransaction(updateInputs(state, action));
+      return updateInputs(state, action);
     case ADD_OUTPUT:
       return validateTransaction(addOutput(state, action));
     case SET_CHANGE_OUTPUT_INDEX:
