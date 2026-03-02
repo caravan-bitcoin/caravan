@@ -344,7 +344,17 @@ const ConfirmAddress = ({ slice, network }) => {
           }).request().qrCodeFrames
         }
         title="Scan QR on Device to Confirm Address"
-        instructions="Use your BCUR2-compatible wallet to scan the QR code and confirm the address on your device."
+        instructions={
+          <>
+            <div style={{ paddingBottom: "1rem" }}>
+              <strong>{slice.multisig.address.slice(0, 6)}</strong>
+              {slice.multisig.address.slice(6, -6)}
+              <strong>{slice.multisig.address.slice(-6)}</strong>
+            </div>
+            Use your BCUR2-compatible wallet to scan the QR code and confirm the
+            address on your device.
+          </>
+        }
         childActions={<RegisterBCUR2Button />}
       />
     </Grid>

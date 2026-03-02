@@ -28,7 +28,7 @@ interface BCUR2EncoderProps {
   autoPlay?: boolean;
   initialInterval?: number;
   qrSize?: number;
-  instructions?: string;
+  instructions?: React.ReactNode;
   childActions?: React.ReactNode;
 }
 
@@ -332,10 +332,8 @@ const BCUR2Encoder: React.FC<BCUR2EncoderProps> = ({
           )}
 
           {/* Instructions */}
-          <Box textAlign="center" maxWidth={400}>
-            <Typography variant="body1" gutterBottom>
-              {instructions}
-            </Typography>
+          <Box textAlign="center" width="100%">
+            {instructions}
           </Box>
         </Box>
       </DialogContent>

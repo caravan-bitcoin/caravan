@@ -195,6 +195,7 @@ Derivation: ${test.params.derivation}
                         onClose={() => this.setState({ showBCURExport: false })}
                         qrSize={300}
                         initialInterval={200}
+                        instructions={test.interaction().request().instruction}
                       />
                     </Box>
                   )}
