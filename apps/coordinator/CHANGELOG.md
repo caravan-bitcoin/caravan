@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.19.0
+
+### Minor Changes
+
+- [#468](https://github.com/caravan-bitcoin/caravan/pull/468) [`f7077e8`](https://github.com/caravan-bitcoin/caravan/commit/f7077e893ce1dc4ad14f43fa61726ea90137577e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - BCUR2 support for wallet registration and address confirmation.
+
+### Patch Changes
+
+- Updated dependencies [[`f7077e8`](https://github.com/caravan-bitcoin/caravan/commit/f7077e893ce1dc4ad14f43fa61726ea90137577e)]:
+  - @caravan/wallets@0.10.0
+
 ## 1.18.3
 
 ### Patch Changes
