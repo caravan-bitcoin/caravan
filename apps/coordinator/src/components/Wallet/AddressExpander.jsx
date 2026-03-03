@@ -158,7 +158,12 @@ class AddressExpander extends React.Component {
     const { extendedPublicKeyImporters } = this.props;
     return (
       Object.values(extendedPublicKeyImporters).filter(
-        (importer) => importer.method === "trezor",
+        (importer) =>
+          importer.method === "trezor" ||
+          importer.method === "ledger" ||
+          importer.method === "bitbox" ||
+          importer.method === "jade" ||
+          importer.method === "coldcard",
       ).length > 0
     );
   };
@@ -276,7 +281,7 @@ class AddressExpander extends React.Component {
         {hasInteraction && (
           <>
             {this.confirmAddressDescription()}
-            {interactionMessage !== "" && (
+            {interactionMessage !== "" && !interactionError && (
               <Box mt={2} align="center">
                 <Typography variant="h5" style={{ color: "green" }}>
                   <SuccessIcon />
@@ -300,18 +305,26 @@ class AddressExpander extends React.Component {
                 })}
               />
             )}
-            <Button
-              variant="contained"
-              size="large"
-              onClick={this.confirmOnDevice}
-              disabled={interactionState === ACTIVE}
-            >
-              Confirm
-            </Button>
+            {interactionMessage === "" && (
+              <Box mt={2}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  onClick={this.confirmOnDevice}
+                  disabled={interactionState === ACTIVE}
+                >
+                  Confirm on Device
+                </Button>
+              </Box>
+            )}
+
             {(interactionMessage !== "" || interactionError !== "") && (
-              <Button size="large" onClick={this.resetInteractionState}>
-                Reset
-              </Button>
+              <Box mt={2}>
+                <Button size="large" onClick={this.resetInteractionState}>
+                  Reset
+                </Button>
+              </Box>
             )}
           </>
         )}
@@ -333,7 +346,17 @@ class AddressExpander extends React.Component {
     const { multisig } = node;
     try {
       const confirmed = await this.interaction.run();
+      if (confirmed && confirmed.manual) {
+        this.setState({
+          interactionState: ACTIVE,
+          interactionMessage: confirmed.successMessage || "Verify the address on your device.",
+          interactionError: "",
+        });
+        return;
+      }
+
       if (
+        confirmed &&
         confirmed.address === multisig.address &&
         confirmed.serializedPath === this.interaction.bip32Path
       ) {
@@ -343,11 +366,7 @@ class AddressExpander extends React.Component {
           interactionError: "",
         });
       } else {
-        this.setState({
-          interactionState: ACTIVE,
-          interactionError: "An unknown error occurred",
-          interactionMessage: "",
-        });
+        throw new Error("Address or path does not match.");
       }
     } catch (error) {
       this.setState({
@@ -359,7 +378,7 @@ class AddressExpander extends React.Component {
   };
 
   keySelected = (event, extendedPublicKeyImporter) => {
-    const { network, node } = this.props;
+    const { network, node, walletName } = this.props;
     const { multisig, bip32Path } = node;
 
     this.interaction = ConfirmMultisigAddress({
@@ -367,6 +386,7 @@ class AddressExpander extends React.Component {
       network,
       bip32Path: `${extendedPublicKeyImporter.bip32Path}${bip32Path.slice(1)}`,
       multisig,
+      name: walletName,
     });
     this.setState({ hasInteraction: true });
     this.resetInteractionState();
@@ -432,7 +452,7 @@ AddressExpander.propTypes = {
 
 AddressExpander.defaultProps = {
   network: Network.TESTNET,
-  setSpendCheckbox: () => {},
+  setSpendCheckbox: () => { },
 };
 
 function mapStateToProps(state) {
@@ -443,6 +463,7 @@ function mapStateToProps(state) {
     client: state.client,
     extendedPublicKeyImporters: state.quorum.extendedPublicKeyImporters,
     transaction: state.spend.transaction,
+    walletName: state.wallet.common.walletName,
   };
 }
 

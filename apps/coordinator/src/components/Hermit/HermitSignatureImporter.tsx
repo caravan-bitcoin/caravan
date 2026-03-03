@@ -12,7 +12,7 @@ import {
   HermitSignMultisigTransaction,
 } from "@caravan/wallets";
 import { Grid, Box, TextField, Button, FormHelperText } from "@mui/material";
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib-v6";
 import HermitReader from "./HermitReader";
 import HermitDisplayer from "./HermitDisplayer";
 import InteractionMessages from "../InteractionMessages";
@@ -94,7 +94,7 @@ class HermitSignatureImporter extends React.Component<
       const childNum = Buffer.from(pathData.slice(0, 4)).readUIntLE(0, 4);
       path += this.childToPath(childNum);
 
-      pathData = pathData.subarray(4) as unknown as Buffer;
+      pathData = Buffer.from(pathData.subarray(4));
     }
     return path;
   };
@@ -159,7 +159,9 @@ class HermitSignatureImporter extends React.Component<
         .split("de")
         .map((p) => [
           Buffer.from(p.slice(0, 8), "hex"),
-          this.parseBinaryPath(Buffer.from(p.slice(8), "hex")),
+          this.parseBinaryPath(
+            Buffer.from(p.slice(8), "hex").buffer as ArrayBuffer,
+          ),
         ]);
 
       // TODO: these need to be fixed with our new types for PSBT inputs and outputs
@@ -341,7 +343,7 @@ class HermitSignatureImporter extends React.Component<
     const bip32Path = event.target.value;
     validateAndSetBIP32Path(
       bip32Path,
-      () => {},
+      () => { },
       (bip32PathError: any) => {
         this.setState({ bip32PathError });
       },
