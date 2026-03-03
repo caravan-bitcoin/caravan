@@ -226,16 +226,11 @@ export const validateMultisigPsbtSignature = (
   if (psbt.inputCount === 0 || psbt.inputCount < inputIndex + 1) {
     throw new Error("Input index is out of range.");
   }
-
-  const input = psbt.data.inputs[inputIndex];
-  if (!input) {
-    throw new Error(`No input found at index ${inputIndex}`);
-  }
-
   const signatureBuffer = multisigSignatureBuffer(
     signatureNoSighashType(inputSignature.toString("hex")),
   );
 
+  const input = psbt.data.inputs[inputIndex];
   const msgHash = getHashForSignature(psbt, inputIndex, inputAmount);
 
   for (const { pubkey } of input.bip32Derivation ?? []) {
@@ -243,22 +238,19 @@ export const validateMultisigPsbtSignature = (
       return pubkey.toString("hex");
     }
   }
+
   const script = input.witnessScript || input.redeemScript;
   if (script) {
-    try {
-      const multisig = payments.p2ms({
-        output: script,
-        network: (psbt as any).opts.network,
-      });
-      if (multisig && multisig.pubkeys) {
-        for (const pubkey of multisig.pubkeys) {
-          if (isValidSignature(pubkey, msgHash, signatureBuffer)) {
-            return pubkey.toString("hex");
-          }
+    const multisig = payments.p2ms({
+      output: script,
+      network: (psbt as any).opts.network,
+    });
+    if (multisig && multisig.pubkeys) {
+      for (const pubkey of multisig.pubkeys) {
+        if (isValidSignature(pubkey, msgHash, signatureBuffer)) {
+          return pubkey.toString("hex");
         }
       }
-    } catch (e) {
-      console.warn("Multisig script parsing failed during validation fallback:", e);
     }
   }
 

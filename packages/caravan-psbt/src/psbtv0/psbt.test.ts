@@ -100,6 +100,7 @@ describe("validateMultisigSignaturePsbt", () => {
           const inputIndex = 0;
           const psbtBuffer = Buffer.from(psbt, "hex");
           const psbtObj = Psbt.fromBuffer(psbtBuffer);
+
           delete psbtObj.data.inputs[inputIndex].bip32Derivation;
           const pubkey = validateMultisigPsbtSignature(
             psbtObj.toHex(),
@@ -107,6 +108,7 @@ describe("validateMultisigSignaturePsbt", () => {
             fixture.signature[inputIndex],
             fixture.inputs[inputIndex].amountSats,
           );
+
           expect(pubkey).toEqual(fixture.publicKeys[inputIndex]);
         });
       });
