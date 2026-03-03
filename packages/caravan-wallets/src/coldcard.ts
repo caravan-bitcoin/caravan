@@ -54,7 +54,7 @@ export const COLDCARD_WALLET_CONFIG_VERSION = "1.0.0";
 /**
  * Base class for interactions with Coldcard
  */
-export class ColdcardInteraction extends IndirectKeystoreInteraction {}
+export class ColdcardInteraction extends IndirectKeystoreInteraction { }
 
 /**
  * Base class for JSON Multisig file-based interactions with Coldcard
@@ -252,7 +252,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
     let xfpFromWithinXpub =
       xpubClass.depth === 1
         ? xpubClass.parentFingerprint &&
-          fingerprintToFixedLengthHex(xpubClass.parentFingerprint)
+        fingerprintToFixedLengthHex(xpubClass.parentFingerprint)
         : null;
 
     // Sanity check if you send in a depth one xpub, we should get the same fingerprint
@@ -652,5 +652,60 @@ Format: ${this.addressType}
     output += xpubs.join("\n");
     output += "\n";
     return output;
+  }
+}
+
+export class ColdcardConfirmMultisigAddress extends ColdcardInteraction {
+  network: string;
+
+  bip32Path: string;
+
+  multisig: any;
+
+  name: string;
+
+  constructor({ network, bip32Path, multisig, name }) {
+    super();
+    this.network = network;
+    this.bip32Path = bip32Path;
+    this.multisig = multisig;
+    this.name = name;
+  }
+
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.install_multisig_config",
+      text: "Ensure your Coldcard has the multisig wallet installed.",
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.address_explorer",
+      text: `On your Coldcard, go to 'Address Explorer' and select the multisig wallet${this.name ? ` "${this.name}"` : ""
+        }.`,
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.verify_address",
+      text: `Verify the address at path ${this.bip32Path} matches the one shown here.`,
+    });
+
+    return messages;
+  }
+
+  async run(): Promise<any> {
+    return {
+      address: this.multisig.address,
+      serializedPath: this.bip32Path,
+      manual: true,
+      successMessage: `Confirm the address on your Coldcard${this.name ? ` "${this.name}"` : ""}.`,
+    };
   }
 }

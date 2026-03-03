@@ -37,6 +37,7 @@ import {
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
   ColdcardMultisigWalletConfig,
+  ColdcardConfirmMultisigAddress,
 } from "./coldcard";
 import {
   CUSTOM,
@@ -602,6 +603,13 @@ export function ConfirmMultisigAddress({
         walletConfig: _walletConfig,
       });
     }
+    case COLDCARD:
+      return new ColdcardConfirmMultisigAddress({
+        network,
+        bip32Path,
+        multisig,
+        name,
+      });
     case TREZOR:
       return new TrezorConfirmMultisigAddress({
         network,

@@ -5,6 +5,7 @@ import {
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
   ColdcardMultisigWalletConfig,
+  ColdcardConfirmMultisigAddress,
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
@@ -776,5 +777,40 @@ describe("ColdcardMultisigWalletConfig", () => {
     expect(() =>
       interactionBuilder({ jsonConfig: jsonMissingAddressType })
     ).toThrow("Configuration file needs addressType.");
+  });
+});
+
+describe("ColdcardConfirmMultisigAddress", () => {
+  it("provides correct messages for address confirmation", () => {
+    const interaction = new ColdcardConfirmMultisigAddress({
+      network: Network.TESTNET,
+      bip32Path: "m/45'/1/0/0/0",
+      multisig: multisigs[0],
+    });
+
+    expect(
+      interaction.hasMessagesFor({
+        state: PENDING,
+        level: INFO,
+        code: "coldcard.install_multisig_config",
+      })
+    ).toBe(true);
+
+    expect(
+      interaction.hasMessagesFor({
+        state: ACTIVE,
+        level: INFO,
+        code: "coldcard.address_explorer",
+      })
+    ).toBe(true);
+
+    expect(
+      interaction.hasMessagesFor({
+        state: ACTIVE,
+        level: INFO,
+        code: "coldcard.verify_address",
+        text: "m/45'/1/0/0/0",
+      })
+    ).toBe(true);
   });
 });

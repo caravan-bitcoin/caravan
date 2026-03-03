@@ -52,7 +52,6 @@ import TrezorConnectDefault, {
   Params,
   BundledParams,
   TrezorConnect as TrezorConnectType,
-  TrezorConnect,
 } from "@trezor/connect-web";
 import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
