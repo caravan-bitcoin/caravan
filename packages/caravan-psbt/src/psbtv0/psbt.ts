@@ -385,3 +385,129 @@ function filterRelevantBip32Derivations(psbt, signingKeyDetails) {
     return bip32Derivation[0];
   });
 }
+
+/**
+ * Given a PSBT, an input index, a pubkey, and a signature,
+ * update the input inside the PSBT with a partial signature object.
+ *
+ * Make sure it validates, and then return the PSBT with the partial
+ * signature inside.
+ */
+function addSignatureToPSBT(psbt, inputIndex, pubkey, signature) {
+  const partialSig = [
+    {
+      pubkey,
+      signature,
+    },
+  ];
+  psbt.data.updateInput(inputIndex, { partialSig });
+  const validator = (pk: any, msghash: any, sig: any): boolean =>
+    isValidSignature(pk, msghash, sig);
+  if (!psbt.validateSignaturesOfInput(inputIndex, validator, pubkey)) {
+    throw new Error("One or more invalid signatures.");
+  }
+  return psbt;
+}
+
+/**
+ * Given an unsigned PSBT, an array of signing public key(s) (one per input),
+ * an array of signature(s) (one per input) in the same order as the pubkey(s),
+ * adds partial signature object(s) to each input and returns the PSBT with
+ * partial signature(s) included.
+ */
+export function addSignaturesToPSBT(network, psbt, pubkeys, signatures) {
+  let psbtWithSignatures = autoLoadPSBT(psbt, {
+    network: networkData(network),
+  });
+  if (psbtWithSignatures === null) return null;
+
+  signatures.forEach((sig, idx) => {
+    const pubkey = pubkeys[idx];
+    psbtWithSignatures = addSignatureToPSBT(
+      psbtWithSignatures,
+      idx,
+      pubkey,
+      sig,
+    );
+  });
+  return psbtWithSignatures.toBase64();
+}
+
+/**
+ * Get number of signers in the PSBT
+ */
+function getNumSigners(psbt) {
+  const partialSignatures =
+    psbt && psbt.data && psbt.data.inputs && psbt.data.inputs[0]
+      ? psbt.data.inputs[0].partialSig
+      : undefined;
+  return partialSignatures === undefined ? 0 : partialSignatures.length;
+}
+
+/**
+ * Extracts the signature(s) from a PSBT.
+ * NOTE: there should be one signature per input, per signer.
+ */
+export function parseSignaturesFromPSBT(psbtFromFile) {
+  const psbt = autoLoadPSBT(psbtFromFile, {});
+  if (psbt === null) {
+    return null;
+  }
+
+  const numSigners = getNumSigners(psbt);
+
+  const signatureSet = {};
+  let pubKey = "";
+  const inputs = psbt.data.inputs;
+  if (numSigners >= 1) {
+    for (let i = 0; i < inputs.length; i++) {
+      for (let j = 0; j < numSigners; j++) {
+        const partialSig = inputs[i]?.partialSig?.[j];
+        if (!partialSig) continue;
+        pubKey = partialSig.pubkey.toString("hex");
+        if (pubKey in signatureSet) {
+          signatureSet[pubKey].push(partialSig.signature.toString("hex"));
+        } else {
+          signatureSet[pubKey] = [partialSig.signature.toString("hex")];
+        }
+      }
+    }
+  } else {
+    return null;
+  }
+  return signatureSet;
+}
+
+/**
+ * Extracts signatures in order of inputs and returns as array
+ * (or array of arrays if multiple signature sets)
+ */
+export function parseSignatureArrayFromPSBT(psbtFromFile) {
+  const psbt = autoLoadPSBT(psbtFromFile);
+  if (psbt === null) return null;
+
+  const numSigners = getNumSigners(psbt);
+
+  const signatureArrays: string[][] = Array.from(
+    { length: numSigners },
+    () => [],
+  );
+
+  const { inputs } = psbt.data;
+
+  if (numSigners >= 1) {
+    for (let i = 0; i < inputs.length; i += 1) {
+      for (let j = 0; j < numSigners; j += 1) {
+        const partialSig = inputs[i]?.partialSig?.[j];
+        if (!partialSig) continue;
+        const signature = partialSig.signature.toString("hex");
+        if (signature) {
+          signatureArrays[j].push(signature);
+        }
+      }
+    }
+  } else {
+    return null;
+  }
+  return numSigners === 1 ? signatureArrays[0] : signatureArrays;
+}
