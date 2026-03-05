@@ -5,13 +5,13 @@
  * Preconditions: assertModifiedWalletConfig, assertWalletAddressesCollected
 
  */
-import { test, expect } from "../fixtures/caravan.fixture";
-import { testStateManager } from "../state/testState";
+import { test, expect } from "../../fixtures/caravan.fixture";
+import { testStateManager } from "../../state/testState";
 import {
   assertModifiedWalletConfig,
   assertWalletAddressesCollected,
-} from "../fixtures/preconditions";
-import { clientConfig } from "../services/bitcoinClient";
+} from "../../fixtures/preconditions";
+import { clientConfig } from "../../services/bitcoinClient";
 
 test.describe("Wallet Display Verification", () => {
   // Preconditions: fail fast if setup didn't complete

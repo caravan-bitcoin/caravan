@@ -11,11 +11,11 @@
  * Both follow the same flow: fill form → preview → download PSBT →
  * sign via RPC → import signatures → broadcast → verify success.
  */
-import { test, expect } from "../fixtures/caravan.fixture";
-import { testStateManager } from "../state/testState";
-import { assertModifiedWalletConfig } from "../fixtures/preconditions";
-import { createIndividualSignedPsbts } from "../services/psbtHelpers";
-import { clientConfig } from "../services/bitcoinClient";
+import { test, expect } from "../../fixtures/caravan.fixture";
+import { testStateManager } from "../../state/testState";
+import { assertModifiedWalletConfig } from "../../fixtures/preconditions";
+import { createIndividualSignedPsbts } from "../../services/psbtHelpers";
+import { clientConfig } from "../../services/bitcoinClient";
 import path from "path";
 import fs from "fs";
 

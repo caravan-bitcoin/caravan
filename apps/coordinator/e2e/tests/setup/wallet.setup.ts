@@ -15,10 +15,10 @@
  *   7. Saves all state for behavioral tests to consume
  *
  */
-import { test, expect } from "../fixtures/caravan.fixture";
-import { testStateManager } from "../state/testState";
-import { extractMultiWalletDescriptors } from "../services/descriptors";
-import { clientConfig } from "../services/bitcoinClient";
+import { test, expect } from "../../fixtures/caravan.fixture";
+import { testStateManager } from "../../state/testState";
+import { extractMultiWalletDescriptors } from "../../services/descriptors";
+import { clientConfig } from "../../services/bitcoinClient";
 import fs from "fs";
 
 test.describe.serial("Wallet Setup", () => {

@@ -6,8 +6,8 @@
  * — they can run in parallel or before it.
  *
  */
-import { test, expect } from "../fixtures/caravan.fixture";
-import { clientConfig } from "../services/bitcoinClient";
+import { test, expect } from "../../fixtures/caravan.fixture";
+import { clientConfig } from "../../services/bitcoinClient";
 
 test.describe("Caravan Smoke Tests", () => {
   test("homepage loads correctly", async ({ homePage }) => {
