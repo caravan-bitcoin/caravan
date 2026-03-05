@@ -148,7 +148,8 @@ const ConfirmAddress = ({ slice, network }) => {
         extendedPublicKeyImporter.method === JADE ||
         extendedPublicKeyImporter.method === BITBOX ||
         extendedPublicKeyImporter.method === TREZOR ||
-        extendedPublicKeyImporter.method === LEDGER
+        extendedPublicKeyImporter.method === LEDGER ||
+        extendedPublicKeyImporter.method === COLDCARD
       ) {
         setInteraction(
           ConfirmMultisigAddress({
@@ -253,9 +254,7 @@ const ConfirmAddress = ({ slice, network }) => {
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={BCUR2}>BCUR2</MenuItem>
-              <MenuItem value={COLDCARD} disabled>
-                Coldcard
-              </MenuItem>
+              <MenuItem value={COLDCARD}>Coldcard</MenuItem>
               <MenuItem value={HERMIT} disabled>
                 Hermit
               </MenuItem>

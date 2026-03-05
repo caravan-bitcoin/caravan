@@ -178,4 +178,96 @@ test.describe("Caravan Wallet Creation", () => {
       downloadDirFiles: { WalletFile: downloadedWalletFile },
     });
   });
+
+  test("should support Coldcard address verification in UI", async ({ page }) => {
+    // Setup wallet
+    await setupPrivateClient(page, {});
+    await expect(page.getByText("Connection Success!")).toBeVisible();
+
+    // Create a simple 2-of-2 multisig
+    await page
+      .locator("input[name='network'][value='regtest']")
+      .setChecked(true);
+
+    const { descriptors } = await extractMultiWalletDescriptors(
+      walletNames.slice(0, 2),
+      client,
+      "p2pkh",
+    );
+    const xpub1 = descriptors[0].xpub;
+    const xpub2 = descriptors[1].xpub;
+
+    // Fill first xpub
+    await page.click("div#public-key-1-importer-select[role='combobox']");
+    await page.click(
+      "li[role='option'][data-value='text']:has-text('Enter as text')",
+    );
+    await page.locator('textarea[name="publicKey"]').fill(xpub1);
+    await page.click("button[type=button]:has-text('Enter')");
+
+    // Fill second xpub
+    await page.click("div#public-key-2-importer-select[role='combobox']");
+    await page.click(
+      "li[role='option'][data-value='text']:has-text('Enter as text')",
+    );
+    await page.locator('textarea[name="publicKey"]').fill(xpub2);
+    await page.click("button[type=button]:has-text('Enter')");
+
+    // Change to regtest and generate address
+    await page.click("button:has-text('Generate Address')");
+    await expect(page.getByText(/bc1|2|3/)).toBeVisible();
+
+    // Navigate to address details/Confirm on Device tab
+    await page.click("button:has-text('Confirm on Device')");
+    await expect(
+      page.getByText("Verify Address with Quorum Participants"),
+    ).toBeVisible();
+
+    // Select first key for verification
+    await page.click("div[id='public-key-selector-select'][role='combobox']");
+    await page.click("li[role='option']:first-child");
+
+    // Verify that Coldcard now appears in the dropdown (not disabled)
+    await page.click("div#confirm-importer-select[role='combobox']");
+
+    // Check that Coldcard option exists and is NOT disabled
+    const coldcardOption = page.locator(
+      "li[role='option'][data-value='coldcard']",
+    );
+    await expect(coldcardOption).toBeVisible();
+
+    // Verify the option is not disabled by checking it's clickable
+    const isDisabled = await coldcardOption.evaluate((el: any) =>
+      el.hasAttribute("aria-disabled"),
+    );
+    expect(isDisabled).toBe(false);
+
+    // Click Coldcard option
+    await coldcardOption.click();
+
+    // Verify manual verification instructions appear
+    await expect(
+      page.getByText(
+        /Coldcard address verification is performed manually via address explorer/,
+      ),
+    ).toBeVisible();
+
+    await expect(
+      page.getByText(
+        /Verify the address matches your Coldcard using an address explorer/,
+      ),
+    ).toBeVisible();
+
+    await expect(
+      page.getByText(
+        /Direct message signing on Coldcard for address verification is not yet supported/,
+      ),
+    ).toBeVisible();
+
+    // Verify Confirm button exists and is enabled
+    const confirmButton = page.locator(
+      "button:has-text('Confirm'):not([disabled])",
+    );
+    await expect(confirmButton).toBeVisible();
+  });
 });
