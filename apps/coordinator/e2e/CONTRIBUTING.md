@@ -12,11 +12,12 @@ tests/       → Test files split by project phase
 
 ### Project Phases
 
-| Phase | Project | Files | Dependencies |
-|-------|---------|-------|-------------|
-| Smoke | `smoke` | `smoke.spec.ts` | None |
-| Setup | `wallet-setup` | `wallet.setup.ts` | None |
-| Tests | `wallet-tests` | `*.spec.ts` (except smoke) | `wallet-setup` |
+| Phase | Project | Directory | Dependencies |
+|-------|---------|-----------|--------------|
+| 0 | `smoke` | `tests/smoke/` | None |
+| 1 | `wallet-setup` | `tests/setup/` | None |
+| 2 | `verify-wallet` | `tests/verify/` | `wallet-setup` |
+| 3 | `mutate-wallet` | `tests/mutate/` | `verify-wallet` |
 
 Playwright enforces the dependency chain. If setup fails, all
 dependent tests are skipped with a clear message in the report.
@@ -126,51 +127,34 @@ await page.waitForFunction(() => {
 
 ---
 
-## Test File Naming Convention
+## Where to Put New Tests
 
-The Playwright config uses filename patterns to determine execution order.
-Choose the correct suffix when creating a new test file:
-
-| Suffix | When to Use | Example |
-|--------|------------|---------|
-| `.smoke.spec.ts` | Test does not require a funded wallet | `connection.smoke.spec.ts` |
-| `.verify.spec.ts` | Test only READS wallet state (addresses, balances, UI display) | `receive-tab.verify.spec.ts` |
-| `.mutate.spec.ts` | Test MODIFIES wallet state (sends transactions, fee bumps) | `cpfp.mutate.spec.ts` |
-
-Execution order: smoke → wallet-setup → verify → mutate
-
-The Playwright config matches these patterns with regexes.
-You do NOT need to modify playwright.config.ts when adding a new test file.
-Just pick the right suffix.
+Drop your test file in the right directory. The Playwright config
+matches by folder path, so you do NOT need to modify
+`playwright.config.ts` when adding a new test file.
+```
+tests/
+├── smoke/          # No wallet needed — app health checks
+│   └── app.spec.ts
+├── setup/          # Wallet import + fund addresses (runs once)
+│   └── wallet.setup.ts
+├── verify/         # Read-only — balances, addresses, UI display
+│   ├── wallet-display.spec.ts
+│   └── address-generation.spec.ts
+└── mutate/         # State-changing — sends, fee bumps
+    ├── transaction-send.spec.ts
+    ├── fee-bump-rbf.spec.ts
+    └── fee-bump-cpfp.spec.ts
+```
 
 ### How to decide: verify or mutate?
 
-Eg: Ask -> "After my test runs, is the wallet balance different?"
+Ask: **"After my test runs, is the wallet balance different?"**
 
-- No  → `.verify.spec.ts`
-- Yes → `.mutate.spec.ts`
+- **No** → `tests/verify/`
+- **Yes** → `tests/mutate/`
 
-Use a **phase prefix** so files sort naturally in the IDE alongside the `testMatch` patterns we already have , Eg:
-
-```
-apps/coordinator/e2e/tests
-├── 0-smoke.smoke.spec.ts
-├── 1-wallet.setup.ts
-├── 2-wallet-display.verify.spec.ts
-├── 2-address-generation.verify.spec.ts
-├── 3-transaction-send.mutate.spec.ts
-├── 3-fee-bump-rbf.mutate.spec.ts
-└── 3-fee-bump-cpfp.mutate.spec.ts
-```
-
-The pattern is: **`{phase}-{feature}.{category}.spec.ts`**
-
-| Phase | Category | `testMatch` | Purpose |
-|-------|----------|-------------|---------|
-| `0-` | `.smoke.spec.ts` | `/\.smoke\.spec\.ts$/` | App loads, basic health |
-| `1-` | `.setup.ts` | `wallet.setup.ts` | Wallet import, fund addresses |
-| `2-` | `.verify.spec.ts` | `/\.verify\.spec\.ts$/` | Read-only assertions (balances, addresses, UTXO display) |
-| `3-` | `.mutate.spec.ts` | `/\.mutate\.spec\.ts$/` | State-changing ops (sends, fee bumps) |
+Execution order: `smoke → setup → verify → mutate`
 
 
 ## Future: data-testid Attributes

@@ -1,5 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// ── Test Phases ──────────────────────────────────────────────
+// smoke/  → App loads, no wallet needed
+// setup/  → Import wallet, fund it on regtest
+// verify/ → Read-only: assert balances, addresses, UTXO display
+// mutate/ → State-changing: sends, fee bumps, CPFP
+//
+// Ask: "After my test runs, is the wallet balance different?"
+//   No  → verify/
+//   Yes → mutate/
+// ─────────────────────────────────────────────────────────────
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -27,27 +38,23 @@ export default defineConfig({
   projects: [
     {
       name: "smoke",
-      testMatch: /\.smoke\.spec\.ts$/,
+      testMatch: /smoke\/.*\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "wallet-setup",
-      testMatch: "wallet.setup.ts",
+      testMatch: /setup\/.*\.setup\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      // Phase 1: Read-only tests that verify wallet state
-      // These expect the wallet to be untouched (8 BTC, 4 addresses, etc.)
       name: "verify-wallet",
-      testMatch: /\.verify\.spec\.ts$/,
+      testMatch: /verify\/.*\.spec\.ts$/,
       dependencies: ["wallet-setup"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      // Phase 2: Tests that modify wallet state (send transactions, fee bumps)
-      // These run after verification because they change balances
       name: "mutate-wallet",
-      testMatch: /\.mutate\.spec\.ts$/,
+      testMatch: /mutate\/.*\.spec\.ts$/,
       dependencies: ["verify-wallet"],
       use: { ...devices["Desktop Chrome"] },
     },
