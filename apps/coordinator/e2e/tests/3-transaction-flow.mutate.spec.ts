@@ -19,7 +19,7 @@ import { clientConfig } from "../services/bitcoinClient";
 import path from "path";
 import fs from "fs";
 
-test.describe("Transaction Creation and Signing", () => {
+test.describe.serial("Transaction Creation and Signing", () => {
   let downloadDir: string;
   let uploadDir: string;
 

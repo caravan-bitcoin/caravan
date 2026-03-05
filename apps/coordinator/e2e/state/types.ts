@@ -131,3 +131,12 @@ export interface IndividualSignedPsbtsResult {
   individualPsbts: IndividualPsbtResult[];
   unsignedPsbtPath: string;
 }
+
+export const WALLET_TABS = {
+  RECEIVE: "Receive",
+  SEND: "Send",
+  TRANSACTIONS: "Transactions",
+  ADDRESSES: "Addresses",
+} as const;
+
+export type WalletTab = (typeof WALLET_TABS)[keyof typeof WALLET_TABS];

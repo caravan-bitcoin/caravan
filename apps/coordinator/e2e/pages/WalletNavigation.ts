@@ -6,6 +6,7 @@
  *
  */
 import { Page, expect } from "@playwright/test";
+import { WalletTab } from "../state/types";
 
 export class WalletNavigation {
   constructor(private page: Page) {}
@@ -17,7 +18,7 @@ export class WalletNavigation {
    * Does NOT wait for tab content — individual tab page objects
    * handle their own content readiness in their methods.
    */
-  async switchToTab(tab: "Receive" | "Send" | "Transactions" | "Addresses") {
+  async switchToTab(tab: WalletTab) {
     const tabBtn = this.page.locator(
       `button[role=tab][type=button]:has-text('${tab}')`,
     );

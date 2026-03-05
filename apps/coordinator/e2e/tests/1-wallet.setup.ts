@@ -21,7 +21,7 @@ import { extractMultiWalletDescriptors } from "../services/descriptors";
 import { clientConfig } from "../services/bitcoinClient";
 import fs from "fs";
 
-test.describe("Wallet Setup", () => {
+test.describe.serial("Wallet Setup", () => {
   let walletNames: string[] = [];
   const downloadDir = testStateManager.getState().downloadDir;
 
@@ -123,6 +123,12 @@ test.describe("Wallet Setup", () => {
     // Act: Mine blocks to confirm
     const senderRef = testStateManager.getSender();
     await btcClient.fundAddress(senderRef.address, senderRef.walletName, 4);
+
+    // After mining blocks, verify the UI has caught up before
+    // declaring setup complete. Without this, verify tests can
+    // start before the balance is reflected.
+    await walletNav.refresh();
+    await walletNav.expectBalance("8", 30000);
 
     // Persist: Save addresses for behavioral tests
     testStateManager.updateState({ walletAddresses: addresses });
