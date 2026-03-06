@@ -264,6 +264,11 @@ test.describe("Caravan Wallet Creation", () => {
       ),
     ).toBeVisible();
 
+    // Verify registration helper button appears for Coldcard config install
+    await expect(
+      page.locator("button:has-text('Download Coldcard Config')"),
+    ).toBeVisible();
+
     // Verify Confirm button exists and is enabled
     const confirmButton = page.locator(
       "button:has-text('Confirm'):not([disabled])",

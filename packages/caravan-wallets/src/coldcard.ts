@@ -565,6 +565,13 @@ export class ColdcardConfirmMultisigAddress extends ColdcardInteraction {
     messages.push({
       state: PENDING,
       level: INFO,
+      code: "coldcard.confirm_address.install_multisig_config",
+      text: "Ensure your Coldcard has the multisig wallet config installed.",
+    });
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
       code: "coldcard.confirm_address.manual_verification",
       text: "Coldcard address verification is performed manually via address explorer.",
     });
@@ -591,7 +598,7 @@ export class ColdcardConfirmMultisigAddress extends ColdcardInteraction {
    * This is a placeholder interaction that just returns the address and path.
    * The UI should display these values and let the user manually verify.
    */
-  async run() {
+  async run(): Promise<any> {
     return {
       address: this.address,
       serializedPath: this.bip32Path,
