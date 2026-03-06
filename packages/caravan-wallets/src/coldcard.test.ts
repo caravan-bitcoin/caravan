@@ -4,6 +4,7 @@ import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardConfirmMultisigAddress,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
@@ -642,6 +643,65 @@ describe("ColdcardSignMultisigTransaction", () => {
         text: "Upload the signed PSBT",
       })
     ).toBe(true);
+  });
+});
+
+describe("ColdcardConfirmMultisigAddress", () => {
+  const ADDRESS = "3QJmV3qfvL9SuYo34YihAf3sRCW3qSinyC";
+  const BIP32_PATH = "m/45'/0/0";
+
+  function interactionBuilder({
+    address = ADDRESS,
+    bip32Path = BIP32_PATH,
+  } = {}) {
+    return new ColdcardConfirmMultisigAddress({
+      address,
+      bip32Path,
+    });
+  }
+
+  it("returns manual verification instructions", () => {
+    const interaction = interactionBuilder();
+
+    expect(
+      interaction.hasMessagesFor({
+        state: PENDING,
+        level: INFO,
+        code: "coldcard.confirm_address.install_multisig_config",
+      })
+    ).toBe(true);
+
+    expect(
+      interaction.hasMessagesFor({
+        state: PENDING,
+        level: INFO,
+        code: "coldcard.confirm_address.manual_verification",
+      })
+    ).toBe(true);
+
+    expect(
+      interaction.hasMessagesFor({
+        state: PENDING,
+        level: INFO,
+        code: "coldcard.confirm_address.check_xpub",
+      })
+    ).toBe(true);
+
+    expect(
+      interaction.hasMessagesFor({
+        state: PENDING,
+        level: INFO,
+        code: "coldcard.confirm_address.no_direct_signing",
+      })
+    ).toBe(true);
+  });
+
+  it("returns address and serialized path on run", async () => {
+    const interaction = interactionBuilder();
+    await expect(interaction.run()).resolves.toEqual({
+      address: ADDRESS,
+      serializedPath: BIP32_PATH,
+    });
   });
 });
 

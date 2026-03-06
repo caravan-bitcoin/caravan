@@ -27,7 +27,16 @@ import {
   multisigAddressType,
   Network,
 } from "@caravan/bitcoin";
-import { PENDING, ACTIVE, ConfirmMultisigAddress } from "@caravan/wallets";
+import {
+  PENDING,
+  ACTIVE,
+  ConfirmMultisigAddress,
+  JADE,
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  COLDCARD,
+} from "@caravan/wallets";
 import LaunchIcon from "@mui/icons-material/Launch";
 import UTXOSet from "../ScriptExplorer/UTXOSet";
 import MultisigDetails from "../MultisigDetails";
@@ -35,6 +44,7 @@ import ImportAddressesButton from "../ImportAddressesButton";
 import Copyable from "../Copyable";
 import InteractionMessages from "../InteractionMessages";
 import ExtendedPublicKeySelector from "./ExtendedPublicKeySelector";
+import DownloadColdardConfigButton from "../RegisterWallet/DownloadColdcardConfig";
 
 import styles from "../ScriptExplorer/styles.module.scss";
 
@@ -45,6 +55,13 @@ const MODE_REDEEM = 1;
 const MODE_CONFIRM = 2;
 const MODE_WATCH = 3;
 let anchor;
+const CONFIRMABLE_KEYSTORE_METHODS = new Set([
+  JADE,
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  COLDCARD,
+]);
 
 class AddressExpander extends React.Component {
   interaction = null;
@@ -60,6 +77,7 @@ class AddressExpander extends React.Component {
       interactionState: PENDING,
       interactionError: "",
       interactionMessage: "",
+      selectedMethod: "",
     };
   }
 
@@ -156,10 +174,8 @@ class AddressExpander extends React.Component {
 
   canConfirm = () => {
     const { extendedPublicKeyImporters } = this.props;
-    return (
-      Object.values(extendedPublicKeyImporters).filter(
-        (importer) => importer.method === "trezor",
-      ).length > 0
+    return Object.values(extendedPublicKeyImporters).some((importer) =>
+      CONFIRMABLE_KEYSTORE_METHODS.has(importer.method),
     );
   };
 
@@ -300,6 +316,17 @@ class AddressExpander extends React.Component {
                 })}
               />
             )}
+            {this.state.selectedMethod === COLDCARD && (
+              <Box my={2}>
+                <Typography variant="caption" component="p">
+                  If not already done, install the multisig wallet config on
+                  your Coldcard first.
+                </Typography>
+                <Box mt={1}>
+                  <DownloadColdardConfigButton />
+                </Box>
+              </Box>
+            )}
             <Button
               variant="contained"
               size="large"
@@ -368,7 +395,10 @@ class AddressExpander extends React.Component {
       bip32Path: `${extendedPublicKeyImporter.bip32Path}${bip32Path.slice(1)}`,
       multisig,
     });
-    this.setState({ hasInteraction: true });
+    this.setState({
+      hasInteraction: true,
+      selectedMethod: extendedPublicKeyImporter.method,
+    });
     this.resetInteractionState();
   };
 

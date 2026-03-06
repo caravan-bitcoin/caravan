@@ -44,8 +44,16 @@ import { slicePropTypes } from "../../proptypes";
 import { getWalletConfig } from "../../selectors/wallet";
 import { BCUR2Encoder } from "../BCUR2";
 import { RegisterBCUR2Button } from "../RegisterWallet/RegisterBCUR2Button";
+import DownloadColdardConfigButton from "../RegisterWallet/DownloadColdcardConfig";
 
 const TEXT = "text";
+const SUPPORTED_CONFIRMATION_METHODS = new Set([
+  JADE,
+  BITBOX,
+  TREZOR,
+  LEDGER,
+  COLDCARD,
+]);
 
 const initialInteractionState = {
   keySelected: false,
@@ -143,12 +151,8 @@ const ConfirmAddress = ({ slice, network }) => {
           value: "",
         });
       }
-      // FIXME - hardcoded to just show up for trezor
       if (
-        extendedPublicKeyImporter.method === JADE ||
-        extendedPublicKeyImporter.method === BITBOX ||
-        extendedPublicKeyImporter.method === TREZOR ||
-        extendedPublicKeyImporter.method === LEDGER
+        SUPPORTED_CONFIRMATION_METHODS.has(extendedPublicKeyImporter.method)
       ) {
         setInteraction(
           ConfirmMultisigAddress({
@@ -253,9 +257,7 @@ const ConfirmAddress = ({ slice, network }) => {
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={BCUR2}>BCUR2</MenuItem>
-              <MenuItem value={COLDCARD} disabled>
-                Coldcard
-              </MenuItem>
+              <MenuItem value={COLDCARD}>Coldcard</MenuItem>
               <MenuItem value={HERMIT} disabled>
                 Hermit
               </MenuItem>
@@ -292,6 +294,17 @@ const ConfirmAddress = ({ slice, network }) => {
               </TableBody>
             </Table>
           </Box>
+          {state.deviceType === COLDCARD && (
+            <Box my={2}>
+              <Typography variant="caption" component="p">
+                If not already done, install the multisig wallet config on your
+                Coldcard first.
+              </Typography>
+              <Box mt={1}>
+                <DownloadColdardConfigButton />
+              </Box>
+            </Box>
+          )}
           {state.interactionMessage !== "" && (
             <Box mt={2} align="center">
               <Typography variant="h5" style={{ color: "green" }}>

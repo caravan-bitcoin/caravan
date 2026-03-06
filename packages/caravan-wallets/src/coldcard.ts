@@ -6,6 +6,7 @@
  * * ColdcardExportPublicKey
  * * ColdcardExportExtendedPublicKey
  * * ColdcardSignMultisigTransaction
+ * * ColdcardConfirmMultisigAddress
  * * ColdcardMultisigWalletConfig
  */
 import { ensureXpubAtPath } from "@caravan/bip32";
@@ -525,6 +526,83 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
       );
     }
     return signatures;
+  }
+}
+
+/**
+ * Presents address verification instructions for Coldcard devices.
+ * 
+ * Since Coldcard doesn't currently support direct message signing for address verification,
+ * this class provides instructions for manual verification via an address explorer.
+ * Users verify the address on their device and confirm manually.
+ *
+ * @example
+ * const interaction = new ColdcardConfirmMultisigAddress({bip32Path: "m/45'/0/0", address: "3..."});
+ * const messages = interaction.messagesFor({state: PENDING});
+ * // User manually verifies address and clicks confirm
+ * const confirmed = { address: "3...", serializedPath: "m/45'/0/0" };
+ */
+export class ColdcardConfirmMultisigAddress extends ColdcardInteraction {
+  bip32Path: string;
+
+  address: string;
+
+  constructor({
+    bip32Path,
+    address,
+  }: {
+    bip32Path: string;
+    address: string;
+  }) {
+    super();
+    this.bip32Path = bip32Path;
+    this.address = address;
+  }
+
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.confirm_address.install_multisig_config",
+      text: "Ensure your Coldcard has the multisig wallet config installed.",
+    });
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.confirm_address.manual_verification",
+      text: "Coldcard address verification is performed manually via address explorer.",
+    });
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.confirm_address.check_xpub",
+      text: "Verify the address matches your Coldcard using an address explorer (e.g., Blockchair, Mempool.space).",
+    });
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.confirm_address.no_direct_signing",
+      text: "Direct message signing on Coldcard for address verification is not yet supported.",
+    });
+
+    return messages;
+  }
+
+  /**
+   * For Coldcard, we don't have automatic address verification via device signing.
+   * This is a placeholder interaction that just returns the address and path.
+   * The UI should display these values and let the user manually verify.
+   */
+  async run(): Promise<any> {
+    return {
+      address: this.address,
+      serializedPath: this.bip32Path,
+    };
   }
 }
 

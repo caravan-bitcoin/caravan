@@ -38,6 +38,7 @@ import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardConfirmMultisigAddress,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import {
@@ -630,6 +631,11 @@ export function ConfirmMultisigAddress({
     }
     case BCUR2:
       return new BCUR2ConfirmMultisigAddress({
+        address: multisig.address,
+      });
+    case COLDCARD:
+      return new ColdcardConfirmMultisigAddress({
+        bip32Path,
         address: multisig.address,
       });
     default:
