@@ -1,4 +1,4 @@
-import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { bitcoinsToSatoshis, MultisigAddressType } from "@caravan/bitcoin";
 import { TransactionDetails } from "@caravan/clients";
 import { UTXO } from "@caravan/transactions";
 import { Slice } from "selectors/wallet";
@@ -9,49 +9,61 @@ import { createInputIdentifier, Input } from "./psbtUtils";
 /**
  * # PURPOSE OF THIS FILE
  *
- * UTXO Reconstruction for Stateless Bitcoin Coordinators
+ * coin Reconstruction for Stateless Bitcoin Coordinators
  *
- * ## Background: The UTXO Visibility Problem in Stateless Coordinators
+ * ## Background: The coin Visibility Problem in Stateless Coordinators
  *
  * Caravan operates as a stateless multisig coordinator, meaning it doesn't maintain
- * a persistent UTXO database like a full Bitcoin wallet would. This creates a unique
- * challenge during Replace-By-Fee (RBF) operations and other cases where we'll need to access previous UTXO's information:
+ * a persistent coin database like a full Bitcoin wallet would. This creates a unique
+ * challenge during Replace-By-Fee (RBF) operations and other cases where we'll need to access previous coin's information:
  *
  * 1. **The Problem**: When a transaction is pending (unconfirmed), Bitcoin Core's
- *    `listunspent` will not return UTXOs that are consumed by that pending transaction.
+ *    `listunspent` will not return coins that are consumed by that pending transaction.
  *    This prevents double-spending, but creates issues for RBF scenarios where we
  *    intentionally want to "double-spend" (replace) a pending transaction.
  *
- * 2. **Why This Affects Caravan**: Since Caravan doesn't track UTXO history locally,
+ * 2. **Why This Affects Caravan**: Since Caravan doesn't track coin history locally,
  *    it relies on Bitcoin Core's `listunspent` to know what funds are available.
- *    When those UTXOs become "hidden" due to pending transactions, Caravan loses
+ *    When those coins become "hidden" due to pending transactions, Caravan loses
  *    visibility into funds that should be available for RBF operations.
  *
- * 3. **Our Solution**: We reconstruct the "missing" UTXOs by analyzing pending
- *    transactions in our wallet, identifying what UTXOs they consumed, and rebuilding
- *    the full UTXO details needed for PSBT signing.
+ * 3. **Our Solution**: We reconstruct the "missing" coins by analyzing pending
+ *    transactions in our wallet, identifying what coins they consumed, and rebuilding
+ *    the full coin details needed for PSBT signing.
  *
  * This approach allows Caravan to maintain its stateless architecture while still
  * supporting advanced Bitcoin features like RBF.
  */
 
-export interface ReconstructedUtxos {
+/**
+ * Unified type that serves both as a Coin representation and contains
+ * all the metadata required to be transformed into a spendable UTXO.
+ */
+export interface ReconstructedCoin {
   txid: string;
-  index: number;
-  amountSats: string;
-  amount: string;
+  vout: number;
+  value: string;  // amount in satoshis
+  prevTxHex: string;
+  address: string;
   confirmed: boolean;
-  transactionHex: string;
-  multisig: Slice["multisig"];
-  bip32Path: Slice["bip32Path"];
-  change: Slice["change"];
+
+  // Metadata extracted from Slice for PSBT signing
+  bip32Derivations: any[];
+  addressType: MultisigAddressType;
+  redeemScript: string;
+  witnessScript: string;
+
+  // Metadata for UI/Tracking
+  bip32Path: string;
+  change: boolean;
+  _pendingTxid?: string; // Internal flag to track which pending tx consumed this
 }
 
 /**
- * Derives a list of transaction IDs that are required to reconstruct specific UTXOs.
+ * Derives a list of transaction IDs that are required to reconstruct specific coins.
  *
  * This utility scans through a set of unconfirmed (pending) transactions and identifies
- * which of their inputs correspond to UTXOs we are attempting to reconstruct. It then
+ * which of their inputs correspond to coins we are attempting to reconstruct. It then
  * extracts the unique `txid`s associated with those relevant inputs.
  *
  * This step is useful when we need to selectively fetch original transaction data
@@ -61,50 +73,51 @@ export interface ReconstructedUtxos {
  * @param neededInputIds - Set of input identifiers (in `txid:vout` format) that need reconstruction.
  * @returns Array of unique transaction IDs (`txid`s) required for reconstruction.
  */
+
 export function extractNeededTransactionIds(
   pendingTransactions: TransactionDetails[],
   neededInputIds: Set<string>,
 ): string[] {
-  // Set used to track unique txids of interest
   const txidSet = new Set<string>(
     pendingTransactions.flatMap((tx) => {
       if (!Array.isArray(tx.vin)) return [];
 
-      return (
-        tx.vin
-          // we only keep entries with both txid & vout
-          .filter((input) => !!input.txid && input.vout !== undefined)
-          // we only keep those tx's whose "txid:vout" is in the needed set
-          .filter((input) =>
-            neededInputIds.has(createInputIdentifier(input.txid!, input.vout!)),
-          )
-          .map((input) => input.txid!)
-      );
+      return tx.vin
+        .filter((input) => !!input.txid && input.vout !== undefined)
+        .filter((input) =>
+          neededInputIds.has(createInputIdentifier(input.txid!, input.vout!)),
+        )
+        .map((input) => input.txid!);
     }),
   );
-
   return Array.from(txidSet);
 }
+
 /**
- * Utility function that reconstructs a single UTXO from transaction data.
+ * Utility function that reconstructs a single coin from transaction data.
  *
  * This function inspects a transaction's outputs to locate the one referenced
  * by `input`, verifies ownership against provided wallet slices, and constructs a
- * fully‑formed UTXO object ready for PSBT signing.
+ * fully‑formed coin object ready for PSBT signing.
  *
- * @param input - The transaction input that consumed the UTXO
- * @param originalTransaction - The transaction that created the UTXO
+ * @param input - The transaction input that consumed the coin
+ * @param originalTransaction - The transaction that created the coin
  * @param originalTransactionHex - Raw hex of the transaction (needed for signing)
  * @param walletSlices - All wallet addresses to verify ownership
- * @returns Reconstructed UTXO object or null if not owned by wallet
+ * @returns Reconstructed coin object or null if not owned by wallet
  */
-function reconstructSingleUtxo(
-  input: { txid: string; vout: number },
+
+
+function reconstructSingleCoin(
+  input: { 
+    txid: string; 
+    vout: number 
+  },
   originalTransaction: TransactionDetails,
   originalTransactionHex: string,
   walletSlices: Slice[],
 ) {
-  // Step 1: Find the specific output of the transaction that became our UTXO.
+  // Step 1: Find the specific output of the transaction that became our coin.
   // This is the output that was consumed by a pending transaction we're trying to replace (fee-bump).
   const originalOutput = originalTransaction.vout?.[input.vout];
   if (!originalOutput) {
@@ -112,60 +125,71 @@ function reconstructSingleUtxo(
   }
 
   // Step 2: Extract the receiving address for that output.
-  // This lets us determine if the UTXO actually belonged to one of our wallet addresses.
+  // This lets us determine if the coin actually belonged to one of our wallet addresses.
   const address =
     originalOutput.scriptPubkeyAddress || originalOutput.scriptPubkey;
   if (!address) {
     return null;
   }
   //  Check if that address is owned by any of our wallet slices.
-  const walletSliceForThisAddress = walletSlices.find(
-    (slice) => slice.multisig?.address === address,
+  const slice = walletSlices.find(
+    (s) => s.multisig?.address === address,
   );
 
-  if (!walletSliceForThisAddress) {
+  if (!slice || !slice.multisig) {
     // If not, we skip it — it's not part of our wallet.
     return null;
   }
 
-  // Step 3: Build the reconstructed UTXO with all properties needed for signing
+  // Step 3: Extract Braid details (e.g., P2SH, P2WSH) to determine signing logic
+  const { addressType }: { addressType: MultisigAddressType } = JSON.parse(
+    slice.multisig.braidDetails
+  )
+
+  // Step 4: Build the reconstructed coin with all properties needed for signing
   return {
-    // Basic UTXO properties
+    // Basic Coin properties
     txid: input.txid,
-    index: input.vout,
-    amountSats: bitcoinsToSatoshis(originalOutput.value.toString()),
-    amount: originalOutput.value.toString(),
+    vout: input.vout,
+    value: bitcoinsToSatoshis(originalOutput.value.toString()),
+    prevTxHex: originalTransactionHex,
+    address: address,
     confirmed: originalTransaction.status?.confirmed || false,
-    transactionHex: originalTransactionHex,
 
     // Wallet-specific
-    multisig: walletSliceForThisAddress.multisig,
-    bip32Path: walletSliceForThisAddress.bip32Path,
-    change: walletSliceForThisAddress.change,
+    addressType,
+    bip32Derivations: slice.multisig.bip32Derivation,
+    redeemScript: slice.multisig.redeem.output,
+    witnessScript: slice.multisig.redeem.output,
+    multisig: slice.multisig,
+
+    // UI Metadata
+    bip32Path: slice.bip32Path,
+    change: slice.change
   };
 }
 
 /**
- * Orchestrates UTXO reconstruction from provided pending transactions.
+ * Orchestrates coin reconstruction from provided pending transactions.
  *
  * Given a set of known pending wallet transactions, this function attempts to
- * rebuild any UTXOs referenced by the input PSBT but hidden due to Bitcoin Core’s
+ * rebuild any coins referenced by the input PSBT but hidden due to Bitcoin Core’s
  * behavior with unconfirmed outputs.
  *
  * Steps:
  * 1. Iterate over pending transactions and their inputs.
- * 2. Match inputs against the set of UTXO identifiers we care about.
- * 3. For each match, fetch the original transaction that created the UTXO.
- * 4. Use `reconstructSingleUtxo()` to rebuild a usable UTXO object.
+ * 2. Match inputs against the set of coin identifiers we care about.
+ * 3. For each match, fetch the original transaction that created the coin.
+ * 4. Use `reconstructSinglecoin()` to rebuild a usable coin object.
  *
  * @param pendingTransactions - Unconfirmed transactions from our wallet (used as data source).
  * @param originalTxLookup - Lookup map of txid → original transaction and hex data.
- * @param allSlices - Wallet metadata (used to verify ownership of reconstructed UTXOs).
- * @param neededInputIds - Set of UTXO input IDs (txid:vout) we want to reconstruct.
+ * @param allSlices - Wallet metadata (used to verify ownership of reconstructed coins).
+ * @param neededInputIds - Set of coin input IDs (txid:vout) we want to reconstruct.
  *
  * @throws {Error} When network is unavailable or reconstruction fails
  */
-export function reconstructUtxosFromPendingTransactions(
+export function reconstructCoinsFromPendingTransactions(
   pendingTransactions: TransactionDetails[],
   originalTxLookup: Map<
     string,
@@ -173,8 +197,8 @@ export function reconstructUtxosFromPendingTransactions(
   >,
   allSlices: Slice[],
   neededInputIds: Set<string>, // Derived from the PSBT
-): { reconstructedUtxos: ReconstructedUtxos[]; hasPendingInputs: boolean } {
-  const reconstructedUtxos: ReconstructedUtxos[] = [];
+): { reconstructedCoins: ReconstructedCoin[]; hasPendingInputs: boolean } {
+  const reconstructedCoins: ReconstructedCoin[] = [];
   let hasPendingInputs = false;
 
   // Loop through each unconfirmed transaction
@@ -194,54 +218,57 @@ export function reconstructUtxosFromPendingTransactions(
       const originalTxData = originalTxLookup.get(input.txid);
       if (!originalTxData) continue;
 
-      const utxo = reconstructSingleUtxo(
-        { txid: input.txid, vout: input.vout },
+      const coin = reconstructSingleCoin(
+        { 
+          txid: input.txid, 
+          vout: input.vout 
+        },
         originalTxData.transaction,
         originalTxData.transactionHex,
         allSlices,
       );
 
       // Only include valid reconstructions
-      if (utxo) {
-        (utxo as any)._pendingTxid = pendingTx.txid; // So we get a PSBT we don't know which pendingTX is it trying to fee Bump
-        reconstructedUtxos.push(utxo as unknown as ReconstructedUtxos);
+      if (coin) {
+        (coin as any)._pendingTxid = pendingTx.txid; // So we get a PSBT we don't know which pendingTX is it trying to fee Bump
+        reconstructedCoins.push(coin as unknown as ReconstructedCoin);
       }
     }
   }
 
-  return { reconstructedUtxos, hasPendingInputs };
+  return { reconstructedCoins, hasPendingInputs };
 }
 
 /*
- * Matches a PSBT's required inputs to available UTXOs using a two-phase strategy.
+ * Matches a PSBT's required inputs to available coins using a two-phase strategy.
  *
  * ## Context
- * When you import a normal PSBT, all the UTXOs it references should be sitting
+ * When you import a normal PSBT, all the coins it references should be sitting
  * in your wallet as "spendable" - meaning Bitcoin Core's `listunspent` can find them.
  *
- * But when you import an RBF (Replace-By-Fee) PSBT, those same UTXOs are now
+ * But when you import an RBF (Replace-By-Fee) PSBT, those same coins are now
  * "spent" in the original pending transaction, so `listunspent` won't return them.
- * Yet the RBF PSBT still needs to reference those exact same UTXOs ...
+ * Yet the RBF PSBT still needs to reference those exact same coins ...
  *
  * ## Matching Strategy
  *
  * 1. **Spendable Path**:
- *    - Checks UTXOs from current wallet state (typically handles standard PSBTs).
+ *    - Checks coins from current wallet state (typically handles standard PSBTs).
  *
  * 2. **Reconstructed Path**:
  *    - Fallback if some inputs are not found in the wallet.
- *    - Matches against reconstructed UTXOs (from analyzing pending transactions).
+ *    - Matches against reconstructed coins (from analyzing pending transactions).
  *    - Designed for RBF PSBTs where inputs are already marked as spent.
  *
  * @param inputIdentifiers - Set of "txid:index" strings that the PSBT requires
  * @param availableInputs - Already formatted inputs from wallet (from selectAvailableInputsFromPSBT)
- * @param reconstructedUtxos - UTXOs rebuilt from pending transactions (the RBF case)
+ * @param reconstructedcoins - coins rebuilt from pending transactions (the RBF case)
  * @returns Complete array of inputs with all metadata needed for transaction signing
  */
 export function matchPsbtInputsToUtxos(
   inputIdentifiers: Set<string>,
   availableInputs: Input[] = [],
-  reconstructedUtxos: ReconstructedUtxos[] = [],
+  reconstructedCoins: ReconstructedCoin[] = [],
 ) {
   const matchedInputs: Input[] = [];
   const alreadyFoundInputs = new Set<string>();
@@ -251,47 +278,59 @@ export function matchPsbtInputsToUtxos(
   // =====================================================================
   //
   // This is where we handle normal PSBT imports. If you just created a PSBT
-  // for a fresh transaction, all the UTXOs it references should be sitting
+  // for a fresh transaction, all the coins it references should be sitting
   // right here in your wallet's spendable slices.
   //
   //
   availableInputs.forEach((input) => {
-    const utxoIdentifier = createInputIdentifier(input.txid, input.index);
-    if (inputIdentifiers.has(utxoIdentifier)) {
+    const coinIdentifier = createInputIdentifier(input.txid, input.index);
+    if (inputIdentifiers.has(coinIdentifier)) {
       matchedInputs.push(input);
-      alreadyFoundInputs.add(utxoIdentifier);
+      alreadyFoundInputs.add(coinIdentifier);
     }
   });
 
   // =====================================================================
-  // STRATEGY 2: The RBF Path - Check Reconstructed UTXOs
+  // STRATEGY 2: The RBF Path - Check Reconstructed coins
   // =====================================================================
   //
   // This is where the magic happens for RBF PSBTs. If we get here, it means
-  // Strategy 1 didn't find all the UTXOs the PSBT needs. That's a strong
+  // Strategy 1 didn't find all the coins the PSBT needs. That's a strong
   // indicator we're dealing with an RBF scenario.
   //
-  // The reconstructed UTXOs come from analyzing pending transactions to
-  // figure out "what UTXOs were consumed by that pending transaction that
-  // this new RBF PSBT wants to replace" and also prevent user from reconstructing any UTXO's given in PSBT.
+  // The reconstructed coins come from analyzing pending transactions to
+  // figure out "what coins were consumed by that pending transaction that
+  // this new RBF PSBT wants to replace" and also prevent user from reconstructing any coin's given in PSBT.
   //
-  reconstructedUtxos.forEach((reconstructedUtxo) => {
-    const utxoIdentifier = createInputIdentifier(
-      reconstructedUtxo.txid,
-      reconstructedUtxo.index,
-    );
+  reconstructedCoins.forEach(
+    (coin) => {
+    
+      // Iterating over each Coin stored in reconstructedCoins
+      const coinIdentifier = createInputIdentifier(coin.txid, coin.vout);
 
     // Two conditions must be met:
-    // 1. The PSBT actually wants this UTXO
+    // 1. The PSBT actually wants this coin
     // 2. We haven't already found it in Strategy 1 (avoid duplicates)
-    const psbtWantsThis = inputIdentifiers.has(utxoIdentifier);
-    const notAlreadyFound = !alreadyFoundInputs.has(utxoIdentifier);
+    const psbtWantsThis = inputIdentifiers.has(coinIdentifier);
+    const notAlreadyFound = !alreadyFoundInputs.has(coinIdentifier);
 
     if (psbtWantsThis && notAlreadyFound) {
-      // The reconstructed UTXO should already have all the wallet metadata
+      // The reconstructed coin should already have all the wallet metadata
       // (multisig, bip32Path, etc.) from the reconstruction process.
-      matchedInputs.push(reconstructedUtxo as Input);
-      alreadyFoundInputs.add(utxoIdentifier);
+
+      /**
+       * Instead of casting the slice (which lacks txid/hex), 
+       * we transform the reconstructed coin into a valid UTXO/Input.
+       */
+
+      // 1. Convert our coin to a formal UTXO structure
+      const utxo = getUtxoFromCoin(coin)
+
+      // 2. Map the UTXO input type
+      // We use 'unknown' as the bridge to satisfy TS checks
+      const formattedInput = (utxo as unknown) as Input;
+      matchedInputs.push(formattedInput);
+      alreadyFoundInputs.add(coinIdentifier);
     }
   });
 
@@ -312,16 +351,16 @@ export function matchPsbtInputsToUtxos(
  * 1. **Identifies ownership**: Checks if the specified output actually belongs to user's wallet
  * 2. **Reconstructs metadata**: Adds all the missing signing information from user wallet's
  *    slice data (multisig scripts, BIP32 derivation paths, etc.)
- * 3. **Formats for fees package**: Converts the result to the UTXO format expected by
+ * 3. **Formats for fees package**: Converts the result to the coin format expected by
  *    the @caravan/transactions package for transaction creation
  *
  *
  * @param parentTransaction - The unconfirmed transaction containing the output we want to spend
  * @param spendableOutputIndex
  * @param txHex - The raw hex data of the parent transaction (needed for signing)
- * @returns A fully enriched UTXO ready for spending, or null if the output doesn't belong to the wallet
+ * @returns A fully enriched coin ready for spending, or null if the output doesn't belong to the wallet
  */
-export const buildUtxoFromSpendingTransaction = (
+export const buildCoinFromSpendingTransaction = (
   parentTransaction: TransactionDetails,
   spendableOutputIndex: number,
   txHex: string,
@@ -331,59 +370,45 @@ export const buildUtxoFromSpendingTransaction = (
     return null;
   }
 
-  const input = {
-    txid: parentTransaction.txid,
-    vout: spendableOutputIndex,
-  };
-
-  const caravanUtxo = reconstructSingleUtxo(
-    input,
+  const coin = reconstructSingleCoin(
+    {
+      txid: parentTransaction.txid,
+      vout: spendableOutputIndex,
+    },
     parentTransaction,
     txHex,
     walletSlices,
   );
 
-  // If reconstruction failed, this output doesn't belong to our wallet
-  if (!caravanUtxo) {
-    console.warn(
-      `Failed to reconstruct UTXO for output ${spendableOutputIndex} of transaction ${parentTransaction.txid}. ` +
-        `This output may not belong to the wallet or wallet slice data may be incomplete.`,
-    );
-    return null;
-  }
-  const coinForConversion = convertCaravanUtxoToCoin(caravanUtxo);
+  if (!coin) return null
+
   try {
-    return getUtxoFromCoin(coinForConversion);
+    return getUtxoFromCoin(coin)
   } catch (error) {
-    console.error(
-      "Failed to convert reconstructed UTXO to fees format:",
-      error,
-    );
+    console.error("Failed to convert reconstructed coin to UTXO format:", error);
     return null;
   }
 };
 
-// TODO: Type conversion complexity in convertCaravanUtxoToCoin
-// This conversion chain (ReconstructedUtxos → Coin → UTXO) highlights unnecessary
-// type complexity. We should consolidate ReconstructedUtxos and Coin into a single
-// type to eliminate this intermediary conversion. This would simplify the codebase
-// by having reconstructSingleUtxo directly return a Coin object that can be passed
-// to getUtxoFromCoin.
+// If reconstruction failed, this output doesn't belong to our wallet
+//   if (!caravancoin) {
+//     console.warn(
+//       `Failed to reconstruct coin for output ${spendableOutputIndex} of transaction ${parentTransaction.txid}. ` +
+//         `This output may not belong to the wallet or wallet slice data may be incomplete.`,
+//     );
+//     return null;
+//   }
+//   const coinForConversion = caravancoin;
+//   try {
+//     return getUtxoFromCoin(coinForConversion);
+//   } catch (error) {
+//     console.error(
+//       "Failed to convert reconstructed coin to fees format:",
+//       error,
+//     );
+//     return null;
+//   }
+// };
 
-/**
- * Converts a Caravan-style UTXO object to a Coin object.
- *
- * @param caravanUtxo - UTXO object returned by reconstructSingleUtxo
- * @returns Coin object ready for getUtxoFromCoin conversion
- */
-function convertCaravanUtxoToCoin(caravanUtxo: ReconstructedUtxos): Coin {
-  // Return a Coin object in the format expected by getUtxoFromCoin
-  return {
-    prevTxId: caravanUtxo.txid,
-    vout: caravanUtxo.index,
-    address: caravanUtxo.multisig.address,
-    value: caravanUtxo.amountSats,
-    prevTxHex: caravanUtxo.transactionHex,
-    slice: caravanUtxo as unknown as Slice,
-  };
-}
+// Eliminating utxo to coin conversion method
+
