@@ -21,6 +21,8 @@ import {
   BCUR2ExportExtendedPublicKey,
   BCUR2EncodeTransaction,
   BCUR2SignMultisigTransaction,
+  BCUR2RegisterWalletPolicy,
+  BCUR2ConfirmMultisigAddress,
 } from "./bcur2/interactions";
 import {
   BITBOX,
@@ -626,6 +628,10 @@ export function ConfirmMultisigAddress({
         policyHmac,
       });
     }
+    case BCUR2:
+      return new BCUR2ConfirmMultisigAddress({
+        address: multisig.address,
+      });
     default:
       return new UnsupportedInteraction({
         code: UNSUPPORTED,
@@ -665,6 +671,11 @@ export function RegisterWalletPolicy({
         policyHmac,
         verify,
       });
+    case BCUR2: {
+      return new BCUR2RegisterWalletPolicy({
+        walletConfig,
+      });
+    }
     default:
       return new UnsupportedInteraction({
         code: "unsupported",
@@ -750,6 +761,10 @@ export function ConfigAdapter({
         walletConfig,
       });
     }
+    case BCUR2:
+      return new ColdcardMultisigWalletConfig({
+        jsonConfig,
+      });
     case COLDCARD:
       return new ColdcardMultisigWalletConfig({
         jsonConfig,

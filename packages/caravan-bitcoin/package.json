@@ -1,6 +1,6 @@
 {
   "name": "@caravan/bitcoin",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Unchained Capital's bitcoin utilities library.",
   "type": "commonjs",
   "main": "./dist/index.js",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/caravan-bitcoin/caravan.git",
+    "url": "https://github.com/caravan-bitcoin/caravan",
     "directory": "packages/caravan-bitcoin"
   },
   "author": "Unchained Capital",

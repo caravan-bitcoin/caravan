@@ -1,5 +1,20 @@
 # @caravan/psbt
 
+## 2.1.0
+
+### Minor Changes
+
+- [#445](https://github.com/caravan-bitcoin/caravan/pull/445) [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653) Thanks [@Shadouts](https://github.com/Shadouts)! - Added PsbtV2.combine method for combining PSBTs.
+
+### Patch Changes
+
+- [#445](https://github.com/caravan-bitcoin/caravan/pull/445) [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653)]:
+  - @caravan/bip32@1.0.4
+  - @caravan/bitcoin@0.4.5
+  - @caravan/multisig@1.0.2
+
 ## 2.0.7
 
 ### Patch Changes
