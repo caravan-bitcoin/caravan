@@ -92,6 +92,14 @@ export class SendTab {
     await btn.click();
   }
 
+  async importPsbtFile(psbtPath: string) {
+    await this.page.getByText("Import PSBT").scrollIntoViewIfNeeded();
+    await this.page.getByRole("combobox", { name: /import method/i }).click();
+    await this.page.getByRole("option", { name: /file upload/i }).click();
+    await this.page.locator('input[type="file"]').setInputFiles(psbtPath);
+    await this.page.getByRole("button", { name: /import psbt file/i }).click();
+  }
+
   async downloadUnsignedPsbt(savePath: string): Promise<string> {
     const btn = this.page.locator(
       'button[type=button]:has-text("Download Unsigned PSBT")',

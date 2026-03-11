@@ -44,6 +44,21 @@ test.describe.serial("Transaction Creation and Signing", () => {
     await walletNav.switchToTab("Send");
   });
 
+  test("invalid PSBT upload: shows error and blocks signing", async ({
+    sendTab,
+    page,
+  }) => {
+    const invalidPsbtPath = path.join(uploadDir, "invalid.psbt");
+    fs.writeFileSync(invalidPsbtPath, "this-is-not-a-valid-psbt");
+
+    await sendTab.importPsbtFile(invalidPsbtPath);
+
+    await expect(page.getByRole("alert")).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("button", { name: /sign transaction/i }),
+    ).not.toBeVisible();
+  });
+
   test("auto coin selection: create, sign, broadcast", async ({
     sendTab,
     signTab,
