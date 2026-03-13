@@ -799,3 +799,4 @@ export * from "./ledger";
 export * from "./trezor";
 export * from "./policy";
 export * from "./types";
+export * from "./webusb-diagnostics";
