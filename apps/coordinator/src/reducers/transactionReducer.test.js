@@ -366,4 +366,46 @@ describe("Test transactionReducer", () => {
       expect(r.txid).toEqual(txid);
     });
   });
+
+  describe("Test SET_FEE action with rate back-calculation", () => {
+    it("should set fee and back-calculate effective fee rate", () => {
+      const r = reducer(
+        {
+          ...initialState(),
+          inputs: [{}],
+          outputs: [{}],
+          addressType: P2WSH,
+          requiredSigners: 2,
+          totalSigners: 3,
+          inputsTotalSats: new BigNumber(929572),
+          feeRate: "5",
+        },
+        {
+          type: SET_FEE,
+          value: "0.00000504",
+        },
+      );
+      expect(r.fee).toEqual("0.00000504");
+      // Rate should be back-calculated, not still "5"
+      expect(parseFloat(r.feeRate)).toBeGreaterThan(0);
+      expect(r.lastEditedFeeField).toEqual("amount");
+    });
+
+    it("should not change fee rate when no inputs exist", () => {
+      const r = reducer(
+        {
+          ...initialState(),
+          inputs: [],
+          outputs: [{}],
+          feeRate: "5",
+        },
+        {
+          type: SET_FEE,
+          value: "0.00000504",
+        },
+      );
+      expect(r.fee).toEqual("0.00000504");
+      expect(r.feeRate).toEqual("5"); // Unchanged
+    });
+  });
 });

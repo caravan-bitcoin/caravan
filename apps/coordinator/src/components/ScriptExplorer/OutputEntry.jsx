@@ -15,6 +15,8 @@ import {
   InputAdornment,
   FormHelperText,
   Typography,
+  Box,
+  Button,
 } from "@mui/material";
 import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWallet";
 import { Delete, AddCircle, RemoveCircle } from "@mui/icons-material";
@@ -133,12 +135,14 @@ class OutputEntry extends React.Component {
     }
     const newAmount = this.autoBalancedAmount();
     if (
+      !BigNumber.isBigNumber(newAmount) ||
+      newAmount.isNaN() ||
       validateOutputAmount(bitcoinsToSatoshis(newAmount), inputsTotalSats) !==
-      ""
+        ""
     ) {
       return true;
     }
-    return amountError === "" && newAmount === new BigNumber(amount);
+    return amountError === "" && newAmount.isEqualTo(new BigNumber(amount));
   };
 
   isBalanceable = () => !this.isNotBalanceable();
@@ -152,15 +156,17 @@ class OutputEntry extends React.Component {
     const { number, fee, inputsTotalSats, outputs } = this.props;
     const outputTotalSats = outputs
       .filter((output, i) => i !== number - 1)
-      .map((output) => output.amountSats)
+      .map((output) => new BigNumber(output.amountSats || 0))
       .reduce(
         (accumulator, currentValue) => accumulator.plus(currentValue),
         new BigNumber(0),
       );
     const feeSats = bitcoinsToSatoshis(new BigNumber(fee));
-    return satoshisToBitcoins(
+    const result = satoshisToBitcoins(
       inputsTotalSats.minus(outputTotalSats.plus(feeSats)),
     );
+    // Guarantee we always return a BigNumber so .toFixed() never crashes
+    return BigNumber.isBigNumber(result) ? result : new BigNumber(result || 0);
   };
 
   balanceAction = () => {
@@ -210,9 +216,11 @@ class OutputEntry extends React.Component {
     } = this.props;
 
     const gridSpacing = isWallet ? 10 : 1;
+    const showRebalance =
+      this.displayBalanceAction() && this.balanceAction() !== null;
 
     return (
-      <Grid container spacing={gridSpacing}>
+      <Grid container spacing={gridSpacing} alignItems="flex-start">
         <Grid item xs={7}>
           <TextField
             fullWidth
@@ -266,22 +274,39 @@ class OutputEntry extends React.Component {
             }}
           />
         </Grid>
-        {this.displayBalanceAction() && (
-          <Grid item xs={1}>
-            <Tooltip
-              title={`${this.balanceAction()} to ${this.autoBalancedAmount().toString()}`}
-              placement="top"
-            >
-              <small>
-                <IconButton onClick={this.handleBalance}>
-                  {this.balanceAction() === "Increase" ? (
+        {showRebalance && (
+          <Grid item xs={2}>
+            <Box>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={this.handleBalance}
+                startIcon={
+                  this.balanceAction() === "Increase" ? (
                     <AddCircle />
                   ) : (
                     <RemoveCircle />
-                  )}
-                </IconButton>
-              </small>
-            </Tooltip>
+                  )
+                }
+                sx={{
+                  textTransform: "none",
+                  fontSize: "0.75rem",
+                  whiteSpace: "nowrap",
+                  minWidth: "auto",
+                }}
+              >
+                Rebalance
+              </Button>
+              <Typography
+                variant="caption"
+                color="textSecondary"
+                sx={{ display: "block", mt: 0.5, fontSize: "0.65rem" }}
+              >
+                {this.balanceAction()} to {this.autoBalancedAmount().toFixed(8)}{" "}
+                BTC
+              </Typography>
+            </Box>
           </Grid>
         )}
 

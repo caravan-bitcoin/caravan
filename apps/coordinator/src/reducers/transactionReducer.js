@@ -12,6 +12,7 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
   unsignedMultisigTransaction,
+  estimateMultisigTransactionFeeRate,
   getAddressType,
 } from "@caravan/bitcoin";
 import {
@@ -92,6 +93,7 @@ export const initialState = () => ({
   feeRateError: "",
   fee: "",
   feeError: "",
+  lastEditedFeeField: "rate", // telling user last edited which field fees or feeRate
   finalizedOutputs: false,
   txid: "",
   balanceError: "",
@@ -168,7 +170,15 @@ function deleteOutput(state, action) {
 }
 
 function updateFeeRate(state, action) {
-  const feeRateString = action.value;
+  let feeRateString = action.value;
+
+  // Limit to 2 decimal places
+  if (feeRateString && feeRateString.includes(".")) {
+    const parts = feeRateString.split(".");
+    if (parts[1] && parts[1].length > 2) {
+      feeRateString = parseFloat(feeRateString).toFixed(2);
+    }
+  }
 
   // Gets the error type. Useful for conditionally displaying errors.
   const feeRateError = checkFeeRateError(feeRateString);
@@ -192,18 +202,52 @@ function updateFeeRate(state, action) {
     feeRateError: feeRateErrorMessage,
     fee,
     feeError: "",
+    lastEditedFeeField: "rate",
   });
 }
 
 function updateFee(state, action) {
   const feeString = action.value;
-  const feeSats = bitcoinsToSatoshis(feeString);
+  // Safely convert — intermediate typing like "" or "0." must not crash
+  let feeSats;
+  try {
+    const parsed = new BigNumber(feeString);
+    feeSats = parsed.isNaN() ? new BigNumber(0) : bitcoinsToSatoshis(parsed);
+  } catch (e) {
+    feeSats = new BigNumber(0);
+  }
+
   const feeError = validateFee(feeSats, state.inputsTotalSats);
+
+  // Back-calculate effective fee rate when inputs exist
+  let feeRate = state.feeRate;
+  let feeRateError = "";
+  if (
+    state.inputs.length > 0 &&
+    !feeError &&
+    BigNumber.isBigNumber(feeSats) &&
+    !feeSats.isNaN() &&
+    feeSats.isGreaterThan(0)
+  ) {
+    const estimatedRate = estimateMultisigTransactionFeeRate({
+      addressType: state.addressType,
+      numInputs: state.inputs.length,
+      numOutputs: state.outputs.length,
+      m: state.requiredSigners,
+      n: state.totalSigners,
+      feesInSatoshis: feeSats,
+    });
+    if (estimatedRate && parseFloat(estimatedRate) > 0) {
+      feeRate = parseFloat(estimatedRate).toFixed(2);
+    }
+  }
 
   return updateState(state, {
     fee: feeString,
     feeError,
-    feeRateError: "",
+    feeRate,
+    feeRateError,
+    lastEditedFeeField: "amount",
   });
 }
 
