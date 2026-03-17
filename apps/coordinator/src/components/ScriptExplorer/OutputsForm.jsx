@@ -3,11 +3,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { map } from "lodash";
 import BigNumber from "bignumber.js";
-import {
-  bitcoinsToSatoshis,
-  satoshisToBitcoins,
-  estimateMultisigTransactionFee,
-} from "@caravan/bitcoin";
+import { bitcoinsToSatoshis, satoshisToBitcoins } from "@caravan/bitcoin";
 import {
   Grid,
   Button,
@@ -161,7 +157,6 @@ class OutputsForm extends React.Component {
   handleFeeRateChange = (event) => {
     const { setFeeRate } = this.props;
     let rate = event.target.value;
-    console.log("rate", rate);
     // Limit to 2 decimal places in the input
     if (rate.includes(".")) {
       const parts = rate.split(".");
@@ -181,33 +176,11 @@ class OutputsForm extends React.Component {
   handleFeeBump = () => {
     const { fee, setFee } = this.props;
     try {
-      const currentSats = bitcoinsToSatoshis(new BigNumber(fee || 0));
+      const currentSats = new BigNumber(bitcoinsToSatoshis(fee || 0));
       const bumped = currentSats.plus(1);
-      setFee(satoshisToBitcoins(bumped).toString());
+      setFee(satoshisToBitcoins(bumped.toFixed(8)));
     } catch (e) {
       // If current fee is unparseable, ignore
-    }
-  };
-
-  // Compute estimated fee from rate for display in auto mode
-  getEstimatedFeeFromRate = () => {
-    const { feeRate, outputs, addressType, requiredSigners, totalSigners } =
-      this.props;
-
-    if (!feeRate || parseFloat(feeRate) <= 0) return "—";
-
-    try {
-      const estimated = estimateMultisigTransactionFee({
-        addressType,
-        numInputs: 1, // estimate with 1 input as minimum
-        numOutputs: Math.max(outputs.length, 1),
-        m: requiredSigners,
-        n: totalSigners,
-        feesPerByteInSatoshis: feeRate,
-      });
-      return satoshisToBitcoins(estimated).toString();
-    } catch (e) {
-      return "—";
     }
   };
 
@@ -287,25 +260,16 @@ class OutputsForm extends React.Component {
     } = this.props;
     const { feeRateFetchError } = this.state;
 
-    // Auto-spend: no inputs selected yet → show estimate from rate, not reducer fee
-    // Manual: show reducer fee directly
     const hasInputs = inputs.length > 0;
     const canEditFee = !autoSpend && hasInputs;
-
-    let feeDisplay;
-    if (autoSpend) {
-      feeDisplay = hasInputs ? fee : this.getEstimatedFeeFromRate();
-    } else {
-      feeDisplay = fee || "";
-    }
-
     const gridSpacing = isWallet ? 10 : 1;
+    const isManual = !autoSpend;
 
     return (
       <>
         <Box ref={this.titleRef}>
-          {/* ====== Outputs Section ====== */}
-          <Box mb={3}>
+          {/* ── Outputs ── */}
+          <Box mb={2}>
             <Grid container spacing={gridSpacing}>
               <Grid item xs={7}>
                 <Typography
@@ -340,249 +304,301 @@ class OutputsForm extends React.Component {
             </Button>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          {autoSpend ? (
+            /* Auto Spend Mode */
+            <Box mt={1} mb={2}>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs="auto">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontWeight: 500, whiteSpace: "nowrap" }}
+                  >
+                    Fee rate
+                  </Typography>
+                </Grid>
+                <Grid item xs={4} sm={3}>
+                  <TextField
+                    fullWidth
+                    value={feeRate}
+                    variant="outlined"
+                    size="small"
+                    type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
+                    name="fee_rate"
+                    disabled={finalizedOutputs}
+                    onChange={this.handleFeeRateChange}
+                    error={this.hasFeeRateError()}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Tooltip
+                            placement="top"
+                            title="Fetch recommended rate"
+                          >
+                            <span>
+                              <IconButton
+                                onClick={this.getFeeEstimate}
+                                disabled={finalizedOutputs}
+                                size="small"
+                                color="primary"
+                              >
+                                <Speed fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs="auto">
+                  <Typography variant="caption" color="text.secondary">
+                    sats/vB
+                  </Typography>
+                </Grid>
+                <Grid item xs>
+                  <Typography variant="caption" color="text.secondary">
+                    ·{" "}
+                    <a
+                      href="https://mempool.space"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "inherit", textDecoration: "underline" }}
+                    >
+                      mempool.space
+                    </a>
+                  </Typography>
+                </Grid>
+              </Grid>
+              {(feeRateFetchError || feeRateError) && (
+                <Typography
+                  variant="caption"
+                  color="error"
+                  sx={{ display: "block", mt: 0.5 }}
+                >
+                  {feeRateFetchError || feeRateError}
+                </Typography>
+              )}
+            </Box>
+          ) : (
+            /* Manual Spend Mode */
+            <>
+              <Divider sx={{ my: 3 }} />
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2.5,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  backgroundColor: "action.hover",
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 600,
+                    mb: 2,
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                    fontSize: "0.75rem",
+                    color: "text.secondary",
+                  }}
+                >
+                  Transaction Fee
+                </Typography>
 
-          {/* ====== Fee Section ====== */}
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2.5,
-              borderColor: "divider",
-              borderRadius: 2,
-              backgroundColor: "action.hover",
-            }}
-          >
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              mb={2}
+                <Grid container spacing={3} alignItems="flex-start">
+                  {/* Fee Rate */}
+                  <Grid item xs={12} sm={5}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
+                    >
+                      Fee Rate
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      value={feeRate}
+                      variant="outlined"
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      name="fee_rate"
+                      disabled={finalizedOutputs}
+                      onChange={this.handleFeeRateChange}
+                      error={this.hasFeeRateError()}
+                      helperText={feeRateFetchError || feeRateError}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Tooltip
+                              placement="top"
+                              title="Fetch recommended rate"
+                            >
+                              <span>
+                                <IconButton
+                                  onClick={this.getFeeEstimate}
+                                  disabled={finalizedOutputs}
+                                  size="small"
+                                  color="primary"
+                                >
+                                  <Speed fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ ml: 0.5, whiteSpace: "nowrap" }}
+                            >
+                              sats/vB
+                            </Typography>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 0.5 }}
+                    >
+                      Check{" "}
+                      <a
+                        href="https://mempool.space"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "inherit",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        mempool.space
+                      </a>{" "}
+                      for current rates
+                    </Typography>
+                  </Grid>
+
+                  {/* Fee Amount */}
+                  <Grid item xs={12} sm={5}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
+                    >
+                      Fee Amount
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      name="fee_total"
+                      disabled={finalizedOutputs || !canEditFee}
+                      value={fee || ""}
+                      variant="outlined"
+                      size="small"
+                      type="text"
+                      onChange={this.handleFeeChange}
+                      error={this.hasFeeError()}
+                      helperText={feeError || ""}
+                      InputProps={{
+                        readOnly: !canEditFee,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {canEditFee && !finalizedOutputs && (
+                              <Tooltip
+                                title="Bump fee by +1 satoshi"
+                                placement="top"
+                              >
+                                <span>
+                                  <IconButton
+                                    onClick={this.handleFeeBump}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ mr: 0.5 }}
+                                  >
+                                    <AddIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ whiteSpace: "nowrap" }}
+                            >
+                              BTC
+                            </Typography>
+                          </InputAdornment>
+                        ),
+                        sx: {
+                          backgroundColor: canEditFee
+                            ? "background.paper"
+                            : "transparent",
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderStyle: canEditFee ? "solid" : "dashed",
+                          },
+                        },
+                      }}
+                    />
+                    {!hasInputs && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: "block",
+                          mt: 0.5,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        Select inputs to edit fee directly
+                      </Typography>
+                    )}
+                    {canEditFee && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block", mt: 0.5 }}
+                      >
+                        Edit to set exact fee — rate updates automatically
+                      </Typography>
+                    )}
+                  </Grid>
+
+                  <Grid item xs={12} sm={2} />
+                </Grid>
+              </Paper>
+            </>
+          )}
+
+          {/* ── Totals ── */}
+          {isManual && (
+            <Paper
+              variant="outlined"
+              sx={{
+                mt: 3,
+                p: 2.5,
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
             >
               <Typography
                 variant="subtitle2"
                 sx={{
                   fontWeight: 600,
+                  mb: 2,
                   letterSpacing: 0.5,
                   textTransform: "uppercase",
                   fontSize: "0.75rem",
                   color: "text.secondary",
                 }}
               >
-                Transaction Fee
+                Transaction Summary
               </Typography>
-              {autoSpend && (
-                <Chip
-                  label="Auto-select mode"
-                  size="small"
-                  variant="outlined"
-                  color="info"
-                  sx={{ fontSize: "0.65rem", height: 22 }}
-                />
-              )}
-            </Box>
 
-            <Grid container spacing={3} alignItems="flex-start">
-              {/* Fee Rate */}
-              <Grid item xs={12} sm={5}>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
-                >
-                  Fee Rate
-                </Typography>
-                <TextField
-                  fullWidth
-                  value={feeRate}
-                  variant="outlined"
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.01 }}
-                  name="fee_rate"
-                  disabled={finalizedOutputs}
-                  onChange={this.handleFeeRateChange}
-                  error={this.hasFeeRateError()}
-                  helperText={feeRateFetchError || feeRateError}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Tooltip placement="top" title="Fetch recommended rate">
-                          <span>
-                            <IconButton
-                              onClick={this.getFeeEstimate}
-                              disabled={finalizedOutputs}
-                              size="small"
-                              color="primary"
-                            >
-                              <Speed fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, whiteSpace: "nowrap" }}
-                        >
-                          sats/vB
-                        </Typography>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mt: 0.5, lineHeight: 1.3 }}
-                >
-                  Check{" "}
-                  <a
-                    href="https://mempool.space"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "inherit", textDecoration: "underline" }}
-                  >
-                    mempool.space
-                  </a>{" "}
-                  for current rates
-                </Typography>
-              </Grid>
-
-              {/* Estimated Fee */}
-              <Grid item xs={12} sm={5}>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
-                >
-                  {autoSpend ? "Estimated Fee" : "Fee Amount"}
-                </Typography>
-                <TextField
-                  fullWidth
-                  name="fee_total"
-                  disabled={finalizedOutputs || !canEditFee}
-                  value={feeDisplay}
-                  variant="outlined"
-                  size="small"
-                  type="text"
-                  onChange={this.handleFeeChange}
-                  error={this.hasFeeError()}
-                  helperText={feeError || ""}
-                  InputProps={{
-                    readOnly: !canEditFee,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {/* +1 sat bump — only in manual mode with inputs */}
-                        {canEditFee && !finalizedOutputs && (
-                          <Tooltip
-                            title="Bump fee by +1 satoshi"
-                            placement="top"
-                          >
-                            <span>
-                              <IconButton
-                                onClick={this.handleFeeBump}
-                                size="small"
-                                color="primary"
-                                sx={{ mr: 0.5 }}
-                              >
-                                <AddIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        )}
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ whiteSpace: "nowrap" }}
-                        >
-                          BTC
-                        </Typography>
-                      </InputAdornment>
-                    ),
-                    sx: {
-                      backgroundColor: canEditFee
-                        ? "background.paper"
-                        : "transparent",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderStyle: canEditFee ? "solid" : "dashed",
-                      },
-                    },
-                  }}
-                />
-                {/* Contextual hints */}
-                {!canEditFee && !autoSpend && !hasInputs && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5, fontStyle: "italic" }}
-                  >
-                    Select inputs to edit fee directly
-                  </Typography>
-                )}
-                {autoSpend && !hasInputs && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5, fontStyle: "italic" }}
-                  >
-                    Estimate based on ~1 input. Final fee set during coin
-                    selection.
-                  </Typography>
-                )}
-                {autoSpend && hasInputs && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5, fontStyle: "italic" }}
-                  >
-                    Finalized during coin selection
-                  </Typography>
-                )}
-                {canEditFee && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5 }}
-                  >
-                    Edit to set exact fee — rate updates automatically
-                  </Typography>
-                )}
-              </Grid>
-
-              <Grid item xs={12} sm={2} />
-            </Grid>
-          </Paper>
-
-          {/* ====== Totals Section ====== */}
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: 3,
-              p: 2.5,
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                fontWeight: 600,
-                mb: 2,
-                letterSpacing: 0.5,
-                textTransform: "uppercase",
-                fontSize: "0.75rem",
-                color: "text.secondary",
-              }}
-            >
-              {!isWallet || (isWallet && !autoSpend)
-                ? "Transaction Summary"
-                : "Output Summary"}
-            </Typography>
-
-            <Grid container spacing={3} alignItems="center">
-              {/* Inputs Total — hidden in auto-spend */}
-              {(!isWallet || (isWallet && !autoSpend)) && (
-                <Grid item xs={12} sm={4}>
-                  <Box>
+              <Grid container spacing={3} alignItems="center">
+                {(!isWallet || (isWallet && isManual)) && (
+                  <Grid item xs={12} sm={4}>
                     <Typography
                       variant="caption"
                       color="text.secondary"
@@ -601,21 +617,16 @@ class OutputsForm extends React.Component {
                         BTC
                       </Typography>
                     </Box>
-                  </Box>
-                </Grid>
-              )}
+                  </Grid>
+                )}
 
-              {/* Outputs + Fee Total */}
-              <Grid item xs={12} sm={4}>
-                <Box>
+                <Grid item xs={12} sm={4}>
                   <Typography
                     variant="caption"
                     color="text.secondary"
                     sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
                   >
-                    {!isWallet || (isWallet && !autoSpend)
-                      ? "Outputs + Fee"
-                      : "Outputs Total"}
+                    Outputs + Fee
                   </Typography>
                   <Box display="flex" alignItems="baseline" gap={0.5}>
                     <Typography
@@ -643,13 +654,9 @@ class OutputsForm extends React.Component {
                       {balanceError}
                     </Typography>
                   )}
-                </Box>
-              </Grid>
+                </Grid>
 
-              {/* Balance difference indicator */}
-              {(!isWallet || (isWallet && !autoSpend)) &&
-                hasInputs &&
-                !this.hasBalanceError() && (
+                {hasInputs && !this.hasBalanceError() && (
                   <Grid item xs={12} sm={4}>
                     <Chip
                       label="Balanced ✓"
@@ -660,11 +667,46 @@ class OutputsForm extends React.Component {
                     />
                   </Grid>
                 )}
-            </Grid>
-          </Paper>
+              </Grid>
+            </Paper>
+          )}
+
+          {/* Auto mode — simple output total inline */}
+          {autoSpend && (
+            <Box mt={2}>
+              <Divider sx={{ mb: 2 }} />
+              <Box display="flex" alignItems="baseline" gap={1}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Sending
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{ fontFamily: "monospace", fontWeight: 600 }}
+                >
+                  {this.outputsAndFeeTotal()}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  BTC
+                </Typography>
+              </Box>
+              {balanceError && (
+                <Typography
+                  variant="caption"
+                  color="error"
+                  sx={{ mt: 0.5, display: "block" }}
+                >
+                  {balanceError}
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
 
-        {/* ====== Action Buttons (Script Explorer only) ====== */}
+        {/* ── Action Buttons (Script Explorer) ── */}
         {!isWallet && (
           <Box mt={4}>
             <Grid container spacing={2} justifyContent="center">
