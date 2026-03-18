@@ -109,6 +109,81 @@ export abstract class PsbtV2Maps {
   private copyMap(from: ReadonlyMap<string, Buffer>, to: Map<string, Buffer>) {
     from.forEach((v, k) => to.set(k, Buffer.from(v)));
   }
+
+  /**
+   * For a given map, set the value to the given key if the value is not empty.
+   * This overrides the value at that key as long as the value will not be
+   * empty.
+   */
+  private combineValue(map: Map<Key, Value>, value: Buffer, toKey: Key) {
+    if (value && value.length > 0) {
+      map.set(toKey, value);
+    }
+  }
+
+  private validateCombineMaps(from: PsbtV2Maps) {
+    // The following checks are not likely to be triggered because a PSBT
+    // combiner is only allowed to combine PSBTs with the same inputs and
+    // outputs. See PsbtV2.validateCombine.
+    if (from.inputMaps.length !== this.inputMaps.length) {
+      throw new Error(
+        `Cannot combine PSBTs with different input counts: ` +
+        `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`
+      );
+    }
+    if (from.outputMaps.length !== this.outputMaps.length) {
+      throw new Error(
+        `Cannot combine PSBTs with different output counts: ` +
+        `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`
+      );
+    }
+  }
+
+  /**
+   * Combines the maps in the provided PsbtV2Maps object into this one. Using
+   * this without validation may produce a PSBT in an invalid state.
+   *
+   * This operation is atomic - if any error occurs, the original state is
+   * preserved.
+   */
+  protected combineMaps(from: PsbtV2Maps) {
+    this.validateCombineMaps(from);
+
+    // Build combined state in temporary copies for atomicity
+    const newGlobalMap = new Map(this.globalMap);
+    const newInputMaps = this.inputMaps.map((m) => new Map(m));
+    const newOutputMaps = this.outputMaps.map((m) => new Map(m));
+
+    // Combine global maps - merge all key-value pairs
+    for (const [key, value] of from.globalMap) {
+      this.combineValue(newGlobalMap, value, key);
+    }
+
+    // Combine input maps - merge all key-value pairs for each input
+    for (let i = 0; i < from.inputMaps.length; i++) {
+      if (!newInputMaps[i]) {
+        newInputMaps[i] = new Map();
+      }
+      for (const [key, value] of from.inputMaps[i]) {
+        this.combineValue(newInputMaps[i], value, key);
+      }
+    }
+
+    // Combine output maps - merge all key-value pairs for each output
+    for (let i = 0; i < from.outputMaps.length; i++) {
+      if (!newOutputMaps[i]) {
+        newOutputMaps[i] = new Map();
+      }
+      for (const [key, value] of from.outputMaps[i]) {
+        this.combineValue(newOutputMaps[i], value, key);
+      }
+    }
+
+    // All operations successful - commit the changes atomically
+    this.globalMap = newGlobalMap;
+    this.inputMaps = newInputMaps;
+    this.outputMaps = newOutputMaps;
+  }
 }
 
 /**
@@ -217,4 +292,36 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       this.v0delete(outputMap, KeyType.PSBT_OUT_SCRIPT);
     }
   };
+
+  public getTransactionId() {
+    const txBuf = this.buildUnsignedTx();
+    try {
+      return Transaction.fromBuffer(txBuf).getId();
+    } catch (e) {
+      const numInputs = this.inputMaps.length;
+      const numOutputs = this.outputMaps.length;
+
+      // Special case: 0 inputs with 1 output creates ambiguous serialization
+      // that bitcoinjs-lib misinterprets as SegWit (0x00 0x01 marker/flag)
+      if (numInputs === 0 && numOutputs === 1) {
+        console.error(
+          `Cannot compute transaction ID for PSBT with 0 inputs and 1 output. ` +
+            `The serialized transaction (${txBuf.toString("hex")}) is ambiguous ` +
+            `with SegWit format and cannot be parsed.`,
+        );
+        throw new Error(
+          "Cannot compute transaction ID: PSBT has 0 inputs and 1 output, " +
+            "which produces an ambiguous transaction format. "
+        );
+      }
+
+      console.error(
+        `Failed to parse transaction buffer: ${txBuf.toString("hex")}`,
+      );
+      throw new Error(
+        `Failed to compute transaction ID (${numInputs} inputs, ${numOutputs} outputs): ` +
+          `${e instanceof Error ? e.message : e}`,
+      );
+    }
+  }
 }

@@ -22,6 +22,7 @@ import {
   RegisterBitBoxButton,
   RegisterLedgerButton,
   RegisterJadeButton,
+  RegisterBCUR2Button,
 } from "../RegisterWallet";
 
 const useStyles = makeStyles({ expanded: { margin: "0 0!important" } });
@@ -99,6 +100,9 @@ const WalletRegistrations = () => {
               </Grid>
               <Grid item>
                 <RegisterLedgerButton />
+              </Grid>
+              <Grid item>
+                <RegisterBCUR2Button />
               </Grid>
               <Grid item>
                 <DownloadColdardConfigButton />

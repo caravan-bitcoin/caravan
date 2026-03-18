@@ -10,7 +10,9 @@ import {
   Network,
   parseSignaturesFromPSBT,
 } from "@caravan/bitcoin";
+import { MultisigWalletConfig } from "@caravan/multisig";
 
+import { ColdcardMultisigWalletConfig, ConfigAdapter } from "..";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -31,7 +33,7 @@ export type BCUR2DecoderFactory = () => BCUR2Decoder;
  */
 export type BCUR2EncoderFactory = (
   data: string,
-  maxFragmentLength: number
+  maxFragmentLength: number,
 ) => BCUR2Encoder;
 
 /** Constant defining BCUR2 interactions */
@@ -56,7 +58,7 @@ export class BCUR2Interaction extends IndirectKeystoreInteraction {
    */
   constructor(
     network: BitcoinNetwork = Network.MAINNET,
-    decoder: BCUR2Decoder = new BCUR2Decoder()
+    decoder: BCUR2Decoder = new BCUR2Decoder(),
   ) {
     super();
     this.network = network;
@@ -497,7 +499,7 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
 
         if (!this.decoder.isComplete()) {
           throw new Error(
-            "Incomplete PSBT data received - scan all QR code parts"
+            "Incomplete PSBT data received - scan all QR code parts",
           );
         }
 
@@ -569,5 +571,76 @@ export class BCUR2SignMultisigTransaction extends BCUR2Interaction {
       this.qrCodeFrames = this.encoder.encodePSBT();
     }
     return this.qrCodeFrames;
+  }
+}
+
+export class BCUR2RegisterWalletPolicy extends BCUR2Interaction {
+  walletConfig: MultisigWalletConfig;
+
+  private encoder: BCUR2Encoder;
+
+  private maxFragmentLength: number = 121;
+
+  private qrCodeFrames: string[];
+
+  constructor({
+    walletConfig,
+    network = Network.MAINNET,
+  }: {
+    walletConfig: MultisigWalletConfig;
+    network?: BitcoinNetwork;
+  }) {
+    super(network);
+    this.walletConfig = walletConfig;
+    this.qrCodeFrames = [];
+
+    const registrationData = (
+      ConfigAdapter({
+        KEYSTORE: BCUR2,
+        jsonConfig: walletConfig,
+      }) as ColdcardMultisigWalletConfig
+    ).adapt();
+
+    this.encoder = new BCUR2Encoder(
+      registrationData,
+      this.maxFragmentLength,
+      "bytes",
+    );
+  }
+
+  /**
+   * Generates the request data for displaying QR codes
+   * @returns {Object} Request data containing instructions
+   * */
+  request() {
+    if (this.qrCodeFrames.length === 0) {
+      this.qrCodeFrames = this.encoder.qrFragments;
+    }
+    return {
+      instruction: "Scan these animated QR codes with your signing device",
+      qrCodeFrames: this.qrCodeFrames,
+      fragmentCount: this.qrCodeFrames.length,
+      maxFragmentLength: this.maxFragmentLength,
+    };
+  }
+}
+
+export class BCUR2ConfirmMultisigAddress extends BCUR2Interaction {
+  private address: string;
+
+  constructor({ address }: { address: string }) {
+    super();
+    this.address = address;
+  }
+
+  /**
+   * Generates the request data for displaying QR codes
+   * @returns {Object} Request data containing instructions
+   * */
+  request() {
+    return {
+      instruction: "Scan these animated QR codes with your signing device",
+      qrCodeFrames: [`bitcoin:${this.address}`], // BIP-21 style URI (not a true UR registry item)
+    };
   }
 }

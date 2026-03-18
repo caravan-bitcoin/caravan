@@ -1,5 +1,14 @@
 # @caravan/bip32
 
+## 1.0.4
+
+### Patch Changes
+
+- [#445](https://github.com/caravan-bitcoin/caravan/pull/445) [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653)]:
+  - @caravan/bitcoin@0.4.5
+
 ## 1.0.3
 
 ### Patch Changes

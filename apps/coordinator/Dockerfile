@@ -1,5 +1,5 @@
 # Caravan coordinator app is platform agnostic, the build platform output can be reused.
-FROM --platform=$BUILDPLATFORM node:20.19.3-bookworm-slim AS base
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS base
 
 # Install all OS dependencies
 FROM base AS builder

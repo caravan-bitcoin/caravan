@@ -37,10 +37,10 @@ if [ -n "$ENGINES_FILE" ]; then
         CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
         REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
 
-        if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
+        if [ "$CURRENT_MAJOR" -lt "$REQUIRED_MAJOR" ]; then
             echo ""
-            echo "❌ Node.js major version mismatch!"
-            echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
+            echo "❌ Node.js version too old!"
+            echo "   Required: Node >= $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
             echo "   Current:  $CURRENT_NODE"
             echo ""
             echo "   To fix this:"

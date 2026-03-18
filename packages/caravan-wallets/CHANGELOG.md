@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- [#468](https://github.com/caravan-bitcoin/caravan/pull/468) [`f7077e8`](https://github.com/caravan-bitcoin/caravan/commit/f7077e893ce1dc4ad14f43fa61726ea90137577e) Thanks [@cc-unchained](https://github.com/cc-unchained)! - BCUR2 support for wallet registration and address confirmation.
+
+## 0.9.5
+
+### Patch Changes
+
+- [#445](https://github.com/caravan-bitcoin/caravan/pull/445) [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653) Thanks [@Shadouts](https://github.com/Shadouts)! - update some packages
+
+- Updated dependencies [[`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653), [`7c97bdc`](https://github.com/caravan-bitcoin/caravan/commit/7c97bdcb9b8d47e6a70b9755eb518b6108aae653)]:
+  - @caravan/bitcoin@0.4.5
+  - @caravan/psbt@2.1.0
+
 ## 0.9.4
 
 ### Patch Changes
