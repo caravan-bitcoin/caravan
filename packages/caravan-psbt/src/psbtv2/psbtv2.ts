@@ -452,17 +452,12 @@ export class PsbtV2 extends PsbtV2Maps {
     return indices;
   }
 
-  get PSBT_OUT_SCRIPT() {
-    const indices: string[] = [];
-    for (const map of this.outputMaps) {
+  get PSBT_OUT_SCRIPT(): (string | null)[] {
+    return this.outputMaps.map((map) => {
       const value = map.get(KeyType.PSBT_OUT_SCRIPT);
-      if (!value) {
-        // This should never happen, but it can't be gracefully handled.
-        throw Error("PSBT_OUT_SCRIPT not set for an output");
-      }
-      indices.push(value.toString("hex"));
-    }
-    return indices;
+      if (!value) return null;
+      return value.toString("hex");
+    });
   }
 
   get PSBT_OUT_TAP_INTERNAL_KEY() {
@@ -575,7 +570,11 @@ export class PsbtV2 extends PsbtV2Maps {
     if (this.isReadyForTransactionExtractor) {
       return false;
     }
-
+    // Per BIP375: if SP outputs are present, all must have a computed
+    // PSBT_OUT_SCRIPT before signing is permitted.
+    if (this.hasSilentPaymentOutputs && !this.hasAllSPOutputScripts) {
+      return false;
+    }
     return true;
   }
 
@@ -800,9 +799,12 @@ export class PsbtV2 extends PsbtV2Maps {
         throw Error("PsbtV2 input is missing PSBT_OUT_AMOUNT");
       }
     }
-    for (const script of this.PSBT_OUT_SCRIPT) {
-      if (!script) {
-        throw Error("PsbtV2 input is missing PSBT_OUT_SCRIPT");
+    for (const [i, script] of this.PSBT_OUT_SCRIPT.entries()) {
+      if (!script && !this.outputMaps[i].has(KeyType.PSBT_OUT_SP_V0_INFO)) {
+        throw Error(
+          `PsbtV2 output ${i} is missing PSBT_OUT_SCRIPT and has no ` +
+            "PSBT_OUT_SP_V0_INFO. An output must have one or both per BIP375.",
+        );
       }
     }
     for (const locktime of this.PSBT_IN_REQUIRED_TIME_LOCKTIME) {
@@ -1034,12 +1036,18 @@ export class PsbtV2 extends PsbtV2Maps {
   public addOutput({
     amount,
     script,
+    silentPayment,
     redeemScript,
     witnessScript,
     bip32Derivation,
   }: {
     amount: number;
-    script: Buffer;
+    script?: Buffer;
+    silentPayment?: {
+      bscan: Buffer;
+      bspend: Buffer;
+      label?: number;
+    };
     redeemScript?: Buffer;
     witnessScript?: Buffer;
     bip32Derivation?: {
@@ -1058,12 +1066,49 @@ export class PsbtV2 extends PsbtV2Maps {
         "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified.",
       );
     }
+    // Per BIP375: every output must have PSBT_OUT_SCRIPT, PSBT_OUT_SP_V0_INFO,
+    // or both. A regular output with no script and no SP info is invalid.
+    if (!script && !silentPayment) {
+      throw Error(
+        "addOutput requires either a script (regular output) or " +
+          "silentPayment { bscan, bspend } (SP output).",
+      );
+    }
+
     const map = new Map<Key, Value>();
     const bw = new BufferWriter();
+
     bw.writeI64(amount);
     map.set(KeyType.PSBT_OUT_AMOUNT, bw.render());
-    bw.writeBytes(script);
-    map.set(KeyType.PSBT_OUT_SCRIPT, bw.render());
+
+    if (script) {
+      bw.writeBytes(script);
+      map.set(KeyType.PSBT_OUT_SCRIPT, bw.render());
+    }
+
+    if (silentPayment) {
+      const { bscan, bspend, label } = silentPayment;
+      if (bscan.length !== 33) {
+        throw Error(`bscan must be 33 bytes, got ${bscan.length}`);
+      }
+      if (bspend.length !== 33) {
+        throw Error(`bspend must be 33 bytes, got ${bspend.length}`);
+      }
+      // Value: bscan || bspend, 66 bytes — no version prefix in field value.
+      const spBw = new BufferWriter();
+      spBw.writeBytes(bscan);
+      spBw.writeBytes(bspend);
+      map.set(KeyType.PSBT_OUT_SP_V0_INFO, spBw.render());
+
+      if (label !== undefined) {
+        if (!Number.isInteger(label) || label < 0 || label > 0xffffffff) {
+          throw Error(`label must be a uint32 (0–${0xffffffff}), got ${label}`);
+        }
+        const labelBw = new BufferWriter();
+        labelBw.writeU32(label);
+        map.set(KeyType.PSBT_OUT_SP_V0_LABEL, labelBw.render());
+      }
+    }
 
     if (redeemScript) {
       bw.writeBytes(redeemScript);
@@ -1693,5 +1738,54 @@ export class PsbtV2 extends PsbtV2Maps {
       console.error(error);
       throw Error("Failed to combine PSBTs.");
     }
+  }
+
+  /**
+   * Returns `true` if any output has `PSBT_OUT_SP_V0_INFO` set.
+   * Used by the Signer to determine whether SP rules apply.
+   */
+  get hasSilentPaymentOutputs(): boolean {
+    return this.outputMaps.some((map) => map.has(KeyType.PSBT_OUT_SP_V0_INFO));
+  }
+
+  /**
+   * Returns `true` if every output that has `PSBT_OUT_SP_V0_INFO` also has
+   * `PSBT_OUT_SCRIPT` set. Non-SP outputs are excluded from this check since
+   * `validate()` already guarantees they have a script.
+   *
+   * Per BIP375: the Signer must not add a signature until this is true.
+   */
+  get hasAllSPOutputScripts(): boolean {
+    return this.outputMaps.every(
+      (map) =>
+        !map.has(KeyType.PSBT_OUT_SP_V0_INFO) ||
+        map.has(KeyType.PSBT_OUT_SCRIPT),
+    );
+  }
+
+  /**
+   * Splits the raw 66-byte `PSBT_OUT_SP_V0_INFO` value for a given output
+   * into its typed `bscan` and `bspend` components.
+   *
+   * @param outputIndex - Zero-based index of the output.
+   * @returns `{ bscan, bspend }` or `null` if the output is not an SP output.
+   * @throws {Error} If the stored value is not exactly 66 bytes.
+   */
+  getSilentPaymentOutputInfo(outputIndex: number): {
+    bscan: Buffer;
+    bspend: Buffer;
+  } | null {
+    const raw = this.outputMaps[outputIndex]?.get(KeyType.PSBT_OUT_SP_V0_INFO);
+    if (!raw) return null;
+    if (raw.length !== 66) {
+      throw new Error(
+        `PSBT_OUT_SP_V0_INFO at output ${outputIndex}: ` +
+          `expected 66 bytes, got ${raw.length}`,
+      );
+    }
+    return {
+      bscan: raw.slice(0, 33),
+      bspend: raw.slice(33, 66),
+    };
   }
 }
