@@ -1,3 +1,4 @@
+import { secp256k1 } from "@noble/curves/secp256k1";
 import { BufferReader, BufferWriter } from "bufio";
 import { Psbt } from "bitcoinjs-lib-v6";
 
@@ -18,6 +19,14 @@ import {
 } from "./functions";
 import { PsbtConversionMaps, PsbtV2Maps } from "./psbtv2maps";
 import { bufferize } from "../functions";
+import {
+  computeInputHash,
+  deriveSilentPaymentOutput,
+  eligibleIndices,
+  ProjectivePoint,
+  SPOutputEntry,
+  sumECDHShares,
+} from "src/psbtv2/silentpayment";
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all
@@ -1787,5 +1796,193 @@ export class PsbtV2 extends PsbtV2Maps {
       bscan: raw.slice(0, 33),
       bspend: raw.slice(33, 66),
     };
+  }
+
+  /**
+   * Returns the indices of inputs eligible for SP ECDH derivation per BIP352.
+   *
+   * Delegates to {@link eligibleIndices} in `silentpayment.ts`, passing the
+   * raw `PSBT_IN_WITNESS_UTXO` buffer for each input (or `null` if absent).
+   *
+   * @returns Array of eligible input indices.
+   */
+  getEligibleInputsForSilentPayments(): number[] {
+    return eligibleIndices(
+      this.inputMaps.map((map) => ({
+        witnessUtxo: map.get(KeyType.PSBT_IN_WITNESS_UTXO) ?? null,
+      })),
+    );
+  }
+
+  /**
+   * Returns `true` when all eligible inputs have an ECDH share, or when a
+   * global ECDH share exists for every unique scan key in the SP outputs.
+   *
+   * Must return `true` before {@link computeSilentPaymentOutputScripts} can run.
+   */
+  hasCompleteECDHCoverage(): boolean {
+    if (!this.hasSilentPaymentOutputs) return false;
+
+    // Collect unique scan keys from SP outputs
+    const scanKeys = new Set<string>();
+    for (const map of this.outputMaps) {
+      const raw = map.get(KeyType.PSBT_OUT_SP_V0_INFO);
+      if (raw) scanKeys.add(raw.slice(0, 33).toString("hex"));
+    }
+
+    // Check if global shares cover all scan keys
+    const globalShareKeys = new Set(
+      this.PSBT_GLOBAL_SP_ECDH_SHARE.map((entry) => entry.key.slice(2)),
+    );
+    if ([...scanKeys].every((k) => globalShareKeys.has(k))) {
+      return true;
+    }
+
+    // Fall back: all eligible inputs must have per-input shares
+    const eligible = this.getEligibleInputsForSilentPayments();
+    return eligible.every((i) => this.PSBT_IN_SP_ECDH_SHARE[i].length > 0);
+  }
+
+  /**
+   * Signer role: derives taproot output scripts for all silent payment outputs
+   * and writes them to `PSBT_OUT_SCRIPT` on each SP output map.
+   *
+   * Implements the BIP352 output derivation algorithm:
+   * ```
+   * ecdhSecret = inputHash · ecdhShare
+   * Pk         = Bspend + taggedHash("BIP0352/SharedSecret", ecdhSecret || k) · G
+   * script     = OP_1 <0x20> <x-only(Pk)>
+   * ```
+   *
+   * After setting all output scripts, locks `PSBT_GLOBAL_TX_MODIFIABLE` by
+   * clearing the Inputs and Outputs Modifiable flags per BIP375.
+   *
+   * @throws {Error} If there are no SP outputs.
+   * @throws {Error} If {@link hasCompleteECDHCoverage} returns `false`.
+   * @throws {Error} If eligible input public keys cannot be extracted.
+   * @throws {Error} If no ECDH share is found for a scan key group.
+   */
+  public computeSilentPaymentOutputScripts(): void {
+    if (!this.hasSilentPaymentOutputs) {
+      throw new Error("No silent payment outputs found.");
+    }
+    if (!this.hasCompleteECDHCoverage()) {
+      throw new Error(
+        "Incomplete ECDH coverage — call addGlobalSPECDHShare or " +
+          "addInputSPECDHShare for all eligible inputs first.",
+      );
+    }
+
+    // ── Step 1: Build outpoints + combined pubkey for inputHash ─────────────
+    const eligible = this.getEligibleInputsForSilentPayments();
+
+    const outpoints: Buffer[] = eligible.map((i) => {
+      const txid = this.inputMaps[i].get(KeyType.PSBT_IN_PREVIOUS_TXID)!;
+      const vout = this.inputMaps[i].get(KeyType.PSBT_IN_OUTPUT_INDEX)!;
+      return Buffer.concat([txid, vout]); // txid(32 LE) || vout(4 LE)
+    });
+
+    let combinedPubkey: ProjectivePoint | null = null;
+
+    for (const i of eligible) {
+      const witnessUtxo = this.inputMaps[i].get(KeyType.PSBT_IN_WITNESS_UTXO);
+      if (!witnessUtxo) continue;
+
+      const scriptLen = witnessUtxo[8];
+      const inputScript = witnessUtxo.slice(9, 9 + scriptLen);
+      let pubkeyBytes: Buffer | null = null;
+
+      if (inputScript[0] === 0x51 && inputScript.length === 34) {
+        // P2TR — use tap internal key, prefixed with 0x02 (even y per BIP352)
+        const tapKey = this.inputMaps[i].get(KeyType.PSBT_IN_TAP_INTERNAL_KEY);
+        if (tapKey) {
+          pubkeyBytes = Buffer.concat([Buffer.from([0x02]), tapKey]);
+        }
+      } else if (inputScript[0] === 0x00 && inputScript.length === 22) {
+        // P2WPKH — pubkey from BIP32 derivation field
+        // key format: keytype(1) || pubkey(33) — strip keytype byte
+        const entries = this.PSBT_IN_BIP32_DERIVATION[i];
+        if (entries.length > 0) {
+          pubkeyBytes = Buffer.from(entries[0].key.slice(2), "hex");
+        }
+      }
+
+      if (!pubkeyBytes) continue;
+      const point = secp256k1.ProjectivePoint.fromHex(pubkeyBytes);
+      combinedPubkey = combinedPubkey ? combinedPubkey.add(point) : point;
+    }
+
+    if (!combinedPubkey) {
+      throw new Error("Could not extract public keys from eligible inputs.");
+    }
+
+    const inputHash = computeInputHash(
+      outpoints,
+      Buffer.from(combinedPubkey.toRawBytes(true)),
+    );
+
+    // ── Step 2: Group SP outputs by Bscan, sort within groups ───────────────
+    // BIP375: recipients with the same Bscan sorted lexicographically ascending
+    // by Bspend to determine k-value ordering. Same Bspend → by output index.
+    const scanKeyGroups = new Map<string, SPOutputEntry[]>();
+    for (let i = 0; i < this.outputMaps.length; i++) {
+      const info = this.getSilentPaymentOutputInfo(i);
+      if (!info) continue;
+      const key = info.bscan.toString("hex");
+      if (!scanKeyGroups.has(key)) scanKeyGroups.set(key, []);
+      scanKeyGroups.get(key)!.push({ outputIndex: i, ...info });
+    }
+
+    for (const group of scanKeyGroups.values()) {
+      group.sort((a, b) => {
+        const cmp = a.bspend.compare(b.bspend);
+        return cmp !== 0 ? cmp : a.outputIndex - b.outputIndex;
+      });
+    }
+
+    // ── Step 3: Resolve ECDH share and derive output scripts ────────────────
+    for (const [bscanHex, group] of scanKeyGroups) {
+      // Prefer global share — read directly from map to avoid hex round-trip
+      const globalShareKey = KeyType.PSBT_GLOBAL_SP_ECDH_SHARE + bscanHex;
+      let ecdhShare: Buffer;
+
+      if (this.globalMap.has(globalShareKey)) {
+        ecdhShare = this.globalMap.get(globalShareKey) as Buffer;
+      } else {
+        // Sum per-input shares for this scan key — read directly from input maps
+        const perInputBuffers = eligible.flatMap((i) => {
+          const val = this.inputMaps[i].get(
+            KeyType.PSBT_IN_SP_ECDH_SHARE + bscanHex,
+          );
+          return val ? [val] : [];
+        });
+        if (perInputBuffers.length === 0) {
+          throw new Error(`No ECDH share found for scan key ${bscanHex}`);
+        }
+        ecdhShare = Buffer.from(
+          sumECDHShares(perInputBuffers).toRawBytes(true),
+        );
+      }
+
+      for (let k = 0; k < group.length; k++) {
+        const { outputIndex, bspend } = group[k];
+        const script = deriveSilentPaymentOutput(
+          ecdhShare,
+          inputHash,
+          bspend,
+          k,
+        );
+        this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SCRIPT, script);
+      }
+    }
+
+    // ── Step 4: Lock modifiable flags per BIP375 ────────────────────────────
+    // Signer must set Inputs and Outputs Modifiable to False after setting
+    // missing PSBT_OUT_SCRIPTs.
+    this.PSBT_GLOBAL_TX_MODIFIABLE = this.PSBT_GLOBAL_TX_MODIFIABLE.filter(
+      (f) =>
+        f !== PsbtGlobalTxModifiableBits.INPUTS &&
+        f !== PsbtGlobalTxModifiableBits.OUTPUTS,
+    );
   }
 }
