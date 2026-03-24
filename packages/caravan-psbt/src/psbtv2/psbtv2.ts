@@ -157,6 +157,20 @@ export class PsbtV2 extends PsbtV2Maps {
     this.globalMap.set(KeyType.PSBT_GLOBAL_TX_MODIFIABLE, br.render());
   }
 
+  get PSBT_GLOBAL_SP_ECDH_SHARE(): NonUniqueKeyTypeValue[] {
+    return getNonUniqueKeyTypeValues(
+      this.globalMap,
+      KeyType.PSBT_GLOBAL_SP_ECDH_SHARE,
+    ) as NonUniqueKeyTypeValue[];
+  }
+
+  get PSBT_GLOBAL_SP_DLEQ(): NonUniqueKeyTypeValue[] {
+    return getNonUniqueKeyTypeValues(
+      this.globalMap,
+      KeyType.PSBT_GLOBAL_SP_DLEQ,
+    ) as NonUniqueKeyTypeValue[];
+  }
+
   get PSBT_GLOBAL_VERSION() {
     const version = this.globalMap
       .get(KeyType.PSBT_GLOBAL_VERSION)
@@ -379,6 +393,20 @@ export class PsbtV2 extends PsbtV2Maps {
     );
   }
 
+  get PSBT_IN_SP_ECDH_SHARE(): NonUniqueKeyTypeValue[][] {
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_SP_ECDH_SHARE,
+    ) as NonUniqueKeyTypeValue[][];
+  }
+
+  get PSBT_IN_SP_DLEQ(): NonUniqueKeyTypeValue[][] {
+    return getNonUniqueKeyTypeValues(
+      this.inputMaps,
+      KeyType.PSBT_IN_SP_DLEQ,
+    ) as NonUniqueKeyTypeValue[][];
+  }
+
   get PSBT_IN_PROPRIETARY() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
@@ -455,6 +483,20 @@ export class PsbtV2 extends PsbtV2Maps {
     return getNonUniqueKeyTypeValues(
       this.outputMaps,
       KeyType.PSBT_OUT_TAP_BIP32_DERIVATION,
+    );
+  }
+
+  get PSBT_OUT_SP_V0_INFO(): (string | null)[] {
+    return getOptionalMappedBytesAsHex(
+      this.outputMaps,
+      KeyType.PSBT_OUT_SP_V0_INFO,
+    );
+  }
+
+  get PSBT_OUT_SP_V0_LABEL(): (number | null)[] {
+    return getOptionalMappedBytesAsUInt(
+      this.outputMaps,
+      KeyType.PSBT_OUT_SP_V0_LABEL,
     );
   }
 
@@ -1196,6 +1238,145 @@ export class PsbtV2 extends PsbtV2Maps {
         input.delete(sig.key);
       }
     }
+  }
+
+  // ── Global SP methods ─────────────────────────────────────────────────────
+
+  public addGlobalSPECDHShare(bscan: Buffer, share: Buffer): void {
+    if (bscan.length !== 33) {
+      throw new Error(
+        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      );
+    }
+    if (share.length !== 33) {
+      throw new Error(
+        `ECDH share must be a 33-byte compressed EC point, got ${share.length}`,
+      );
+    }
+    const key = KeyType.PSBT_GLOBAL_SP_ECDH_SHARE + bscan.toString("hex");
+    this.globalMap.set(key, share);
+  }
+
+  public addGlobalSPDLEQProof(bscan: Buffer, proof: Buffer): void {
+    if (bscan.length !== 33) {
+      throw new Error(
+        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      );
+    }
+    if (proof.length !== 64) {
+      throw new Error(`DLEQ proof must be 64 bytes, got ${proof.length}`);
+    }
+    const shareKey = KeyType.PSBT_GLOBAL_SP_ECDH_SHARE + bscan.toString("hex");
+    if (!this.globalMap.has(shareKey)) {
+      throw new Error(
+        "Cannot add global SP DLEQ proof: no matching ECDH share for this " +
+          "bscan. Call addGlobalSPECDHShare first.",
+      );
+    }
+    const key = KeyType.PSBT_GLOBAL_SP_DLEQ + bscan.toString("hex");
+    this.globalMap.set(key, proof);
+  }
+
+  // ── Per-input SP methods ──────────────────────────────────────────────────
+
+  public addInputSPECDHShare(
+    inputIndex: number,
+    bscan: Buffer,
+    share: Buffer,
+  ): void {
+    if (inputIndex < 0 || inputIndex >= this.inputMaps.length) {
+      throw new Error(
+        `inputIndex ${inputIndex} out of range (${this.inputMaps.length} inputs)`,
+      );
+    }
+    if (bscan.length !== 33) {
+      throw new Error(
+        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      );
+    }
+    if (share.length !== 33) {
+      throw new Error(
+        `ECDH share must be a 33-byte compressed EC point, got ${share.length}`,
+      );
+    }
+    const key = KeyType.PSBT_IN_SP_ECDH_SHARE + bscan.toString("hex");
+    this.inputMaps[inputIndex].set(key, share);
+  }
+
+  public addInputSPDLEQProof(
+    inputIndex: number,
+    bscan: Buffer,
+    proof: Buffer,
+  ): void {
+    if (inputIndex < 0 || inputIndex >= this.inputMaps.length) {
+      throw new Error(
+        `inputIndex ${inputIndex} out of range (${this.inputMaps.length} inputs)`,
+      );
+    }
+    if (bscan.length !== 33) {
+      throw new Error(
+        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      );
+    }
+    if (proof.length !== 64) {
+      throw new Error(`DLEQ proof must be 64 bytes, got ${proof.length}`);
+    }
+    const shareKey = KeyType.PSBT_IN_SP_ECDH_SHARE + bscan.toString("hex");
+    if (!this.inputMaps[inputIndex].has(shareKey)) {
+      throw new Error(
+        `Cannot add SP DLEQ proof on input ${inputIndex}: no matching ECDH ` +
+          "share for this bscan. Call addInputSPECDHShare first.",
+      );
+    }
+    const key = KeyType.PSBT_IN_SP_DLEQ + bscan.toString("hex");
+    this.inputMaps[inputIndex].set(key, proof);
+  }
+
+  // ── Per-output SP methods ─────────────────────────────────────────────────
+
+  public addOutputSPInfo(
+    outputIndex: number,
+    bscan: Buffer,
+    bspend: Buffer,
+  ): void {
+    if (outputIndex < 0 || outputIndex >= this.outputMaps.length) {
+      throw new Error(
+        `outputIndex ${outputIndex} out of range (${this.outputMaps.length} outputs)`,
+      );
+    }
+    if (bscan.length !== 33) {
+      throw new Error(
+        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      );
+    }
+    if (bspend.length !== 33) {
+      throw new Error(
+        `bspend must be a 33-byte compressed pubkey, got ${bspend.length}`,
+      );
+    }
+    const bw = new BufferWriter();
+    bw.writeBytes(bscan);
+    bw.writeBytes(bspend);
+    this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_INFO, bw.render());
+  }
+
+  public addOutputSPLabel(outputIndex: number, label: number): void {
+    if (outputIndex < 0 || outputIndex >= this.outputMaps.length) {
+      throw new Error(
+        `outputIndex ${outputIndex} out of range (${this.outputMaps.length} outputs)`,
+      );
+    }
+    if (!this.outputMaps[outputIndex].has(KeyType.PSBT_OUT_SP_V0_INFO)) {
+      throw new Error(
+        `Output ${outputIndex} has no SP info. Call addOutputSPInfo first.`,
+      );
+    }
+    if (!Number.isInteger(label) || label < 0 || label > 0xffffffff) {
+      throw new Error(`label must be a uint32 (0–${0xffffffff}), got ${label}`);
+    }
+    const bw = new BufferWriter();
+    bw.writeU32(label);
+    this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_LABEL, bw.render());
   }
 
   /**

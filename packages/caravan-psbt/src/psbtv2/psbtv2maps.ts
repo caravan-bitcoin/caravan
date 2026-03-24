@@ -277,6 +277,8 @@ export class PsbtConversionMaps extends PsbtV2Maps {
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_INPUT_COUNT);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_TX_MODIFIABLE);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_SP_ECDH_SHARE);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_SP_DLEQ);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_VERSION);
 
     for (const inputMap of this.inputMaps) {
@@ -285,11 +287,15 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       this.v0delete(inputMap, KeyType.PSBT_IN_SEQUENCE);
       this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_TIME_LOCKTIME);
       this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME);
+      this.v0delete(inputMap, KeyType.PSBT_IN_SP_ECDH_SHARE);
+      this.v0delete(inputMap, KeyType.PSBT_IN_SP_DLEQ);
     }
 
     for (const outputMap of this.outputMaps) {
       this.v0delete(outputMap, KeyType.PSBT_OUT_AMOUNT);
       this.v0delete(outputMap, KeyType.PSBT_OUT_SCRIPT);
+      this.v0delete(outputMap, KeyType.PSBT_OUT_SP_V0_INFO);
+      this.v0delete(outputMap, KeyType.PSBT_OUT_SP_V0_LABEL);
     }
   };
 
