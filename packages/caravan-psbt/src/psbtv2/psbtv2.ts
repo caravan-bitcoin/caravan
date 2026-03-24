@@ -461,10 +461,10 @@ export class PsbtV2 extends PsbtV2Maps {
     return indices;
   }
 
-  get PSBT_OUT_SCRIPT(): (string | null)[] {
+  get PSBT_OUT_SCRIPT(): string[] {
     return this.outputMaps.map((map) => {
       const value = map.get(KeyType.PSBT_OUT_SCRIPT);
-      if (!value) return null;
+      if (!value) return "";
       return value.toString("hex");
     });
   }
