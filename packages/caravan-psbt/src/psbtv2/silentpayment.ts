@@ -8,12 +8,12 @@
  * @see {@link https://github.com/bitcoin/bips/blob/master/bip-0375.mediawiki BIP375}
  */
 
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { secp256k1, schnorr } from "@noble/curves/secp256k1";
 import { createHash } from "crypto";
 import { script } from "bitcoinjs-lib-v6";
-import { xOnlyPointAddTweak } from "src/noble-ecc";
 
 const CURVE_ORDER = secp256k1.CURVE.n;
+const { bytesToNumberBE } = schnorr.utils;
 const { OPS } = script;
 
 // ── Internal types ─────────────────────────────────────────────────────────
@@ -191,8 +191,8 @@ export function eligibleIndices(inputs: SPInputDescriptor[]): number[] {
     } else if (version === OPS.OP_0 && inputScript.length === 34) {
       // P2WSH (OP_0 + 32-byte hash) — NOT eligible (multisig)
       continue;
-    } else if (version >= OPS.OP_2) {
-      // Segwit v2+ — NOT eligible per BIP375
+    } else if (version >= OPS.OP_2 && version <= OPS.OP_16) {
+      // Segwit v2–v16 (OP_2–OP_16 range 0x52–0x60) — NOT eligible per BIP375
       continue;
     } else {
       // Anything else (P2SH-P2WPKH wrapped, P2PKH) — eligible
@@ -270,6 +270,9 @@ export function computeInputHash(
  * outputScript = OP_1 <0x20> <x-only(Pk)>
  * ```
  *
+ * Uses full compressed point arithmetic for `Bspend` to correctly handle
+ * both even-y (0x02) and odd-y (0x03) spend keys.
+ *
  * @param ecdhShare - 33-byte compressed EC point `C = a·Bscan`, where `a` is
  *   the sum of eligible input private keys (global share) or a single input's
  *   private key (per-input share).
@@ -279,7 +282,6 @@ export function computeInputHash(
  * @param k - Zero-based recipient index within the scan-key group. Increments
  *   for each recipient sharing the same `Bscan`.
  * @returns 34-byte P2TR output script: `OP_1 <0x20> <32-byte x-only pubkey>`.
- * @throws {Error} If the tweak produces an invalid point.
  */
 export function deriveSilentPaymentOutput(
   ecdhShare: Buffer,
@@ -287,12 +289,13 @@ export function deriveSilentPaymentOutput(
   bspend: Buffer,
   k: number,
 ): Buffer {
+  const inputScalar = bytesToNumberBE(inputHash);
+  assertValidScalar(inputScalar, "Silent payment input hash");
+
   // ecdhSecret = inputHash · ecdhShare
-  // Fn.fromBytes handles modular reduction internally — no manual BigInt needed.
-  const inputHashScalar = secp256k1.ProjectivePoint.Fn.fromBytes(inputHash);
   const ecdhSecretPoint =
-    secp256k1.ProjectivePoint.fromHex(ecdhShare).multiply(inputHashScalar);
-  const ecdhSecretBytes = Buffer.from(ecdhSecretPoint.toRawBytes(true));
+    secp256k1.ProjectivePoint.fromHex(ecdhShare).multiply(inputScalar);
+  const ecdhSecretBytes = ecdhSecretPoint.toRawBytes(true);
 
   // tweak_k = taggedHash("BIP0352/SharedSecret", ecdhSecret_compressed || k_be32)
   const kBuf = Buffer.allocUnsafe(4);
@@ -302,22 +305,15 @@ export function deriveSilentPaymentOutput(
     Buffer.concat([ecdhSecretBytes, kBuf]),
   );
 
-  // Pk = Bspend + tweak·G
-  // xOnlyPointAddTweak expects an x-only (32-byte) pubkey — strip the 02/03 prefix.
-  // It is already tested against BIP341 vectors in noble-ecc.test.ts.
-  const bspendXOnly = bspend.slice(1);
-  const tweakResult = xOnlyPointAddTweak(bspendXOnly, tweak);
-  if (!tweakResult) {
-    throw new Error(
-      "Silent payment output derivation failed: invalid tweak result.",
-    );
-  }
+  const tweakScalar = bytesToNumberBE(tweak);
+  assertValidScalar(tweakScalar, "Silent payment shared-secret tweak");
 
-  // P2TR output script: OP_1 <push 32 bytes> <x-only pubkey>
-  // THIRTY_TWO_BYTE_PUSH_LENGTH is a raw data push length, not an opcode.
-  const THIRTY_TWO_BYTE_PUSH_LENGTH = 0x20;
-  return Buffer.concat([
-    Buffer.from([OPS.OP_1, THIRTY_TWO_BYTE_PUSH_LENGTH]),
-    Buffer.from(tweakResult.xOnlyPubkey),
-  ]);
+  // Pk = Bspend + tweak_k·G
+  const Pk = secp256k1.ProjectivePoint.fromHex(bspend).add(
+    secp256k1.ProjectivePoint.BASE.multiply(tweakScalar),
+  );
+
+  // P2TR output script: OP_1 <0x20> <x-only pubkey>
+  const xOnlyPk = Pk.toRawBytes(true).subarray(1);
+  return Buffer.concat([Buffer.from([OPS.OP_1, 0x20]), xOnlyPk]);
 }
