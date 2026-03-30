@@ -67,6 +67,20 @@ export function assertValidBscan(bscan: Buffer): void {
 }
 
 /**
+ * Asserts that a scan public key is a valid 33-byte compressed point.
+ *
+ * @param bspend - Candidate scan public key buffer.
+ * @throws {Error} If `bscan` is not exactly 33 bytes.
+ */
+export function assertValidBspend(bspend: Buffer): void {
+  if (bspend.length !== 33) {
+    throw new Error(
+      `bspend must be a 33-byte compressed pubkey, got ${bspend.length}`,
+    );
+  }
+}
+
+/**
  * Asserts that an ECDH share is a valid 33-byte compressed EC point.
  *
  * @param share - Candidate ECDH share buffer.

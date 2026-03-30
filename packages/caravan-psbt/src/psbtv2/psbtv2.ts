@@ -21,6 +21,7 @@ import { PsbtConversionMaps, PsbtV2Maps } from "./psbtv2maps";
 import { bufferize } from "../functions";
 import {
   assertValidBscan,
+  assertValidBspend,
   assertValidDLEQProof,
   assertValidECDHShare,
   assertValidKLabel,
@@ -1732,16 +1733,8 @@ export class PsbtV2 extends PsbtV2Maps {
         `outputIndex ${outputIndex} out of range (${this.outputMaps.length} outputs)`,
       );
     }
-    if (bscan.length !== 33) {
-      throw new Error(
-        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
-      );
-    }
-    if (bspend.length !== 33) {
-      throw new Error(
-        `bspend must be a 33-byte compressed pubkey, got ${bspend.length}`,
-      );
-    }
+    assertValidBscan(bscan);
+    assertValidBspend(bspend);
     const bw = new BufferWriter();
     bw.writeBytes(bscan);
     bw.writeBytes(bspend);
@@ -1759,9 +1752,7 @@ export class PsbtV2 extends PsbtV2Maps {
         `Output ${outputIndex} has no SP info. Call addOutputSPInfo first.`,
       );
     }
-    if (!Number.isInteger(label) || label < 0 || label > 0xffffffff) {
-      throw new Error(`label must be a uint32 (0–${0xffffffff}), got ${label}`);
-    }
+    assertValidKLabel(label, outputIndex);
     const bw = new BufferWriter();
     bw.writeU32(label);
     this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_LABEL, bw.render());
