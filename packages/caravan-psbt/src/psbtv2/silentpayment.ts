@@ -13,7 +13,10 @@ import { createHash } from "crypto";
 import { script } from "bitcoinjs-lib-v6";
 import { xOnlyPointAddTweak } from "src/noble-ecc";
 
+const CURVE_ORDER = secp256k1.CURVE.n;
 const { OPS } = script;
+
+// ── Internal types ─────────────────────────────────────────────────────────
 
 export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
 
@@ -44,6 +47,80 @@ export interface SPInputDescriptor {
    * Format: `amount(8) || scriptLen(varint) || script`.
    */
   witnessUtxo: Buffer | null;
+}
+
+// ── Field validators ───────────────────────────────────────────────────────
+// Called from both field setters in PsbtV2 and validateSilentPayments().
+
+/**
+ * Asserts that a scan public key is a valid 33-byte compressed point.
+ *
+ * @param bscan - Candidate scan public key buffer.
+ * @throws {Error} If `bscan` is not exactly 33 bytes.
+ */
+export function assertValidBscan(bscan: Buffer): void {
+  if (bscan.length !== 33) {
+    throw new Error(
+      `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+    );
+  }
+}
+
+/**
+ * Asserts that an ECDH share is a valid 33-byte compressed EC point.
+ *
+ * @param share - Candidate ECDH share buffer.
+ * @throws {Error} If `share` is not exactly 33 bytes.
+ */
+export function assertValidECDHShare(share: Buffer): void {
+  if (share.length !== 33) {
+    throw new Error(
+      `ECDH share must be a 33-byte compressed EC point, got ${share.length}`,
+    );
+  }
+}
+
+/**
+ * Asserts that a DLEQ proof is exactly 64 bytes.
+ *
+ * @param proof - Candidate DLEQ proof buffer.
+ * @throws {Error} If `proof` is not exactly 64 bytes.
+ */
+export function assertValidDLEQProof(proof: Buffer): void {
+  if (proof.length !== 64) {
+    throw new Error(`DLEQ proof must be 64 bytes, got ${proof.length}`);
+  }
+}
+
+/**
+ * Asserts that a `PSBT_OUT_SP_V0_INFO` value is exactly 66 bytes
+ * (`bscan(33) || bspend(33)`).
+ *
+ * @param raw - Candidate SP V0 info buffer.
+ * @param outputIndex - Output index for error context.
+ * @throws {Error} If `raw` is not exactly 66 bytes.
+ */
+export function assertValidSPV0Info(raw: Buffer, outputIndex: number): void {
+  if (raw.length !== 66) {
+    throw new Error(
+      `PSBT_OUT_SP_V0_INFO at output ${outputIndex}: ` +
+        `expected 66 bytes, got ${raw.length}`,
+    );
+  }
+}
+
+export function assertValidKLabel(k: number, outputIndex: number): void {
+  if (!Number.isInteger(k) || k < 0 || k > 0xffffffff) {
+    throw new Error(
+      `Silent payment recipient index k is invalid at output ${outputIndex}: ${k}`,
+    );
+  }
+}
+
+function assertValidScalar(value: bigint, name: string): void {
+  if (value === 0n || value >= CURVE_ORDER) {
+    throw new Error(`${name} is not a valid secp256k1 scalar`);
+  }
 }
 
 // ── Tagged hash ────────────────────────────────────────────────────────────
