@@ -67,10 +67,10 @@ export function assertValidBscan(bscan: Buffer): void {
 }
 
 /**
- * Asserts that a scan public key is a valid 33-byte compressed point.
+ * Asserts that a spend public key is a valid 33-byte compressed point.
  *
  * @param bspend - Candidate scan public key buffer.
- * @throws {Error} If `bscan` is not exactly 33 bytes.
+ * @throws {Error} If `bspend` is not exactly 33 bytes.
  */
 export function assertValidBspend(bspend: Buffer): void {
   if (bspend.length !== 33) {
@@ -123,10 +123,18 @@ export function assertValidSPV0Info(raw: Buffer, outputIndex: number): void {
   }
 }
 
-export function assertValidKLabel(k: number, outputIndex: number): void {
-  if (!Number.isInteger(k) || k < 0 || k > 0xffffffff) {
+export function assertValidLabel(m: number, outputIndex: number): void {
+  if (!Number.isInteger(m) || m < 0 || m > 0xffffffff) {
     throw new Error(
-      `Silent payment recipient index k is invalid at output ${outputIndex}: ${k}`,
+      `Silent payment label m is invalid at output ${outputIndex}: ${m}`,
+    );
+  }
+}
+
+export function assertValidOutputK(k: number, outputIndex: number): void {
+  if (!Number.isInteger(k) || k < 0 || k > 2323) {
+    throw new Error(
+      `Silent payment recipient index should be 0 < k < 2323 (Kmax) but was at output ${outputIndex}: ${k}`,
     );
   }
 }

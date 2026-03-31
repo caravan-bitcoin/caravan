@@ -24,7 +24,8 @@ import {
   assertValidBspend,
   assertValidDLEQProof,
   assertValidECDHShare,
-  assertValidKLabel,
+  assertValidLabel,
+  assertValidOutputK,
   assertValidSPV0Info,
   computeInputHash,
   deriveSilentPaymentOutput,
@@ -1121,7 +1122,7 @@ export class PsbtV2 extends PsbtV2Maps {
       const bscanHex = spInfo.subarray(0, 33).toString("hex");
       const bspend = spInfo.subarray(33, 66);
       const k = scanKeyKValues.get(bscanHex) ?? 0;
-      assertValidKLabel(k, outputIndex);
+      assertValidOutputK(k, outputIndex);
       const globalShareKey = KeyType.PSBT_GLOBAL_SP_ECDH_SHARE + bscanHex;
       let ecdhShare: Buffer;
 
@@ -1752,7 +1753,7 @@ export class PsbtV2 extends PsbtV2Maps {
         `Output ${outputIndex} has no SP info. Call addOutputSPInfo first.`,
       );
     }
-    assertValidKLabel(label, outputIndex);
+    assertValidLabel(label, outputIndex);
     const bw = new BufferWriter();
     bw.writeU32(label);
     this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_LABEL, bw.render());
@@ -2304,6 +2305,7 @@ export class PsbtV2 extends PsbtV2Maps {
 
       for (let k = 0; k < group.length; k++) {
         const { outputIndex, bspend } = group[k];
+        assertValidOutputK(k, outputIndex);
         const script = deriveSilentPaymentOutput(
           ecdhShare,
           inputHash,
