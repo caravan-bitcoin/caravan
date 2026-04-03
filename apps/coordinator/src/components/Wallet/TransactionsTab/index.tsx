@@ -3,8 +3,10 @@ import { useSelector } from "react-redux";
 import { useGetClient } from "hooks/client";
 import { Box, Tabs, Tab } from "@mui/material";
 import { AccelerationModal } from "./FeeBumping/components/AccelerationModal";
-import { usePendingTransactions } from "clients/transactions";
-import { useConfirmedTransactions } from "clients/txHistory";
+import {
+  usePendingTransactions,
+  useConfirmedTransactions,
+} from "clients/txHistory";
 import { ConfirmedTransactionsView } from "./TableComponents/ConfirmedTransactionsView";
 import { PendingTransactionsView } from "./TableComponents/PendingTransactionsView";
 import { useHandleTransactionExplorerLinkClick } from "./hooks";

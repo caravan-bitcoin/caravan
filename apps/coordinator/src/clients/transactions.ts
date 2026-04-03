@@ -1,14 +1,6 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { useSelector } from "react-redux";
-import { useMemo } from "react";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { BlockchainClient, TransactionDetails } from "@caravan/clients";
-import {
-  getPendingTransactionIds,
-  getWalletAddresses,
-  Slice,
-  selectProcessedTransactions,
-} from "selectors/wallet";
-import { calculateTransactionValue } from "utils/transactionCalculations";
+import { Slice } from "selectors/wallet";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 
@@ -16,11 +8,11 @@ import { bitcoinsToSatoshis } from "@caravan/bitcoin";
 export const transactionKeys = {
   all: ["transactions"] as const,
   tx: (txid: string) => [...transactionKeys.all, txid] as const,
-  pending: () => [...transactionKeys.all, "pending"] as const,
   txWithHex: (txid: string) =>
     [...transactionKeys.all, txid, "withHex"] as const,
   coins: (txid: string) => [...transactionKeys.all, txid, "coins"] as const,
   confirmedHistory: () => [...transactionKeys.all, "confirmed"] as const,
+  pendingHistory: () => [...transactionKeys.all, "unconfirmed"] as const,
 };
 
 // Service function for fetching transaction details
@@ -44,48 +36,6 @@ export const useFetchTransactionDetails = (txid: string) => {
   });
 };
 
-// Hook for fetching pending transaction IDs and their details
-// Service function for fetching pending transaction fees
-const fetchPendingTransactionFee = async (
-  txid: string,
-  client: BlockchainClient,
-) => {
-  if (!client) {
-    throw new Error("No blockchain client available");
-  }
-  return await client.getFeesForPendingTransaction(txid);
-};
-
-// Hook for fetching all pending transactions
-const useFetchPendingTransactions = () => {
-  const pendingTransactionIds = useSelector(getPendingTransactionIds);
-  const blockchainClient = useGetClient();
-
-  return useQueries({
-    queries: pendingTransactionIds.map((txid) => ({
-      queryKey: transactionKeys.tx(txid),
-      queryFn: async () => {
-        const transaction = await fetchTransactionDetails(
-          txid,
-          blockchainClient,
-        );
-
-        // If transaction doesn't have a fee, fetch it
-        if (!transaction.fee) {
-          const fee = await fetchPendingTransactionFee(txid, blockchainClient);
-          return {
-            ...transaction,
-            fee: Number(fee),
-          };
-        }
-
-        return transaction;
-      },
-      enabled: !!blockchainClient && !!txid,
-    })),
-  });
-};
-
 // Hook for fetching transactions with their hex data
 export const useTransactionsWithHex = (txids: string[]) => {
   const blockchainClient = useGetClient();
@@ -103,62 +53,6 @@ export const useTransactionsWithHex = (txids: string[]) => {
       enabled: !!txid,
     })),
   });
-};
-
-// Basic hook for raw pending transactions (no processing)
-export const useRawPendingTransactions = () => {
-  const walletAddresses = useSelector(getWalletAddresses);
-  const transactionQueries = useFetchPendingTransactions();
-
-  const isLoading = transactionQueries.some((query) => query.isLoading);
-  const error = transactionQueries.find((query) => query.error)?.error;
-
-  // Process transactions with calculated values and filter out confirmed ones
-  const pendingTransactions = transactionQueries
-    .filter((query) => query.data && !query.data.status?.confirmed)
-    .map((query) => query.data!);
-
-  const transactions = pendingTransactions.map((tx) => {
-    return {
-      ...tx,
-      valueToWallet: calculateTransactionValue(tx, walletAddresses),
-      isReceived:
-        tx.isReceived !== undefined
-          ? tx.isReceived
-          : calculateTransactionValue(tx, walletAddresses) > 0,
-    };
-  });
-
-  return {
-    transactions,
-    isLoading,
-    error,
-    refetch: () => {
-      transactionQueries.forEach((query) => query.refetch());
-    },
-  };
-};
-
-// Hook for processed pending transactions - uses selector
-export const usePendingTransactions = () => {
-  const walletAddresses = useSelector(getWalletAddresses);
-  const rawPendingQuery = useRawPendingTransactions();
-
-  const transactions = useMemo(() => {
-    if (!rawPendingQuery.transactions) return [];
-    return selectProcessedTransactions(
-      rawPendingQuery.transactions,
-      walletAddresses,
-      "unconfirmed",
-    );
-  }, [rawPendingQuery.transactions, walletAddresses]);
-
-  return {
-    transactions,
-    isLoading: rawPendingQuery.isLoading,
-    error: rawPendingQuery.error,
-    refetch: rawPendingQuery.refetch,
-  };
 };
 
 export interface Coin {
