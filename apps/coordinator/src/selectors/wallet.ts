@@ -543,7 +543,7 @@ export const selectWalletConfig = createSelector(
 export const selectProcessedTransactions = (
   transactions: WalletTransactionDetails[],
   walletAddresses: string[],
-  filter: "all" | "confirmed" | "unconfirmed" | "pending" = "all",
+  filter: "all" | "confirmed" | "unconfirmed" = "all",
 ): TransactionDetails[] => {
   // Filter by confirmation status
   const filteredTransactions = transactions.filter((tx) => {
@@ -551,7 +551,6 @@ export const selectProcessedTransactions = (
       case "confirmed":
         return tx.status?.confirmed === true;
       case "unconfirmed":
-      case "pending":
         return tx.status?.confirmed !== true;
       case "all":
       default:

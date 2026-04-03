@@ -14,9 +14,9 @@ import { UTXO } from "@caravan/transactions";
 import {
   Coin,
   fetchTransactionCoins,
-  usePendingTransactions,
   useTransactionsWithHex,
 } from "clients/transactions";
+import { usePendingTransactions } from "clients/txHistory";
 import { MultisigAddressType, P2SH, P2SH_P2WSH, P2WSH } from "@caravan/bitcoin";
 import { useGetClient } from "hooks/client";
 import { TransactionDetails } from "@caravan/clients";
