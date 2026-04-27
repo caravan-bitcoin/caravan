@@ -218,7 +218,8 @@ class OutputEntry extends React.Component {
     const gridSpacing = isWallet ? 10 : 1;
     // Only show the rebalance button on the change output when one is set,
     // not on recipient outputs.
-    const isChangeOutput = changeOutputIndex > 0 && number === changeOutputIndex;
+    const isChangeOutput =
+      changeOutputIndex > 0 && number === changeOutputIndex;
     const showRebalance =
       this.displayBalanceAction() &&
       this.balanceAction() !== null &&
@@ -326,8 +327,7 @@ class OutputEntry extends React.Component {
 
         <Grid item xs={1}>
           {!finalizedOutputs &&
-            outputs.length >
-              (changeOutputIndex > 0 && autoSpend ? 2 : 1) && (
+            outputs.length > (changeOutputIndex > 0 && autoSpend ? 2 : 1) && (
               <Tooltip title="Remove Output" placement="top">
                 <IconButton onClick={this.handleDelete}>
                   <Delete />

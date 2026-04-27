@@ -173,7 +173,11 @@ function updateFeeRate(state, action) {
   let feeRateString = action.value;
 
   // Round to 2 decimal places
-  if (feeRateString && feeRateString !== "" && !Number.isNaN(parseFloat(feeRateString))) {
+  if (
+    feeRateString &&
+    feeRateString !== "" &&
+    !Number.isNaN(parseFloat(feeRateString))
+  ) {
     const parsed = parseFloat(feeRateString);
     feeRateString = String(Math.round((parsed + Number.EPSILON) * 100) / 100);
   }
@@ -243,9 +247,7 @@ function updateFee(state, action) {
     });
     const parsedRate = parseFloat(estimatedRate);
     if (estimatedRate && parsedRate > 0) {
-      feeRate = String(
-        Math.round((parsedRate + Number.EPSILON) * 100) / 100,
-      );
+      feeRate = String(Math.round((parsedRate + Number.EPSILON) * 100) / 100);
     }
   }
 
