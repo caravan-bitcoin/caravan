@@ -271,7 +271,7 @@ class OutputsForm extends React.Component {
           {/* ── Outputs ── */}
           <Box mb={2}>
             <Grid container spacing={gridSpacing}>
-              <Grid item xs={7}>
+              <Grid item xs={6}>
                 <Typography
                   variant="caption"
                   className={styles.outputsFormLabel}
@@ -325,7 +325,7 @@ class OutputsForm extends React.Component {
                     variant="outlined"
                     size="small"
                     type="number"
-                    inputProps={{ min: 0, step: 0.01 }}
+                    inputProps={{ min: 0, step: 1 }}
                     name="fee_rate"
                     disabled={finalizedOutputs}
                     onChange={this.handleFeeRateChange}
@@ -425,7 +425,7 @@ class OutputsForm extends React.Component {
                       variant="outlined"
                       size="small"
                       type="number"
-                      inputProps={{ min: 0, step: 0.01 }}
+                      inputProps={{ min: 0, step: 1 }}
                       name="fee_rate"
                       disabled={finalizedOutputs}
                       onChange={this.handleFeeRateChange}

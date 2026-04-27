@@ -226,7 +226,7 @@ class OutputEntry extends React.Component {
 
     return (
       <Grid container spacing={gridSpacing} alignItems="flex-start">
-        <Grid item xs={7}>
+        <Grid item xs={6}>
           <TextField
             fullWidth
             placeholder="Address"
@@ -279,8 +279,8 @@ class OutputEntry extends React.Component {
             }}
           />
         </Grid>
-        {showRebalance && (
-          <Grid item xs={2}>
+        <Grid item xs={2} sx={{ minHeight: 64 }}>
+          {showRebalance && (
             <Box>
               <Button
                 variant="outlined"
@@ -306,25 +306,34 @@ class OutputEntry extends React.Component {
               <Typography
                 variant="caption"
                 color="textSecondary"
-                sx={{ display: "block", mt: 0.5, fontSize: "0.65rem" }}
+                noWrap
+                sx={{
+                  display: "block",
+                  mt: 0.5,
+                  fontSize: "0.65rem",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+                title={`${this.balanceAction()} to ${this.autoBalancedAmount().toFixed(8)} BTC`}
               >
                 {this.balanceAction()} to {this.autoBalancedAmount().toFixed(8)}{" "}
                 BTC
               </Typography>
             </Box>
-          </Grid>
-        )}
+          )}
+        </Grid>
 
-        {!finalizedOutputs &&
-          outputs.length > (changeOutputIndex > 0 && autoSpend ? 2 : 1) && (
-            <Grid item xs={1}>
+        <Grid item xs={1}>
+          {!finalizedOutputs &&
+            outputs.length >
+              (changeOutputIndex > 0 && autoSpend ? 2 : 1) && (
               <Tooltip title="Remove Output" placement="top">
                 <IconButton onClick={this.handleDelete}>
                   <Delete />
                 </IconButton>
               </Tooltip>
-            </Grid>
-          )}
+            )}
+        </Grid>
       </Grid>
     );
   }
