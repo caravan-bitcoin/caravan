@@ -216,8 +216,13 @@ class OutputEntry extends React.Component {
     } = this.props;
 
     const gridSpacing = isWallet ? 10 : 1;
+    // Only show the rebalance button on the change output when one is set,
+    // not on recipient outputs.
+    const isChangeOutput = changeOutputIndex > 0 && number === changeOutputIndex;
     const showRebalance =
-      this.displayBalanceAction() && this.balanceAction() !== null;
+      this.displayBalanceAction() &&
+      this.balanceAction() !== null &&
+      (changeOutputIndex === 0 || isChangeOutput);
 
     return (
       <Grid container spacing={gridSpacing} alignItems="flex-start">

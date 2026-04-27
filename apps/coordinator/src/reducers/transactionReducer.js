@@ -172,12 +172,10 @@ function deleteOutput(state, action) {
 function updateFeeRate(state, action) {
   let feeRateString = action.value;
 
-  // Limit to 2 decimal places
-  if (feeRateString && feeRateString.includes(".")) {
-    const parts = feeRateString.split(".");
-    if (parts[1] && parts[1].length > 2) {
-      feeRateString = parseFloat(feeRateString).toFixed(2);
-    }
+  // Round to 2 decimal places
+  if (feeRateString && feeRateString !== "" && !Number.isNaN(parseFloat(feeRateString))) {
+    const parsed = parseFloat(feeRateString);
+    feeRateString = String(Math.round((parsed + Number.EPSILON) * 100) / 100);
   }
 
   // Gets the error type. Useful for conditionally displaying errors.
