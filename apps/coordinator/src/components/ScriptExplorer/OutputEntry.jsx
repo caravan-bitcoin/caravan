@@ -283,6 +283,7 @@ class OutputEntry extends React.Component {
           {showRebalance && (
             <Box>
               <Button
+                data-testid="rebalance-button"
                 variant="outlined"
                 color="primary"
                 size="small"

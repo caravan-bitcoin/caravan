@@ -237,7 +237,7 @@ test.describe("Transaction Creation and Signing", () => {
         .getByRole("button")
         .click();
 
-      await page.getByTestId("AddCircleIcon").click();
+      await page.getByTestId("rebalance-button").click();
 
       //Preview Tx
       await page.locator('button:has-text("Preview Transaction")').click();
