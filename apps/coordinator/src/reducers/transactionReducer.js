@@ -217,12 +217,14 @@ function updateFee(state, action) {
 
   const feeError = validateFee(feeSats, state.inputsTotalSats);
 
-  // Back-calculate effective fee rate when inputs exist
+  // Back-calculate effective fee rate whenever we have a positive fee and
+  // a known input set. Recompute even when validateFee surfaced a
+  // non-fatal error (e.g. fee too high) so the rate field always reflects
+  // the typed amount instead of going stale.
   let feeRate = state.feeRate;
   let feeRateError = "";
   if (
     state.inputs.length > 0 &&
-    !feeError &&
     BigNumber.isBigNumber(feeSats) &&
     !feeSats.isNaN() &&
     feeSats.isGreaterThan(0)
@@ -235,8 +237,11 @@ function updateFee(state, action) {
       n: state.totalSigners,
       feesInSatoshis: feeSats,
     });
-    if (estimatedRate && parseFloat(estimatedRate) > 0) {
-      feeRate = parseFloat(estimatedRate).toFixed(2);
+    const parsedRate = parseFloat(estimatedRate);
+    if (estimatedRate && parsedRate > 0) {
+      feeRate = String(
+        Math.round((parsedRate + Number.EPSILON) * 100) / 100,
+      );
     }
   }
 
