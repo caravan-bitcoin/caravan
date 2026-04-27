@@ -391,6 +391,28 @@ describe("Test transactionReducer", () => {
       expect(r.lastEditedFeeField).toEqual("amount");
     });
 
+    it("user scenario: 1 input 6.25 BTC, 2 outputs, fee 0.001 BTC should bump rate well above 1", () => {
+      const r = reducer(
+        {
+          ...initialState(),
+          inputs: [{}],
+          outputs: [{}, {}],
+          addressType: P2WSH,
+          requiredSigners: 2,
+          totalSigners: 3,
+          inputsTotalSats: new BigNumber(625000000),
+          feeRate: "1",
+        },
+        {
+          type: SET_FEE,
+          value: "0.001",
+        },
+      );
+      expect(r.fee).toEqual("0.001");
+      expect(r.feeError).toEqual("");
+      expect(parseFloat(r.feeRate)).toBeGreaterThan(100);
+    });
+
     it("should not change fee rate when no inputs exist", () => {
       const r = reducer(
         {

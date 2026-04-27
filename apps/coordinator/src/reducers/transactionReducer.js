@@ -206,11 +206,15 @@ function updateFeeRate(state, action) {
 
 function updateFee(state, action) {
   const feeString = action.value;
-  // Safely convert — intermediate typing like "" or "0." must not crash
+  // Safely convert — intermediate typing like "" or "0." must not crash.
+  // bitcoinsToSatoshis returns a string, so wrap it back in BigNumber so
+  // the guards below (isGreaterThan, isNaN) actually behave like numbers.
   let feeSats;
   try {
     const parsed = new BigNumber(feeString);
-    feeSats = parsed.isNaN() ? new BigNumber(0) : bitcoinsToSatoshis(parsed);
+    feeSats = parsed.isNaN()
+      ? new BigNumber(0)
+      : new BigNumber(bitcoinsToSatoshis(parsed));
   } catch (e) {
     feeSats = new BigNumber(0);
   }
