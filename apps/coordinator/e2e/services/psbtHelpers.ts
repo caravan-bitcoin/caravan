@@ -3,8 +3,8 @@ import path from "path";
 import {
   IndividualSignedPsbtsResult,
   IndividualPsbtResult,
-} from "../utils/types";
-import { testStateManager } from "../utils/testState";
+} from "../state/types";
+import { testStateManager } from "../state/testState";
 
 /**
  * Creates individual partially signed PSBT files

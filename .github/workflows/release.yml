@@ -61,7 +61,9 @@ jobs:
     steps:
       - name: Parse Package Version
         id: published
-        run: echo "version=$(echo '${{ needs.release.outputs.publishedPackages }}' | jq -r '.[] | select(.name=="caravan-coordinator").version')" >> "$GITHUB_OUTPUT"
+        env:
+          PUBLISHED_PACKAGES: ${{ needs.release.outputs.publishedPackages }}
+        run: echo "version=$(echo "$PUBLISHED_PACKAGES" | jq -r '.[] | select(.name=="caravan-coordinator").version')" >> "$GITHUB_OUTPUT"
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up QEMU
