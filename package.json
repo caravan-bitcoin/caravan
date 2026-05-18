@@ -3,7 +3,7 @@
   "private": true,
   "engines": {
     "node": ">=24",
-    "npm": ">=11"
+    "npm": ">=11.10"
   },
   "scripts": {
     "preinstall": "node scripts/check-node-versions.js",
@@ -54,7 +54,7 @@
       "jspdf": "2.5.1"
     }
   },
-  "packageManager": "npm@11.5.1",
+  "packageManager": "npm@11.14.1",
   "workspaces": [
     "apps/*",
     "packages/*"

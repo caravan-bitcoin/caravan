@@ -21,11 +21,14 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: 'npm'
+
+      - name: Pin npm to 11.14.1
+        run: npm install -g npm@11.14.1
 
       - name: Install dependencies
         run: npm ci

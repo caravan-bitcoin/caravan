@@ -101,29 +101,56 @@ And another good resource for what the workflow should look like [here](https://
 ### Node.js Version Management
 
 #### Required Versions
-This project enforces specific Node.js and npm versions to ensure consistent lockfiles across all contributors:
+This project enforces specific Node.js and npm versions to ensure consistent
+lockfiles and to support the supply-chain install cooldown (see below):
 
 ```json
 {
   "engines": {
     "node": ">=24",
-    "npm": ">=11"
+    "npm": ">=11.10"
   }
 }
 ```
+
+The `packageManager` field pins the exact npm version (`npm@11.14.1`) so
+contributors using Corepack get a consistent installer.
 
 #### Setup
 Use the correct Node.js version before working on the project:
 
 ```shell
 $ nvm use                    # Uses .nvmrc file
-$ npm install               # Automatically checks versions
+$ nvm install-latest-npm     # Or: npm install -g npm@latest
+$ npm install                # Automatically checks versions
 ```
 
+#### Install cooldown (supply-chain hardening)
+
+The repo `.npmrc` sets `min-release-age=7` (days). npm will refuse to
+install any package version published less than 7 days ago. This limits
+exposure to short-window supply-chain attacks (compromised maintainer
+credentials, typosquats) — most such attacks are detected and yanked
+within hours to days. The setting requires npm 11.10+; older npm versions
+silently ignore it.
+
+To temporarily bypass for an urgent install (e.g. a CVE fix shipped today):
+
+```shell
+$ npm config set min-release-age 0
+$ npm install <pkg>
+$ npm config delete min-release-age
+```
+
+Do not pass `--before=<date>` in the same invocation — npm errors out if
+both `min-release-age` and `before` are set.
+
 #### Pre-commit Hooks
-A Husky `pre-commit` hook verifies that your Node.js major version satisfies
-the `engines.node` requirement in the root `package.json`. Lint and tests are
-not run by the hook — run them yourself or rely on CI.
+A Husky `pre-commit` hook verifies that your Node.js major version and npm
+major.minor version satisfy the `engines` requirements in the root
+`package.json`. The npm check exists because an older npm would silently
+ignore the install cooldown above. Lint and tests are not run by the hook
+— run them yourself or rely on CI.
 
 #### Common Issues
 
