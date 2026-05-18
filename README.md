@@ -106,8 +106,8 @@ This project enforces specific Node.js and npm versions to ensure consistent loc
 ```json
 {
   "engines": {
-    "node": ">=20.18.0 <21.0.0",
-    "npm": ">=10.5.0 <11.0.0"
+    "node": ">=24",
+    "npm": ">=11"
   }
 }
 ```
@@ -121,17 +121,15 @@ $ npm install               # Automatically checks versions
 ```
 
 #### Pre-commit Hooks
-Husky automatically runs pre-commit checks that:
-
-- ✅ Verify your Node.js version matches requirements
-- ✅ Validate package-lock.json changes are consistent
-- ✅ Run linting (if available)
+A Husky `pre-commit` hook verifies that your Node.js major version satisfies
+the `engines.node` requirement in the root `package.json`. Lint and tests are
+not run by the hook — run them yourself or rely on CI.
 
 #### Common Issues
 
 **Version mismatch during install:**
 ```shell
-$ nvm use 20.18.0
+$ nvm use 24
 $ npm install
 ```
 
@@ -166,7 +164,7 @@ $ npm install turbo --global
 $ git clone https://github.com/caravan-bitcoin/caravan.git
 $ cd caravan
 $ npm install
-$ turbo run dev --concurrency 11 # or `npm run dev`
+$ turbo run dev --concurrency 15 # or `npm run dev`
 ```
 
 #### What's happening?

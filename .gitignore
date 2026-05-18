@@ -37,6 +37,11 @@ yarn-error.log*
 .DS_Store
 *.pem
 
+# Agent context files (personal, not committed)
+CLAUDE.md
+AGENTS.md
+.claude/
+
 **/target
 .rustup
 .cargo
