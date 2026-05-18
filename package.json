@@ -52,7 +52,7 @@
   },
   "overrides": {
     "material-table": {
-      "jspdf": "2.5.1"
+      "jspdf": "4.2.1"
     }
   },
   "packageManager": "npm@11.14.1",
