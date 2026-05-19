@@ -112,7 +112,6 @@
     "@tanstack/react-query-devtools": "^4.40.0",
     "@trezor/transport": "^1.1.15",
     "@vitejs/plugin-react": "^5.2.0",
-    "base58check": "^2.0.0",
     "bignumber.js": "^9.0.0",
     "bip32": "^2.0.4",
     "bitcoin-address-validation": "^1.0.2",
