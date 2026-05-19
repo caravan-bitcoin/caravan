@@ -1,6 +1,6 @@
 import React from "react";
 import { ThemeProvider } from "@mui/material/styles";
-import { render } from "../../../utils/test-utils";
+import { render, screen } from "../../../utils/test-utils";
 import theme from "../../theme";
 
 import WalletInfoCard from "../WalletInfoCard";
@@ -9,12 +9,12 @@ describe("WalletInfoCard", () => {
   const walletName = "Wallet Name";
 
   const renderWalletInfoCard = (passedProps) => {
-    const { getByText, getByDataCy } = render(
+    const { getByDataCy } = render(
       <ThemeProvider theme={theme}>
         <WalletInfoCard {...passedProps} />
       </ThemeProvider>,
     );
-    return { getByText, getByDataCy };
+    return { getByDataCy };
   };
 
   describe("editable", () => {
@@ -38,7 +38,7 @@ describe("WalletInfoCard", () => {
     };
 
     test("renders with defaults", () => {
-      const { getByText, getByDataCy } = renderWalletInfoCard(props);
+      const { getByDataCy } = renderWalletInfoCard(props);
       const walletInfoCard = getByDataCy("wallet-info-card");
       const balance = getByDataCy("balance");
       const pendingBalance = getByDataCy("pending-balance");
@@ -48,7 +48,7 @@ describe("WalletInfoCard", () => {
       expect(balance).toBeVisible();
       expect(balance).toHaveTextContent("0 BTC");
       expect(bitcoinIcon).toHaveAttribute("color", "grey");
-      expect(getByText(walletName)).toBeVisible();
+      expect(screen.getByText(walletName)).toBeVisible();
       expect(pendingBalance).toBeEmptyDOMElement();
     });
 

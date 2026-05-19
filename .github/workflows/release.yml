@@ -41,6 +41,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
+      - name: Pin npm to 11.14.1
+        run: npm install -g npm@11.14.1
+
       - name: Install Dependencies
         run: npm ci
 
