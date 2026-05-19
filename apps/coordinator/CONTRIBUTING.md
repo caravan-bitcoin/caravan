@@ -11,7 +11,7 @@ First, [fork](https://guides.github.com/activities/forking) and then clone the c
 ```sh
 git clone https://github.com/your-username/caravan
 cd caravan
-git remote add upstream https://github.com/unchained-capital/caravan
+git remote add upstream https://github.com/caravan-bitcoin/caravan
 ```
 
 Install dependencies:
@@ -52,13 +52,12 @@ npm run lint
 
 4. Commit your changes:
 
-`caravan` uses [commitizen](https://github.com/commitizen/cz-cli) to create commit messages so it can automatically create semantic releases.
-
 ```sh
 git add .
-npm run commit
-# answer the questions
+git commit -m "feat: short description of the change"
 ```
+
+Conventional-commit-style prefixes (`feat:`, `fix:`, `chore:`, `docs:`) are common in the history but not strictly enforced. Versioning and changelogs are handled by [changesets](../../README.md#changesets) — see the Changesets section in the root README.
 
 5. Push your changes:
 
@@ -66,7 +65,7 @@ npm run commit
 git push origin my-branch
 ```
 
-5. Open [this project on GitHub](https://github.com/unchained-capital/caravan), then click “Compare & pull request”.
+5. Open [this project on GitHub](https://github.com/caravan-bitcoin/caravan), then click “Compare & pull request”.
 
 ## Releasing Caravan
 

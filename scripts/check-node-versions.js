@@ -10,9 +10,10 @@ const npmRange = engines.npm;
 const currentNode = process.version; // e.g., "v20.18.0"
 const currentNpm = execSync("npm --version", { encoding: "utf8" }).trim(); // e.g., "10.5.0"
 
-// Parse version string into comparable numbers
+// Parse version string into comparable numbers [major, minor, patch]
 function parseVersion(version) {
-  return version.replace(/^v/, "").split(".").map(Number);
+  const parts = version.replace(/^v/, "").split(".").map(Number);
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
 }
 
 // Check if version satisfies a range like ">=20.18.0 <21.0.0"

@@ -1,5 +1,11 @@
 # @caravan/fees
 
+## 1.0.1
+
+### Patch Changes
+
+- [#464](https://github.com/caravan-bitcoin/caravan/pull/464) [`9fa7c06`](https://github.com/caravan-bitcoin/caravan/commit/9fa7c06692a6eb836f8a36ce7bbf6a94186ce353) Thanks [@Legend101Zz](https://github.com/Legend101Zz)! - Fix @caravan/transactions package build configuration for npm publishing
+
 ## 1.0.2
 
 ### Patch Changes

@@ -37,10 +37,10 @@ if [ -n "$ENGINES_FILE" ]; then
         CURRENT_MAJOR=$(echo "$CURRENT_NODE" | sed 's/v\([0-9]*\)\..*/\1/')
         REQUIRED_MAJOR=$(echo "$NODE_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
 
-        if [ "$CURRENT_MAJOR" != "$REQUIRED_MAJOR" ]; then
+        if [ "$CURRENT_MAJOR" -lt "$REQUIRED_MAJOR" ]; then
             echo ""
-            echo "❌ Node.js major version mismatch!"
-            echo "   Required: Node $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
+            echo "❌ Node.js version too old!"
+            echo "   Required: Node >= $REQUIRED_MAJOR.x (from: $NODE_REQUIREMENT)"
             echo "   Current:  $CURRENT_NODE"
             echo ""
             echo "   To fix this:"
@@ -60,6 +60,61 @@ if [ -n "$ENGINES_FILE" ]; then
 else
     echo "   ⚠️  package.json with no engines field found"
     exit 1
+fi
+
+# 2. Check npm version — required for min-release-age (supply-chain cooldown in .npmrc)
+echo "2️⃣ Checking npm version..."
+CURRENT_NPM=$(npm --version)
+
+NPM_REQUIREMENT=$(node -e "
+    try {
+        const pkg = require('$ENGINES_FILE');
+        if (pkg.engines && pkg.engines.npm) {
+            console.log(pkg.engines.npm);
+        }
+    } catch(e) {
+        process.exit(1);
+    }
+")
+
+if [ -n "$NPM_REQUIREMENT" ]; then
+    echo "   📝 Required npm: $NPM_REQUIREMENT"
+    echo "   💻 Current npm:  $CURRENT_NPM"
+
+    # Compare current vs required as "major.minor" tuples (we only enforce major.minor)
+    CURRENT_NPM_MAJOR=$(echo "$CURRENT_NPM" | sed 's/^\([0-9]*\)\..*/\1/')
+    CURRENT_NPM_MINOR=$(echo "$CURRENT_NPM" | sed 's/^[0-9]*\.\([0-9]*\)\..*/\1/')
+    REQUIRED_NPM_MAJOR=$(echo "$NPM_REQUIREMENT" | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+    REQUIRED_NPM_MINOR=$(echo "$NPM_REQUIREMENT" | sed 's/[^0-9]*[0-9]*\.\([0-9]*\).*/\1/')
+    # Default missing minor to 0
+    [ -z "$REQUIRED_NPM_MINOR" ] && REQUIRED_NPM_MINOR=0
+
+    NPM_OK=true
+    if [ "$CURRENT_NPM_MAJOR" -lt "$REQUIRED_NPM_MAJOR" ]; then
+        NPM_OK=false
+    elif [ "$CURRENT_NPM_MAJOR" -eq "$REQUIRED_NPM_MAJOR" ] && [ "$CURRENT_NPM_MINOR" -lt "$REQUIRED_NPM_MINOR" ]; then
+        NPM_OK=false
+    fi
+
+    if [ "$NPM_OK" = "false" ]; then
+        echo ""
+        echo "❌ npm version too old!"
+        echo "   Required: npm >= $REQUIRED_NPM_MAJOR.$REQUIRED_NPM_MINOR (from: $NPM_REQUIREMENT)"
+        echo "   Current:  $CURRENT_NPM"
+        echo ""
+        echo "   .npmrc enables min-release-age (supply-chain cooldown), which requires npm 11.10+."
+        echo "   An older npm will silently ignore the cooldown setting."
+        echo ""
+        echo "   To fix this:"
+        echo "   1. Run: npm install -g npm@latest"
+        echo "   2. Then try your commit again"
+        echo ""
+        exit 1
+    fi
+
+    echo "   ✅ npm version OK"
+else
+    echo "   ⚠️  Could not read engines.npm field"
 fi
 
 echo ""

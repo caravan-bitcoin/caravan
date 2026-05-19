@@ -4,7 +4,7 @@ import {
   descStructure,
   rpcConfig,
   walletConfig,
-} from "./types";
+} from "../state/types";
 
 export class BitcoinCoreService {
   private clientConfig: rpcConfig;

@@ -1,6 +1,6 @@
 {
   "name": "@caravan/bip32",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "unchained capital",
   "description": "Package for working with bip32 and derivative objects like extended public keys",
   "engines": {
@@ -50,5 +50,10 @@
     "eslint-plugin-prettier": "^5.1.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caravan-bitcoin/caravan",
+    "directory": "packages/bip32"
   }
 }
