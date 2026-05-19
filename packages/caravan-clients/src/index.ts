@@ -1,4 +1,5 @@
 export { bitcoindImportDescriptors } from "./wallet";
+export { callBitcoind } from "./bitcoind";
 export { BlockchainClient, ClientType, PublicBitcoinProvider } from "./client";
 export type {
   UTXO,

@@ -1,4 +1,4 @@
-import BitcoinCore from "bitcoin-core";
+import { callBitcoind } from "@caravan/clients";
 import {
   SingleSigAddressType,
   descStructure,
@@ -7,38 +7,33 @@ import {
 } from "../state/types";
 
 export class BitcoinCoreService {
-  private clientConfig: rpcConfig;
-  private client: BitcoinCore;
-  private walletClient: Map<string, BitcoinCore> = new Map();
+  private readonly baseUrl: string;
+  private readonly auth: { username: string; password: string };
 
   constructor(clientConfig: rpcConfig) {
-    this.clientConfig = {
+    this.baseUrl = clientConfig.host;
+    this.auth = {
       username: clientConfig.username,
       password: clientConfig.password,
-      port: clientConfig.port,
-      host: clientConfig.host,
     };
-
-    this.client = new BitcoinCore(this.clientConfig);
   }
 
-  private getWalletClient(walletName: string) {
-    try {
-      if (!this.walletClient.has(walletName)) {
-        const walletClient = new BitcoinCore({
-          ...this.clientConfig,
-          wallet: walletName,
-        });
-        this.walletClient.set(walletName, walletClient);
+  private walletUrl(walletName: string): string {
+    return `${this.baseUrl}/wallet/${walletName}`;
+  }
 
-        return this.walletClient.get(walletName);
-      }
-      return this.walletClient.get(walletName);
-    } catch (error) {
+  private async rpc<T>(
+    url: string,
+    method: string,
+    params: unknown[] = [],
+  ): Promise<T> {
+    const response = await callBitcoind<T>(url, this.auth, method, params);
+    if (response.error) {
       throw new Error(
-        `Failed to get wallet client for '${walletName}': ${error}`,
+        `bitcoind RPC '${method}' failed: ${response.error.code} ${response.error.message}`,
       );
     }
+    return response.result;
   }
 
   async waitForBitcoinCore() {
@@ -47,9 +42,7 @@ export class BitcoinCoreService {
 
     for (let i = 1; i <= maxRetries; i++) {
       try {
-        const res = await this.client.command("getblockchaininfo");
-
-        return res;
+        return await this.rpc<unknown>(this.baseUrl, "getblockchaininfo");
       } catch (error) {
         console.log(`Attempt: ${i}/${maxRetries} & error: ${error} `);
         if (i == maxRetries) {
@@ -57,7 +50,6 @@ export class BitcoinCoreService {
             `Failed to connect to Bitcoin Core RPC after ${maxRetries} attempts: ${error}`,
           );
         }
-        //waiting for retry
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -65,8 +57,7 @@ export class BitcoinCoreService {
 
   async getBlockchainInfo() {
     try {
-      const blockchainInfo = await this.client.command("getblockchaininfo");
-      return blockchainInfo;
+      return await this.rpc<unknown>(this.baseUrl, "getblockchaininfo");
     } catch (error) {
       throw new Error(`Failed to fetch blockchain info: ${error}`);
     }
@@ -74,18 +65,16 @@ export class BitcoinCoreService {
 
   async createWallet(walletConfig: walletConfig) {
     try {
-      const wallet = await this.client.command(
-        "createwallet",
+      return await this.rpc<unknown>(this.baseUrl, "createwallet", [
         walletConfig.wallet_name,
         walletConfig.disable_private_keys,
         walletConfig.blank,
         walletConfig.passphrase,
         walletConfig.avoid_reuse,
-        walletConfig.descriptors || true,
-        walletConfig.load_on_startup || true,
+        walletConfig.descriptors ?? true,
+        walletConfig.load_on_startup ?? true,
         walletConfig.external_signer,
-      );
-      return wallet;
+      ]);
     } catch (error) {
       throw new Error(
         `Failed to create wallet '${walletConfig.wallet_name}': ${error}`,
@@ -95,8 +84,7 @@ export class BitcoinCoreService {
 
   async loadWallets(walletName: string) {
     try {
-      const loadWallet = this.client.command("loadwallet", walletName);
-      return loadWallet;
+      return await this.rpc<unknown>(this.baseUrl, "loadwallet", [walletName]);
     } catch (error) {
       throw new Error(`Failed to load wallet '${walletName}': ${error}`);
     }
@@ -104,11 +92,9 @@ export class BitcoinCoreService {
 
   async unloadWallet(walletName: string) {
     try {
-      const unloadWallet = await this.client.command(
-        "unloadwallet",
+      return await this.rpc<unknown>(this.baseUrl, "unloadwallet", [
         walletName,
-      );
-      return unloadWallet;
+      ]);
     } catch (error) {
       throw new Error(`Failed to unload wallet '${walletName}': ${error}`);
     }
@@ -117,7 +103,6 @@ export class BitcoinCoreService {
   async walletExists(walletName: string): Promise<boolean> {
     try {
       const wallets = await this.listWallets();
-
       if (wallets && Array.isArray(wallets) && wallets.includes(walletName)) {
         return true;
       }
@@ -131,8 +116,7 @@ export class BitcoinCoreService {
 
   async listWallets() {
     try {
-      const allWallets = await this.client.command("listwallets");
-      return allWallets;
+      return await this.rpc<string[]>(this.baseUrl, "listwallets");
     } catch (error) {
       throw new Error(`Failed to list wallets: ${error}`);
     }
@@ -140,10 +124,10 @@ export class BitcoinCoreService {
 
   async listDescriptors(walletName: string) {
     try {
-      const walletClient = this.getWalletClient(walletName);
-
-      const descriptors = await walletClient?.command("listdescriptors");
-      return descriptors;
+      return await this.rpc<unknown>(
+        this.walletUrl(walletName),
+        "listdescriptors",
+      );
     } catch (error) {
       throw new Error(
         `Failed to list descriptors for wallet '${walletName}': ${error}`,
@@ -155,8 +139,9 @@ export class BitcoinCoreService {
     walletName: string,
   ): Promise<Record<SingleSigAddressType, descStructure>> {
     try {
-      const walletClient = this.getWalletClient(walletName);
-      const allDesc = await walletClient?.command("listdescriptors");
+      const allDesc = await this.rpc<{
+        descriptors: { desc: string }[];
+      }>(this.walletUrl(walletName), "listdescriptors");
 
       const standardDescRegex = /^\w+\(\[(.+?)\/(.+?)\](.+?)\/(.+?)\)\#(.+)$/;
       const shWpkhDescRegex =
@@ -212,12 +197,10 @@ export class BitcoinCoreService {
       );
     }
   }
+
   async checkBalance(walletName: string) {
     try {
-      const walletClient = this.getWalletClient(walletName);
-
-      const balance = await walletClient?.command("getbalance");
-      return balance;
+      return await this.rpc<number>(this.walletUrl(walletName), "getbalance");
     } catch (error) {
       throw new Error(
         `Failed to check balance for wallet '${walletName}': ${error}`,
@@ -227,10 +210,10 @@ export class BitcoinCoreService {
 
   async getNewAddress(walletName: string) {
     try {
-      const client = this.getWalletClient(walletName);
-
-      const address = await client?.command("getnewaddress");
-      return address;
+      return await this.rpc<string>(
+        this.walletUrl(walletName),
+        "getnewaddress",
+      );
     } catch (error) {
       throw new Error(
         `Failed to get new address from wallet '${walletName}': ${error}`,
@@ -240,10 +223,10 @@ export class BitcoinCoreService {
 
   async fundAddress(address: string, walletName: string, blocks?: number) {
     try {
-      let blockHashes = await this.client?.command(
+      const blockHashes = await this.rpc<string[]>(
+        this.baseUrl,
         "generatetoaddress",
-        blocks ?? 101,
-        address,
+        [blocks ?? 101, address],
       );
 
       const balance = await this.checkAddressBalance(address, walletName);
@@ -260,12 +243,11 @@ export class BitcoinCoreService {
 
   async checkAddressBalance(address: string, walletName: string) {
     try {
-      const walletClient = this.getWalletClient(walletName);
-      const balance = await walletClient?.command(
+      return await this.rpc<number>(
+        this.walletUrl(walletName),
         "getreceivedbyaddress",
-        address,
+        [address],
       );
-      return balance;
     } catch (error) {
       throw new Error(
         `Failed to check balance for address '${address}' in wallet '${walletName}': ${error}`,
@@ -275,15 +257,11 @@ export class BitcoinCoreService {
 
   async sendToAddress(walletName: string, toAddress: string, amount: number) {
     try {
-      const walletClient = this.getWalletClient(walletName);
-
-      let txid = await walletClient?.command(
+      return await this.rpc<string>(
+        this.walletUrl(walletName),
         "sendtoaddress",
-        toAddress,
-        amount,
+        [toAddress, amount],
       );
-
-      return txid;
     } catch (error) {
       throw new Error(
         `Failed to send ${amount} BTC from wallet '${walletName}' to address '${toAddress}': ${error}`,
@@ -301,7 +279,6 @@ export class BitcoinCoreService {
    * @param bip32derivs - whether to include the BIP32 derivation info (def: true)
    * @returns Object containing the signed PSBT and completion status
    */
-
   async signPsbt(
     walletName: string,
     psbtBase64: string,
@@ -310,14 +287,10 @@ export class BitcoinCoreService {
     bip32derivs: boolean = true,
   ): Promise<{ psbt: string; complete: boolean }> {
     try {
-      const walletClient = this.getWalletClient(walletName);
-
-      const result = await walletClient?.command(
+      const result = await this.rpc<{ psbt: string; complete: boolean }>(
+        this.walletUrl(walletName),
         "walletprocesspsbt",
-        psbtBase64,
-        signInputs,
-        sighashtype,
-        bip32derivs,
+        [psbtBase64, signInputs, sighashtype, bip32derivs],
       );
 
       return {
@@ -337,7 +310,6 @@ export class BitcoinCoreService {
    * @param psbtBase64 - Base64 encoded signed PSBT
    * @returns Array of signature objects with hex signatures and public keys
    */
-
   async extractSignaturesFromPsbt(psbtBase64: string): Promise<
     {
       signatures: string[];
@@ -346,8 +318,16 @@ export class BitcoinCoreService {
     }[]
   > {
     try {
-      const decodedPbst = await this.client.command("decodepsbt", psbtBase64);
-      const extractedSignatures: any = [];
+      const decodedPbst = await this.rpc<{
+        inputs: {
+          partial_signatures?: Record<string, string>;
+        }[];
+      }>(this.baseUrl, "decodepsbt", [psbtBase64]);
+      const extractedSignatures: {
+        signatures: string[];
+        publicKeys: string[];
+        inputIndex: number;
+      }[] = [];
 
       // Iterate through each input to extract signatures
       for (
@@ -362,12 +342,11 @@ export class BitcoinCoreService {
           const signatures: string[] = [];
           const publicKeys: string[] = [];
 
-          // Extract each signature and its corresponding public key
           for (const [pubkey, signature] of Object.entries(
             input.partial_signatures,
           )) {
             publicKeys.push(pubkey);
-            signatures.push(signature as string);
+            signatures.push(signature);
           }
 
           if (signatures.length > 0) {
