@@ -55,7 +55,7 @@
     "material-table": {
       "jspdf": "4.2.1"
     },
-    "tiny-secp256k1": "1.1.6",
+    "tiny-secp256k1": "1.1.7",
     "ws": "8.20.1"
   },
   "packageManager": "npm@11.14.1",
