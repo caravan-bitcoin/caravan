@@ -57,7 +57,7 @@
     "prettier": "^3.2.5",
     "tsx": "^4.19.4",
     "typescript": "^5.0.2",
-    "vite": "6.4.2",
+    "vite": "8.0.13",
     "vite-plugin-wasm": "^3.3.0"
   },
   "scripts": {
