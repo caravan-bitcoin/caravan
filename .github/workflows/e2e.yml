@@ -23,6 +23,9 @@ jobs:
           node-version: 24
           cache: 'npm'
 
+      - name: Pin npm to 11.14.1
+        run: npm install -g npm@11.14.1
+
       - name: Install dependencies
         run: npm ci
 
@@ -38,9 +41,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install Playwright browsers
+      # Always install the browser binary. The Playwright installer is
+      # idempotent and fast when the right revision is already on disk, but
+      # it self-heals when the cache held a different revision (e.g. after a
+      # @playwright/test minor bump that ships a new chromium build, or when
+      # an earlier run populated the cache incompletely). --with-deps runs an
+      # apt install that takes ~1 min, so we only do that on a real miss.
+      - name: Install Playwright browser
+        run: cd apps/coordinator && npx playwright install chromium
+
+      - name: Install Playwright system deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: cd apps/coordinator && npx playwright install --with-deps chromium
+        run: cd apps/coordinator && npx playwright install-deps chromium
 
       # Create .env file for your setup
       - name: Create .env file for e2e tests
