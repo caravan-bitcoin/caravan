@@ -94,47 +94,29 @@ test.describe("Wallet Display Verification", () => {
     await walletNav.expectBalance("8 BTC");
   });
 
-  test("should allow user to edit and save wallet name", async ({ page }) => {
-    try {
-      await page.goto("/#/wallet");
-      await expect(page).toHaveURL(/.*\/wallet/);
+  test("wallet name can be edited and saved", async ({ page }) => {
+    const walletInfoCard = page.locator('[data-cy="wallet-info-card"]');
+    await expect(walletInfoCard).toBeVisible();
 
-      // Wallet name should be visible (display mode)
-      let nameDisplay = page.locator('[data-cy="editable-name-value"]').first();
-      await expect(nameDisplay).toBeVisible();
+    const nameDisplay = walletInfoCard.locator(
+      '[data-cy="editable-name-value"]',
+    );
+    await expect(nameDisplay).toBeVisible();
 
-      const originalName = (await nameDisplay.textContent())?.trim();
-      if (!originalName) {
-        throw new Error("Wallet name is empty or not found");
-      }
+    const originalName = (await nameDisplay.textContent())?.trim();
+    expect(originalName).toBeTruthy();
 
-      const newName = `${originalName}-renamed-${Date.now()}`;
+    const newName = `${originalName}-renamed`;
 
-      // Enter edit mode
-      const editButton = page.locator('[data-cy="edit-button"]').first();
-      await editButton.click();
+    await walletInfoCard.locator('[data-cy="edit-button"]').click();
 
-      // Edit input visible
-      const nameInput = page.getByLabel("Name");
-      await expect(nameInput).toBeVisible();
+    const nameInput = walletInfoCard.getByLabel("Name");
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill(newName);
 
-      await nameInput.fill(newName);
+    await walletInfoCard.locator('[data-cy="save-button"]').click();
 
-      // Save change
-      const saveButton = page.locator('[data-cy="save-button"]').first();
-      await expect(saveButton).toBeEnabled();
-      await saveButton.click();
-
-      // UI exits edit mode
-      await expect(nameInput).not.toBeVisible();
-      await expect(editButton).toBeVisible();
-
-      // Updated name shown in display mode
-      nameDisplay = page.locator('[data-cy="editable-name-value"]').first();
-      await expect(nameDisplay).toHaveText(newName);
-
-    } catch (error) {
-      throw new Error(`Error in wallet name editing: ${error}`);
-    }
+    await expect(nameInput).not.toBeVisible();
+    await expect(nameDisplay).toHaveText(newName);
   });
 });
