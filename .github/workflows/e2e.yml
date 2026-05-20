@@ -71,7 +71,6 @@ jobs:
             max_attempts: 3
             timeout_minutes: 15
             command: |
-              cd apps/coordinator
               npm run test:e2e
             on_retry_command: |
               echo "Cleaning up before retry..."
