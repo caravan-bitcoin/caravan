@@ -10,6 +10,7 @@ import { ReceiveTab } from "../pages/ReceiveTab";
 import { AddressesTab } from "../pages/AddressesTab";
 import { SendTab } from "../pages/SendTab";
 import { SignTab } from "../pages/SignTab";
+import { WalletConfigPage } from "../pages/WalletConfigPage";
 import bitcoinClient from "../services/bitcoinClient";
 import { BitcoinCoreService } from "../services/bitcoinServices";
 
@@ -22,6 +23,7 @@ type CaravanFixtures = {
   addressesTab: AddressesTab;
   sendTab: SendTab;
   signTab: SignTab;
+  walletConfig: WalletConfigPage;
   btcClient: BitcoinCoreService;
 };
 
@@ -49,6 +51,9 @@ export const test = base.extend<CaravanFixtures>({
   },
   signTab: async ({ page }, use) => {
     await use(new SignTab(page));
+  },
+  walletConfig: async ({ page }, use) => {
+    await use(new WalletConfigPage(page));
   },
   btcClient: async ({}, use) => {
     await use(bitcoinClient());
