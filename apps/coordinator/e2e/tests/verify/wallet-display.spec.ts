@@ -94,7 +94,14 @@ test.describe("Wallet Display Verification", () => {
     await walletNav.expectBalance("8 BTC");
   });
 
-  test("wallet name can be edited and saved", async ({ page }) => {
+  test("wallet name can be edited and saved", async ({
+    page,
+    walletImport,
+  }) => {
+    await page.getByRole("button", { name: "Clear Wallet" }).click();
+    const walletFile = testStateManager.getDownloadedWalletFile();
+    await walletImport.importConfig(walletFile, clientConfig.password);
+
     const walletInfoCard = page.locator('[data-cy="wallet-info-card"]');
     await expect(walletInfoCard).toBeVisible();
 
