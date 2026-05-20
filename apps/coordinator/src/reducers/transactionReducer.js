@@ -216,7 +216,7 @@ function updateFeeRate(state, action) {
   // problems when trying to author a CPFP.
   const fee =
     feeRateError === null ||
-      feeRateError === FeeValidationError.FEE_RATE_TOO_HIGH
+    feeRateError === FeeValidationError.FEE_RATE_TOO_HIGH
       ? setFeeForRate(state, feeRateString, state.outputs.length)
       : "";
 
