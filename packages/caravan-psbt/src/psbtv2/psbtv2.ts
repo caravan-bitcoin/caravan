@@ -35,14 +35,13 @@ import {
   groupSilentPaymentOutputs,
   hasSegwitV2PlusInput,
   BIP352_NUMS_H,
-  ProjectivePoint,
   SPInputDescriptor,
   SPOutputEntry,
   sumECDHShares,
   generateSilentPaymentDLEQProof,
   verifySilentPaymentDLEQProof,
 } from "src/psbtv2/silentpayment";
-
+import { ProjectivePoint } from "src/psbtv2/dleq";
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all

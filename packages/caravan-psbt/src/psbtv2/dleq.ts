@@ -2,6 +2,10 @@ import { randomBytes } from "crypto";
 
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { sha256 } from "@noble/hashes/sha256";
+import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/abstract/utils";
+import { mod } from "@noble/curves/abstract/modular";
+
+export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
 
 const N = secp256k1.CURVE.n;
 const G = secp256k1.ProjectivePoint.BASE;
@@ -12,38 +16,12 @@ function taggedHash(tag: string, msg: Buffer): Buffer {
   return Buffer.from(sha256(Buffer.concat([tagHash, tagHash, msg])));
 }
 
-function bytesToBigInt(bytes: Buffer): bigint {
-  if (bytes.length === 0) return 0n;
-  return BigInt(`0x${bytes.toString("hex")}`);
-}
-
-function bigIntTo32Bytes(n: bigint): Buffer {
-  if (n < 0n || n >= 1n << 256n) {
-    throw new Error("Integer does not fit in 32 bytes.");
+function scalarFromPrivateKey(bytes: Buffer, context: string): bigint {
+  if (!secp256k1.utils.isValidPrivateKey(bytes)) {
+    throw new Error(`${context}: invalid secp256k1 scalar.`);
   }
 
-  return Buffer.from(n.toString(16).padStart(64, "0"), "hex");
-}
-
-function modN(n: bigint): bigint {
-  const r = n % N;
-  return r >= 0n ? r : r + N;
-}
-
-function scalarFrom32Bytes(bytes: Buffer, context: string): bigint {
-  if (bytes.length !== 32) {
-    throw new Error(
-      `${context}: expected 32-byte scalar, got ${bytes.length}.`,
-    );
-  }
-
-  const scalar = bytesToBigInt(bytes);
-
-  if (scalar === 0n || scalar >= N) {
-    throw new Error(`${context}: scalar must be in range [1, n - 1].`);
-  }
-
-  return scalar;
+  return bytesToNumberBE(bytes);
 }
 
 function assertMessage(message?: Buffer): Buffer {
@@ -76,18 +54,8 @@ function xor32(a: Buffer, b: Buffer): Buffer {
   return out;
 }
 
-function parsePoint(bytes: Buffer, context: string): typeof G {
-  try {
-    const point = secp256k1.ProjectivePoint.fromHex(bytes);
-
-    if (point.equals(ZERO)) {
-      throw new Error("point at infinity");
-    }
-
-    return point;
-  } catch (e) {
-    throw new Error(`${context}: invalid secp256k1 point.`);
-  }
+function pointFromCompressed(bytes: Buffer): ProjectivePoint {
+  return secp256k1.ProjectivePoint.fromHex(bytes);
 }
 
 function pointToCompressedBytes(point: typeof G): Buffer {
@@ -98,26 +66,6 @@ function pointToCompressedBytes(point: typeof G): Buffer {
   return Buffer.from(point.toRawBytes(true));
 }
 
-function multiplyPoint(point: typeof G, scalar: bigint): typeof G {
-  const k = modN(scalar);
-
-  if (k === 0n) {
-    return ZERO;
-  }
-
-  return point.multiply(k);
-}
-
-function multiplyGenerator(scalar: bigint): typeof G {
-  const k = modN(scalar);
-
-  if (k === 0n) {
-    return ZERO;
-  }
-
-  return G.multiply(k);
-}
-
 /**
  * Computes scalar * compressedPoint and returns a compressed point.
  */
@@ -125,15 +73,19 @@ export function multiplyCompressedPoint(
   compressedPoint: Buffer,
   scalarBytes: Buffer,
 ): Buffer {
-  const scalar = scalarFrom32Bytes(scalarBytes, "multiplyCompressedPoint");
-  const point = parsePoint(compressedPoint, "multiplyCompressedPoint point");
-  const result = multiplyPoint(point, scalar);
+  const scalar = scalarFromPrivateKey(
+    scalarBytes,
+    "multiplyCompressedPoint scalar",
+  );
+
+  const result =
+    secp256k1.ProjectivePoint.fromHex(compressedPoint).multiply(scalar);
 
   if (result.equals(ZERO)) {
     throw new Error("multiplyCompressedPoint produced point at infinity.");
   }
 
-  return pointToCompressedBytes(result);
+  return Buffer.from(result.toRawBytes(true));
 }
 
 export function generateDLEQProof({
@@ -147,61 +99,69 @@ export function generateDLEQProof({
   auxRand?: Buffer;
   message?: Buffer;
 }): Buffer {
-  const a = scalarFrom32Bytes(secret, "BIP374 secret");
-  const B = parsePoint(basePoint, "BIP374 basePoint");
+  const a = scalarFromPrivateKey(secret, "BIP374 secret");
+  const B = pointFromCompressed(basePoint);
   const m = assertMessage(message);
 
   assertAuxRand(auxRand);
 
-  const A = multiplyGenerator(a);
-  const C = multiplyPoint(B, a);
+  const A = G.multiply(a);
+  const C = B.multiply(a);
 
   if (A.equals(ZERO) || C.equals(ZERO)) {
     throw new Error("BIP374 proof generation produced point at infinity.");
   }
 
+  const ABytes = Buffer.from(A.toRawBytes(true));
+  const BBytes = Buffer.from(B.toRawBytes(true));
+  const CBytes = Buffer.from(C.toRawBytes(true));
+
   const t = xor32(secret, taggedHash("BIP0374/aux", auxRand));
 
   const rand = taggedHash(
     "BIP0374/nonce",
-    Buffer.concat([t, pointToCompressedBytes(A), pointToCompressedBytes(C), m]),
+    Buffer.concat([t, ABytes, CBytes, m]),
   );
 
-  const k = modN(bytesToBigInt(rand));
+  const k = mod(bytesToNumberBE(rand), N);
 
   if (k === 0n) {
     throw new Error("BIP374 nonce produced zero scalar.");
   }
 
-  const R1 = multiplyGenerator(k);
-  const R2 = multiplyPoint(B, k);
+  const R1 = G.multiply(k);
+  const R2 = B.multiply(k);
 
   if (R1.equals(ZERO) || R2.equals(ZERO)) {
     throw new Error("BIP374 nonce produced point at infinity.");
   }
 
+  const R1Bytes = Buffer.from(R1.toRawBytes(true));
+  const R2Bytes = Buffer.from(R2.toRawBytes(true));
+
   const eBytes = taggedHash(
     "BIP0374/challenge",
     Buffer.concat([
-      pointToCompressedBytes(A),
-      pointToCompressedBytes(B),
-      pointToCompressedBytes(C),
-      pointToCompressedBytes(G),
-      pointToCompressedBytes(R1),
-      pointToCompressedBytes(R2),
+      ABytes,
+      BBytes,
+      CBytes,
+      Buffer.from(G.toRawBytes(true)),
+      R1Bytes,
+      R2Bytes,
       m,
     ]),
   );
 
-  const e = bytesToBigInt(eBytes);
-  const s = modN(k + modN(e) * a);
-  const proof = Buffer.concat([eBytes, bigIntTo32Bytes(s)]);
+  const e = bytesToNumberBE(eBytes);
+  const s = mod(k + mod(e, N) * a, N);
+
+  const proof = Buffer.concat([eBytes, Buffer.from(numberToBytesBE(s, 32))]);
 
   if (
     !verifyDLEQProof({
-      publicKey: pointToCompressedBytes(A),
+      publicKey: ABytes,
       basePoint,
-      result: pointToCompressedBytes(C),
+      result: CBytes,
       proof,
       message,
     })
@@ -229,14 +189,13 @@ export function verifyDLEQProof({
     return false;
   }
 
-  let A: typeof G;
-  let B: typeof G;
-  let C: typeof G;
-
+  let A: ProjectivePoint;
+  let B: ProjectivePoint;
+  let C: ProjectivePoint;
   try {
-    A = parsePoint(publicKey, "BIP374 publicKey");
-    B = parsePoint(basePoint, "BIP374 basePoint");
-    C = parsePoint(result, "BIP374 result");
+    A = pointFromCompressed(publicKey);
+    B = pointFromCompressed(basePoint);
+    C = pointFromCompressed(result);
   } catch {
     return false;
   }
@@ -244,11 +203,19 @@ export function verifyDLEQProof({
   const eBytes = proof.subarray(0, 32);
   const sBytes = proof.subarray(32, 64);
 
-  const e = bytesToBigInt(eBytes);
-  const s = bytesToBigInt(sBytes);
+  const e = bytesToNumberBE(eBytes);
+  const s = bytesToNumberBE(sBytes);
 
-  // BIP374 bounds s, but not e. e is the full 32-byte challenge hash integer.
   if (s >= N) {
+    return false;
+  }
+
+  const eReduced = mod(e, N);
+
+  const R1 = G.multiply(s).add(A.multiply(eReduced).negate());
+  const R2 = B.multiply(s).add(C.multiply(eReduced).negate());
+
+  if (R1.equals(ZERO) || R2.equals(ZERO)) {
     return false;
   }
 
@@ -259,17 +226,6 @@ export function verifyDLEQProof({
   } catch {
     return false;
   }
-
-  const eA = multiplyPoint(A, e);
-  const eC = multiplyPoint(C, e);
-
-  const R1 = multiplyGenerator(s).add(eA.negate());
-  const R2 = multiplyPoint(B, s).add(eC.negate());
-
-  if (R1.equals(ZERO) || R2.equals(ZERO)) {
-    return false;
-  }
-
   const expectedE = taggedHash(
     "BIP0374/challenge",
     Buffer.concat([

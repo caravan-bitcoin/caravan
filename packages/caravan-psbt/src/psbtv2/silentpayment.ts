@@ -20,10 +20,8 @@ import {
   generateDLEQProof,
   multiplyCompressedPoint,
   verifyDLEQProof,
+  ProjectivePoint,
 } from "./dleq";
-// ── Internal types ─────────────────────────────────────────────────────────
-
-export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
 
 // ── Public types ───────────────────────────────────────────────────────────
 
