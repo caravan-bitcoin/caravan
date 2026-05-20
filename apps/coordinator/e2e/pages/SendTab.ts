@@ -100,6 +100,15 @@ export class SendTab {
     await this.page.getByRole("button", { name: /import psbt file/i }).click();
   }
 
+  async expectImportErrorBlocksSigning() {
+    await expect(this.page.getByRole("alert")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      this.page.getByRole("button", { name: /sign transaction/i }),
+    ).not.toBeVisible();
+  }
+
   async downloadUnsignedPsbt(savePath: string): Promise<string> {
     const btn = this.page.locator(
       'button[type=button]:has-text("Download Unsigned PSBT")',
