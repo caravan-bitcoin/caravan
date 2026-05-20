@@ -128,13 +128,13 @@ export abstract class PsbtV2Maps {
     if (from.inputMaps.length !== this.inputMaps.length) {
       throw new Error(
         `Cannot combine PSBTs with different input counts: ` +
-        `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`
+          `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`,
       );
     }
     if (from.outputMaps.length !== this.outputMaps.length) {
       throw new Error(
         `Cannot combine PSBTs with different output counts: ` +
-        `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`
+          `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`,
       );
     }
   }
@@ -241,9 +241,13 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       ).readBigInt64LE();
       const numberAmount = parseInt(bigintAmount.toString());
 
-      // BIP375: prefer PSBT_OUT_SP_V0_INFO for unique identification so the
-      // ID is stable whether or not the output script has been computed yet.
-      tx.addOutput((spInfo ?? script) as Buffer, numberAmount);
+      // BIP375 unique identification uses v0 || Bscan || Bspend when
+      // PSBT_OUT_SP_V0_INFO is present, so the txid is stable before and after
+      // the real output script has been computed.
+      const outputScript = spInfo
+        ? Buffer.concat([Buffer.from([0x00]), spInfo])
+        : (script as Buffer);
+      tx.addOutput(outputScript, numberAmount);
     }
 
     return tx.toBuffer();
@@ -320,7 +324,7 @@ export class PsbtConversionMaps extends PsbtV2Maps {
         );
         throw new Error(
           "Cannot compute transaction ID: PSBT has 0 inputs and 1 output, " +
-            "which produces an ambiguous transaction format. "
+            "which produces an ambiguous transaction format. ",
         );
       }
 

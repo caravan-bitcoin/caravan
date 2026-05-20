@@ -15,7 +15,7 @@ import { script } from "bitcoinjs-lib-v6";
 const CURVE_ORDER = secp256k1.CURVE.n;
 const { bytesToNumberBE } = schnorr.utils;
 const { OPS } = script;
-
+import { Transaction } from "bitcoinjs-lib-v6";
 // ── Internal types ─────────────────────────────────────────────────────────
 
 export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
@@ -40,14 +40,23 @@ export interface SPOutputEntry {
  * in original index order.
  */
 export interface SPInputDescriptor {
-  /**
-   * Raw `PSBT_IN_WITNESS_UTXO` value for this input, or `null` if the field
-   * is absent (legacy P2PKH / P2SH-P2WPKH inputs).
-   *
-   * Format: `amount(8) || scriptLen(varint) || script`.
-   */
   witnessUtxo: Buffer | null;
+  nonWitnessUtxo?: Buffer | null;
+  outputIndex?: number | null;
+  redeemScript?: Buffer | null;
 }
+
+export type SPInputScriptType =
+  | "p2tr"
+  | "p2wpkh"
+  | "p2wsh"
+  | "segwit_v2plus"
+  | "p2pkh_or_unknown_legacy"
+  | "p2sh_p2wpkh"
+  | "ineligible";
+
+export const BIP352_NUMS_H =
+  "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0";
 
 // ── Field validators ───────────────────────────────────────────────────────
 // Called from both field setters in PsbtV2 and validateSilentPayments().
@@ -58,12 +67,44 @@ export interface SPInputDescriptor {
  * @param bscan - Candidate scan public key buffer.
  * @throws {Error} If `bscan` is not exactly 33 bytes.
  */
-export function assertValidBscan(bscan: Buffer): void {
-  if (bscan.length !== 33) {
+function assertValidCompressedPoint(value: Buffer, name: string): void {
+  if (value.length !== 33) {
     throw new Error(
-      `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
+      `${name} must be a 33-byte compressed pubkey, got ${value.length}`,
     );
   }
+  if (value[0] !== 0x02 && value[0] !== 0x03) {
+    throw new Error(
+      `${name} must use compressed secp256k1 prefix 0x02 or 0x03`,
+    );
+  }
+  secp256k1.ProjectivePoint.fromHex(value);
+}
+
+export function assertValidBscan(bscan: Buffer): void {
+  assertValidCompressedPoint(bscan, "bscan");
+}
+
+export function parseSilentPaymentScanKeyData(
+  key: string,
+  keyType: string,
+  context: string,
+): Buffer {
+  const scanKey = key.slice(keyType.length);
+  if (!/^[0-9a-fA-F]+$/.test(scanKey)) {
+    throw new Error(`${context} scan keydata must be hex encoded.`);
+  }
+  const bscan = Buffer.from(scanKey, "hex");
+  assertValidBscan(bscan);
+  return bscan;
+}
+
+export function scanKeyHexFromBIP375Key(
+  key: string,
+  keyType: string,
+  context: string,
+): string {
+  return parseSilentPaymentScanKeyData(key, keyType, context).toString("hex");
 }
 
 /**
@@ -73,11 +114,7 @@ export function assertValidBscan(bscan: Buffer): void {
  * @throws {Error} If `bspend` is not exactly 33 bytes.
  */
 export function assertValidBspend(bspend: Buffer): void {
-  if (bspend.length !== 33) {
-    throw new Error(
-      `bspend must be a 33-byte compressed pubkey, got ${bspend.length}`,
-    );
-  }
+  assertValidCompressedPoint(bspend, "bspend");
 }
 
 /**
@@ -87,11 +124,7 @@ export function assertValidBspend(bspend: Buffer): void {
  * @throws {Error} If `share` is not exactly 33 bytes.
  */
 export function assertValidECDHShare(share: Buffer): void {
-  if (share.length !== 33) {
-    throw new Error(
-      `ECDH share must be a 33-byte compressed EC point, got ${share.length}`,
-    );
-  }
+  assertValidCompressedPoint(share, "ECDH share");
 }
 
 /**
@@ -121,6 +154,8 @@ export function assertValidSPV0Info(raw: Buffer, outputIndex: number): void {
         `expected 66 bytes, got ${raw.length}`,
     );
   }
+  assertValidBscan(raw.subarray(0, 33));
+  assertValidBspend(raw.subarray(33, 66));
 }
 
 export function assertValidLabel(m: number, outputIndex: number): void {
@@ -187,42 +222,161 @@ export function bip352TaggedHash(tag: string, data: Buffer): Buffer {
  *   correspond to positions in the original input list.
  * @returns Array of input indices eligible for SP ECDH derivation.
  */
+function readWitnessUtxoScript(witnessUtxo: Buffer): Buffer {
+  if (witnessUtxo.length < 9) return Buffer.alloc(0);
+  const scriptLen = witnessUtxo[8];
+  return witnessUtxo.subarray(9, 9 + scriptLen);
+}
+
+function readNonWitnessUtxoScript(
+  nonWitnessUtxo?: Buffer | null,
+  outputIndex?: number | null,
+): Buffer | null {
+  if (!nonWitnessUtxo || outputIndex === null || outputIndex === undefined) {
+    return null;
+  }
+
+  const tx = Transaction.fromBuffer(nonWitnessUtxo);
+  return tx.outs[outputIndex]?.script ?? null;
+}
+
+export function classifyWitnessScript(scriptPubKey: Buffer): SPInputScriptType {
+  if (
+    scriptPubKey.length === 34 &&
+    scriptPubKey[0] === OPS.OP_1 &&
+    scriptPubKey[1] === 0x20
+  ) {
+    return "p2tr";
+  }
+  if (
+    scriptPubKey.length === 22 &&
+    scriptPubKey[0] === OPS.OP_0 &&
+    scriptPubKey[1] === 0x14
+  ) {
+    return "p2wpkh";
+  }
+  if (
+    scriptPubKey.length === 34 &&
+    scriptPubKey[0] === OPS.OP_0 &&
+    scriptPubKey[1] === 0x20
+  ) {
+    return "p2wsh";
+  }
+  if (
+    scriptPubKey.length >= 4 &&
+    scriptPubKey[0] >= OPS.OP_2 &&
+    scriptPubKey[0] <= OPS.OP_16
+  ) {
+    return "segwit_v2plus";
+  }
+  if (
+    scriptPubKey.length === 25 &&
+    scriptPubKey[0] === OPS.OP_DUP &&
+    scriptPubKey[1] === OPS.OP_HASH160 &&
+    scriptPubKey[2] === 0x14 &&
+    scriptPubKey[23] === OPS.OP_EQUALVERIFY &&
+    scriptPubKey[24] === OPS.OP_CHECKSIG
+  ) {
+    return "p2pkh_or_unknown_legacy";
+  }
+  if (
+    scriptPubKey.length === 23 &&
+    scriptPubKey[0] === OPS.OP_HASH160 &&
+    scriptPubKey[1] === 0x14 &&
+    scriptPubKey[22] === OPS.OP_EQUAL
+  ) {
+    return "ineligible";
+  }
+  return "ineligible";
+}
+
+export function classifyInputDescriptor(
+  input: SPInputDescriptor,
+): SPInputScriptType {
+  const script = input.witnessUtxo
+    ? readWitnessUtxoScript(input.witnessUtxo)
+    : readNonWitnessUtxoScript(input.nonWitnessUtxo, input.outputIndex);
+
+  if (!script) {
+    return "ineligible";
+  }
+
+  const scriptType = classifyWitnessScript(script);
+
+  if (scriptType === "p2sh_p2wpkh") {
+    return scriptType;
+  }
+
+  if (
+    script.length === 23 &&
+    script[0] === OPS.OP_HASH160 &&
+    script[1] === 0x14 &&
+    script[22] === OPS.OP_EQUAL
+  ) {
+    if (
+      input.redeemScript &&
+      classifyWitnessScript(input.redeemScript) === "p2wpkh"
+    ) {
+      return "p2sh_p2wpkh";
+    }
+
+    return "ineligible";
+  }
+
+  return scriptType;
+}
+
+export function isEligibleInputType(type: SPInputScriptType): boolean {
+  return (
+    type === "p2tr" ||
+    type === "p2wpkh" ||
+    type === "p2sh_p2wpkh" ||
+    type === "p2pkh_or_unknown_legacy"
+  );
+}
+
 export function eligibleIndices(inputs: SPInputDescriptor[]): number[] {
   const eligible: number[] = [];
 
   for (let i = 0; i < inputs.length; i++) {
-    const { witnessUtxo } = inputs[i];
-
-    if (!witnessUtxo) {
-      // No witness UTXO — legacy input (P2PKH / P2SH-P2WPKH), eligible
-      eligible.push(i);
-      continue;
-    }
-
-    // witnessUtxo format: 8-byte amount || varint scriptLen || script
-    const scriptLen = witnessUtxo[8];
-    const inputScript = witnessUtxo.slice(9, 9 + scriptLen);
-    const version = inputScript[0];
-
-    if (version === OPS.OP_1 && inputScript.length === 34) {
-      // P2TR (OP_1 + 32-byte x-only key) — eligible
-      eligible.push(i);
-    } else if (version === OPS.OP_0 && inputScript.length === 22) {
-      // P2WPKH (OP_0 + 20-byte hash) — eligible
-      eligible.push(i);
-    } else if (version === OPS.OP_0 && inputScript.length === 34) {
-      // P2WSH (OP_0 + 32-byte hash) — NOT eligible (multisig)
-      continue;
-    } else if (version >= OPS.OP_2 && version <= OPS.OP_16) {
-      // Segwit v2–v16 (OP_2–OP_16 range 0x52–0x60) — NOT eligible per BIP375
-      continue;
-    } else {
-      // Anything else (P2SH-P2WPKH wrapped, P2PKH) — eligible
+    if (isEligibleInputType(classifyInputDescriptor(inputs[i]))) {
       eligible.push(i);
     }
   }
 
   return eligible;
+}
+
+export function hasSegwitV2PlusInput(inputs: SPInputDescriptor[]): boolean {
+  return inputs.some(
+    (input) => classifyInputDescriptor(input) === "segwit_v2plus",
+  );
+}
+
+export function getTaprootOutputKeyFromWitnessUtxo(
+  witnessUtxo: Buffer,
+): Buffer | null {
+  const scriptPubKey = readWitnessUtxoScript(witnessUtxo);
+  if (classifyWitnessScript(scriptPubKey) !== "p2tr") return null;
+  return Buffer.concat([Buffer.from([0x02]), scriptPubKey.subarray(2, 34)]);
+}
+
+export function groupSilentPaymentOutputs(
+  entries: SPOutputEntry[],
+): Map<string, SPOutputEntry[]> {
+  const groups = new Map<string, SPOutputEntry[]>();
+  for (const entry of entries) {
+    const key = entry.bscan.toString("hex");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(entry);
+  }
+  for (const group of groups.values()) {
+    group.sort((a, b) => {
+      const cmp = a.bspend.compare(b.bspend);
+      return cmp !== 0 ? cmp : a.outputIndex - b.outputIndex;
+    });
+  }
+  return groups;
 }
 
 // ── ECDH share accumulation ────────────────────────────────────────────────
