@@ -6,11 +6,37 @@ import { describe, expect, test } from "vitest";
 import { PsbtV2 } from "./psbtv2";
 import bip375Vectors from "../fixtures/bip375_vectors.json";
 import { KeyType } from "src/psbtv2/types";
+import { secp256k1 } from "@noble/curves/secp256k1";
 
 const SKIP_DESCRIPTIONS = new Set([
   "ecdh coverage: invalid proof in PSBT_IN_SP_DLEQ field",
   "ecdh coverage: invalid proof in PSBT_GLOBAL_SP_DLEQ field",
 ]);
+
+function hex(s: string): Buffer {
+  return Buffer.from(s, "hex");
+}
+
+function pubkeyFromSecret(secret: Buffer): Buffer {
+  return Buffer.from(
+    secp256k1.ProjectivePoint.BASE.multiply(
+      BigInt(`0x${secret.toString("hex")}`),
+    ).toRawBytes(true),
+  );
+}
+
+function p2wpkhScript(pubkey: Buffer): Buffer {
+  // Test-only: use a fixed valid witness program derived from pubkey bytes.
+  // If the repo already has address/script helpers, prefer those.
+  const h = Buffer.from(
+    require("crypto")
+      .createHash("ripemd160")
+      .update(require("crypto").createHash("sha256").update(pubkey).digest())
+      .digest(),
+  );
+
+  return Buffer.concat([Buffer.from([0x00, 0x14]), h]);
+}
 
 // ── Invalid vectors ────────────────────────────────────────────────────────
 
@@ -116,5 +142,231 @@ describe("BIP375 valid vectors", () => {
         }
       }
     }
+  });
+});
+
+describe("BIP375 DLEQ integration", () => {
+  it("adds and validates a global ECDH share with DLEQ proof", () => {
+    const inputSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000001",
+    );
+    const scanSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000002",
+    );
+    const spendSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000003",
+    );
+
+    const inputPubkey = pubkeyFromSecret(inputSecret);
+    const scanKey = pubkeyFromSecret(scanSecret);
+    const spendKey = pubkeyFromSecret(spendSecret);
+
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      silentPayment: {
+        bscan: scanKey,
+        bspend: spendKey,
+      },
+    });
+
+    psbt.addGlobalSPECDHShareWithDLEQ(
+      scanKey,
+      inputSecret,
+      Buffer.alloc(32, 0),
+    );
+
+    psbt.computeSilentPaymentOutputScripts();
+
+    expect(() => new PsbtV2(psbt.serialize())).not.toThrow();
+  });
+
+  it("rejects a mutated global DLEQ proof", () => {
+    const inputSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000001",
+    );
+    const scanSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000002",
+    );
+    const spendSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000003",
+    );
+
+    const inputPubkey = pubkeyFromSecret(inputSecret);
+    const scanKey = pubkeyFromSecret(scanSecret);
+    const spendKey = pubkeyFromSecret(spendSecret);
+
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      silentPayment: {
+        bscan: scanKey,
+        bspend: spendKey,
+      },
+    });
+
+    psbt.addGlobalSPECDHShareWithDLEQ(
+      scanKey,
+      inputSecret,
+      Buffer.alloc(32, 0),
+    );
+
+    const proofKey = KeyType.PSBT_GLOBAL_SP_DLEQ + scanKey.toString("hex");
+    const proof = Buffer.from(psbt.globalMap.get(proofKey) as Buffer);
+    proof[0] ^= 1;
+    psbt.globalMap.set(proofKey, proof);
+
+    psbt.computeSilentPaymentOutputScripts();
+
+    expect(() => new PsbtV2(psbt.serialize())).toThrow(
+      /Invalid global silent payment DLEQ proof/,
+    );
+  });
+
+  it("adds and validates per-input ECDH shares with DLEQ proofs", () => {
+    const inputSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000001",
+    );
+    const scanSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000002",
+    );
+    const spendSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000003",
+    );
+
+    const inputPubkey = pubkeyFromSecret(inputSecret);
+    const scanKey = pubkeyFromSecret(scanSecret);
+    const spendKey = pubkeyFromSecret(spendSecret);
+
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      silentPayment: {
+        bscan: scanKey,
+        bspend: spendKey,
+      },
+    });
+
+    psbt.addInputSPECDHShareWithDLEQ(
+      0,
+      scanKey,
+      inputSecret,
+      Buffer.alloc(32, 0),
+    );
+
+    psbt.computeSilentPaymentOutputScripts();
+
+    expect(() => new PsbtV2(psbt.serialize())).not.toThrow();
+  });
+
+  it("rejects a mutated per-input DLEQ proof", () => {
+    const inputSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000001",
+    );
+    const scanSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000002",
+    );
+    const spendSecret = hex(
+      "0000000000000000000000000000000000000000000000000000000000000003",
+    );
+
+    const inputPubkey = pubkeyFromSecret(inputSecret);
+    const scanKey = pubkeyFromSecret(scanSecret);
+    const spendKey = pubkeyFromSecret(spendSecret);
+
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      silentPayment: {
+        bscan: scanKey,
+        bspend: spendKey,
+      },
+    });
+
+    psbt.addInputSPECDHShareWithDLEQ(
+      0,
+      scanKey,
+      inputSecret,
+      Buffer.alloc(32, 0),
+    );
+
+    const proofKey = KeyType.PSBT_IN_SP_DLEQ + scanKey.toString("hex");
+    const proof = Buffer.from(psbt.inputMaps[0].get(proofKey) as Buffer);
+    proof[0] ^= 1;
+    psbt.inputMaps[0].set(proofKey, proof);
+
+    psbt.computeSilentPaymentOutputScripts();
+
+    expect(() => new PsbtV2(psbt.serialize())).toThrow(
+      /Invalid input 0 silent payment DLEQ proof/,
+    );
   });
 });

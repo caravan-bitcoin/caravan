@@ -16,6 +16,11 @@ const CURVE_ORDER = secp256k1.CURVE.n;
 const { bytesToNumberBE } = schnorr.utils;
 const { OPS } = script;
 import { Transaction } from "bitcoinjs-lib-v6";
+import {
+  generateDLEQProof,
+  multiplyCompressedPoint,
+  verifyDLEQProof,
+} from "./dleq";
 // ── Internal types ─────────────────────────────────────────────────────────
 
 export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
@@ -492,4 +497,58 @@ export function deriveSilentPaymentOutput(
   // P2TR output script: OP_1 <0x20> <x-only pubkey>
   const xOnlyPk = Pk.toRawBytes(true).subarray(1);
   return Buffer.concat([Buffer.from([OPS.OP_1, 0x20]), xOnlyPk]);
+}
+
+export function generateSilentPaymentDLEQProof({
+  secret,
+  scanKey,
+  auxRand,
+}: {
+  secret: Buffer;
+  scanKey: Buffer;
+  auxRand?: Buffer;
+}): {
+  ecdhShare: Buffer;
+  proof: Buffer;
+} {
+  assertValidBscan(scanKey);
+
+  const ecdhShare = multiplyCompressedPoint(scanKey, secret);
+  assertValidECDHShare(ecdhShare);
+
+  const proof = generateDLEQProof({
+    secret,
+    basePoint: scanKey,
+    auxRand,
+  });
+
+  assertValidDLEQProof(proof);
+
+  return {
+    ecdhShare,
+    proof,
+  };
+}
+
+export function verifySilentPaymentDLEQProof({
+  publicKey,
+  scanKey,
+  ecdhShare,
+  proof,
+}: {
+  publicKey: Buffer;
+  scanKey: Buffer;
+  ecdhShare: Buffer;
+  proof: Buffer;
+}): boolean {
+  assertValidBscan(scanKey);
+  assertValidECDHShare(ecdhShare);
+  assertValidDLEQProof(proof);
+
+  return verifyDLEQProof({
+    publicKey,
+    basePoint: scanKey,
+    result: ecdhShare,
+    proof,
+  });
 }

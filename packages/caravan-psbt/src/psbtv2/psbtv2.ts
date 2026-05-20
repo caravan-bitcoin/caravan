@@ -39,6 +39,8 @@ import {
   SPInputDescriptor,
   SPOutputEntry,
   sumECDHShares,
+  generateSilentPaymentDLEQProof,
+  verifySilentPaymentDLEQProof,
 } from "src/psbtv2/silentpayment";
 
 /**
@@ -1183,6 +1185,20 @@ export class PsbtV2 extends PsbtV2Maps {
             `Could not compute aggregate public key for global DLEQ verification for scan key ${bscanHex}.`,
           );
         }
+
+        if (
+          !verifySilentPaymentDLEQProof({
+            publicKey: Buffer.from(aggregatePubkey.toRawBytes(true)),
+            scanKey: Buffer.from(bscanHex, "hex"),
+            ecdhShare,
+            proof,
+          })
+        ) {
+          throw Error(
+            `Invalid global silent payment DLEQ proof for scan key ${bscanHex}.`,
+          );
+        }
+
         continue;
       }
 
@@ -1219,6 +1235,20 @@ export class PsbtV2 extends PsbtV2Maps {
             `Input ${i} missing public key for silent payment DLEQ verification.`,
           );
         }
+
+        if (
+          !verifySilentPaymentDLEQProof({
+            publicKey: Buffer.from(inputPubkey.toRawBytes(true)),
+            scanKey: Buffer.from(bscanHex, "hex"),
+            ecdhShare,
+            proof,
+          })
+        ) {
+          throw Error(
+            `Invalid input ${i} silent payment DLEQ proof for scan key ${bscanHex}.`,
+          );
+        }
+
         // A per-input SP DLEQ proof requires the input public key as A.
         // Even before semantic BIP374 verification, reject proof-bearing
         // eligible inputs whose public key cannot be recovered from the PSBT.
@@ -1835,23 +1865,43 @@ export class PsbtV2 extends PsbtV2Maps {
     this.globalMap.set(key, proof);
   }
 
+  public addGlobalSPECDHShareWithDLEQ(
+    bscan: Buffer,
+    aggregateSecret: Buffer,
+    auxRand?: Buffer,
+  ): void {
+    const { ecdhShare, proof } = generateSilentPaymentDLEQProof({
+      secret: aggregateSecret,
+      scanKey: bscan,
+      auxRand,
+    });
 
-  public addInputSPECDHShare(
+    this.addGlobalSPECDHShare(bscan, ecdhShare);
+    this.addGlobalSPDLEQProof(bscan, proof);
+  }
+
+  public addInputSPECDHShareWithDLEQ(
     inputIndex: number,
     bscan: Buffer,
-    share: Buffer,
+    inputSecret: Buffer,
+    auxRand?: Buffer,
   ): void {
     if (inputIndex < 0 || inputIndex >= this.inputMaps.length) {
       throw new Error(
         `inputIndex ${inputIndex} out of range (${this.inputMaps.length} inputs)`,
       );
     }
-    if (bscan.length !== 33) {
-      throw new Error(
-        `bscan must be a 33-byte compressed pubkey, got ${bscan.length}`,
-      );
-    }
-    if (share.length !== 33) {
+
+    const { ecdhShare, proof } = generateSilentPaymentDLEQProof({
+      secret: inputSecret,
+      scanKey: bscan,
+      auxRand,
+    });
+
+    this.addInputSPECDHShare(inputIndex, bscan, ecdhShare);
+    this.addInputSPDLEQProof(inputIndex, bscan, proof);
+  }
+
   // ── Per-input SP methods ──────────────────────────────────────────────────
 
   public addInputSPECDHShare(
