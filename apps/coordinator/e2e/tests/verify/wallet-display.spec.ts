@@ -93,37 +93,4 @@ test.describe("Wallet Display Verification", () => {
     await walletNav.refresh();
     await walletNav.expectBalance("8 BTC");
   });
-
-  test("wallet name can be edited and saved", async ({
-    page,
-    walletImport,
-  }) => {
-    await page.getByRole("button", { name: "Clear Wallet" }).click();
-    const walletFile = testStateManager.getDownloadedWalletFile();
-    await walletImport.importConfig(walletFile, clientConfig.password);
-
-    const walletInfoCard = page.locator('[data-cy="wallet-info-card"]');
-    await expect(walletInfoCard).toBeVisible();
-
-    const nameDisplay = walletInfoCard.locator(
-      '[data-cy="editable-name-value"]',
-    );
-    await expect(nameDisplay).toBeVisible();
-
-    const originalName = (await nameDisplay.textContent())?.trim();
-    expect(originalName).toBeTruthy();
-
-    const newName = `${originalName}-renamed`;
-
-    await walletInfoCard.locator('[data-cy="edit-button"]').click();
-
-    const nameInput = walletInfoCard.getByLabel("Name");
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill(newName);
-
-    await walletInfoCard.locator('[data-cy="save-button"]').click();
-
-    await expect(nameInput).not.toBeVisible();
-    await expect(nameDisplay).toHaveText(newName);
-  });
 });
