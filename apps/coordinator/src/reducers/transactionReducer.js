@@ -78,10 +78,19 @@ function sortInputs(a, b) {
  * @param {Array} outputs - The full array of outputs.
  * @param {Array} inputs - The full array of inputs.
  * @param {string} network - The network (MAINNET or TESTNET).
+ * @param {Object} options - Validation options.
+ * @param {boolean} options.validateBlank - Whether to validate blank addresses.
  * @returns {string} The error message, or an empty string if valid.
  */
-function validateOutputAddress(address, index, outputs, inputs, network) {
-  if (address === "") return "";
+function validateOutputAddress(
+  address,
+  index,
+  outputs,
+  inputs,
+  network,
+  { validateBlank = true } = {},
+) {
+  if (!validateBlank && address === "") return "";
   let error = validateAddress(address, network);
   if (error === "") {
     for (let i = 0; i < inputs.length; i += 1) {
@@ -378,12 +387,14 @@ function resetTransactionState(state) {
 function validateTransaction(state) {
   const { outputs = [], inputs = [], network } = state;
   const newOutputs = outputs.map((output, index) => {
+    const validateBlank = output.address !== "" || output.addressError !== "";
     const error = validateOutputAddress(
       output.address,
       index,
       outputs,
       inputs,
       network,
+      { validateBlank },
     );
     if (error === output.addressError) {
       return output;

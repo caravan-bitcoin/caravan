@@ -177,6 +177,21 @@ describe("Test transactionReducer", () => {
         "Output address cannot equal input address.",
       );
     });
+    it("should preserve blank address validation when an output address is cleared", () => {
+      const r = reducer(
+        {
+          inputs: [],
+          outputs: [initialOutputState()],
+          network: Network.TESTNET,
+        },
+        {
+          type: SET_OUTPUT_ADDRESS,
+          value: "",
+          number: 1,
+        },
+      );
+      expect(r.outputs[0].addressError).toEqual("Address cannot be blank.");
+    });
   });
   describe("Test SET_OUTPUT_AMOUNT action", () => {
     it("should properly set output amount", () => {
