@@ -8,11 +8,6 @@ import bip375Vectors from "../fixtures/bip375_vectors.json";
 import { KeyType } from "src/psbtv2/types";
 import { secp256k1 } from "@noble/curves/secp256k1";
 
-const SKIP_DESCRIPTIONS = new Set([
-  "ecdh coverage: invalid proof in PSBT_IN_SP_DLEQ field",
-  "ecdh coverage: invalid proof in PSBT_GLOBAL_SP_DLEQ field",
-]);
-
 function hex(s: string): Buffer {
   return Buffer.from(s, "hex");
 }
@@ -41,9 +36,7 @@ function p2wpkhScript(pubkey: Buffer): Buffer {
 // ── Invalid vectors ────────────────────────────────────────────────────────
 
 describe("BIP375 invalid vectors", () => {
-  test.each(
-    bip375Vectors.invalid.filter((v) => !SKIP_DESCRIPTIONS.has(v.description)),
-  )("$description", ({ psbt }) => {
+  test.each(bip375Vectors.invalid)("$description", ({ psbt }) => {
     expect(() => {
       const p = new PsbtV2(psbt);
       p.validate();
@@ -54,9 +47,7 @@ describe("BIP375 invalid vectors", () => {
 // ── Valid vectors ──────────────────────────────────────────────────────────
 
 describe("BIP375 valid vectors", () => {
-  test.each(
-    bip375Vectors.valid.filter((v) => !SKIP_DESCRIPTIONS.has(v.description)),
-  )("$description", ({ psbt, supplementary }) => {
+  test.each(bip375Vectors.valid)("$description", ({ psbt, supplementary }) => {
     const p = new PsbtV2(psbt);
 
     expect(() => p.validate()).not.toThrow();
