@@ -933,9 +933,10 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   private hasNumsTaprootScriptPathSpend(inputIndex: number): boolean {
-    const internalKey = this.PSBT_IN_TAP_INTERNAL_KEY[inputIndex];
+    const internalKey: string | null =
+      this.PSBT_IN_TAP_INTERNAL_KEY[inputIndex];
 
-    if (internalKey?.toString("hex") === BIP352_NUMS_H) {
+    if (internalKey === BIP352_NUMS_H) {
       return true;
     }
 
