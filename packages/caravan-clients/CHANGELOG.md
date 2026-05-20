@@ -1,5 +1,11 @@
 # @caravan/clients
 
+## 1.0.4
+
+### Patch Changes
+
+- [#502](https://github.com/caravan-bitcoin/caravan/pull/502) [`f529483`](https://github.com/caravan-bitcoin/caravan/commit/f529483c859b3068f2f676d9bbf0d6d0f2ed7af1) Thanks [@bucko13](https://github.com/bucko13)! - Update direct dependency versions and remove unused axios declarations.
+
 ## 1.0.3
 
 ### Patch Changes
