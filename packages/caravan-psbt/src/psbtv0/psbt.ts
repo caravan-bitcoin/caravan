@@ -11,7 +11,7 @@ import {
   P2WSH,
   signatureNoSighashType,
 } from "@caravan/bitcoin";
-import { Psbt, Transaction, initEccLib } from "bitcoinjs-lib-v6";
+import { Psbt, Transaction, initEccLib, payments } from "bitcoinjs-lib-v6";
 import { MultisigWalletConfig } from "@caravan/multisig";
 import { toOutputScript } from "bitcoinjs-lib-v6/src/address.js";
 import { GlobalXpub } from "bip174/src/lib/interfaces.js";
@@ -238,6 +238,22 @@ export const validateMultisigPsbtSignature = (
       return pubkey.toString("hex");
     }
   }
+
+  const script = input.witnessScript || input.redeemScript;
+  if (script) {
+    const multisig = payments.p2ms({
+      output: script,
+      network: (psbt as any).opts.network,
+    });
+    if (multisig && multisig.pubkeys) {
+      for (const pubkey of multisig.pubkeys) {
+        if (isValidSignature(pubkey, msgHash, signatureBuffer)) {
+          return pubkey.toString("hex");
+        }
+      }
+    }
+  }
+
   return false;
 };
 
