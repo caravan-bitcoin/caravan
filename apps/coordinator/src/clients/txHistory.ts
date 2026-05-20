@@ -17,8 +17,11 @@ import { calculateTransactionValue } from "utils/transactionCalculations";
 // cascading complexity where the query keys change, cache invalidation gets messy, and the logic becomes hard to follow
 const MAX_TRANSACTIONS_TO_FETCH = 500;
 const TRANSACTION_STALE_TIME = 30 * 1000; // 30 seconds
+const PENDING_STALE_TIME = 10 * 1000; // 10 seconds - shorter for pending
 
-export const usePublicClientTransactions = () => {
+export const usePublicClientTransactions = (
+  filter: "confirmed" | "unconfirmed" = "confirmed",
+) => {
   const blockchainClient = useGetClient();
   const clientType = blockchainClient?.type;
   const queryClient = useQueryClient();
@@ -36,19 +39,22 @@ export const usePublicClientTransactions = () => {
     return walletAddresses.length > 0 ? walletAddresses : spentAddresses;
   }, [walletAddresses, spentSlices]);
 
+  const queryKey =
+    filter === "confirmed"
+      ? transactionKeys.confirmedHistory()
+      : transactionKeys.pendingHistory();
+
   // When addresses change, we invalidate the cache
   // rather than creating a new cache with a different key. This basically tells React Query
   // that the data at this location is now stale, please refetch it
   useEffect(() => {
     if (currentAddresses.length > 0 && clientType === "public") {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.confirmedHistory(),
-      });
+      queryClient.invalidateQueries({ queryKey });
     }
   }, [currentAddresses.length, clientType, queryClient]);
 
   return useQuery({
-    queryKey: transactionKeys.confirmedHistory(),
+    queryKey,
     queryFn: async () => {
       // So we fetch all transactions in one call and let the blockchain client handle this efficiently
       const rawTransactions =
@@ -61,7 +67,7 @@ export const usePublicClientTransactions = () => {
       const processedTransactions = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
-        "confirmed",
+        filter,
       );
 
       // Deduplication step — when querying multiple addresses, a transaction that
@@ -86,32 +92,38 @@ export const usePublicClientTransactions = () => {
       !!blockchainClient &&
       clientType === "public" &&
       currentAddresses.length > 0,
-    staleTime: TRANSACTION_STALE_TIME,
+    staleTime:
+      filter === "confirmed" ? TRANSACTION_STALE_TIME : PENDING_STALE_TIME,
     refetchOnWindowFocus: true,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: filter === "confirmed" ? 60000 : 30000,
     refetchIntervalInBackground: false,
   });
 };
 
-export const usePrivateClientTransactions = () => {
+export const usePrivateClientTransactions = (
+  filter: "confirmed" | "unconfirmed" = "confirmed",
+) => {
   const blockchainClient = useGetClient();
   const walletAddresses = useSelector(getWalletAddresses);
   const clientType = blockchainClient?.type;
   const queryClient = useQueryClient();
+
+  const queryKey =
+    filter === "confirmed"
+      ? transactionKeys.confirmedHistory()
+      : transactionKeys.pendingHistory();
 
   // When addresses change, we invalidate the cache
   // rather than creating a new cache with a different key. This basically tells React Query
   // that the data at this location is now stale, please refetch it
   useEffect(() => {
     if (clientType === "private" && blockchainClient) {
-      queryClient.invalidateQueries({
-        queryKey: transactionKeys.confirmedHistory(),
-      });
+      queryClient.invalidateQueries({ queryKey });
     }
   }, [walletAddresses.length, clientType, queryClient, blockchainClient]);
 
   return useQuery({
-    queryKey: transactionKeys.confirmedHistory(),
+    queryKey,
     queryFn: async () => {
       // Fetch all transactions from the wallet in one call
       const rawTransactions =
@@ -120,11 +132,11 @@ export const usePrivateClientTransactions = () => {
           0,
         );
 
-      // Process transactions to add wallet-specific data
-      const confirmedTx = selectProcessedTransactions(
+      // Process transactions according to the requested filter
+      const filteredTx = selectProcessedTransactions(
         rawTransactions,
         walletAddresses,
-        "confirmed",
+        filter,
       );
 
       // Deduplication step — this fixes the issue where private nodes serving multiple
@@ -132,7 +144,7 @@ export const usePrivateClientTransactions = () => {
       // in the query, we ensure it's done once at fetch time rather than repeatedly
       // during every UI render.
       const seenTxids = new Set<string>();
-      const deduplicated = confirmedTx.filter((tx) => {
+      const deduplicated = filteredTx.filter((tx) => {
         if (seenTxids.has(tx.txid)) {
           return false;
         }
@@ -147,9 +159,10 @@ export const usePrivateClientTransactions = () => {
       }));
     },
     enabled: !!blockchainClient && clientType === "private",
-    staleTime: TRANSACTION_STALE_TIME,
+    staleTime:
+      filter === "confirmed" ? TRANSACTION_STALE_TIME : PENDING_STALE_TIME,
     refetchOnWindowFocus: true,
-    refetchInterval: 60000,
+    refetchInterval: filter === "confirmed" ? 60000 : 30000,
     refetchIntervalInBackground: false,
   });
 };
@@ -165,4 +178,23 @@ export const useConfirmedTransactions = () => {
   const publicQuery = usePublicClientTransactions();
 
   return clientType === "private" ? privateQuery : publicQuery;
+};
+
+/**
+ * Hook for fetching unconfirmed (pending) transactions.
+ * Reuses the existing public/private client hooks with "unconfirmed" filter.
+ */
+export const usePendingTransactions = () => {
+  const clientType = useSelector((state: WalletState) => state.client.type);
+  const privateQuery = usePrivateClientTransactions("unconfirmed");
+  const publicQuery = usePublicClientTransactions("unconfirmed");
+
+  const query = clientType === "private" ? privateQuery : publicQuery;
+
+  return {
+    transactions: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  };
 };
