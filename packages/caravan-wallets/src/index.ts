@@ -233,11 +233,13 @@ export function ExportPublicKey({
  */
 export function SignMessage({
   keystore,
+  network,
   bip32Path,
   message,
   expectedPubkey,
 }: {
   keystore: KEYSTORE_TYPES;
+  network?: Network | null;
   bip32Path: string;
   message: string;
   expectedPubkey: string;
@@ -257,11 +259,11 @@ export function SignMessage({
         expectedPubkey,
       });
     case TREZOR:
-      // Lane A3 will adapt TrezorSignMessage to return Entry. For now it
-      // continues to return the SDK's raw response.
       return new TrezorSignMessage({
+        network: network ?? null,
         bip32Path,
         message,
+        expectedPubkey,
       });
     default:
       return new UnsupportedInteraction({

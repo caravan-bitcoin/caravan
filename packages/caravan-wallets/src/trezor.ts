@@ -65,6 +65,10 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
+import {
+  Entry,
+  validateMessage,
+} from "./messages";
 
 /**
  * What's going on with this TrezorConnect import?
@@ -1034,19 +1038,42 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
 }
 
 /**
- * Returns a signature for a message given a bip32 path.
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Trezor device. Returns a canonical `Entry`.
+ *
+ * BIP-322 is intentionally not supported on this class: Trezor firmware
+ * does not implement it (see trezor-firmware#1943). A future
+ * per-keystore BIP-322 interaction class can be added separately
+ * if/when Trezor firmware adds support; caravan does not model protocol
+ * selection as a runtime flag on this class.
  */
 export class TrezorSignMessage extends TrezorInteraction {
   bip32Path: string;
 
   message: string;
 
+  expectedPubkey: string;
+
   bip32ValidationErrorMessage: any;
 
-  constructor({ network = "", bip32Path = "", message = "" }) {
-    super({ network: Network[network] });
+  constructor({
+    network,
+    bip32Path,
+    message,
+    expectedPubkey,
+  }: {
+    network: Network | null;
+    bip32Path: string;
+    message: string;
+    expectedPubkey: string;
+  }) {
+    super({ network });
+
+    validateMessage(message, TREZOR);
+
     this.bip32Path = bip32Path;
     this.message = message;
+    this.expectedPubkey = expectedPubkey;
 
     this.bip32ValidationErrorMessage = {};
     const bip32PathError = validateBIP32Path(bip32Path);
@@ -1108,10 +1135,24 @@ export class TrezorSignMessage extends TrezorInteraction {
     return [
       TrezorConnect.signMessage,
       {
+        coin: this.trezorCoin,
         path: this.bip32Path,
         message: this.message,
       },
     ];
+  }
+
+  /**
+   * TrezorConnect.signMessage returns `{address, signature}` where
+   * `signature` is already a base64-encoded BIP-137 signature. Map it
+   * into the canonical Entry shape.
+   */
+  parsePayload(payload: { address: string; signature: string }): Entry {
+    return {
+      bip32Path: this.bip32Path,
+      signature: payload.signature,
+      expectedPubkey: this.expectedPubkey,
+    };
   }
 }
 

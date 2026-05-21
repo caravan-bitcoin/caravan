@@ -9,6 +9,7 @@ import TrezorConnect from "@trezor/connect-web";
 import { ECPair, payments } from "bitcoinjs-lib";
 
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
+import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
 import {
   trezorCoin,
   TrezorInteraction,
@@ -459,12 +460,15 @@ describe("trezor", () => {
 
   describe("TrezorSignMessage", () => {
     const _bip32Path = "m/45'/0'/0'/0'";
+    const EXPECTED_PUBKEY =
+      "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
 
     function interactionBuilder(bip32Path = "", message = "") {
       return new TrezorSignMessage({
         network: Network.MAINNET,
         bip32Path: bip32Path || _bip32Path,
         message: message || "hello world",
+        expectedPubkey: EXPECTED_PUBKEY,
       });
     }
 
@@ -475,6 +479,8 @@ describe("trezor", () => {
       const interaction = new TrezorSignMessage({
         bip32Path: "m/foo",
         network: Network.MAINNET,
+        message: "hello world",
+        expectedPubkey: EXPECTED_PUBKEY,
       });
       expect(
         interaction.hasMessagesFor({
@@ -485,11 +491,37 @@ describe("trezor", () => {
       ).toBe(true);
     });
 
-    it("uses TrezorConnect.signMessage", () => {
+    it("constructor throws MessageSigningError on oversize message", () => {
+      expect(
+        () =>
+          new TrezorSignMessage({
+            network: Network.MAINNET,
+            bip32Path: _bip32Path,
+            message: "a".repeat(MAX_MESSAGE_BYTES + 1),
+            expectedPubkey: EXPECTED_PUBKEY,
+          })
+      ).toThrowError(MessageSigningError);
+    });
+
+    it("uses TrezorConnect.signMessage with coin set from network", () => {
       const interaction = interactionBuilder();
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signMessage);
       expect((params as any).path).toEqual(_bip32Path);
+      expect((params as any).coin).toEqual("Bitcoin");
+    });
+
+    it("parsePayload maps {address, signature} into Entry", () => {
+      const interaction = interactionBuilder();
+      const entry = interaction.parsePayload({
+        address: "bc1qdummyaddress",
+        signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
+      });
+      expect(entry).toEqual({
+        bip32Path: _bip32Path,
+        signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
+        expectedPubkey: EXPECTED_PUBKEY,
+      });
     });
   });
 });
