@@ -123,6 +123,14 @@ Here you should build out a query key map and the hooks that will be used to acc
 See the [transactions client](./src/clients/transactions.ts) for an example of how to build out a new query.
 
 
+## In-app test suite (`/#/test`)
+
+The coordinator ships an in-app keystore test suite at the `/#/test` route (mounted in `App.tsx`). It walks a connected keystore through a sequence of real device interactions and records pass/fail per step.
+
+Suite composition: each keystore has `src/tests/<keystore>.js` that concatenates category modules. Current categories: `publicKeys`, `extendedPublicKeys`, `signing` (PSBTs), `addresses`, `registration`, and `messageSigning`. To add a new category, write a new `src/tests/<category>.jsx` exporting a `<category>Tests(keystore)` factory and append `.concat(<category>Tests(KEYSTORE))` to each supporting `src/tests/<keystore>.js`.
+
+`messageSigning` covers Ledger / Trezor / Jade / BitBox / Coldcard; it signs a fixed UTF-8 message with the `open_source` cosigner key from `TEST_FIXTURES.multisigs` and verifies cryptographically via `verifyMessageSignature` from `@caravan/wallets`. BCUR2, Hermit, and Custom are intentionally omitted.
+
 ## Troubleshooting
 
 ### React "Unexpected fiber pop" in Chrome
