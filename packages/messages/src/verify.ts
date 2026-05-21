@@ -4,16 +4,9 @@ import { Verifier, Address } from "bip322-js";
  * Verify a base64 signature against the canonical P2WPKH address
  * derived from `pubkey`. Returns a boolean — never throws.
  *
- * Wraps `bip322-js` in loose-verification mode: the BIP-322 spec
- * prohibits BIP-137-style signatures over P2WPKH addresses, but
- * caravan's cosigner paths in P2WSH multisig wallets canonicalize to
- * P2WPKH, so strict mode would reject every BIP-137 signature against
- * a real caravan cosigner path.
- *
- * Address type is hardcoded P2WPKH — that's the only shape caravan
- * cosigner paths produce. Stage 4a callers don't need an addressType
- * parameter; if a future use case wants external-interop with
- * non-P2WPKH signatures, add it then.
+ * Loose-mode `bip322-js`: strict mode rejects BIP-137 sigs over
+ * P2WPKH, but caravan's cosigner paths canonicalize to P2WPKH so we
+ * need to accept them. Address type is hardcoded P2WPKH.
  */
 export function verifyMessageSignature(args: {
   message: string;

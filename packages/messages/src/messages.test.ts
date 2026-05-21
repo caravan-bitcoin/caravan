@@ -82,8 +82,6 @@ describe("validateMessage", () => {
 });
 
 describe("verifyMessageSignature — input validation", () => {
-  // Reuses one fixture's pubkey/sig — these tests exercise the verifier's
-  // input-shape gate, not the protocol layer.
   const { pubkey, message, bip137 } = FIXTURES[0];
 
   it("returns false for non-hex pubkey", () => {
@@ -118,10 +116,6 @@ describe("verifyMessageSignature — input validation", () => {
 });
 
 describe("verifyMessageSignature — fixture round-trip", () => {
-  // Signatures in test-fixtures/signatures.json are produced by
-  // scripts/generate-fixtures.ts from the open_source seed in
-  // TEST_FIXTURES.multisigs. Regenerate if TEST_FIXTURES changes.
-
   FIXTURES.forEach((fix) => {
     describe(fix.description, () => {
       it("verifies the BIP-137 fixture", () => {

@@ -471,15 +471,10 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
 }
 
 /**
- * Normalize Jade's raw EC signature output into a canonical BIP-137
- * base64 65-byte signature.
- *
- * Jade returns a raw `r||s` EC signature with no recovery byte attached
- * (its firmware exposes the signature without protocol-level conformance
- * to BIP-137 or BIP-322). To produce a canonical BIP-137 sig we have to
- * pick the right recovery byte (`v` in {0, 1}); we do that by trying both
- * candidates and checking which one recovers to `pubkey` via the
- * loose-mode verifier in `messages.ts`. Two ECDSA recoveries is cheap.
+ * Normalize Jade's raw 64-byte `r||s` EC signature into a canonical
+ * BIP-137 base64 65-byte signature by picking the recovery byte that
+ * verifies against `pubkey`. Tries both `v` candidates and returns the
+ * one that recovers; throws MalformedResponse if neither does.
  */
 function normalizeJadeSignature(
   rawSig: Uint8Array | string,
@@ -531,12 +526,8 @@ function normalizeJadeSignature(
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
  * `bip32Path` on a Jade device. Returns a canonical `Entry`.
  *
- * Jade firmware emits a raw EC signature with no protocol-level
- * conformance; caravan treats it as BIP-137 once the recovery byte is
- * reconstructed (see `normalizeJadeSignature`). A future per-keystore
- * BIP-322 interaction class can be added separately if/when Jade
- * firmware adds support; caravan does not model protocol selection as
- * a runtime flag on this class.
+ * Jade emits a raw 64-byte EC signature with no recovery byte; see
+ * `normalizeJadeSignature` for how we reconstruct it.
  */
 export class JadeSignMessage extends JadeInteraction {
   bip32Path: string;

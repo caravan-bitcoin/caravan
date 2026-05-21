@@ -221,15 +221,10 @@ export function ExportPublicKey({
 /**
  * Return an interaction class for signing a message with the cosigner
  * key at `bip32Path` on the given `keystore`. The interaction's `.run()`
- * returns a canonical {@link Entry} record (BIP-137 wire form).
+ * returns a canonical `Entry` (BIP-137 wire form).
  *
- * **Supported keystores:** Ledger (legacy + v2 Bitcoin apps), Trezor,
- * Jade, BitBox, Coldcard. Each implements BIP-137 per its firmware's
- * native capability. Future BIP-322 support will land as separate
- * per-keystore interaction classes (e.g. a `ColdcardSignMessageBIP322`
- * wrapping Coldcard's Proof-of-Reserve PSBT flow) — not as a runtime
- * flag on these classes — once devices implement the protocol in a
- * shape caravan can consume per-cosigner.
+ * Supported keystores: Ledger (legacy + v2 Bitcoin apps), Trezor,
+ * Jade, BitBox, Coldcard.
  */
 export function SignMessage({
   keystore,

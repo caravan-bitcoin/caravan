@@ -1,5 +1,4 @@
 import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
-import { MessageSigningError } from "@caravan/messages";
 import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
 
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
@@ -324,8 +323,10 @@ describe("ledger", () => {
     const EXPECTED_PUBKEY =
       "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
 
+    const PATH = "m/48'/1'/0'/2'/0/0";
+
     function interactionBuilder(
-      bip32Path = "m/48'/1'/0'/2'/0/0",
+      bip32Path = PATH,
       message = "hello world"
     ) {
       return new LedgerSignMessage({
@@ -333,6 +334,21 @@ describe("ledger", () => {
         message,
         pubkey: EXPECTED_PUBKEY,
       });
+    }
+
+    function mountLedgerApp(
+      interaction: LedgerSignMessage,
+      mockApp: { signMessage: ReturnType<typeof vi.fn> },
+      { isLegacy }: { isLegacy: boolean }
+    ) {
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(isLegacy);
+      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
+        callback(mockApp, {
+          setExchangeTimeout: () => {},
+          close: () => {},
+        })
+      );
     }
 
     itHasAppMessages(interactionBuilder);
@@ -352,87 +368,59 @@ describe("ledger", () => {
       const r32 = "01".repeat(32);
       const s32 = "02".repeat(32);
       const mockApp = {
-        signMessage: vi
-          .fn()
-          .mockResolvedValue({ v: 1, r: r32, s: s32 }),
+        signMessage: vi.fn().mockResolvedValue({ v: 1, r: r32, s: s32 }),
       };
-      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
-      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
-      vi
-        .spyOn(interaction, "withApp")
-        .mockImplementation((callback: any) =>
-          callback(mockApp, {
-            setExchangeTimeout: () => {},
-            close: () => {},
-          })
-        );
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
 
       const entry = await interaction.run();
 
       expect(mockApp.signMessage).toHaveBeenCalledWith(
-        "m/48'/1'/0'/2'/0/0",
+        PATH,
         Buffer.from("hello world", "utf8").toString("hex")
       );
-      expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
-      expect(entry.pubkey).toBe(EXPECTED_PUBKEY);
-      // header = v + 27 + 4 = 32
       const expectedSig = Buffer.concat([
         Buffer.from([32]),
         Buffer.from(r32, "hex"),
         Buffer.from(s32, "hex"),
       ]).toString("base64");
-      expect(entry.signature).toBe(expectedSig);
+      expect(entry).toEqual({
+        bip32Path: PATH,
+        pubkey: EXPECTED_PUBKEY,
+        signature: expectedSig,
+      });
     });
 
     it("legacy Bitcoin app: SDK statusCode 0x6985 wraps as DeviceRejected", async () => {
       const interaction = interactionBuilder();
-      const rejectErr = Object.assign(
-        new Error("CONDITIONS_OF_USE_NOT_SATISFIED"),
-        { statusCode: 0x6985 }
-      );
-      const mockApp = {
-        signMessage: vi.fn().mockRejectedValue(rejectErr),
-      };
-      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
-      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
-      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
-        callback(mockApp, {
-          setExchangeTimeout: () => {},
-          close: () => {},
-        })
+      mountLedgerApp(
+        interaction,
+        {
+          signMessage: vi.fn().mockRejectedValue(
+            Object.assign(new Error("CONDITIONS_OF_USE_NOT_SATISFIED"), {
+              statusCode: 0x6985,
+            })
+          ),
+        },
+        { isLegacy: true }
       );
 
-      try {
-        await interaction.run();
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
-        expect((err as MessageSigningError).keystore).toBe("ledger");
-      }
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "DeviceRejected",
+        keystore: "ledger",
+      });
     });
 
     it("legacy Bitcoin app: unrelated SDK errors wrap as TransportError", async () => {
       const interaction = interactionBuilder();
-      const mockApp = {
-        signMessage: vi.fn().mockRejectedValue(new Error("USB disconnected")),
-      };
-      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
-      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
-      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
-        callback(mockApp, {
-          setExchangeTimeout: () => {},
-          close: () => {},
-        })
+      mountLedgerApp(
+        interaction,
+        { signMessage: vi.fn().mockRejectedValue(new Error("USB disconnected")) },
+        { isLegacy: true }
       );
 
-      try {
-        await interaction.run();
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        expect((err as MessageSigningError).kind).toBe("TransportError");
-      }
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "TransportError",
+      });
     });
 
     it("v2 Bitcoin app: run() uses AppClient.signMessage(message, path) and passes through base64", async () => {
@@ -443,53 +431,36 @@ describe("ledger", () => {
       const mockApp = {
         signMessage: vi.fn().mockResolvedValue(expectedSig),
       };
-      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
-      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(false);
-      vi
-        .spyOn(interaction, "withApp")
-        .mockImplementation((callback: any) =>
-          callback(mockApp, {
-            setExchangeTimeout: () => {},
-            close: () => {},
-          })
-        );
+      mountLedgerApp(interaction, mockApp, { isLegacy: false });
 
       const entry = await interaction.run();
 
-      // v2 SDK: (messageBuffer, path) — reversed positional order
       expect(mockApp.signMessage).toHaveBeenCalledWith(
         Buffer.from("hello world", "utf8"),
-        "m/48'/1'/0'/2'/0/0"
+        PATH
       );
-      expect(entry.signature).toBe(expectedSig);
-      expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
-      expect(entry.pubkey).toBe(EXPECTED_PUBKEY);
+      expect(entry).toEqual({
+        bip32Path: PATH,
+        pubkey: EXPECTED_PUBKEY,
+        signature: expectedSig,
+      });
     });
 
     it("v2 Bitcoin app: SDK errors also wrap as MessageSigningError", async () => {
       const interaction = interactionBuilder();
-      const rejectErr = Object.assign(new Error("user rejected"), {
-        statusCode: 0x6985,
-      });
-      const mockApp = {
-        signMessage: vi.fn().mockRejectedValue(rejectErr),
-      };
-      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
-      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(false);
-      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
-        callback(mockApp, {
-          setExchangeTimeout: () => {},
-          close: () => {},
-        })
+      mountLedgerApp(
+        interaction,
+        {
+          signMessage: vi.fn().mockRejectedValue(
+            Object.assign(new Error("user rejected"), { statusCode: 0x6985 })
+          ),
+        },
+        { isLegacy: false }
       );
 
-      try {
-        await interaction.run();
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
-      }
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "DeviceRejected",
+      });
     });
   });
 

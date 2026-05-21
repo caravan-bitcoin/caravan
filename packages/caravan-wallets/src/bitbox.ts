@@ -565,20 +565,8 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
 }
 
 /**
- * BitBox sign-message interaction.
- *
- * Per BitBox's user-facing doc
- * (https://support.bitbox.swiss/en_US/sign-bitcoin-message-bitbox02),
- * message signing is restricted to native-SegWit (P2WPKH, `bc1q...`)
- * addresses. We sign at the cosigner's per-address path with a P2WPKH
- * single-key script config — the same "sign as cosigner pubkey" pattern
- * SeedSigner adopted (see SeedSigner PR #874).
- *
- * The bitbox-api `btcSignMessage` returns
- * `{ sig, recid, electrumSig65 }`. The `electrumSig65` is already the
- * canonical 65-byte BIP-137 wire form (header + r + s); caravan
- * base64-encodes it directly. BitBox's header byte uses the Electrum
- * convention; caravan's loose-mode verifier tolerates any header.
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a BitBox device. P2WPKH-only per BitBox firmware.
  */
 export class BitBoxSignMessage extends BitBoxInteraction {
   network: BitcoinNetwork;

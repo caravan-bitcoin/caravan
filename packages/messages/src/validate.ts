@@ -1,8 +1,5 @@
 import { MessageSigningError } from "./types";
 
-// Coldcard's signed-message SD-card flow is the tightest envelope; its
-// firmware caps message text around 500 bytes once the BIP-32 path and
-// address-format suffix are folded in. 240 leaves margin.
 export const MAX_MESSAGE_BYTES = 240;
 
 const NUL_BYTE = String.fromCharCode(0);

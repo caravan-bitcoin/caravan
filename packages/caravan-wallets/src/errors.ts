@@ -1,22 +1,8 @@
 import { MessageSigningError } from "@caravan/messages";
 
 /**
- * Translate a raw SDK throw from a hardware-wallet driver into the
- * keystore-agnostic `MessageSigningError` shape. Lives in
- * `@caravan/wallets` (not in `@caravan/messages`) because the
- * heuristic is specifically about vendor SDK quirks.
- *
- * `MessageSigningError` instances pass through untouched so structured
- * errors raised by the keystore layer (MalformedResponse,
- * MalformedRequest) don't get clobbered into TransportError when they
- * bubble up through the same try/catch.
- *
- * The classifier is lenient: each SDK reports rejection differently
- * (Ledger statusCode 0x6985, Trezor "Cancelled" payload, BitBox
- * "user abort", Jade "...rejected"). Over-tagging a transport drop
- * as DeviceRejected is preferred over the reverse — the user-facing
- * string for "rejected" still reads sensibly to a user whose USB
- * cable was unplugged, but the reverse is confusing.
+ * Translate a raw SDK throw into a `MessageSigningError`. Existing
+ * `MessageSigningError` instances pass through unchanged.
  */
 export function wrapSdkError(
   keystore: string,

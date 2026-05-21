@@ -1,8 +1,3 @@
-/**
- * Canonical per-cosigner signature record. Every signer in the
- * caravan-wallets ecosystem normalizes its native SDK output into
- * this shape so downstream code is signer-agnostic.
- */
 export type Entry = {
   bip32Path: string;
   signature: string;
@@ -28,8 +23,6 @@ export class MessageSigningError extends Error {
     userMessage: string;
     cause?: unknown;
   }) {
-    // Structured `.message` for logs ([Kind/KEYSTORE] prefix); plain
-    // `.userMessage` for UI surfaces.
     super(`[${args.kind}/${args.keystore}] ${args.userMessage}`, {
       cause: args.cause,
     });

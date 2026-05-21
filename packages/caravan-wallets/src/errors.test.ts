@@ -51,10 +51,6 @@ describe("wrapSdkError", () => {
 });
 
 describe("SignMessage factory runs validateMessage before constructing", () => {
-  // Validation lives in @caravan/messages; these tests assert it's wired
-  // into the factory for every supported keystore. A future keystore
-  // added to the switch without going through validateMessage shows up
-  // here.
   const oversize = "a".repeat(MAX_MESSAGE_BYTES + 1);
   const bip32Path = "m/84'/0'/0'/0/0";
   const pubkey =
@@ -69,21 +65,20 @@ describe("SignMessage factory runs validateMessage before constructing", () => {
   ])(
     "%s: throws MalformedRequest before constructing the interaction",
     (keystore, needsNetwork) => {
-      try {
+      expect(() =>
         SignMessage({
           keystore: keystore as any,
           network: needsNetwork ? Network.MAINNET : null,
           bip32Path,
           message: oversize,
           pubkey,
-        });
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        const e = err as MessageSigningError;
-        expect(e.kind).toBe("MalformedRequest");
-        expect(e.keystore).toBe(keystore);
-      }
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          kind: "MalformedRequest",
+          keystore,
+        }),
+      );
     },
   );
 });

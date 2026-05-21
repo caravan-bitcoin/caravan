@@ -5,7 +5,6 @@ import {
   networkData,
   Network,
 } from "@caravan/bitcoin";
-import { MessageSigningError } from "@caravan/messages";
 import TrezorConnect from "@trezor/connect-web";
 import { ECPair, payments } from "bitcoinjs-lib";
 
@@ -512,43 +511,22 @@ describe("trezor", () => {
       });
     });
 
-    it("run() wraps Trezor 'Cancelled' as DeviceRejected", async () => {
+    it.each([
+      ["Cancelled", "DeviceRejected"],
+      ["Device disconnected during action", "TransportError"],
+    ])("run() wraps Trezor '%s' as %s", async (errorText, expectedKind) => {
       const interaction = interactionBuilder();
       const signSpy = vi
         .spyOn(TrezorConnect, "signMessage")
         .mockResolvedValueOnce({
           success: false,
-          payload: { error: "Cancelled" },
+          payload: { error: errorText },
         } as any);
-      try {
-        await interaction.run();
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
-        expect((err as MessageSigningError).keystore).toBe("trezor");
-      } finally {
-        signSpy.mockRestore();
-      }
-    });
-
-    it("run() wraps non-cancellation failures as TransportError", async () => {
-      const interaction = interactionBuilder();
-      const signSpy = vi
-        .spyOn(TrezorConnect, "signMessage")
-        .mockResolvedValueOnce({
-          success: false,
-          payload: { error: "Device disconnected during action" },
-        } as any);
-      try {
-        await interaction.run();
-        throw new Error("expected throw");
-      } catch (err) {
-        expect(err).toBeInstanceOf(MessageSigningError);
-        expect((err as MessageSigningError).kind).toBe("TransportError");
-      } finally {
-        signSpy.mockRestore();
-      }
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: expectedKind,
+        keystore: "trezor",
+      });
+      signSpy.mockRestore();
     });
   });
 });

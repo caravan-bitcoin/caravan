@@ -1039,12 +1039,6 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
 /**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
  * `bip32Path` on a Trezor device. Returns a canonical `Entry`.
- *
- * BIP-322 is intentionally not supported on this class: Trezor firmware
- * does not implement it (see trezor-firmware#1943). A future
- * per-keystore BIP-322 interaction class can be added separately
- * if/when Trezor firmware adds support; caravan does not model protocol
- * selection as a runtime flag on this class.
  */
 export class TrezorSignMessage extends TrezorInteraction {
   bip32Path: string;
