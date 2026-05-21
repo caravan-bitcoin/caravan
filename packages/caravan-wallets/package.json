@@ -84,6 +84,7 @@
     "@ledgerhq/hw-transport-webusb": "6.29.8",
     "@trezor/connect-web": "^9.6.0",
     "bignumber.js": "^8.1.1",
+    "bip322-js": "^3.0.0",
     "bitbox-api": "^0.10.0",
     "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",
