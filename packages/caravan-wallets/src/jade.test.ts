@@ -5,18 +5,11 @@ import {
   ExtendedPublicKey,
   getPsbtVersionNumber,
   PsbtV2,
+  TEST_FIXTURES,
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
-import {
-  MessageSigningError,
-  verifyMessageSignature,
-} from "@caravan/messages";
-import { HDKey } from "@scure/bip32";
-import { mnemonicToSeedSync } from "@scure/bip39";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — bitcoinjs-message has no ambient types
-import * as bitcoinMessage from "bitcoinjs-message";
+import { MessageSigningError } from "@caravan/messages";
 import { IJade, IJadeInterface, JadeTransport } from "jadets";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mock, MockProxy } from "vitest-mock-extended";
@@ -38,22 +31,19 @@ import {
 } from "./jade";
 import { MultisigWalletConfig } from "./types";
 
-const BIP39_PHRASE =
-  "merge alley lucky axis penalty manage latin gasp virus captain wheel deal chase fragile chapter boss zero dirt stadium tooth physical valve kid plunge";
-
-// Mock modules
-vi.mock("@caravan/bitcoin", () => ({
-  ExtendedPublicKey: {
-    fromBase58: vi.fn(),
-  },
-  getPsbtVersionNumber: vi.fn(),
-  PsbtV2: vi.fn(),
-  bip32PathToSequence: vi.fn(),
-  bip32SequenceToPath: vi.fn(),
-  P2SH: "P2SH",
-  P2WSH: "P2WSH",
-  P2SH_P2WSH: "P2SH_P2WSH",
-}));
+vi.mock("@caravan/bitcoin", async () => {
+  const actual = await vi.importActual<typeof import("@caravan/bitcoin")>(
+    "@caravan/bitcoin",
+  );
+  return {
+    ...actual,
+    ExtendedPublicKey: { fromBase58: vi.fn() },
+    getPsbtVersionNumber: vi.fn(),
+    PsbtV2: vi.fn(),
+    bip32PathToSequence: vi.fn(),
+    bip32SequenceToPath: vi.fn(),
+  };
+});
 
 vi.mock("@caravan/bip32", () => ({
   getRelativeBip32Sequence: vi.fn(),
@@ -548,75 +538,58 @@ describe("Jade", () => {
       });
 
       it("rejects a sig that does not recover to pubkey under either v", async () => {
-        const path = "m/44'/0'/0'";
-        const seed = mnemonicToSeedSync(BIP39_PHRASE);
-        const signingNode = HDKey.fromMasterSeed(seed).derive(path);
-        const wrongNode = HDKey.fromMasterSeed(seed).derive("m/44'/0'/1'");
-        const priv = Buffer.from(signingNode.privateKey as Uint8Array);
-        const wrongPub = Buffer.from(wrongNode.publicKey as Uint8Array);
-        const message = "Hello, Jade!";
-
-        const bip137 = bitcoinMessage.sign(message, priv, true, {
-          segwitType: "p2wpkh",
-        });
-        const rawSig = bip137.subarray(1);
+        // Jade emits a raw 64-byte r||s. Use the BIP-137 fixture sig
+        // minus its header byte but claim the other cosigner's pubkey;
+        // neither v candidate should recover to it.
+        const fixture = TEST_FIXTURES.multisigs[0];
+        const rawSig = Buffer.from(
+          fixture.signedMessages.bip137,
+          "base64",
+        ).subarray(1);
 
         mockJade.signMessage.mockResolvedValueOnce(rawSig);
 
         const interaction = new JadeSignMessage({
-          bip32Path: path,
-          message,
-          // sign with `signingNode` but claim `wrongNode` was the signer;
-          // neither v candidate should recover to wrongPub.
-          pubkey: wrongPub.toString("hex"),
+          bip32Path: fixture.bip32Path,
+          message: fixture.signedMessages.message,
+          pubkey: fixture.publicKeys.find((pk) => pk !== fixture.publicKey)!,
           dependencies,
         });
 
         await expect(interaction.run()).rejects.toThrowError(
-          MessageSigningError
+          MessageSigningError,
         );
       });
 
       it("signs and returns Entry with a canonical sig that verifies against pubkey", async () => {
-        const path = "m/44'/0'/0'";
-        const seed = mnemonicToSeedSync(BIP39_PHRASE);
-        const node = HDKey.fromMasterSeed(seed).derive(path);
-        const priv = Buffer.from(node.privateKey as Uint8Array);
-        const pub = Buffer.from(node.publicKey as Uint8Array);
-        const pubkey = pub.toString("hex");
-        const message = "Hello, Jade!";
-
-        // Synthesize a Jade-style raw EC sig (r||s, no header byte) by
-        // signing via bitcoinjs-message and stripping the BIP-137 header.
-        // This is the wire-equivalent of what Jade's firmware emits over
-        // the sign_message RPC.
-        const bip137 = bitcoinMessage.sign(message, priv, true, {
-          segwitType: "p2wpkh",
-        });
-        const rawSig = bip137.subarray(1);
+        const fixture = TEST_FIXTURES.multisigs[0];
+        // Strip the BIP-137 header byte to get the wire-equivalent of
+        // what Jade's firmware emits.
+        const rawSig = Buffer.from(
+          fixture.signedMessages.bip137,
+          "base64",
+        ).subarray(1);
 
         mockJade.signMessage.mockResolvedValueOnce(rawSig);
 
         const interaction = new JadeSignMessage({
-          bip32Path: path,
-          message,
-          pubkey,
+          bip32Path: fixture.bip32Path,
+          message: fixture.signedMessages.message,
+          pubkey: fixture.publicKey,
           dependencies,
         });
 
         const entry = await interaction.run();
 
-        expect(entry.bip32Path).toBe(path);
-        expect(entry.pubkey).toBe(pubkey);
-        expect(typeof entry.signature).toBe("string");
-        expect(
-          verifyMessageSignature({
-            message,
-            signature: entry.signature,
-            pubkey: entry.pubkey,
-          }),
-        ).toBe(true);
-        expect(mockJade.signMessage).toHaveBeenCalledWith([44, 0, 0], message);
+        expect(entry).toEqual({
+          bip32Path: fixture.bip32Path,
+          pubkey: fixture.publicKey,
+          signature: fixture.signedMessages.bip137,
+        });
+        expect(mockJade.signMessage).toHaveBeenCalledWith(
+          [45, 1, 100, 0, 0],
+          fixture.signedMessages.message,
+        );
       });
     });
 
@@ -630,7 +603,7 @@ describe("Jade", () => {
             "wsh(multi(k))"
           );
           expect(
-            variantFromAddressType("P2SH_P2WSH" as MultisigAddressType)
+            variantFromAddressType("P2SH-P2WSH" as MultisigAddressType)
           ).toBe("sh(wsh(multi(k)))");
         });
 
