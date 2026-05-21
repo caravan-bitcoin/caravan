@@ -13,6 +13,7 @@ import {
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
 } from "./ledger";
+import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
@@ -320,6 +321,9 @@ describe("ledger", () => {
   });
 
   describe("LedgerSignMessage", () => {
+    const EXPECTED_PUBKEY =
+      "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
+
     function interactionBuilder(
       bip32Path = "m/48'/1'/0'/2'/0/0",
       message = "hello world"
@@ -327,6 +331,7 @@ describe("ledger", () => {
       return new LedgerSignMessage({
         bip32Path,
         message,
+        expectedPubkey: EXPECTED_PUBKEY,
       });
     }
 
@@ -340,6 +345,53 @@ describe("ledger", () => {
           code: "ledger.bip32_path.path_error",
         })
       ).toBe(true);
+    });
+
+    it("constructor throws MessageSigningError on oversize message", () => {
+      expect(
+        () =>
+          new LedgerSignMessage({
+            bip32Path: "m/48'/1'/0'/2'/0/0",
+            message: "a".repeat(MAX_MESSAGE_BYTES + 1),
+            expectedPubkey: EXPECTED_PUBKEY,
+          })
+      ).toThrowError(MessageSigningError);
+    });
+
+    it("run() normalizes {v,r,s} into a base64 BIP-137 sig wrapped in Entry", async () => {
+      const interaction = interactionBuilder();
+      const r32 = "01".repeat(32);
+      const s32 = "02".repeat(32);
+      const mockApp = {
+        signMessage: vi
+          .fn()
+          .mockResolvedValue({ v: 1, r: r32, s: s32 }),
+      };
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi
+        .spyOn(interaction, "withApp")
+        .mockImplementation((callback: any) =>
+          callback(mockApp, {
+            setExchangeTimeout: () => {},
+            close: () => {},
+          })
+        );
+
+      const entry = await interaction.run();
+
+      expect(mockApp.signMessage).toHaveBeenCalledWith(
+        "m/48'/1'/0'/2'/0/0",
+        Buffer.from("hello world", "utf8").toString("hex")
+      );
+      expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
+      expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
+      // header = v + 27 + 4 = 32
+      const expectedSig = Buffer.concat([
+        Buffer.from([32]),
+        Buffer.from(r32, "hex"),
+        Buffer.from(s32, "hex"),
+      ]).toString("base64");
+      expect(entry.signature).toBe(expectedSig);
     });
   });
 

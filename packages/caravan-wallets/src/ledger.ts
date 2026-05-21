@@ -55,6 +55,10 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
+import {
+  Entry,
+  validateMessage,
+} from "./messages";
 import { MultisigWalletPolicy } from "./policy";
 import { DeviceError, MultisigWalletConfig } from "./types";
 
@@ -1225,12 +1229,44 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
 }
 
 /**
- * Returns a signature for a given message by a single public key.
+ * Normalize Ledger's `{v, r, s}` ECDSA signature output into a canonical
+ * BIP-137 base64 65-byte signature.
+ *
+ * Header byte encoding follows the @ledgerhq/hw-app-btc README example:
+ * `v + 27 + 4` (compressed-P2PKH range, 31-34). caravan's loose-mode
+ * verifier ignores address-type encoding in the header, so the exact
+ * range is not material — any consistent compressed flag works.
+ */
+function normalizeLedgerSignature(vrs: {
+  v: number;
+  r: string;
+  s: string;
+}): string {
+  const headerByte = vrs.v + 27 + 4;
+  const sig = Buffer.concat([
+    Buffer.from([headerByte]),
+    Buffer.from(vrs.r, "hex"),
+    Buffer.from(vrs.s, "hex"),
+  ]);
+  return sig.toString("base64");
+}
+
+/**
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Ledger device. Returns a canonical `Entry`.
+ *
+ * BIP-322 is intentionally not supported on this class: the Ledger
+ * firmware does not implement it (see sparrowwallet/sparrow#1742). A
+ * future per-keystore BIP-322 interaction class can be added separately
+ * if/when Ledger firmware adds support; caravan does not model protocol
+ * selection as a runtime flag on this class.
  */
 export class LedgerSignMessage extends LedgerBitcoinInteraction {
   bip32Path: string;
 
   message: string;
+
+  expectedPubkey: string;
 
   bip32ValidationErrorMessage?: LedgerDeviceError;
 
@@ -1238,11 +1274,22 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
 
   readonly isV2Supported = false;
 
-  constructor({ bip32Path, message }: { bip32Path: string; message: string }) {
+  constructor({
+    bip32Path,
+    message,
+    expectedPubkey,
+  }: {
+    bip32Path: string;
+    message: string;
+    expectedPubkey: string;
+  }) {
     super();
+
+    validateMessage(message, LEDGER);
+
     this.bip32Path = bip32Path;
     this.message = message;
-    // this.bip32ValidationErrorMessage = false;
+    this.expectedPubkey = expectedPubkey;
 
     const bip32PathError = validateBIP32Path(bip32Path);
     if (bip32PathError.length) {
@@ -1272,30 +1319,34 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
       state: ACTIVE,
       level: INFO,
       code: "ledger.sign",
-      // (version is optional)
       text: 'Your Ledger will ask you to "Confirm Message" for signing.',
       action: LEDGER_RIGHT_BUTTON,
     });
-    // TODO: are more messages required?
 
     return messages;
   }
 
   /**
-   * See {@link https://github.com/LedgerHQ/ledger-live/tree/develop/libs/ledgerjs/packages/hw-app-btc#signmessagenew}.
+   * Signs `this.message` with the key at `this.bip32Path` on the Ledger
+   * Bitcoin app. Returns the canonical `Entry` shape. The SDK's
+   * `app.signMessage(path, messageHex)` returns `{v, r, s}`; we hex-encode
+   * the message and normalize the response to a base64 65-byte BIP-137
+   * signature. See @ledgerhq/hw-app-btc Btc.signMessage docs.
    */
-  async run() {
-    // check app version support first
+  async run(): Promise<Entry> {
     await super.run();
     return this.withApp(async (app, transport) => {
       try {
-        // TODO: what would be an appropriate amount of time to wait for a
-        // signature?
         transport.setExchangeTimeout(20000);
 
-        const vrs = await app.signMessageNew(this.bip32Path, this.message);
+        const messageHex = Buffer.from(this.message, "utf8").toString("hex");
+        const vrs = await app.signMessage(this.bip32Path, messageHex);
 
-        return vrs;
+        return {
+          bip32Path: this.bip32Path,
+          signature: normalizeLedgerSignature(vrs),
+          expectedPubkey: this.expectedPubkey,
+        };
       } finally {
         transport.close();
       }

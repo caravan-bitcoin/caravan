@@ -235,13 +235,17 @@ export function SignMessage({
   keystore,
   bip32Path,
   message,
+  expectedPubkey,
 }: {
   keystore: KEYSTORE_TYPES;
   bip32Path: string;
   message: string;
+  expectedPubkey: string;
 }) {
   switch (keystore) {
     case JADE:
+      // Lane A4 will adapt JadeSignMessage to return Entry. For now it
+      // continues to return the SDK's raw hex EC signature.
       return new JadeSignMessage({
         bip32Path,
         message,
@@ -250,8 +254,11 @@ export function SignMessage({
       return new LedgerSignMessage({
         bip32Path,
         message,
+        expectedPubkey,
       });
     case TREZOR:
+      // Lane A3 will adapt TrezorSignMessage to return Entry. For now it
+      // continues to return the SDK's raw response.
       return new TrezorSignMessage({
         bip32Path,
         message,
