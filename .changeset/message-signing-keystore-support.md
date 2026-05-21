@@ -8,36 +8,40 @@ keystore implementations.
 `SignMessage({keystore, network?, bip32Path, message, expectedPubkey})`
 is the canonical surface. The factory requires `expectedPubkey`
 (caller-supplied; the test runner or wallet UI derives it from the
-descriptor). The factory returns an interaction whose `.run()` produces
-`Entry = {bip32Path, signature, expectedPubkey}` — a uniform shape
-across keystores.
+descriptor) and validates `message` (UTF-8, no NUL, ≤240 bytes) before
+constructing any per-keystore interaction. The returned interaction's
+`.run()` produces `Entry = {bip32Path, signature, expectedPubkey}` — a
+uniform shape across keystores.
 
-Supported keystores after this release:
+Supported keystores after this release (all BIP-137):
 
-- `LEDGER` / `LEDGER_V2` (BIP-137; single class dispatches on app
-  version — fixes a latent bug where the previous code called the
-  nonexistent `app.signMessageNew`)
-- `TREZOR` (BIP-137; also fixes a network-enum reverse-lookup bug that
-  caused `trezorCoin()` to always pick the testnet branch)
-- `JADE` (BIP-137; reconstructs the recovery byte from a raw 64-byte
-  EC sig by trying both `v` candidates)
-- `BITBOX` (BIP-137; new)
-- `COLDCARD` (BIP-137; new indirect-keystore SD-card flow)
+- `LEDGER` / `LEDGER_V2` — single class dispatches on app version (the
+  earlier code called the nonexistent `app.signMessageNew`; that latent
+  bug is fixed here).
+- `TREZOR` — also fixes a `Network` enum reverse-lookup bug that caused
+  `trezorCoin()` to always pick the testnet branch.
+- `JADE` — reconstructs the recovery byte from a raw 64-byte EC sig by
+  trying both `v` candidates.
+- `BITBOX` — new.
+- `COLDCARD` — new indirect-keystore SD-card flow.
 
-Verification: `verifyMessageSignature({message, entry})` exported from
-the package. Wraps `bip322-js` in loose mode so BIP-137 sigs over
-P2WPKH-derived cosigner paths (caravan's canonical multisig cosigner
-shape) verify correctly; strict mode would reject them per the BIP-322
-spec.
+Verification: `verifyMessageSignature({message, signature, expectedPubkey})`
+exported from the package. Wraps `bip322-js` in loose mode so BIP-137
+sigs over P2WPKH-derived cosigner paths (caravan's canonical multisig
+cosigner shape) verify correctly; strict mode would reject them per the
+BIP-322 spec.
 
 Error contract: new `MessageSigningError` discriminated union with
-kinds `UnsupportedAddressType`, `DeviceRejected`, `TransportError`,
-`MalformedResponse`, `MalformedRequest`, each carrying `keystore`,
-optional `cause`, and `userMessage`.
+kinds `DeviceRejected`, `TransportError`, `MalformedResponse`,
+`MalformedRequest`, each carrying `keystore`, optional `cause`, and
+`userMessage`. `e.message` is structured (`[Kind/KEYSTORE] {userMessage}`)
+for logs; `e.userMessage` is the bare string for UI surfaces. Every
+per-keystore `.run()` wraps raw SDK throws via `wrapSdkError(keystore,
+err)` so consumers branch on `e.kind` rather than vendor error shapes.
 
-New exports: `verifyMessageSignature`, `validateMessage`,
+New exports: `verifyMessageSignature`, `validateMessage`, `wrapSdkError`,
 `MessageSigningError`, `MAX_MESSAGE_BYTES`, types `Entry`,
-`MessageSigningErrorKind`, `NormalizeSignature`.
+`MessageSigningErrorKind`.
 
 **Design note — protocol selection.** caravan does not model BIP-137 vs
 BIP-322 as a runtime flag on these interaction classes. Each class
