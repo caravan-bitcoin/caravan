@@ -139,4 +139,35 @@ describe("BitBoxSignMessage", () => {
       expect.any(Uint8Array),
     );
   });
+
+  it("uses 'rbtc' coin code on regtest", async () => {
+    const interaction = new BitBoxSignMessage({
+      network: Network.REGTEST,
+      bip32Path: "m/84'/1'/0'/0/0",
+      message: "regtest msg",
+      expectedPubkey: EXPECTED_PUBKEY,
+    });
+    const r32 = Buffer.alloc(32, 0x33);
+    const s32 = Buffer.alloc(32, 0x44);
+    const mockBitBox = {
+      btcSignMessage: vi.fn().mockResolvedValue({
+        sig: new Uint8Array(64),
+        recid: 0n,
+        electrumSig65: Uint8Array.from(
+          Buffer.concat([Buffer.from([39]), r32, s32]),
+        ),
+      }),
+    };
+    vi.spyOn(interaction, "withDevice").mockImplementation(
+      async (cb: any) => cb(mockBitBox),
+    );
+
+    await interaction.run();
+
+    expect(mockBitBox.btcSignMessage).toHaveBeenCalledWith(
+      "rbtc",
+      expect.any(Object),
+      expect.any(Uint8Array),
+    );
+  });
 });

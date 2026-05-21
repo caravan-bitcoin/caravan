@@ -102,6 +102,15 @@ export function messageSigningTests(keystore) {
     // stripping the branch prefix off fixture.bip32Path.
     const openSourceNode = fixture.braidDetails.extendedPublicKeys[0];
     const branchPath = openSourceNode.path;
+    // Defensive: catch fixture drift at suite-construction time rather
+    // than at on-device verification time. If the address-level path
+    // doesn't sit under the branch path, the slice below would produce
+    // a bogus relativePath and silently derive the wrong pubkey.
+    if (!fixture.bip32Path.startsWith(`${branchPath}/`)) {
+      throw new Error(
+        `messageSigning fixture mismatch: bip32Path "${fixture.bip32Path}" is not under branchPath "${branchPath}"`,
+      );
+    }
     const relativePath = fixture.bip32Path.slice(branchPath.length + 1);
     const expectedPubkey = deriveChildPublicKey(
       openSourceNode.base58String,

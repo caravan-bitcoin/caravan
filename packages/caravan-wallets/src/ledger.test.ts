@@ -465,6 +465,32 @@ describe("ledger", () => {
       expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
       expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
     });
+
+    it("v2 Bitcoin app: SDK errors also wrap as MessageSigningError", async () => {
+      const interaction = interactionBuilder();
+      const rejectErr = Object.assign(new Error("user rejected"), {
+        statusCode: 0x6985,
+      });
+      const mockApp = {
+        signMessage: vi.fn().mockRejectedValue(rejectErr),
+      };
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(false);
+      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
+        callback(mockApp, {
+          setExchangeTimeout: () => {},
+          close: () => {},
+        })
+      );
+
+      try {
+        await interaction.run();
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
+      }
+    });
   });
 
   function getMockedApp() {
