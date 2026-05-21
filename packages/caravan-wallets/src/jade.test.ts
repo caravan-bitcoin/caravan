@@ -8,6 +8,11 @@ import {
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
+import { HDKey } from "@scure/bip32";
+import { mnemonicToSeedSync } from "@scure/bip39";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — bitcoinjs-message has no ambient types
+import * as bitcoinMessage from "bitcoinjs-message";
 import { IJade, IJadeInterface, JadeTransport } from "jadets";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mock, MockProxy } from "vitest-mock-extended";
@@ -27,7 +32,15 @@ import {
   walletConfigToJadeDescriptor,
   getSignatureArray,
 } from "./jade";
+import {
+  MAX_MESSAGE_BYTES,
+  MessageSigningError,
+  verifyMessageSignature,
+} from "./messages";
 import { MultisigWalletConfig } from "./types";
+
+const BIP39_PHRASE =
+  "merge alley lucky axis penalty manage latin gasp virus captain wheel deal chase fragile chapter boss zero dirt stadium tooth physical valve kid plunge";
 
 // Mock modules
 vi.mock("@caravan/bitcoin", () => ({
@@ -503,27 +516,97 @@ describe("Jade", () => {
     });
 
     describe("JadeSignMessage", () => {
-      it("signs message using jade.signMessage", async () => {
-        const expectedSignature = Buffer.from("test_signature");
-        const testMessage = "Hello, Jade!";
-        const testPath = "m/44'/0'/0'";
-        mockJade.signMessage.mockResolvedValueOnce(
-          Buffer.from(expectedSignature)
+      const DUMMY_PUBKEY = `02${"00".repeat(32)}`;
+
+      it("constructor throws on oversize message", () => {
+        expect(
+          () =>
+            new JadeSignMessage({
+              bip32Path: "m/44'/0'/0'",
+              message: "a".repeat(MAX_MESSAGE_BYTES + 1),
+              expectedPubkey: DUMMY_PUBKEY,
+              dependencies,
+            })
+        ).toThrowError(MessageSigningError);
+      });
+
+      it("rejects raw sig of wrong length with MalformedResponse", async () => {
+        mockJade.signMessage.mockResolvedValueOnce(Buffer.alloc(32));
+        const interaction = new JadeSignMessage({
+          bip32Path: "m/44'/0'/0'",
+          message: "hello",
+          expectedPubkey: DUMMY_PUBKEY,
+          dependencies,
+        });
+        await expect(interaction.run()).rejects.toThrowError(
+          MessageSigningError
         );
+      });
+
+      it("rejects a sig that does not recover to expectedPubkey under either v", async () => {
+        const path = "m/44'/0'/0'";
+        const seed = mnemonicToSeedSync(BIP39_PHRASE);
+        const signingNode = HDKey.fromMasterSeed(seed).derive(path);
+        const wrongNode = HDKey.fromMasterSeed(seed).derive("m/44'/0'/1'");
+        const priv = Buffer.from(signingNode.privateKey as Uint8Array);
+        const wrongPub = Buffer.from(wrongNode.publicKey as Uint8Array);
+        const message = "Hello, Jade!";
+
+        const bip137 = bitcoinMessage.sign(message, priv, true, {
+          segwitType: "p2wpkh",
+        });
+        const rawSig = bip137.subarray(1);
+
+        mockJade.signMessage.mockResolvedValueOnce(rawSig);
 
         const interaction = new JadeSignMessage({
-          bip32Path: testPath,
-          message: testMessage,
+          bip32Path: path,
+          message,
+          // sign with `signingNode` but claim `wrongNode` was the signer;
+          // neither v candidate should recover to wrongPub.
+          expectedPubkey: wrongPub.toString("hex"),
           dependencies,
         });
 
-        const result = await interaction.run();
-
-        expect(result).toEqual(expectedSignature);
-        expect(mockJade.signMessage).toHaveBeenCalledWith(
-          [44, 0, 0],
-          testMessage
+        await expect(interaction.run()).rejects.toThrowError(
+          MessageSigningError
         );
+      });
+
+      it("signs and returns Entry with a canonical sig that verifies against expectedPubkey", async () => {
+        const path = "m/44'/0'/0'";
+        const seed = mnemonicToSeedSync(BIP39_PHRASE);
+        const node = HDKey.fromMasterSeed(seed).derive(path);
+        const priv = Buffer.from(node.privateKey as Uint8Array);
+        const pub = Buffer.from(node.publicKey as Uint8Array);
+        const expectedPubkey = pub.toString("hex");
+        const message = "Hello, Jade!";
+
+        // Synthesize a Jade-style raw EC sig (r||s, no header byte) by
+        // signing via bitcoinjs-message and stripping the BIP-137 header.
+        // This is the wire-equivalent of what Jade's firmware emits over
+        // the sign_message RPC.
+        const bip137 = bitcoinMessage.sign(message, priv, true, {
+          segwitType: "p2wpkh",
+        });
+        const rawSig = bip137.subarray(1);
+
+        mockJade.signMessage.mockResolvedValueOnce(rawSig);
+
+        const interaction = new JadeSignMessage({
+          bip32Path: path,
+          message,
+          expectedPubkey,
+          dependencies,
+        });
+
+        const entry = await interaction.run();
+
+        expect(entry.bip32Path).toBe(path);
+        expect(entry.expectedPubkey).toBe(expectedPubkey);
+        expect(typeof entry.signature).toBe("string");
+        expect(verifyMessageSignature({ message, entry })).toBe(true);
+        expect(mockJade.signMessage).toHaveBeenCalledWith([44, 0, 0], message);
       });
     });
 

@@ -226,10 +226,14 @@ export function ExportPublicKey({
 }
 
 /**
- * Return an interaction class for signing a message by the given `keystore`
- * for the given `bip32Path`.
+ * Return an interaction class for signing a message with the cosigner
+ * key at `bip32Path` on the given `keystore`. The interaction's `.run()`
+ * returns a canonical {@link Entry} record (BIP-137 wire form).
  *
- * **Supported keystores:** Ledger, Trezor
+ * **Supported keystores:** Ledger, Trezor, Jade. Each implements BIP-137
+ * per its firmware's native capability. Future BIP-322 support will land
+ * as separate per-keystore interaction classes — not as a runtime flag
+ * on these classes — once devices implement the protocol.
  */
 export function SignMessage({
   keystore,
@@ -246,11 +250,10 @@ export function SignMessage({
 }) {
   switch (keystore) {
     case JADE:
-      // Lane A4 will adapt JadeSignMessage to return Entry. For now it
-      // continues to return the SDK's raw hex EC signature.
       return new JadeSignMessage({
         bip32Path,
         message,
+        expectedPubkey,
       });
     case LEDGER:
       return new LedgerSignMessage({

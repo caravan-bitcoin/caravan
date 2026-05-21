@@ -34,6 +34,12 @@ import {
   ACTIVE,
   INFO,
 } from "./interaction";
+import {
+  Entry,
+  MessageSigningError,
+  validateMessage,
+  verifyMessageSignature,
+} from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 export const JADE = "jade";
@@ -464,32 +470,129 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
   }
 }
 
-export class JadeSignMessage extends JadeInteraction {
+/**
+ * Normalize Jade's raw EC signature output into a canonical BIP-137
+ * base64 65-byte signature.
+ *
+ * Jade returns a raw `r||s` EC signature with no recovery byte attached
+ * (its firmware exposes the signature without protocol-level conformance
+ * to BIP-137 or BIP-322). To produce a canonical BIP-137 sig we have to
+ * pick the right recovery byte (`v` in {0, 1}); we do that by trying both
+ * candidates and checking which one recovers to `expectedPubkey` via the
+ * loose-mode verifier in `messages.ts`. Two ECDSA recoveries is cheap.
+ */
+function normalizeJadeSignature(
+  rawSig: Uint8Array | string,
+  expectedPubkey: string,
+  message: string,
+): string {
+  const sigBuf =
+    typeof rawSig === "string"
+      ? Buffer.from(rawSig, "hex")
+      : Buffer.from(rawSig);
 
+  if (sigBuf.length !== 64) {
+    throw new MessageSigningError({
+      kind: "MalformedResponse",
+      keystore: JADE,
+      userMessage: `Expected 64-byte EC sig from Jade, got ${sigBuf.length} bytes.`,
+    });
+  }
+
+  const r = sigBuf.subarray(0, 32);
+  const s = sigBuf.subarray(32, 64);
+
+  for (const v of [0, 1]) {
+    const headerByte = v + 27 + 4;
+    const candidate = Buffer.concat([
+      Buffer.from([headerByte]),
+      r,
+      s,
+    ]).toString("base64");
+    const matches = verifyMessageSignature({
+      message,
+      entry: {
+        bip32Path: "",
+        signature: candidate,
+        expectedPubkey,
+      },
+    });
+    if (matches) {
+      return candidate;
+    }
+  }
+
+  throw new MessageSigningError({
+    kind: "MalformedResponse",
+    keystore: JADE,
+    userMessage:
+      "Jade signature does not recover to expectedPubkey under either recovery candidate.",
+  });
+}
+
+/**
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Jade device. Returns a canonical `Entry`.
+ *
+ * Jade firmware emits a raw EC signature with no protocol-level
+ * conformance; caravan treats it as BIP-137 once the recovery byte is
+ * reconstructed (see `normalizeJadeSignature`). A future per-keystore
+ * BIP-322 interaction class can be added separately if/when Jade
+ * firmware adds support; caravan does not model protocol selection as
+ * a runtime flag on this class.
+ */
+export class JadeSignMessage extends JadeInteraction {
   bip32Path: string;
- 
+
   message: string;
-  
-  constructor({ 
-    bip32Path, 
-    message, 
+
+  expectedPubkey: string;
+
+  constructor({
+    bip32Path,
+    message,
+    expectedPubkey,
     network,
-    dependencies 
-  }: { 
-    bip32Path: string; 
+    dependencies,
+  }: {
+    bip32Path: string;
     message: string;
+    expectedPubkey: string;
     network?: BitcoinNetwork;
     dependencies?: JadeDependencies;
   }) {
     super(network, dependencies);
+
+    validateMessage(message, JADE);
+
     this.bip32Path = bip32Path;
     this.message = message;
+    this.expectedPubkey = expectedPubkey;
   }
-  
-  async run() {
+
+  async run(): Promise<Entry> {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      return await jade.signMessage(path, this.message);
+      // We do not pass useAeSignatures, so the SDK returns a plain
+      // Uint8Array (not the [sig, hostCommitment] tuple used for anti-exfil).
+      const rawSig = (await jade.signMessage(path, this.message)) as Uint8Array;
+      if (Array.isArray(rawSig)) {
+        throw new MessageSigningError({
+          kind: "MalformedResponse",
+          keystore: JADE,
+          userMessage:
+            "Unexpected anti-exfil tuple from Jade.signMessage; expected plain signature.",
+        });
+      }
+      return {
+        bip32Path: this.bip32Path,
+        signature: normalizeJadeSignature(
+          rawSig,
+          this.expectedPubkey,
+          this.message,
+        ),
+        expectedPubkey: this.expectedPubkey,
+      };
     });
   }
 }
