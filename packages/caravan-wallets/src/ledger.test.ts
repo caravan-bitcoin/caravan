@@ -358,7 +358,7 @@ describe("ledger", () => {
       ).toThrowError(MessageSigningError);
     });
 
-    it("run() normalizes {v,r,s} into a base64 BIP-137 sig wrapped in Entry", async () => {
+    it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in Entry", async () => {
       const interaction = interactionBuilder();
       const r32 = "01".repeat(32);
       const s32 = "02".repeat(32);
@@ -368,6 +368,7 @@ describe("ledger", () => {
           .mockResolvedValue({ v: 1, r: r32, s: s32 }),
       };
       vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
       vi
         .spyOn(interaction, "withApp")
         .mockImplementation((callback: any) =>
@@ -392,6 +393,37 @@ describe("ledger", () => {
         Buffer.from(s32, "hex"),
       ]).toString("base64");
       expect(entry.signature).toBe(expectedSig);
+    });
+
+    it("v2 Bitcoin app: run() uses AppClient.signMessage(message, path) and passes through base64", async () => {
+      const interaction = interactionBuilder();
+      const expectedSig = Buffer.from(
+        Buffer.concat([Buffer.from([32]), Buffer.alloc(64)])
+      ).toString("base64");
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue(expectedSig),
+      };
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(false);
+      vi
+        .spyOn(interaction, "withApp")
+        .mockImplementation((callback: any) =>
+          callback(mockApp, {
+            setExchangeTimeout: () => {},
+            close: () => {},
+          })
+        );
+
+      const entry = await interaction.run();
+
+      // v2 SDK: (messageBuffer, path) — reversed positional order
+      expect(mockApp.signMessage).toHaveBeenCalledWith(
+        Buffer.from("hello world", "utf8"),
+        "m/48'/1'/0'/2'/0/0"
+      );
+      expect(entry.signature).toBe(expectedSig);
+      expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
+      expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
     });
   });
 

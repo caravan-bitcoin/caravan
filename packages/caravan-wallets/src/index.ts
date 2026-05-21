@@ -230,10 +230,11 @@ export function ExportPublicKey({
  * key at `bip32Path` on the given `keystore`. The interaction's `.run()`
  * returns a canonical {@link Entry} record (BIP-137 wire form).
  *
- * **Supported keystores:** Ledger, Trezor, Jade. Each implements BIP-137
- * per its firmware's native capability. Future BIP-322 support will land
- * as separate per-keystore interaction classes — not as a runtime flag
- * on these classes — once devices implement the protocol.
+ * **Supported keystores:** Ledger (legacy + v2 Bitcoin apps), Trezor,
+ * Jade. Each implements BIP-137 per its firmware's native capability.
+ * Future BIP-322 support will land as separate per-keystore interaction
+ * classes — not as a runtime flag on these classes — once devices
+ * implement the protocol.
  */
 export function SignMessage({
   keystore,
@@ -256,6 +257,9 @@ export function SignMessage({
         expectedPubkey,
       });
     case LEDGER:
+    case LEDGER_V2:
+      // LedgerSignMessage dispatches internally on the running app
+      // version (legacy Bitcoin app vs v2). Both paths produce BIP-137.
       return new LedgerSignMessage({
         bip32Path,
         message,

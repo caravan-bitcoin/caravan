@@ -1272,7 +1272,10 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
 
   readonly isLegacySupported = true;
 
-  readonly isV2Supported = false;
+  // Lane A5: AppClient.signMessage(message, path) on the v2 Bitcoin app
+  // returns a base64-encoded BIP-137 sig directly; the legacy Btc app
+  // returns {v,r,s} which normalizeLedgerSignature wraps.
+  readonly isV2Supported = true;
 
   constructor({
     bip32Path,
@@ -1328,10 +1331,14 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
 
   /**
    * Signs `this.message` with the key at `this.bip32Path` on the Ledger
-   * Bitcoin app. Returns the canonical `Entry` shape. The SDK's
-   * `app.signMessage(path, messageHex)` returns `{v, r, s}`; we hex-encode
-   * the message and normalize the response to a base64 65-byte BIP-137
-   * signature. See @ledgerhq/hw-app-btc Btc.signMessage docs.
+   * Bitcoin app. Returns the canonical `Entry` shape.
+   *
+   * Two app generations:
+   * - Legacy `Btc.signMessage(path, messageHex)` returns `{v, r, s}`;
+   *   normalizeLedgerSignature wraps with a header byte.
+   * - v2 `AppClient.signMessage(message: Buffer, path: string)` returns a
+   *   base64 BIP-137 signature directly. (Note the reversed positional
+   *   order vs the legacy SDK.)
    */
   async run(): Promise<Entry> {
     await super.run();
@@ -1339,12 +1346,19 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
       try {
         transport.setExchangeTimeout(20000);
 
-        const messageHex = Buffer.from(this.message, "utf8").toString("hex");
-        const vrs = await app.signMessage(this.bip32Path, messageHex);
+        let signature: string;
+        if (await this.isLegacyApp()) {
+          const messageHex = Buffer.from(this.message, "utf8").toString("hex");
+          const vrs = await app.signMessage(this.bip32Path, messageHex);
+          signature = normalizeLedgerSignature(vrs);
+        } else {
+          const messageBuf = Buffer.from(this.message, "utf8");
+          signature = await app.signMessage(messageBuf, this.bip32Path);
+        }
 
         return {
           bip32Path: this.bip32Path,
-          signature: normalizeLedgerSignature(vrs),
+          signature,
           expectedPubkey: this.expectedPubkey,
         };
       } finally {
