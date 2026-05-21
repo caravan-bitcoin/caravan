@@ -857,4 +857,57 @@ describe("ColdcardSignMessage", () => {
     ].join("\n");
     expect(() => builder().parse(file)).toThrowError(MessageSigningError);
   });
+
+  it("parse() throws MalformedResponse if the signature slot isn't base64-shaped", () => {
+    // Simulate a degenerate output where some extra metadata line ends
+    // up in the signature slot (e.g. a wrapped address or a comment).
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      "definitely not a base64 signature",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse if the signature is too short to be BIP-137", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      // 44 chars: valid base64 shape, but too short for a 65-byte sig.
+      "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
+  });
+
+  it("parse() tolerates surrounding whitespace on the signature line", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      `   ${SAMPLE_SIG}   `,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
+  });
+
+  it("parse() tolerates blank lines between the marker and the address", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "",
+      "bc1qaddress",
+      "",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
+  });
 });

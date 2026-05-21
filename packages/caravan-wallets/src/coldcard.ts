@@ -753,6 +753,14 @@ export class ColdcardSignMessage extends ColdcardInteraction {
   /**
    * Parse the armored "Bitcoin Signed Message" file Coldcard returns
    * over SD card. Extract the base64 signature and wrap as an Entry.
+   *
+   * The signature line is identified as the second non-empty
+   * non-delimiter line after BEGIN SIGNATURE (first is the address,
+   * second is the base64 sig). To survive minor format variations
+   * (extra blank lines, address-line wrapping), we also validate the
+   * candidate matches a base64 shape covering the BIP-137 65-byte
+   * wire form — 87 base64 chars plus one `=` padding char, or with
+   * trailing whitespace stripped.
    */
   parse(file: string): Entry {
     if (typeof file !== "string" || file.length === 0) {
@@ -773,11 +781,9 @@ export class ColdcardSignMessage extends ColdcardInteraction {
           "Coldcard signed-message file is missing the '-----BEGIN SIGNATURE-----' delimiter.",
       });
     }
-    // Per Coldcard's armored output, the signature is the second
-    // non-empty line after the BEGIN SIGNATURE marker (first line is
-    // the bitcoin address, second is the base64 sig).
     const afterMarker = lines
       .slice(sigStart + 1)
+      .map((l) => l.trim())
       .filter((l) => l.length > 0 && !l.includes("-----"));
     if (afterMarker.length < 2) {
       throw new MessageSigningError({
@@ -787,12 +793,22 @@ export class ColdcardSignMessage extends ColdcardInteraction {
           "Coldcard signed-message file does not contain both an address line and a signature line.",
       });
     }
-    const signature = afterMarker[1].trim();
+    const signature = afterMarker[1];
     if (signature.length === 0) {
       throw new MessageSigningError({
         kind: "MalformedResponse",
         keystore: COLDCARD,
         userMessage: "Coldcard returned an empty signature line.",
+      });
+    }
+    // 65-byte BIP-137 → 88 base64 chars (87 + one `=`). Allow 80-120
+    // window so any caravan-incompatible-but-still-base64 sig fails
+    // the verifier downstream rather than crashing here.
+    if (!(/^[A-Za-z0-9+/]{80,120}={0,2}$/).test(signature)) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: `Coldcard signature line is not base64-shaped (got "${signature.slice(0, 16)}…").`,
       });
     }
 
