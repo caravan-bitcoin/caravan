@@ -59,7 +59,7 @@ import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import { MULTISIG_ROOT } from "./constants";
-import { wrapSdkError } from "./errors";
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -1119,14 +1119,10 @@ export class TrezorSignMessage extends TrezorInteraction {
     return messages;
   }
 
-  /**
-   * See {@link https://github.com/trezor/connect/blob/v8/docs/methods/signMessage.md}.
-   */
   connectParams() {
     return [
       TrezorConnect.signMessage,
       {
-        coin: this.trezorCoin,
         path: this.bip32Path,
         message: this.message,
       },
@@ -1153,11 +1149,18 @@ export class TrezorSignMessage extends TrezorInteraction {
    * the base class would otherwise throw.
    */
   async run(): Promise<Entry> {
+    let entry: Entry;
     try {
-      return await super.run();
+      entry = await super.run();
     } catch (err) {
       throw wrapSdkError(TREZOR, err);
     }
+    assertSignatureVerifies(TREZOR, {
+      message: this.message,
+      signature: entry.signature,
+      pubkey: entry.pubkey,
+    });
+    return entry;
   }
 }
 

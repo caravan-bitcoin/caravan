@@ -490,12 +490,14 @@ describe("trezor", () => {
       ).toBe(true);
     });
 
-    it("uses TrezorConnect.signMessage with coin set from network", () => {
+    it("calls TrezorConnect.signMessage with path and message", () => {
       const interaction = interactionBuilder();
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signMessage);
-      expect((params as any).path).toEqual(_bip32Path);
-      expect((params as any).coin).toEqual("Bitcoin");
+      expect(params).toEqual({
+        path: _bip32Path,
+        message: "hello world",
+      });
     });
 
     it("parsePayload maps {address, signature} into Entry", () => {

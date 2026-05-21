@@ -23,7 +23,7 @@ import {
   PairedBitBox,
 } from 'bitbox-api';
 
-import { wrapSdkError } from "./errors";
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
@@ -638,9 +638,15 @@ export class BitBoxSignMessage extends BitBoxInteraction {
         });
       }
 
+      const signature = Buffer.from(result.electrumSig65).toString("base64");
+      assertSignatureVerifies(BITBOX, {
+        message: this.message,
+        signature,
+        pubkey: this.pubkey,
+      });
       return {
         bip32Path: this.bip32Path,
-        signature: Buffer.from(result.electrumSig65).toString("base64"),
+        signature,
         pubkey: this.pubkey,
       };
     });

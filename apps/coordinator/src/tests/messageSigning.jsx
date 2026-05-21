@@ -23,8 +23,8 @@ class MessageSigningTest extends Test {
           coordinator passes the cosigner&apos;s expected pubkey; the keystore
           signs at the given BIP-32 path. The test verifies the returned
           signature cryptographically via the pubkey-aware verifier in{" "}
-          <code>@caravan/wallets</code> (loose-mode BIP-137 / BIP-322 over the
-          canonical P2WPKH address derived from the cosigner pubkey).
+          <code>@caravan/messages</code> (loose-mode BIP-137 over the canonical
+          P2WPKH address derived from the cosigner pubkey).
         </p>
         <Table>
           <TableBody>
@@ -74,10 +74,9 @@ class MessageSigningTest extends Test {
     });
   }
 
-  // Cryptographic verification, not byte-equality. ECDSA signing is
-  // non-deterministic at the wire level (BIP-322 Simple in particular
-  // varies across invocations); two valid signatures of the same message
-  // by the same key compare unequal byte-wise but both verify true.
+  // Verification is cryptographic, not byte-equality: pass the returned
+  // Entry's (signature, pubkey, message) to the verifier and trust its
+  // boolean. The expected-value passed into matches() is ignored.
   // eslint-disable-next-line class-methods-use-this
   matches(_expected, entry) {
     return verifyMessageSignature({

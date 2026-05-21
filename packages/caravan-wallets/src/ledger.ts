@@ -48,7 +48,7 @@ import TransportU2F from "@ledgerhq/hw-transport-u2f";
 import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
 
-import { wrapSdkError } from "./errors";
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
@@ -1348,6 +1348,12 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
         } catch (err) {
           throw wrapSdkError(LEDGER, err);
         }
+
+        assertSignatureVerifies(LEDGER, {
+          message: this.message,
+          signature,
+          pubkey: this.pubkey,
+        });
 
         return {
           bip32Path: this.bip32Path,

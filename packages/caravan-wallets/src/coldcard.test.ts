@@ -782,12 +782,11 @@ describe("ColdcardMultisigWalletConfig", () => {
 });
 
 describe("ColdcardSignMessage", () => {
-  const EXPECTED_PUBKEY =
-    "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
-  const BIP32_PATH = "m/45'/1'/100'/0/0";
-  const MESSAGE = "caravan message-signing smoke";
-  const SAMPLE_SIG =
-    "Hxc02s7sgKR4FsfL4iLqRn29tk4VlsRcvphvCmLqMVxiHrTcjxn+5XAaFNzZmDvB3vJypZJ0xWeCqUbAxYZBgL8=";
+  const FIXTURE = TEST_FIXTURES.multisigs[0];
+  const EXPECTED_PUBKEY = FIXTURE.publicKey;
+  const BIP32_PATH = FIXTURE.bip32Path;
+  const MESSAGE = FIXTURE.signedMessages.message;
+  const SAMPLE_SIG = FIXTURE.signedMessages.bip137;
 
   function builder() {
     return new ColdcardSignMessage({

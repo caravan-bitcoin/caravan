@@ -30,6 +30,7 @@ import {
   getUnsignedMultisigPsbtV0,
 } from "@caravan/psbt";
 
+import { assertSignatureVerifies } from "./errors";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -779,6 +780,12 @@ export class ColdcardSignMessage extends ColdcardInteraction {
         userMessage: `Coldcard signature line is not base64-shaped (got "${signature.slice(0, 16)}…").`,
       });
     }
+
+    assertSignatureVerifies(COLDCARD, {
+      message: this.message,
+      signature,
+      pubkey: this.pubkey,
+    });
 
     return {
       bip32Path: this.bip32Path,

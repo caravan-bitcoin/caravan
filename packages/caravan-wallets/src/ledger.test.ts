@@ -320,15 +320,30 @@ describe("ledger", () => {
   });
 
   describe("LedgerSignMessage", () => {
-    const EXPECTED_PUBKEY =
-      "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
+    const FIXTURE = TEST_FIXTURES.multisigs[0];
+    const EXPECTED_PUBKEY = FIXTURE.publicKey;
+    const PATH = FIXTURE.bip32Path;
+    const MESSAGE = FIXTURE.signedMessages.message;
 
-    const PATH = "m/48'/1'/0'/2'/0/0";
+    // Decode the real BIP-137 sig into the {v, r, s} shape Ledger's legacy
+    // Btc app returns. The fixture's header byte is in the P2WPKH range
+    // (39+v); caravan's normalizeLedgerSignature uses the P2SH-P2WPKH
+    // range (31+v) on the same (r, s), and loose-mode verification accepts
+    // both.
+    const FIXTURE_SIG_BYTES = Buffer.from(
+      FIXTURE.signedMessages.bip137,
+      "base64"
+    );
+    const FIXTURE_V = (FIXTURE_SIG_BYTES[0] - 27) % 4;
+    const FIXTURE_R_HEX = FIXTURE_SIG_BYTES.subarray(1, 33).toString("hex");
+    const FIXTURE_S_HEX = FIXTURE_SIG_BYTES.subarray(33, 65).toString("hex");
+    const NORMALIZED_HEADER = FIXTURE_V + 27 + 4;
+    const NORMALIZED_SIG = Buffer.concat([
+      Buffer.from([NORMALIZED_HEADER]),
+      FIXTURE_SIG_BYTES.subarray(1, 65),
+    ]).toString("base64");
 
-    function interactionBuilder(
-      bip32Path = PATH,
-      message = "hello world"
-    ) {
+    function interactionBuilder(bip32Path = PATH, message = MESSAGE) {
       return new LedgerSignMessage({
         bip32Path,
         message,
@@ -365,10 +380,12 @@ describe("ledger", () => {
 
     it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in Entry", async () => {
       const interaction = interactionBuilder();
-      const r32 = "01".repeat(32);
-      const s32 = "02".repeat(32);
       const mockApp = {
-        signMessage: vi.fn().mockResolvedValue({ v: 1, r: r32, s: s32 }),
+        signMessage: vi.fn().mockResolvedValue({
+          v: FIXTURE_V,
+          r: FIXTURE_R_HEX,
+          s: FIXTURE_S_HEX,
+        }),
       };
       mountLedgerApp(interaction, mockApp, { isLegacy: true });
 
@@ -376,17 +393,29 @@ describe("ledger", () => {
 
       expect(mockApp.signMessage).toHaveBeenCalledWith(
         PATH,
-        Buffer.from("hello world", "utf8").toString("hex")
+        Buffer.from(MESSAGE, "utf8").toString("hex")
       );
-      const expectedSig = Buffer.concat([
-        Buffer.from([32]),
-        Buffer.from(r32, "hex"),
-        Buffer.from(s32, "hex"),
-      ]).toString("base64");
       expect(entry).toEqual({
         bip32Path: PATH,
         pubkey: EXPECTED_PUBKEY,
-        signature: expectedSig,
+        signature: NORMALIZED_SIG,
+      });
+    });
+
+    it("throws MalformedResponse if the device returns a non-verifying sig", async () => {
+      const interaction = interactionBuilder();
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue({
+          v: 0,
+          r: "00".repeat(32),
+          s: "00".repeat(32),
+        }),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
+
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "MalformedResponse",
+        keystore: "ledger",
       });
     });
 
@@ -425,24 +454,21 @@ describe("ledger", () => {
 
     it("v2 Bitcoin app: run() uses AppClient.signMessage(message, path) and passes through base64", async () => {
       const interaction = interactionBuilder();
-      const expectedSig = Buffer.from(
-        Buffer.concat([Buffer.from([32]), Buffer.alloc(64)])
-      ).toString("base64");
       const mockApp = {
-        signMessage: vi.fn().mockResolvedValue(expectedSig),
+        signMessage: vi.fn().mockResolvedValue(FIXTURE.signedMessages.bip137),
       };
       mountLedgerApp(interaction, mockApp, { isLegacy: false });
 
       const entry = await interaction.run();
 
       expect(mockApp.signMessage).toHaveBeenCalledWith(
-        Buffer.from("hello world", "utf8"),
+        Buffer.from(MESSAGE, "utf8"),
         PATH
       );
       expect(entry).toEqual({
         bip32Path: PATH,
         pubkey: EXPECTED_PUBKEY,
-        signature: expectedSig,
+        signature: FIXTURE.signedMessages.bip137,
       });
     });
 
