@@ -128,13 +128,13 @@ export abstract class PsbtV2Maps {
     if (from.inputMaps.length !== this.inputMaps.length) {
       throw new Error(
         `Cannot combine PSBTs with different input counts: ` +
-        `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`
+          `this has ${this.inputMaps.length}, other has ${from.inputMaps.length}`,
       );
     }
     if (from.outputMaps.length !== this.outputMaps.length) {
       throw new Error(
         `Cannot combine PSBTs with different output counts: ` +
-        `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`
+          `this has ${this.outputMaps.length}, other has ${from.outputMaps.length}`,
       );
     }
   }
@@ -224,12 +224,15 @@ export class PsbtConversionMaps extends PsbtV2Maps {
     }
 
     for (let i = 0; i < numOutputs; i++) {
+      const spInfo = this.outputMaps[i].get(KeyType.PSBT_OUT_SP_V0_INFO);
+      const script = this.outputMaps[i].get(KeyType.PSBT_OUT_SCRIPT);
+
       if (
-        !this.outputMaps[i].has(KeyType.PSBT_OUT_SCRIPT) ||
+        (!spInfo && !script) ||
         !this.outputMaps[i].has(KeyType.PSBT_OUT_AMOUNT)
       ) {
         console.warn(
-          `Output ${i} is missing previous out script or amount. Skipping.`,
+          `Output ${i} is missing SP_INFO, script or amount. Skipping.`,
         );
         continue;
       }
@@ -237,10 +240,14 @@ export class PsbtConversionMaps extends PsbtV2Maps {
         this.outputMaps[i].get(KeyType.PSBT_OUT_AMOUNT) as Buffer
       ).readBigInt64LE();
       const numberAmount = parseInt(bigintAmount.toString());
-      tx.addOutput(
-        this.outputMaps[i].get(KeyType.PSBT_OUT_SCRIPT) as Buffer,
-        numberAmount,
-      );
+
+      // BIP375 unique identification uses v0 || Bscan || Bspend when
+      // PSBT_OUT_SP_V0_INFO is present, so the txid is stable before and after
+      // the real output script has been computed.
+      const outputScript = spInfo
+        ? Buffer.concat([Buffer.from([0x00]), spInfo])
+        : (script as Buffer);
+      tx.addOutput(outputScript, numberAmount);
     }
 
     return tx.toBuffer();
@@ -277,6 +284,8 @@ export class PsbtConversionMaps extends PsbtV2Maps {
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_INPUT_COUNT);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_OUTPUT_COUNT);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_TX_MODIFIABLE);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_SP_ECDH_SHARE);
+    this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_SP_DLEQ);
     this.v0delete(this.globalMap, KeyType.PSBT_GLOBAL_VERSION);
 
     for (const inputMap of this.inputMaps) {
@@ -285,11 +294,15 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       this.v0delete(inputMap, KeyType.PSBT_IN_SEQUENCE);
       this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_TIME_LOCKTIME);
       this.v0delete(inputMap, KeyType.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME);
+      this.v0delete(inputMap, KeyType.PSBT_IN_SP_ECDH_SHARE);
+      this.v0delete(inputMap, KeyType.PSBT_IN_SP_DLEQ);
     }
 
     for (const outputMap of this.outputMaps) {
       this.v0delete(outputMap, KeyType.PSBT_OUT_AMOUNT);
       this.v0delete(outputMap, KeyType.PSBT_OUT_SCRIPT);
+      this.v0delete(outputMap, KeyType.PSBT_OUT_SP_V0_INFO);
+      this.v0delete(outputMap, KeyType.PSBT_OUT_SP_V0_LABEL);
     }
   };
 
@@ -311,7 +324,7 @@ export class PsbtConversionMaps extends PsbtV2Maps {
         );
         throw new Error(
           "Cannot compute transaction ID: PSBT has 0 inputs and 1 output, " +
-            "which produces an ambiguous transaction format. "
+            "which produces an ambiguous transaction format. ",
         );
       }
 
