@@ -23,7 +23,7 @@ import {
   P2WSH,
   BitcoinNetwork,
 } from "@caravan/bitcoin";
-import { type Entry, MessageSigningError } from "@caravan/messages";
+import { type SignMessageResult, MessageSigningError } from "@caravan/messages";
 import {
   convertLegacyInput,
   convertLegacyOutput,
@@ -721,7 +721,7 @@ export class ColdcardSignMessage extends ColdcardInteraction {
 
   /**
    * Parse the armored "Bitcoin Signed Message" file Coldcard returns
-   * over SD card. Extract the base64 signature and wrap as an Entry.
+   * over SD card. Extract the base64 signature and wrap as an SignMessageResult.
    *
    * The signature line is identified as the second non-empty
    * non-delimiter line after BEGIN SIGNATURE (first is the address,
@@ -731,7 +731,7 @@ export class ColdcardSignMessage extends ColdcardInteraction {
    * wire form — 87 base64 chars plus one `=` padding char, or with
    * trailing whitespace stripped.
    */
-  parse(file: string): Entry {
+  parse(file: string): SignMessageResult {
     if (typeof file !== "string" || file.length === 0) {
       throw new MessageSigningError({
         kind: "MalformedResponse",

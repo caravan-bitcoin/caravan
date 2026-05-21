@@ -372,7 +372,7 @@ describe("ledger", () => {
       ).toBe(true);
     });
 
-    it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in Entry", async () => {
+    it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in SignMessageResult", async () => {
       const interaction = interactionBuilder();
       const mockApp = {
         signMessage: vi.fn().mockResolvedValue({

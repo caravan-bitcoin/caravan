@@ -95,6 +95,14 @@ export { MULTISIG_ROOT } from "./constants";
 
 export { wrapSdkError } from "./errors";
 
+// Re-export so consumers don't need to depend on the internal
+// @caravan/messages package directly.
+export {
+  MessageSigningError,
+  type MessageSigningErrorKind,
+  type SignMessageResult,
+} from "@caravan/messages";
+
 /**
  * Keystores which support direct interactions.
  */
@@ -221,7 +229,7 @@ export function ExportPublicKey({
 /**
  * Return an interaction class for signing a message with the cosigner
  * key at `bip32Path` on the given `keystore`. The interaction's `.run()`
- * returns a canonical `Entry` (BIP-137 wire form).
+ * returns a canonical `SignMessageResult` (BIP-137 wire form).
  *
  * Supported keystores: Ledger (legacy + v2 Bitcoin apps), Trezor,
  * Jade, BitBox, Coldcard.

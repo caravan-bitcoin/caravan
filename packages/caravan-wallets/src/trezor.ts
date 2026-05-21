@@ -42,7 +42,7 @@ import {
   extractFingerprintFromBip380Descriptor,
   Network,
 } from "@caravan/bitcoin";
-import type { Entry } from "@caravan/messages";
+import type { SignMessageResult } from "@caravan/messages";
 import { translatePSBT } from "@caravan/psbt";
 import {
   GetPublicKey,
@@ -1038,7 +1038,7 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
 
 /**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
- * `bip32Path` on a Trezor device. Returns a canonical `Entry`.
+ * `bip32Path` on a Trezor device. Returns a canonical `SignMessageResult`.
  */
 export class TrezorSignMessage extends TrezorInteraction {
   bip32Path: string;
@@ -1132,9 +1132,9 @@ export class TrezorSignMessage extends TrezorInteraction {
   /**
    * TrezorConnect.signMessage returns `{address, signature}` where
    * `signature` is already a base64-encoded BIP-137 signature. Map it
-   * into the canonical Entry shape.
+   * into the canonical SignMessageResult shape.
    */
-  parsePayload(payload: { address: string; signature: string }): Entry {
+  parsePayload(payload: { address: string; signature: string }): SignMessageResult {
     return {
       bip32Path: this.bip32Path,
       signature: payload.signature,
@@ -1148,8 +1148,8 @@ export class TrezorSignMessage extends TrezorInteraction {
    * TransportError) rather than the raw `Error(result.payload.error)`
    * the base class would otherwise throw.
    */
-  async run(): Promise<Entry> {
-    let entry: Entry;
+  async run(): Promise<SignMessageResult> {
+    let entry: SignMessageResult;
     try {
       entry = await super.run();
     } catch (err) {

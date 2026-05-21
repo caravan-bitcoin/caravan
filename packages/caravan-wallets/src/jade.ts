@@ -14,7 +14,7 @@ import {
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
 import {
-  type Entry,
+  type SignMessageResult,
   MessageSigningError,
   verifyMessageSignature,
 } from "@caravan/messages";
@@ -526,7 +526,7 @@ function normalizeJadeSignature(
 
 /**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
- * `bip32Path` on a Jade device. Returns a canonical `Entry`.
+ * `bip32Path` on a Jade device. Returns a canonical `SignMessageResult`.
  *
  * Jade emits a raw 64-byte EC signature with no recovery byte; see
  * `normalizeJadeSignature` for how we reconstruct it.
@@ -558,13 +558,11 @@ export class JadeSignMessage extends JadeInteraction {
     this.pubkey = pubkey;
   }
 
-  async run(): Promise<Entry> {
+  async run(): Promise<SignMessageResult> {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
       let rawSig: Uint8Array;
       try {
-        // We do not pass useAeSignatures, so the SDK returns a plain
-        // Uint8Array (not the [sig, hostCommitment] tuple used for anti-exfil).
         rawSig = (await jade.signMessage(path, this.message)) as Uint8Array;
       } catch (err) {
         throw wrapSdkError(JADE, err);

@@ -11,7 +11,6 @@ import {
 } from "@caravan/bitcoin";
 import { MessageSigningError } from "@caravan/messages";
 import { IJade, IJadeInterface, JadeTransport } from "jadets";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mock, MockProxy } from "vitest-mock-extended";
 
 import {
@@ -561,7 +560,7 @@ describe("Jade", () => {
         );
       });
 
-      it("signs and returns Entry with a canonical sig that verifies against pubkey", async () => {
+      it("signs and returns SignMessageResult with a canonical sig that verifies against pubkey", async () => {
         const fixture = TEST_FIXTURES.multisigs[0];
         // Strip the BIP-137 header byte to get the wire-equivalent of
         // what Jade's firmware emits.

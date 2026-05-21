@@ -17,14 +17,9 @@ class MessageSigningTest extends Test {
     return (
       <Box>
         <p>
-          Sign a fixed UTF-8 message with the <strong>open_source</strong>{" "}
-          cosigner&apos;s key (BIP-39 phrase from{" "}
-          <code>TEST_FIXTURES.keys.open_source.bip39Phrase</code>). The
-          coordinator passes the cosigner&apos;s expected pubkey; the keystore
-          signs at the given BIP-32 path. The test verifies the returned
-          signature cryptographically via the pubkey-aware verifier in{" "}
-          <code>@caravan/messages</code> (loose-mode BIP-137 over the canonical
-          P2WPKH address derived from the cosigner pubkey).
+          Sign the message below with the <strong>open_source</strong>{" "}
+          cosigner&apos;s key, then verify the signature against the expected
+          pubkey.
         </p>
         <Table>
           <TableBody>
@@ -75,7 +70,7 @@ class MessageSigningTest extends Test {
   }
 
   // Verification is cryptographic, not byte-equality: pass the returned
-  // Entry's (signature, pubkey, message) to the verifier and trust its
+  // SignMessageResult's (signature, pubkey, message) to the verifier and trust its
   // boolean. The expected-value passed into matches() is ignored.
   // eslint-disable-next-line class-methods-use-this
   matches(_expected, entry) {
@@ -87,7 +82,7 @@ class MessageSigningTest extends Test {
   }
 
   expected() {
-    // matches() ignores the expected value (it verifies the actual Entry
+    // matches() ignores the expected value (it verifies the actual SignMessageResult
     // cryptographically). Returned here so the UI has something to render
     // alongside the actual response.
     return this.params.pubkey;

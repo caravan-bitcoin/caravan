@@ -15,7 +15,7 @@ import {
   ExtendedPublicKey,
   MultisigAddressType,
 } from "@caravan/bitcoin";
-import { type Entry, MessageSigningError } from "@caravan/messages";
+import { type SignMessageResult, MessageSigningError } from "@caravan/messages";
 import {
   BtcCoin,
   BtcMultisigScriptType,
@@ -609,7 +609,7 @@ export class BitBoxSignMessage extends BitBoxInteraction {
     return messages;
   }
 
-  async run(): Promise<Entry> {
+  async run(): Promise<SignMessageResult> {
     return await this.withDevice(async (pairedBitBox) => {
       let result: Awaited<ReturnType<typeof pairedBitBox.btcSignMessage>>;
       try {

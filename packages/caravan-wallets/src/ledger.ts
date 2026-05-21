@@ -37,7 +37,7 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
-import type { Entry } from "@caravan/messages";
+import type { SignMessageResult } from "@caravan/messages";
 import { LegacyInput } from "@caravan/multisig";
 import { translatePSBT } from "@caravan/psbt";
 import LedgerBtc from "@ledgerhq/hw-app-btc";
@@ -1253,7 +1253,7 @@ function normalizeLedgerSignature(vrs: {
 
 /**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
- * `bip32Path` on a Ledger device. Returns a canonical `Entry`.
+ * `bip32Path` on a Ledger device. Returns a canonical `SignMessageResult`.
  */
 export class LedgerSignMessage extends LedgerBitcoinInteraction {
   bip32Path: string;
@@ -1320,7 +1320,7 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
 
   /**
    * Signs `this.message` with the key at `this.bip32Path` on the Ledger
-   * Bitcoin app. Returns the canonical `Entry` shape.
+   * Bitcoin app. Returns the canonical `SignMessageResult` shape.
    *
    * Two app generations:
    * - Legacy `Btc.signMessage(path, messageHex)` returns `{v, r, s}`;
@@ -1329,7 +1329,7 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
    *   base64 BIP-137 signature directly. (Note the reversed positional
    *   order vs the legacy SDK.)
    */
-  async run(): Promise<Entry> {
+  async run(): Promise<SignMessageResult> {
     await super.run();
     return this.withApp(async (app, transport) => {
       try {

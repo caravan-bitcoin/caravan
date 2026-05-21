@@ -500,7 +500,7 @@ describe("trezor", () => {
       });
     });
 
-    it("parsePayload maps {address, signature} into Entry", () => {
+    it("parsePayload maps {address, signature} into SignMessageResult", () => {
       const interaction = interactionBuilder();
       const entry = interaction.parsePayload({
         address: "bc1qdummyaddress",

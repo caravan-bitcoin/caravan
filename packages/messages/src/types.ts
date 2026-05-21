@@ -1,4 +1,4 @@
-export type Entry = {
+export type SignMessageResult = {
   bip32Path: string;
   signature: string;
   pubkey: string;
