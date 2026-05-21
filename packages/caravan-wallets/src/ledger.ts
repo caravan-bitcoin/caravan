@@ -55,10 +55,7 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
-import {
-  Entry,
-  validateMessage,
-} from "./messages";
+import { Entry } from "./messages";
 import { MultisigWalletPolicy } from "./policy";
 import { DeviceError, MultisigWalletConfig } from "./types";
 
@@ -1287,8 +1284,6 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
     expectedPubkey: string;
   }) {
     super();
-
-    validateMessage(message, LEDGER);
 
     this.bip32Path = bip32Path;
     this.message = message;

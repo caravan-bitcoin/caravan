@@ -36,11 +36,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import {
-  Entry,
-  MessageSigningError,
-  validateMessage,
-} from "./messages";
+import { Entry, MessageSigningError } from "./messages";
 import { WalletConfigKeyDerivation } from "./types";
 
 export const COLDCARD = "coldcard";
@@ -715,8 +711,6 @@ export class ColdcardSignMessage extends ColdcardInteraction {
     expectedPubkey: string;
   }) {
     super();
-
-    validateMessage(message, COLDCARD);
 
     this.bip32Path = bip32Path;
     this.message = message;

@@ -65,10 +65,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import {
-  Entry,
-  validateMessage,
-} from "./messages";
+import { Entry } from "./messages";
 
 /**
  * What's going on with this TrezorConnect import?
@@ -1068,8 +1065,6 @@ export class TrezorSignMessage extends TrezorInteraction {
     expectedPubkey: string;
   }) {
     super({ network });
-
-    validateMessage(message, TREZOR);
 
     this.bip32Path = bip32Path;
     this.message = message;

@@ -75,7 +75,7 @@ import {
   LedgerRegisterWalletPolicy,
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
-import { MessageSigningError } from "./messages";
+import { MessageSigningError, validateMessage } from "./messages";
 import {
   TREZOR,
   TrezorGetMetadata,
@@ -99,11 +99,7 @@ export {
   verifyMessageSignature,
   MAX_MESSAGE_BYTES,
 } from "./messages";
-export type {
-  Entry,
-  MessageSigningErrorKind,
-  NormalizeSignature,
-} from "./messages";
+export type { Entry, MessageSigningErrorKind } from "./messages";
 
 /**
  * Keystores which support direct interactions.
@@ -254,6 +250,7 @@ export function SignMessage({
   message: string;
   expectedPubkey: string;
 }) {
+  validateMessage(message, keystore);
   switch (keystore) {
     case BITBOX:
       if (!network) {

@@ -33,7 +33,6 @@ import {
   getSignatureArray,
 } from "./jade";
 import {
-  MAX_MESSAGE_BYTES,
   MessageSigningError,
   verifyMessageSignature,
 } from "./messages";
@@ -518,18 +517,6 @@ describe("Jade", () => {
     describe("JadeSignMessage", () => {
       const DUMMY_PUBKEY = `02${"00".repeat(32)}`;
 
-      it("constructor throws on oversize message", () => {
-        expect(
-          () =>
-            new JadeSignMessage({
-              bip32Path: "m/44'/0'/0'",
-              message: "a".repeat(MAX_MESSAGE_BYTES + 1),
-              expectedPubkey: DUMMY_PUBKEY,
-              dependencies,
-            })
-        ).toThrowError(MessageSigningError);
-      });
-
       it("rejects raw sig of wrong length with MalformedResponse", async () => {
         mockJade.signMessage.mockResolvedValueOnce(Buffer.alloc(32));
         const interaction = new JadeSignMessage({
@@ -605,7 +592,13 @@ describe("Jade", () => {
         expect(entry.bip32Path).toBe(path);
         expect(entry.expectedPubkey).toBe(expectedPubkey);
         expect(typeof entry.signature).toBe("string");
-        expect(verifyMessageSignature({ message, entry })).toBe(true);
+        expect(
+          verifyMessageSignature({
+            message,
+            signature: entry.signature,
+            expectedPubkey: entry.expectedPubkey,
+          }),
+        ).toBe(true);
         expect(mockJade.signMessage).toHaveBeenCalledWith([44, 0, 0], message);
       });
     });

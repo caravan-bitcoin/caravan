@@ -16,9 +16,6 @@
  *   tab), not a library one.
  * - `MessageSigningError`: closed-set error taxonomy used by every
  *   per-keystore interaction class.
- * - `NormalizeSignature`: a typed contract some keystore interaction
- *   classes use internally when wrapping their SDK's native return
- *   shape into the canonical `Entry`.
  *
  * Protocol selection (BIP-137 vs BIP-322) is NOT modeled as a runtime
  * flag on these primitives. Each per-keystore `SignMessage` interaction
@@ -36,7 +33,6 @@ export type Entry = {
 };
 
 export type MessageSigningErrorKind =
-  | "UnsupportedAddressType"
   | "DeviceRejected"
   | "TransportError"
   | "MalformedResponse"
@@ -55,7 +51,12 @@ export class MessageSigningError extends Error {
     userMessage: string;
     cause?: unknown;
   }) {
-    super(args.userMessage, { cause: args.cause });
+    // Structured `.message` for logs ("[Kind/KEYSTORE] user-facing
+    // text"); plain `.userMessage` for UI surfaces so the UI doesn't
+    // have to strip the prefix.
+    super(`[${args.kind}/${args.keystore}] ${args.userMessage}`, {
+      cause: args.cause,
+    });
     this.name = "MessageSigningError";
     this.kind = args.kind;
     this.keystore = args.keystore;
@@ -63,6 +64,10 @@ export class MessageSigningError extends Error {
   }
 }
 
+// Coldcard's signed-message SD-card file is the tightest envelope:
+// the Coldcard firmware caps message-text input around 500 bytes once
+// the BIP-32 path and address-format suffix are folded in. 240 leaves
+// margin and matches what other multisig coordinators allow.
 export const MAX_MESSAGE_BYTES = 240;
 
 const NUL_BYTE = String.fromCharCode(0);
@@ -96,13 +101,14 @@ export function validateMessage(message: string, keystore: string): void {
 
 export function verifyMessageSignature(args: {
   message: string;
-  entry: Entry;
+  signature: string;
+  expectedPubkey: string;
 }): boolean {
-  const { message, entry } = args;
-  if (!HEX_RE.test(entry.expectedPubkey)) {
+  const { message, signature, expectedPubkey } = args;
+  if (!HEX_RE.test(expectedPubkey)) {
     return false;
   }
-  const pubkeyBuf = Buffer.from(entry.expectedPubkey, "hex");
+  const pubkeyBuf = Buffer.from(expectedPubkey, "hex");
   if (pubkeyBuf.length !== COMPRESSED_PUBKEY_BYTES) {
     return false;
   }
@@ -113,13 +119,8 @@ export function verifyMessageSignature(args: {
     return false;
   }
   try {
-    return Verifier.verifySignature(address, message, entry.signature, false);
+    return Verifier.verifySignature(address, message, signature, false);
   } catch {
     return false;
   }
 }
-
-export type NormalizeSignature = (
-  rawSdkOutput: unknown,
-  ctx: { expectedPubkey: string },
-) => string;

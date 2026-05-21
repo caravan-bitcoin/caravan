@@ -13,7 +13,6 @@ import {
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
 } from "./ledger";
-import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
@@ -345,17 +344,6 @@ describe("ledger", () => {
           code: "ledger.bip32_path.path_error",
         })
       ).toBe(true);
-    });
-
-    it("constructor throws MessageSigningError on oversize message", () => {
-      expect(
-        () =>
-          new LedgerSignMessage({
-            bip32Path: "m/48'/1'/0'/2'/0/0",
-            message: "a".repeat(MAX_MESSAGE_BYTES + 1),
-            expectedPubkey: EXPECTED_PUBKEY,
-          })
-      ).toThrowError(MessageSigningError);
     });
 
     it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in Entry", async () => {

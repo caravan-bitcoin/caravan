@@ -1,4 +1,4 @@
-import { TEST_FIXTURES } from "@caravan/bitcoin";
+import { Network, TEST_FIXTURES } from "@caravan/bitcoin";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { Signer as BIP322Signer, Address as BIP322Address } from "bip322-js";
@@ -6,12 +6,20 @@ import * as bitcoinMessage from "bitcoinjs-message";
 import * as wif from "wif";
 
 import {
-  Entry,
   MAX_MESSAGE_BYTES,
   MessageSigningError,
   validateMessage,
   verifyMessageSignature,
 } from "./messages";
+
+import {
+  BITBOX,
+  COLDCARD,
+  JADE,
+  LEDGER,
+  SignMessage,
+  TREZOR,
+} from "./index";
 
 type MultisigFixture = {
   description: string;
@@ -97,7 +105,7 @@ describe("validateMessage", () => {
     ).toThrowError(MessageSigningError);
   });
 
-  it("MalformedRequest errors carry the keystore label", () => {
+  it("MalformedRequest errors carry the keystore label and structured message", () => {
     try {
       validateMessage("a".repeat(MAX_MESSAGE_BYTES + 1), "JADE");
       throw new Error("expected throw");
@@ -107,7 +115,52 @@ describe("validateMessage", () => {
       expect(e.kind).toBe("MalformedRequest");
       expect(e.keystore).toBe("JADE");
       expect(typeof e.userMessage).toBe("string");
+      // `.message` carries structured prefix for logs; `.userMessage` is the
+      // bare string for UI surfaces.
+      expect(e.message).toContain("[MalformedRequest/JADE]");
+      expect(e.message).toContain(e.userMessage);
+      expect(e.userMessage.startsWith("[")).toBe(false);
     }
+  });
+});
+
+describe("SignMessage factory validates message before constructing", () => {
+  // validateMessage lives in the factory now (single call site, before the
+  // switch), not in each per-keystore constructor. These tests assert the
+  // factory throws with the right keystore label for every supported
+  // keystore — so a future keystore added to the switch without going
+  // through validateMessage shows up here.
+  const oversize = "a".repeat(MAX_MESSAGE_BYTES + 1);
+  const bip32Path = "m/84'/0'/0'/0/0";
+  const expectedPubkey =
+    "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
+
+  const cases: Array<{ label: string; keystore: string; needsNetwork: boolean }> = [
+    { label: "LEDGER", keystore: LEDGER, needsNetwork: false },
+    { label: "TREZOR", keystore: TREZOR, needsNetwork: false },
+    { label: "JADE", keystore: JADE, needsNetwork: false },
+    { label: "BITBOX", keystore: BITBOX, needsNetwork: true },
+    { label: "COLDCARD", keystore: COLDCARD, needsNetwork: false },
+  ];
+
+  cases.forEach(({ label, keystore, needsNetwork }) => {
+    it(`${label}: throws MessageSigningError on oversize message before construction`, () => {
+      try {
+        SignMessage({
+          keystore: keystore as any,
+          network: needsNetwork ? Network.MAINNET : null,
+          bip32Path,
+          message: oversize,
+          expectedPubkey,
+        });
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        const e = err as MessageSigningError;
+        expect(e.kind).toBe("MalformedRequest");
+        expect(e.keystore).toBe(keystore);
+      }
+    });
   });
 });
 
@@ -117,22 +170,13 @@ describe("verifyMessageSignature", () => {
 
   it("returns true for a BIP-322 Simple signature round-tripped via bip322-js", () => {
     const { priv, pub } = deriveKeypair(PATH);
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: signBIP322(priv, pub, MESSAGE),
-      expectedPubkey: pub.toString("hex"),
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(true);
-  });
-
-  it("returns true for a BIP-137 signature in loose mode", () => {
-    const { priv, pub } = deriveKeypair(PATH);
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: signBIP137(priv, MESSAGE),
-      expectedPubkey: pub.toString("hex"),
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(true);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: signBIP322(priv, pub, MESSAGE),
+        expectedPubkey: pub.toString("hex"),
+      }),
+    ).toBe(true);
   });
 
   it("returns false for a tampered signature", () => {
@@ -141,63 +185,67 @@ describe("verifyMessageSignature", () => {
     const sigBuf = Buffer.from(sig, "base64");
     const mid = Math.floor(sigBuf.length / 2);
     sigBuf[mid] = 255 - sigBuf[mid];
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: sigBuf.toString("base64"),
-      expectedPubkey: pub.toString("hex"),
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: sigBuf.toString("base64"),
+        expectedPubkey: pub.toString("hex"),
+      }),
+    ).toBe(false);
   });
 
   it("returns false when expectedPubkey is wrong (sibling path)", () => {
     const { priv, pub } = deriveKeypair(PATH);
     const wrong = deriveKeypair("m/45'/0'/0'/0/1");
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: signBIP322(priv, pub, MESSAGE),
-      expectedPubkey: wrong.pub.toString("hex"),
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: signBIP322(priv, pub, MESSAGE),
+        expectedPubkey: wrong.pub.toString("hex"),
+      }),
+    ).toBe(false);
   });
 
   it("returns false when message differs from what was signed", () => {
     const { priv, pub } = deriveKeypair(PATH);
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: signBIP322(priv, pub, MESSAGE),
-      expectedPubkey: pub.toString("hex"),
-    };
     expect(
-      verifyMessageSignature({ message: "different message", entry }),
+      verifyMessageSignature({
+        message: "different message",
+        signature: signBIP322(priv, pub, MESSAGE),
+        expectedPubkey: pub.toString("hex"),
+      }),
     ).toBe(false);
   });
 
   it("returns false for non-hex expectedPubkey", () => {
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: "ignored",
-      expectedPubkey: "not-hex",
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: "ignored",
+        expectedPubkey: "not-hex",
+      }),
+    ).toBe(false);
   });
 
   it("returns false for short (non-33-byte) pubkey", () => {
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: "ignored",
-      expectedPubkey: "0123abcd",
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: "ignored",
+        expectedPubkey: "0123abcd",
+      }),
+    ).toBe(false);
   });
 
   it("returns false for garbage signature input", () => {
     const { pub } = deriveKeypair(PATH);
-    const entry: Entry = {
-      bip32Path: PATH,
-      signature: "not-base64-at-all-!!!",
-      expectedPubkey: pub.toString("hex"),
-    };
-    expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+    expect(
+      verifyMessageSignature({
+        message: MESSAGE,
+        signature: "not-base64-at-all-!!!",
+        expectedPubkey: pub.toString("hex"),
+      }),
+    ).toBe(false);
   });
 });
 
@@ -214,22 +262,24 @@ describe("verifyMessageSignature across TEST_FIXTURES.multisigs (open_source)", 
 
     it(`${label} — BIP-322 round-trip verifies`, () => {
       const { priv, pub } = deriveKeypair(fixture.bip32Path);
-      const entry: Entry = {
-        bip32Path: fixture.bip32Path,
-        signature: signBIP322(priv, pub, MESSAGE),
-        expectedPubkey: pub.toString("hex"),
-      };
-      expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(true);
+      expect(
+        verifyMessageSignature({
+          message: MESSAGE,
+          signature: signBIP322(priv, pub, MESSAGE),
+          expectedPubkey: pub.toString("hex"),
+        }),
+      ).toBe(true);
     });
 
     it(`${label} — BIP-137 round-trip verifies`, () => {
       const { priv, pub } = deriveKeypair(fixture.bip32Path);
-      const entry: Entry = {
-        bip32Path: fixture.bip32Path,
-        signature: signBIP137(priv, MESSAGE),
-        expectedPubkey: pub.toString("hex"),
-      };
-      expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(true);
+      expect(
+        verifyMessageSignature({
+          message: MESSAGE,
+          signature: signBIP137(priv, MESSAGE),
+          expectedPubkey: pub.toString("hex"),
+        }),
+      ).toBe(true);
     });
 
     it(`${label} — sign with open_source but claim unchained pubkey → false`, () => {
@@ -239,12 +289,13 @@ describe("verifyMessageSignature across TEST_FIXTURES.multisigs (open_source)", 
         (pk) => pk !== openSourceHex,
       );
       expect(unchainedHex).toBeDefined();
-      const entry: Entry = {
-        bip32Path: fixture.bip32Path,
-        signature: signBIP322(priv, pub, MESSAGE),
-        expectedPubkey: unchainedHex as string,
-      };
-      expect(verifyMessageSignature({ message: MESSAGE, entry })).toBe(false);
+      expect(
+        verifyMessageSignature({
+          message: MESSAGE,
+          signature: signBIP322(priv, pub, MESSAGE),
+          expectedPubkey: unchainedHex as string,
+        }),
+      ).toBe(false);
     });
   });
 });

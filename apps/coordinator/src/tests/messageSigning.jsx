@@ -81,7 +81,8 @@ class MessageSigningTest extends Test {
   matches(_expected, entry) {
     return verifyMessageSignature({
       message: this.params.message,
-      entry,
+      signature: entry.signature,
+      expectedPubkey: entry.expectedPubkey,
     });
   }
 

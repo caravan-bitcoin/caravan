@@ -37,7 +37,6 @@ import {
 import {
   Entry,
   MessageSigningError,
-  validateMessage,
   verifyMessageSignature,
 } from "./messages";
 import { MultisigWalletConfig } from "./types";
@@ -511,11 +510,8 @@ function normalizeJadeSignature(
     ]).toString("base64");
     const matches = verifyMessageSignature({
       message,
-      entry: {
-        bip32Path: "",
-        signature: candidate,
-        expectedPubkey,
-      },
+      signature: candidate,
+      expectedPubkey,
     });
     if (matches) {
       return candidate;
@@ -562,8 +558,6 @@ export class JadeSignMessage extends JadeInteraction {
     dependencies?: JadeDependencies;
   }) {
     super(network, dependencies);
-
-    validateMessage(message, JADE);
 
     this.bip32Path = bip32Path;
     this.message = message;

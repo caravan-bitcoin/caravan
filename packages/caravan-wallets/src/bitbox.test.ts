@@ -2,7 +2,7 @@ import { Network } from "@caravan/bitcoin";
 import { describe, it, expect, vi } from "vitest";
 
 import { BitBoxSignMessage } from "./bitbox";
-import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
+import { MessageSigningError } from "./messages";
 
 const EXPECTED_PUBKEY =
   "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
@@ -17,12 +17,6 @@ function makeInteraction(message = "hello world") {
 }
 
 describe("BitBoxSignMessage", () => {
-  it("constructor throws MessageSigningError on oversize message", () => {
-    expect(() =>
-      makeInteraction("a".repeat(MAX_MESSAGE_BYTES + 1)),
-    ).toThrowError(MessageSigningError);
-  });
-
   it("run() base64-encodes electrumSig65 and returns Entry", async () => {
     const interaction = makeInteraction();
     // Synthesize a 65-byte electrumSig65: header byte 39 (P2WPKH range,

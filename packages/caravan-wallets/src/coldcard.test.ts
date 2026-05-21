@@ -9,7 +9,7 @@ import {
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
-import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
+import { MessageSigningError } from "./messages";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 
@@ -796,17 +796,6 @@ describe("ColdcardSignMessage", () => {
       expectedPubkey: EXPECTED_PUBKEY,
     });
   }
-
-  it("constructor throws on oversize message", () => {
-    expect(
-      () =>
-        new ColdcardSignMessage({
-          bip32Path: BIP32_PATH,
-          message: "a".repeat(MAX_MESSAGE_BYTES + 1),
-          expectedPubkey: EXPECTED_PUBKEY,
-        })
-    ).toThrowError(MessageSigningError);
-  });
 
   it("request() returns a 3-line .txt with message, path, p2wpkh", () => {
     expect(builder().request()).toBe(

@@ -28,11 +28,7 @@ import {
   INFO,
   DirectKeystoreInteraction,
 } from "./interaction";
-import {
-  Entry,
-  MessageSigningError,
-  validateMessage,
-} from "./messages";
+import { Entry, MessageSigningError } from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 
@@ -606,8 +602,6 @@ export class BitBoxSignMessage extends BitBoxInteraction {
     expectedPubkey: string;
   }) {
     super({ showPairingCode });
-
-    validateMessage(message, BITBOX);
 
     this.network = network;
     this.bip32Path = bip32Path;

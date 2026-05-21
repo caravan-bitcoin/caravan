@@ -9,7 +9,6 @@ import TrezorConnect from "@trezor/connect-web";
 import { ECPair, payments } from "bitcoinjs-lib";
 
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
-import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
 import {
   trezorCoin,
   TrezorInteraction,
@@ -489,18 +488,6 @@ describe("trezor", () => {
           code: "trezor.bip32_path.path_error",
         })
       ).toBe(true);
-    });
-
-    it("constructor throws MessageSigningError on oversize message", () => {
-      expect(
-        () =>
-          new TrezorSignMessage({
-            network: Network.MAINNET,
-            bip32Path: _bip32Path,
-            message: "a".repeat(MAX_MESSAGE_BYTES + 1),
-            expectedPubkey: EXPECTED_PUBKEY,
-          })
-      ).toThrowError(MessageSigningError);
     });
 
     it("uses TrezorConnect.signMessage with coin set from network", () => {
