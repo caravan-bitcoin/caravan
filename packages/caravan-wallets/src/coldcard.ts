@@ -36,6 +36,11 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
+import {
+  Entry,
+  MessageSigningError,
+  validateMessage,
+} from "./messages";
 import { WalletConfigKeyDerivation } from "./types";
 
 export const COLDCARD = "coldcard";
@@ -652,5 +657,155 @@ Format: ${this.addressType}
     output += xpubs.join("\n");
     output += "\n";
     return output;
+  }
+}
+
+/**
+ * Coldcard sign-message interaction over SD card / Virtual Disk file
+ * exchange — the established BIP-137 flow for Coldcard.
+ *
+ * Request file: a plain-text file with up to 3 lines per the Coldcard
+ * docs:
+ *
+ *     {message}
+ *     {bip32Path}
+ *     {addressFormat}   // one of: p2pkh, p2sh-p2wpkh, p2wpkh
+ *
+ * caravan signs at the cosigner key as P2WPKH single-key (the SeedSigner
+ * workaround pattern), so the third line is always "p2wpkh".
+ *
+ * Response file: Coldcard emits an armored "Bitcoin Signed Message" file
+ * with the canonical structure
+ *
+ *     -----BEGIN BITCOIN SIGNED MESSAGE-----
+ *     {message}
+ *     -----BEGIN SIGNATURE-----
+ *     {bitcoin address}
+ *     {base64 BIP-137 signature}
+ *     -----END BITCOIN SIGNED MESSAGE-----
+ *
+ * parse() extracts the base64 signature line from that block and returns
+ * a canonical Entry. The signature is the standard 65-byte BIP-137 wire
+ * form, base64-encoded; caravan's loose-mode verifier handles Coldcard's
+ * header-byte encoding (which uses the segwit-bech32 range for P2WPKH).
+ *
+ * BIP-322 is intentionally not supported on this class. Coldcard's
+ * BIP-322 firmware mode is the "Proof of Reserve" PSBT flow (Mk 5.5.0 /
+ * Q 1.4.0Q+), which proves wallet-level UTXO control via the BIP-322
+ * FULL form — a different use case from caravan's per-cosigner-key
+ * BIP-322 Simple need. A future, separate `ColdcardSignMessageBIP322`
+ * (or similarly named) interaction class can wrap the Proof-of-Reserve
+ * PSBT flow if/when caravan needs that capability; caravan does not
+ * model protocol selection as a runtime flag on this class.
+ */
+export class ColdcardSignMessage extends ColdcardInteraction {
+  bip32Path: string;
+
+  message: string;
+
+  expectedPubkey: string;
+
+  constructor({
+    bip32Path,
+    message,
+    expectedPubkey,
+  }: {
+    bip32Path: string;
+    message: string;
+    expectedPubkey: string;
+  }) {
+    super();
+
+    validateMessage(message, COLDCARD);
+
+    this.bip32Path = bip32Path;
+    this.message = message;
+    this.expectedPubkey = expectedPubkey;
+    this.workflow = ["request", "parse"];
+  }
+
+  messages() {
+    const messages = super.messages();
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.download_sign_message_file",
+      text: "Download and save this text file to your SD card.",
+    });
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.sign_message",
+      text: "On the Coldcard: Advanced > File Management > Sign Text File. Confirm the message and sign.",
+    });
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.upload_signed_message_file",
+      text: "Upload the signed message file produced by your Coldcard below.",
+    });
+    return messages;
+  }
+
+  /**
+   * Build the .txt request file for Coldcard's sign-text-file flow.
+   * Three lines: message, BIP-32 path, address format (always p2wpkh
+   * since we sign per cosigner pubkey as single-key).
+   */
+  request(): string {
+    return `${this.message}\n${this.bip32Path}\np2wpkh\n`;
+  }
+
+  /**
+   * Parse the armored "Bitcoin Signed Message" file Coldcard returns
+   * over SD card. Extract the base64 signature and wrap as an Entry.
+   */
+  parse(file: string): Entry {
+    if (typeof file !== "string" || file.length === 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: "Empty Coldcard signed-message file.",
+      });
+    }
+
+    const lines = file.split(/\r?\n/);
+    const sigStart = lines.findIndex((l) => l.includes("BEGIN SIGNATURE"));
+    if (sigStart < 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage:
+          "Coldcard signed-message file is missing the '-----BEGIN SIGNATURE-----' delimiter.",
+      });
+    }
+    // Per Coldcard's armored output, the signature is the second
+    // non-empty line after the BEGIN SIGNATURE marker (first line is
+    // the bitcoin address, second is the base64 sig).
+    const afterMarker = lines
+      .slice(sigStart + 1)
+      .filter((l) => l.length > 0 && !l.includes("-----"));
+    if (afterMarker.length < 2) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage:
+          "Coldcard signed-message file does not contain both an address line and a signature line.",
+      });
+    }
+    const signature = afterMarker[1].trim();
+    if (signature.length === 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: "Coldcard returned an empty signature line.",
+      });
+    }
+
+    return {
+      bip32Path: this.bip32Path,
+      signature,
+      expectedPubkey: this.expectedPubkey,
+    };
   }
 }

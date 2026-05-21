@@ -4,10 +4,12 @@ import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardSignMessage,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
+import { MAX_MESSAGE_BYTES, MessageSigningError } from "./messages";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 
@@ -776,5 +778,94 @@ describe("ColdcardMultisigWalletConfig", () => {
     expect(() =>
       interactionBuilder({ jsonConfig: jsonMissingAddressType })
     ).toThrow("Configuration file needs addressType.");
+  });
+});
+
+describe("ColdcardSignMessage", () => {
+  const EXPECTED_PUBKEY =
+    "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
+  const BIP32_PATH = "m/45'/1'/100'/0/0";
+  const MESSAGE = "caravan message-signing smoke";
+  const SAMPLE_SIG =
+    "Hxc02s7sgKR4FsfL4iLqRn29tk4VlsRcvphvCmLqMVxiHrTcjxn+5XAaFNzZmDvB3vJypZJ0xWeCqUbAxYZBgL8=";
+
+  function builder() {
+    return new ColdcardSignMessage({
+      bip32Path: BIP32_PATH,
+      message: MESSAGE,
+      expectedPubkey: EXPECTED_PUBKEY,
+    });
+  }
+
+  it("constructor throws on oversize message", () => {
+    expect(
+      () =>
+        new ColdcardSignMessage({
+          bip32Path: BIP32_PATH,
+          message: "a".repeat(MAX_MESSAGE_BYTES + 1),
+          expectedPubkey: EXPECTED_PUBKEY,
+        })
+    ).toThrowError(MessageSigningError);
+  });
+
+  it("request() returns a 3-line .txt with message, path, p2wpkh", () => {
+    expect(builder().request()).toBe(
+      `${MESSAGE}\n${BIP32_PATH}\np2wpkh\n`
+    );
+  });
+
+  it("workflow advertises both request and parse steps", () => {
+    expect(builder().workflow).toEqual(["request", "parse"]);
+  });
+
+  it("parse() extracts the base64 signature from the armored Coldcard file", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qfakecoldcardaddress0000000000000000000",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+      "",
+    ].join("\n");
+
+    const entry = builder().parse(file);
+    expect(entry).toEqual({
+      bip32Path: BIP32_PATH,
+      signature: SAMPLE_SIG,
+      expectedPubkey: EXPECTED_PUBKEY,
+    });
+  });
+
+  it("parse() handles CRLF line endings", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\r\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
+  });
+
+  it("parse() throws MalformedResponse on empty input", () => {
+    expect(() => builder().parse("")).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse when SIGNATURE delimiter is missing", () => {
+    expect(() =>
+      builder().parse("not a coldcard file\nsome other content")
+    ).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse when address+signature lines are missing", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
   });
 });

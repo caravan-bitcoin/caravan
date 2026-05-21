@@ -39,6 +39,7 @@ import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardSignMessage,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import {
@@ -233,10 +234,12 @@ export function ExportPublicKey({
  * returns a canonical {@link Entry} record (BIP-137 wire form).
  *
  * **Supported keystores:** Ledger (legacy + v2 Bitcoin apps), Trezor,
- * Jade, BitBox. Each implements BIP-137 per its firmware's native
- * capability. Future BIP-322 support will land as separate per-keystore
- * interaction classes — not as a runtime flag on these classes — once
- * devices implement the protocol.
+ * Jade, BitBox, Coldcard. Each implements BIP-137 per its firmware's
+ * native capability. Future BIP-322 support will land as separate
+ * per-keystore interaction classes (e.g. a `ColdcardSignMessageBIP322`
+ * wrapping Coldcard's Proof-of-Reserve PSBT flow) — not as a runtime
+ * flag on these classes — once devices implement the protocol in a
+ * shape caravan can consume per-cosigner.
  */
 export function SignMessage({
   keystore,
@@ -263,6 +266,12 @@ export function SignMessage({
       }
       return new BitBoxSignMessage({
         network,
+        bip32Path,
+        message,
+        expectedPubkey,
+      });
+    case COLDCARD:
+      return new ColdcardSignMessage({
         bip32Path,
         message,
         expectedPubkey,
