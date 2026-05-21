@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { Network } from "@caravan/bitcoin";
-import { MessageSigningError, validateMessage } from "@caravan/messages";
+import { validateMessage } from "@caravan/messages";
 import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
@@ -33,7 +33,6 @@ import {
   BitBoxConfirmMultisigAddress,
   BitBoxRegisterWalletPolicy,
   BitBoxSignMultisigTransaction,
-  BitBoxSignMessage,
 } from "./bitbox";
 import {
   COLDCARD,
@@ -249,21 +248,6 @@ export function SignMessage({
 }) {
   validateMessage(message, keystore);
   switch (keystore) {
-    case BITBOX:
-      if (!network) {
-        throw new MessageSigningError({
-          kind: "MalformedRequest",
-          keystore: BITBOX,
-          userMessage:
-            "BitBox message signing requires `network` to select the coin code.",
-        });
-      }
-      return new BitBoxSignMessage({
-        network,
-        bip32Path,
-        message,
-        pubkey,
-      });
     case COLDCARD:
       return new ColdcardSignMessage({
         bip32Path,
@@ -291,6 +275,14 @@ export function SignMessage({
         bip32Path,
         message,
         pubkey,
+      });
+    case BITBOX:
+      // BitBox firmware's sign_message accepts only BIP-49/BIP-84 paths
+      // under simpleType script configs; caravan's multisig cosigner
+      // paths (BIP-45 / BIP-48) are rejected as InvalidInput.
+      return new UnsupportedInteraction({
+        code: "unsupported",
+        text: "BitBox firmware does not support message signing at multisig-derived cosigner paths.",
       });
     default:
       return new UnsupportedInteraction({

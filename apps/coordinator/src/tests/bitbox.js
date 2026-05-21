@@ -5,11 +5,11 @@ import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";
 import addressTests from "./addresses";
 import registrationTests from "./registration";
-import { messageSigningTests } from "./messageSigning";
 
+// BitBox firmware does not support message signing at caravan's
+// multisig-purpose cosigner paths; messageSigningTests is omitted.
 export default publicKeyTests(BITBOX)
   .concat(extendedPublicKeyTests(BITBOX))
   .concat(signingTests(BITBOX))
   .concat(addressTests(BITBOX))
-  .concat(registrationTests(BITBOX))
-  .concat(messageSigningTests(BITBOX));
+  .concat(registrationTests(BITBOX));

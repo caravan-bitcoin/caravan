@@ -15,7 +15,6 @@ import {
   ExtendedPublicKey,
   MultisigAddressType,
 } from "@caravan/bitcoin";
-import { type SignMessageResult, MessageSigningError } from "@caravan/messages";
 import {
   BtcCoin,
   BtcMultisigScriptType,
@@ -23,7 +22,6 @@ import {
   PairedBitBox,
 } from 'bitbox-api';
 
-import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
@@ -564,91 +562,3 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
   }
 }
 
-/**
- * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
- * `bip32Path` on a BitBox device. P2WPKH-only per BitBox firmware.
- */
-export class BitBoxSignMessage extends BitBoxInteraction {
-  network: BitcoinNetwork;
-
-  bip32Path: string;
-
-  message: string;
-
-  pubkey: string;
-
-  constructor({
-    showPairingCode,
-    network,
-    bip32Path,
-    message,
-    pubkey,
-  }: {
-    showPairingCode?: TShowPairingCode;
-    network: BitcoinNetwork;
-    bip32Path: string;
-    message: string;
-    pubkey: string;
-  }) {
-    super({ showPairingCode });
-
-    this.network = network;
-    this.bip32Path = bip32Path;
-    this.message = message;
-    this.pubkey = pubkey;
-  }
-
-  messages() {
-    const messages = super.messages();
-    messages.push({
-      state: ACTIVE,
-      level: INFO,
-      text: "Confirm the message on your BitBox device.",
-      code: "bitbox.sign_message",
-    });
-    return messages;
-  }
-
-  async run(): Promise<SignMessageResult> {
-    return await this.withDevice(async (pairedBitBox) => {
-      let result: Awaited<ReturnType<typeof pairedBitBox.btcSignMessage>>;
-      try {
-        result = await pairedBitBox.btcSignMessage(
-          convertNetwork(this.network),
-          {
-            scriptConfig: { simpleType: "p2wpkh" },
-            keypath: this.bip32Path,
-          },
-          new TextEncoder().encode(this.message),
-        );
-      } catch (err) {
-        throw wrapSdkError(BITBOX, err);
-      }
-
-      if (
-        !result.electrumSig65 ||
-        result.electrumSig65.length !== 65
-      ) {
-        throw new MessageSigningError({
-          kind: "MalformedResponse",
-          keystore: BITBOX,
-          userMessage: `Expected 65-byte electrumSig65 from BitBox, got ${
-            result.electrumSig65?.length ?? 0
-          } bytes.`,
-        });
-      }
-
-      const signature = Buffer.from(result.electrumSig65).toString("base64");
-      assertSignatureVerifies(BITBOX, {
-        message: this.message,
-        signature,
-        pubkey: this.pubkey,
-      });
-      return {
-        bip32Path: this.bip32Path,
-        signature,
-        pubkey: this.pubkey,
-      };
-    });
-  }
-}
