@@ -81,6 +81,22 @@ class MessageSigningTest extends Test {
     });
   }
 
+  // The base Test.runParse() unpacks Coldcard parse() output assuming
+  // either an xpub-import shape ({rootFingerprint, ...}) or a signed-PSBT
+  // shape ({pubkey: [sig, ...]}) — for the latter it sends Object.values()[0]
+  // to the resolver. The SignMessageResult shape ({bip32Path, signature,
+  // pubkey}) needs to reach matches() intact for cryptographic verification.
+  async runParse(data) {
+    try {
+      const entry = await this.actual(data);
+      return this.resolve(entry);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+      return { status: Test.ERROR, message: e.message };
+    }
+  }
+
   expected() {
     // matches() ignores the expected value (it verifies the actual SignMessageResult
     // cryptographically). Returned here so the UI has something to render
