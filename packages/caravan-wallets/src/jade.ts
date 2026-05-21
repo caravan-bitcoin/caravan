@@ -497,8 +497,10 @@ function normalizeJadeSignature(
   const r = sigBuf.subarray(0, 32);
   const s = sigBuf.subarray(32, 64);
 
+  // Header byte = v + 39, the segwit-bech32 (P2WPKH) range. Matches the
+  // address type the verifier derives from `pubkey`.
   for (const v of [0, 1]) {
-    const headerByte = v + 27 + 4;
+    const headerByte = v + 39;
     const candidate = Buffer.concat([
       Buffer.from([headerByte]),
       r,

@@ -1230,21 +1230,23 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
  * Normalize Ledger's `{v, r, s}` ECDSA signature output into a canonical
  * BIP-137 base64 65-byte signature.
  *
- * Header byte encoding follows the @ledgerhq/hw-app-btc README example:
- * `v + 27 + 4` (compressed-P2PKH range, 31-34). caravan's loose-mode
- * verifier ignores address-type encoding in the header, so the exact
- * range is not material — any consistent compressed flag works.
+ * Header byte = `v + 39`, the segwit-bech32 (P2WPKH) range. Matches the
+ * address type the verifier derives from the cosigner pubkey.
+ *
+ * `r` and `s` are zero-padded to 32 bytes each — Ledger's SDK returns
+ * them as hex strings and can strip leading zeros, but the BIP-137 wire
+ * form needs fixed-width fields.
  */
 function normalizeLedgerSignature(vrs: {
   v: number;
   r: string;
   s: string;
 }): string {
-  const headerByte = vrs.v + 27 + 4;
+  const headerByte = vrs.v + 39;
   const sig = Buffer.concat([
     Buffer.from([headerByte]),
-    Buffer.from(vrs.r, "hex"),
-    Buffer.from(vrs.s, "hex"),
+    Buffer.from(vrs.r.padStart(64, "0"), "hex"),
+    Buffer.from(vrs.s.padStart(64, "0"), "hex"),
   ]);
   return sig.toString("base64");
 }

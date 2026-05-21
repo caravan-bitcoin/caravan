@@ -325,23 +325,17 @@ describe("ledger", () => {
     const PATH = FIXTURE.bip32Path;
     const MESSAGE = FIXTURE.signedMessages.message;
 
-    // Decode the real BIP-137 sig into the {v, r, s} shape Ledger's legacy
+    // Decode the BIP-137 fixture into the {v, r, s} shape Ledger's legacy
     // Btc app returns. The fixture's header byte is in the P2WPKH range
-    // (39+v); caravan's normalizeLedgerSignature uses the P2SH-P2WPKH
-    // range (31+v) on the same (r, s), and loose-mode verification accepts
-    // both.
+    // (39+v), which is also what normalizeLedgerSignature produces — so
+    // the normalized output byte-matches the fixture exactly.
     const FIXTURE_SIG_BYTES = Buffer.from(
       FIXTURE.signedMessages.bip137,
       "base64"
     );
-    const FIXTURE_V = (FIXTURE_SIG_BYTES[0] - 27) % 4;
+    const FIXTURE_V = FIXTURE_SIG_BYTES[0] - 39;
     const FIXTURE_R_HEX = FIXTURE_SIG_BYTES.subarray(1, 33).toString("hex");
     const FIXTURE_S_HEX = FIXTURE_SIG_BYTES.subarray(33, 65).toString("hex");
-    const NORMALIZED_HEADER = FIXTURE_V + 27 + 4;
-    const NORMALIZED_SIG = Buffer.concat([
-      Buffer.from([NORMALIZED_HEADER]),
-      FIXTURE_SIG_BYTES.subarray(1, 65),
-    ]).toString("base64");
 
     function interactionBuilder(bip32Path = PATH, message = MESSAGE) {
       return new LedgerSignMessage({
@@ -398,8 +392,29 @@ describe("ledger", () => {
       expect(entry).toEqual({
         bip32Path: PATH,
         pubkey: EXPECTED_PUBKEY,
-        signature: NORMALIZED_SIG,
+        signature: FIXTURE.signedMessages.bip137,
       });
+    });
+
+    it("legacy Bitcoin app: pads r and s to 32 bytes when SDK strips leading zeros", async () => {
+      const interaction = interactionBuilder();
+      // simulate a leading-zero strip: shave the first hex char off r
+      const stripped = FIXTURE_R_HEX.replace(/^0/, "");
+      // only run this case if the fixture's r actually has a leading
+      // zero to strip; otherwise the test isn't meaningful
+      if (stripped.length === FIXTURE_R_HEX.length) {
+        return;
+      }
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue({
+          v: FIXTURE_V,
+          r: stripped,
+          s: FIXTURE_S_HEX,
+        }),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
+      const entry = await interaction.run();
+      expect(entry.signature).toBe(FIXTURE.signedMessages.bip137);
     });
 
     it("throws MalformedResponse if the device returns a non-verifying sig", async () => {
