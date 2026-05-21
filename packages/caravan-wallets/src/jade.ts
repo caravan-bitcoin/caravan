@@ -16,7 +16,6 @@ import {
 import {
   type SignMessageResult,
   MessageSigningError,
-  verifyMessageSignature,
 } from "@caravan/messages";
 import {
   Jade,
@@ -33,7 +32,7 @@ import {
   JadeHttpRequestFunction,
 } from "jadets";
 
-import { wrapSdkError } from "./errors";
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -471,65 +470,8 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
 }
 
 /**
- * Normalize Jade's raw 64-byte `r||s` EC signature into a canonical
- * BIP-137 base64 65-byte signature by picking the recovery byte that
- * verifies against `pubkey`. Tries both `v` candidates and returns the
- * one that recovers; throws MalformedResponse if neither does.
- */
-function normalizeJadeSignature(
-  rawSig: Uint8Array | string,
-  pubkey: string,
-  message: string,
-): string {
-  const sigBuf =
-    typeof rawSig === "string"
-      ? Buffer.from(rawSig, "hex")
-      : Buffer.from(rawSig);
-
-  if (sigBuf.length !== 64) {
-    throw new MessageSigningError({
-      kind: "MalformedResponse",
-      keystore: JADE,
-      userMessage: `Expected 64-byte EC sig from Jade, got ${sigBuf.length} bytes.`,
-    });
-  }
-
-  const r = sigBuf.subarray(0, 32);
-  const s = sigBuf.subarray(32, 64);
-
-  // Header byte = v + 39, the segwit-bech32 (P2WPKH) range. Matches the
-  // address type the verifier derives from `pubkey`.
-  for (const v of [0, 1]) {
-    const headerByte = v + 39;
-    const candidate = Buffer.concat([
-      Buffer.from([headerByte]),
-      r,
-      s,
-    ]).toString("base64");
-    const matches = verifyMessageSignature({
-      message,
-      signature: candidate,
-      pubkey,
-    });
-    if (matches) {
-      return candidate;
-    }
-  }
-
-  throw new MessageSigningError({
-    kind: "MalformedResponse",
-    keystore: JADE,
-    userMessage:
-      "Jade signature does not recover to pubkey under either recovery candidate.",
-  });
-}
-
-/**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
  * `bip32Path` on a Jade device. Returns a canonical `SignMessageResult`.
- *
- * Jade emits a raw 64-byte EC signature with no recovery byte; see
- * `normalizeJadeSignature` for how we reconstruct it.
  */
 export class JadeSignMessage extends JadeInteraction {
   bip32Path: string;
@@ -561,27 +503,27 @@ export class JadeSignMessage extends JadeInteraction {
   async run(): Promise<SignMessageResult> {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      let rawSig: Uint8Array;
+      let signature: unknown;
       try {
-        rawSig = (await jade.signMessage(path, this.message)) as Uint8Array;
+        signature = await jade.signMessage(path, this.message);
       } catch (err) {
         throw wrapSdkError(JADE, err);
       }
-      if (Array.isArray(rawSig)) {
+      if (typeof signature !== "string") {
         throw new MessageSigningError({
           kind: "MalformedResponse",
           keystore: JADE,
-          userMessage:
-            "Unexpected anti-exfil tuple from Jade.signMessage; expected plain signature.",
+          userMessage: `Expected base64 signature string from Jade, got ${typeof signature}.`,
         });
       }
+      assertSignatureVerifies(JADE, {
+        message: this.message,
+        signature,
+        pubkey: this.pubkey,
+      });
       return {
         bip32Path: this.bip32Path,
-        signature: normalizeJadeSignature(
-          rawSig,
-          this.pubkey,
-          this.message,
-        ),
+        signature,
         pubkey: this.pubkey,
       };
     });

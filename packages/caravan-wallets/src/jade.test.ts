@@ -9,7 +9,6 @@ import {
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
-import { MessageSigningError } from "@caravan/messages";
 import { IJade, IJadeInterface, JadeTransport } from "jadets";
 import { mock, MockProxy } from "vitest-mock-extended";
 
@@ -506,17 +505,18 @@ describe("Jade", () => {
     describe("JadeSignMessage", () => {
       const DUMMY_PUBKEY = `02${"00".repeat(32)}`;
 
-      it("rejects raw sig of wrong length with MalformedResponse", async () => {
-        mockJade.signMessage.mockResolvedValueOnce(Buffer.alloc(32));
+      it("rejects non-string SDK output with MalformedResponse", async () => {
+        mockJade.signMessage.mockResolvedValueOnce(Buffer.alloc(32) as any);
         const interaction = new JadeSignMessage({
           bip32Path: "m/44'/0'/0'",
           message: "hello",
           pubkey: DUMMY_PUBKEY,
           dependencies,
         });
-        await expect(interaction.run()).rejects.toThrowError(
-          MessageSigningError
-        );
+        await expect(interaction.run()).rejects.toMatchObject({
+          kind: "MalformedResponse",
+          keystore: "jade",
+        });
       });
 
       it.each([
@@ -536,50 +536,36 @@ describe("Jade", () => {
         });
       });
 
-      it("rejects a sig that does not recover to pubkey under either v", async () => {
-        // Jade emits a raw 64-byte r||s. Use the BIP-137 fixture sig
-        // minus its header byte but claim the other cosigner's pubkey;
-        // neither v candidate should recover to it.
+      it("rejects a sig that does not verify against pubkey", async () => {
+        // Sign with open_source but claim a different cosigner's pubkey.
         const fixture = TEST_FIXTURES.multisigs[0];
-        const rawSig = Buffer.from(
-          fixture.signedMessages.bip137,
-          "base64",
-        ).subarray(1);
-
-        mockJade.signMessage.mockResolvedValueOnce(rawSig);
-
+        mockJade.signMessage.mockResolvedValueOnce(
+          fixture.signedMessages.bip137 as any,
+        );
         const interaction = new JadeSignMessage({
           bip32Path: fixture.bip32Path,
           message: fixture.signedMessages.message,
           pubkey: fixture.publicKeys.find((pk) => pk !== fixture.publicKey)!,
           dependencies,
         });
-
-        await expect(interaction.run()).rejects.toThrowError(
-          MessageSigningError,
-        );
+        await expect(interaction.run()).rejects.toMatchObject({
+          kind: "MalformedResponse",
+          keystore: "jade",
+        });
       });
 
-      it("signs and returns SignMessageResult with a canonical sig that verifies against pubkey", async () => {
+      it("returns the base64 sig string Jade emits", async () => {
         const fixture = TEST_FIXTURES.multisigs[0];
-        // Strip the BIP-137 header byte to get the wire-equivalent of
-        // what Jade's firmware emits.
-        const rawSig = Buffer.from(
-          fixture.signedMessages.bip137,
-          "base64",
-        ).subarray(1);
-
-        mockJade.signMessage.mockResolvedValueOnce(rawSig);
-
+        mockJade.signMessage.mockResolvedValueOnce(
+          fixture.signedMessages.bip137 as any,
+        );
         const interaction = new JadeSignMessage({
           bip32Path: fixture.bip32Path,
           message: fixture.signedMessages.message,
           pubkey: fixture.publicKey,
           dependencies,
         });
-
         const entry = await interaction.run();
-
         expect(entry).toEqual({
           bip32Path: fixture.bip32Path,
           pubkey: fixture.publicKey,
