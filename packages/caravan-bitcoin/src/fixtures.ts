@@ -93,10 +93,6 @@ const BIP39_PHRASE = [
 
 export const ROOT_FINGERPRINT = "f57ec65d";
 
-// Common message body for the pre-computed BIP-137 / BIP-322 signatures
-// attached to each MULTISIGS_BASE entry under `signedMessages`. Generated
-// once with the open_source seed at each fixture's `bip32Path` — signatures
-// are deterministic (RFC6979 ECDSA), so the values can live in source.
 const SIGNED_MESSAGE_TEXT = "I control this caravan cosigner key";
 
 const NODES = {
