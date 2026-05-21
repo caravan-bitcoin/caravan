@@ -459,12 +459,15 @@ describe("trezor", () => {
 
   describe("TrezorSignMessage", () => {
     const _bip32Path = "m/45'/0'/0'/0'";
+    const EXPECTED_PUBKEY =
+      "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
 
     function interactionBuilder(bip32Path = "", message = "") {
       return new TrezorSignMessage({
         network: Network.MAINNET,
         bip32Path: bip32Path || _bip32Path,
         message: message || "hello world",
+        pubkey: EXPECTED_PUBKEY,
       });
     }
 
@@ -475,6 +478,8 @@ describe("trezor", () => {
       const interaction = new TrezorSignMessage({
         bip32Path: "m/foo",
         network: Network.MAINNET,
+        message: "hello world",
+        pubkey: EXPECTED_PUBKEY,
       });
       expect(
         interaction.hasMessagesFor({
@@ -485,11 +490,45 @@ describe("trezor", () => {
       ).toBe(true);
     });
 
-    it("uses TrezorConnect.signMessage", () => {
+    it("calls TrezorConnect.signMessage with path and message", () => {
       const interaction = interactionBuilder();
       const [method, params] = interaction.connectParams();
       expect(method).toEqual(TrezorConnect.signMessage);
-      expect((params as any).path).toEqual(_bip32Path);
+      expect(params).toEqual({
+        path: _bip32Path,
+        message: "hello world",
+      });
+    });
+
+    it("parsePayload maps {address, signature} into SignMessageResult", () => {
+      const interaction = interactionBuilder();
+      const entry = interaction.parsePayload({
+        address: "bc1qdummyaddress",
+        signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
+      });
+      expect(entry).toEqual({
+        bip32Path: _bip32Path,
+        signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
+        pubkey: EXPECTED_PUBKEY,
+      });
+    });
+
+    it.each([
+      ["Cancelled", "DeviceRejected"],
+      ["Device disconnected during action", "TransportError"],
+    ])("run() wraps Trezor '%s' as %s", async (errorText, expectedKind) => {
+      const interaction = interactionBuilder();
+      const signSpy = vi
+        .spyOn(TrezorConnect, "signMessage")
+        .mockResolvedValueOnce({
+          success: false,
+          payload: { error: errorText },
+        } as any);
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: expectedKind,
+        keystore: "trezor",
+      });
+      signSpy.mockRestore();
     });
   });
 });

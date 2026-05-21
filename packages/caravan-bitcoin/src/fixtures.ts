@@ -93,6 +93,11 @@ const BIP39_PHRASE = [
 
 export const ROOT_FINGERPRINT = "f57ec65d";
 
+// Shared message used by signed-message fixtures. Signatures are committed
+// as stable known-good outputs for the open_source seed at each fixture's
+// bip32Path.
+const SIGNED_MESSAGE_TEXT = "I control this caravan cosigner key";
+
 const NODES = {
   "m/45'/0'/0'": {
     pub: "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03",
@@ -567,6 +572,13 @@ const MULTISIGS_BASE = [
       "02a8513d9931896d5d3afc8063148db75d8851fd1fc41b1098ba2a6a766db563d4",
       "03938dd09bf3dd29ddf41f264858accfa40b330c98e0ed27caf77734fac00139ba",
     ],
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "KFSBeQqW8cc4AfsZuJjWz5/NgHnw4cK7xVuccdEJKu/xd3v8g9i40s12C+2MSWY7OfU9qIe1Q/UtccwzZA5U8D4=",
+      bip322:
+        "AkcwRAIgM1Ell+pNFsrMwJl4hIFwhomvVimXV/5RQTRxBzDzd6ACIG2CsGeXxa5nn3yEhjt4npz49uCuAHFnsaLY4tGCmNzlASECqFE9mTGJbV06/IBjFI23XYhR/R/EGxCYuipqdm21Y9Q=",
+    },
     changePublicKeys: [
       "021a049747120345fa9017fb42d8ff3d4fb1d2ef4c80546872c5da513babd51585",
       "03a00095df48367ed21e5c6edd50af4352311bf060eb100425cb7af4331aa1aad0",
@@ -728,6 +740,13 @@ const MULTISIGS_BASE = [
       "209c71790a3745bc398a86dc20bc058101f44e3c05fb4430907464555fca61d7",
     publicKey:
       "026aaa7c4697ff439bfd6c7a70abf66253b4e329654b41ee2ad21d68b854e4a422",
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "KBaXIjkSunsbpNUoPfoI5IhCbK7q7c8iVr16yVieGJ8BD6a04EYk81QsEzNE0OXMdWgeraCOMJtn0aga8dKpZz4=",
+      bip322:
+        "AkgwRQIhAMC5UNBKm7Tcgv8E86MSu3NdWs1bt2FSg47aK4sgGxBIAiAK0oEq4GUh8kBAfwqrXvZkdTO9h7/acNl7tPaHkyotCgEhAmqqfEaX/0Ob/Wx6cKv2YlO04yllS0HuKtIdaLhU5KQi",
+    },
     publicKeys: [
       "025566585b3a8066b7d0bba4d2b24c3c59a5f527d62c100bbb7073a7cb2565418c",
       "026aaa7c4697ff439bfd6c7a70abf66253b4e329654b41ee2ad21d68b854e4a422",
@@ -844,6 +863,13 @@ const MULTISIGS_BASE = [
       "ff8e053e3417029696f0222355adb2b386a825c85a40fa4bb125501d59fef416",
     publicKey:
       "03bc34c50cf768f802290269c2ddabd086c73514c880cecb6db3f67676a4b72469",
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "KJfWMK1Hrz7RGiEXlEguKh3+SdUt/yCd8QCmvVVbkr3pRARJlShA3bCdhW2M93RnILKAOSWSIL7ZiEKV2emAhmg=",
+      bip322:
+        "AkcwRAIgMdIkhIgwbmQthk8s0agEgPL4whBYbxSLN8jbWJLl0rUCIDPjuMFdt92Ha+6O8I6gYcDs5yS8IHXnGB/p78dO4p10ASEDvDTFDPdo+AIpAmnC3avQhsc1FMiAzstts/Z2dqS3JGk=",
+    },
     publicKeys: [
       "035a763e0480f858ef626b649fa0efe9eb647abbf77db54f3af904d2de50c4342d",
       "03bc34c50cf768f802290269c2ddabd086c73514c880cecb6db3f67676a4b72469",
@@ -955,6 +981,13 @@ const MULTISIGS_BASE = [
       "c9f3e4cb4ca50a9a7042e72d0099e2848431b7008773cd96f40bc406a71ceb33",
     publicKey:
       "02583c4776b51691f4e036c8e0eb160f3464a2de9ae4c6818b7945c78fc6bace79",
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "J8/EYbdDf5qSZCn41KW3U0F6yTn2RH/Vuo3M1oCrq7Hsf15h62UjzVqhDyNQFEZxPX7cmRDc3E2qiZqYdkGSPeo=",
+      bip322:
+        "AkgwRQIhAJRcYXj/GCs3BqT5elSqC336YRO14zabqvgXKbmfgnWmAiBeHH2JmMRlf5Mv9d8EeNzpDggsSlHfPXBU973axexMiwEhAlg8R3a1FpH04DbI4OsWDzRkot6a5MaBi3lFx4/Gus55",
+    },
     publicKeys: [
       "02583c4776b51691f4e036c8e0eb160f3464a2de9ae4c6818b7945c78fc6bace79",
       "02b024e76d6c2d8c22d9550467e97ced251ead5592529f9c813c1d818f7e89a35a",
@@ -1063,6 +1096,13 @@ const MULTISIGS_BASE = [
       "d7461610bc48a84f199e1c9a081227d8f36a0c32e8adb141f4bc410aa999375f",
     publicKey:
       "0342997f6fcd7fa4a3c7e290c8867148992e6194742120985c664d9e214461af7c",
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "KH/5pycF+8q6MLI1zq1KiRN9IzQMZGvelKREtQ/4VZ5QCIk5bnA0cwp0V3CPANjF/9ebJ9TDbwGMLdHYXTVuZFo=",
+      bip322:
+        "AkgwRQIhAPgg5Wtr97Cq7SCRZNXZhgf0UWBD7D4a7F+3lbb7X4WRAiBg0SSFab8zf/dyVk5jL13rfKKsNdqummVdb4Z8r12XVQEhA0KZf2/Nf6Sjx+KQyIZxSJkuYZR0ISCYXGZNniFEYa98",
+    },
     publicKeys: [
       "0328b57c2f65c98ed7cde4bca54cc3a13afa4d47117fd9dae06663a4169e05ef86",
       "0342997f6fcd7fa4a3c7e290c8867148992e6194742120985c664d9e214461af7c",
@@ -1179,6 +1219,13 @@ const MULTISIGS_BASE = [
       "c18feb515eb8a44070450c38f93aeab036a86192fa6133dcbe55645f89de278a",
     publicKey:
       "0369e74fc954355b6f7acf9bbec5b861c186852b759a85f92558e420a0202047f4",
+    signedMessages: {
+      message: SIGNED_MESSAGE_TEXT,
+      bip137:
+        "J4QZr9yceH9iLxoCYGEb/WWTe0zOLiD54Ak6xjIOsfmQGp6qZDRkc6E1W8I93QLTHUXKObDQlPUARif87PYaQPM=",
+      bip322:
+        "AkcwRAIgErd8/pNZ/sTrmzM5TNtlDGdEbIB50k5UIB/iR6aMlPECIAn4uZ8BozE9iVE789UT0ui4rHAiSwHwf3XeA9f/6JQQASEDaedPyVQ1W296z5u+xbhhwYaFK3WahfklWOQgoCAgR/Q=",
+    },
     publicKeys: [
       "02e21b7318cfbd482bdbb66441420b9018e5b440bf9b0cdedd427626d81f32605b",
       "0369e74fc954355b6f7acf9bbec5b861c186852b759a85f92558e420a0202047f4",
