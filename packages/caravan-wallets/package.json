@@ -46,10 +46,13 @@
     "@caravan/eslint-config": "*",
     "@caravan/multisig": "*",
     "@caravan/typescript-config": "*",
+    "@scure/bip32": "^1.7.0",
+    "@scure/bip39": "^1.6.0",
     "@types/node": "^22.14.1",
     "@types/w3c-web-usb": "^1.0.6",
     "@typescript-eslint/parser": "^5.51.0",
     "babel-plugin-transform-inline-environment-variables": "^0.4.3",
+    "bitcoinjs-message": "^2.2.0",
     "eslint": "^8.34.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-jest": "^23.0.3",
@@ -58,7 +61,8 @@
     "jsdom": "^26.1.0",
     "lint-staged": "^16.2.7",
     "prettier": "^2.8.4",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "wif": "^5.0.0"
   },
   "scripts": {
     "compile-images": "node images/compile.js",
@@ -83,6 +87,7 @@
     "@ledgerhq/hw-transport-webusb": "6.29.8",
     "@trezor/connect-web": "^9.6.0",
     "bignumber.js": "^8.1.1",
+    "bip322-js": "^3.0.0",
     "bitbox-api": "^0.10.0",
     "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",

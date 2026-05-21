@@ -90,6 +90,18 @@ export const VERSION: string = version;
 
 export { MULTISIG_ROOT } from "./constants";
 
+export {
+  MessageSigningError,
+  validateMessage,
+  verifyMessageSignature,
+  MAX_MESSAGE_BYTES,
+} from "./messages";
+export type {
+  Entry,
+  MessageSigningErrorKind,
+  NormalizeSignature,
+} from "./messages";
+
 /**
  * Keystores which support direct interactions.
  */
