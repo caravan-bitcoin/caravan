@@ -38,6 +38,7 @@ import {
   Entry,
   MessageSigningError,
   verifyMessageSignature,
+  wrapSdkError,
 } from "./messages";
 import { MultisigWalletConfig } from "./types";
 
@@ -567,9 +568,14 @@ export class JadeSignMessage extends JadeInteraction {
   async run(): Promise<Entry> {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      // We do not pass useAeSignatures, so the SDK returns a plain
-      // Uint8Array (not the [sig, hostCommitment] tuple used for anti-exfil).
-      const rawSig = (await jade.signMessage(path, this.message)) as Uint8Array;
+      let rawSig: Uint8Array;
+      try {
+        // We do not pass useAeSignatures, so the SDK returns a plain
+        // Uint8Array (not the [sig, hostCommitment] tuple used for anti-exfil).
+        rawSig = (await jade.signMessage(path, this.message)) as Uint8Array;
+      } catch (err) {
+        throw wrapSdkError(JADE, err);
+      }
       if (Array.isArray(rawSig)) {
         throw new MessageSigningError({
           kind: "MalformedResponse",

@@ -55,7 +55,7 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
-import { Entry } from "./messages";
+import { Entry, wrapSdkError } from "./messages";
 import { MultisigWalletPolicy } from "./policy";
 import { DeviceError, MultisigWalletConfig } from "./types";
 
@@ -1342,13 +1342,22 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
         transport.setExchangeTimeout(20000);
 
         let signature: string;
-        if (await this.isLegacyApp()) {
-          const messageHex = Buffer.from(this.message, "utf8").toString("hex");
-          const vrs = await app.signMessage(this.bip32Path, messageHex);
-          signature = normalizeLedgerSignature(vrs);
-        } else {
-          const messageBuf = Buffer.from(this.message, "utf8");
-          signature = await app.signMessage(messageBuf, this.bip32Path);
+        try {
+          if (await this.isLegacyApp()) {
+            const messageHex = Buffer.from(this.message, "utf8").toString(
+              "hex",
+            );
+            const vrs = await app.signMessage(this.bip32Path, messageHex);
+            signature = normalizeLedgerSignature(vrs);
+          } else {
+            const messageBuf = Buffer.from(this.message, "utf8");
+            signature = await app.signMessage(messageBuf, this.bip32Path);
+          }
+        } catch (err) {
+          // Ledger user-rejection surfaces as statusCode 0x6985; transport
+          // drops and timeouts surface as TransportError-shaped errors.
+          // wrapSdkError classifies via statusCode + message heuristics.
+          throw wrapSdkError(LEDGER, err);
         }
 
         return {

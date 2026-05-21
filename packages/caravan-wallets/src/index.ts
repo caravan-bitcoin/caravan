@@ -97,6 +97,7 @@ export {
   MessageSigningError,
   validateMessage,
   verifyMessageSignature,
+  wrapSdkError,
   MAX_MESSAGE_BYTES,
 } from "./messages";
 export type { Entry, MessageSigningErrorKind } from "./messages";

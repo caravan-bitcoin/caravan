@@ -10,6 +10,7 @@ import {
   MessageSigningError,
   validateMessage,
   verifyMessageSignature,
+  wrapSdkError,
 } from "./messages";
 
 import {
@@ -121,6 +122,55 @@ describe("validateMessage", () => {
       expect(e.message).toContain(e.userMessage);
       expect(e.userMessage.startsWith("[")).toBe(false);
     }
+  });
+});
+
+describe("wrapSdkError", () => {
+  it("passes MessageSigningError instances through unchanged", () => {
+    const original = new MessageSigningError({
+      kind: "MalformedResponse",
+      keystore: "LEDGER",
+      userMessage: "garbage from device",
+    });
+    const wrapped = wrapSdkError("LEDGER", original);
+    expect(wrapped).toBe(original);
+  });
+
+  it("classifies Ledger statusCode 0x6985 as DeviceRejected", () => {
+    const err = Object.assign(new Error("CONDITIONS_OF_USE_NOT_SATISFIED"), {
+      statusCode: 0x6985,
+    });
+    const wrapped = wrapSdkError("LEDGER", err);
+    expect(wrapped.kind).toBe("DeviceRejected");
+    expect(wrapped.keystore).toBe("LEDGER");
+    expect(wrapped.cause).toBe(err);
+  });
+
+  it("classifies cancellation-shaped messages as DeviceRejected", () => {
+    for (const msg of [
+      "User cancelled",
+      "Action rejected by user",
+      "denied",
+      "Aborted by user",
+      "user abort",
+    ]) {
+      const wrapped = wrapSdkError("TREZOR", new Error(msg));
+      expect(wrapped.kind).toBe("DeviceRejected");
+    }
+  });
+
+  it("classifies anything else as TransportError", () => {
+    const err = new Error("USB device unplugged");
+    const wrapped = wrapSdkError("JADE", err);
+    expect(wrapped.kind).toBe("TransportError");
+    expect(wrapped.userMessage).toBe("USB device unplugged");
+    expect(wrapped.cause).toBe(err);
+  });
+
+  it("handles non-Error throws by stringifying", () => {
+    const wrapped = wrapSdkError("BITBOX", "raw string thrown");
+    expect(wrapped.kind).toBe("TransportError");
+    expect(wrapped.userMessage).toBe("raw string thrown");
   });
 });
 

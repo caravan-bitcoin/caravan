@@ -99,6 +99,54 @@ export function validateMessage(message: string, keystore: string): void {
   }
 }
 
+/**
+ * Heuristic classifier for SDK errors raised inside SignMessage.run().
+ * Maps anything that looks like user-rejection into DeviceRejected;
+ * everything else (transport drops, USB timeouts, library bugs) goes
+ * to TransportError. MessageSigningError instances pass through
+ * unchanged so MalformedResponse / MalformedRequest from the keystore
+ * layer don't get clobbered into TransportError when they bubble up
+ * through the same try/catch.
+ *
+ * The classifier is intentionally lenient: each SDK reports rejection
+ * differently (Ledger statusCode 0x6985, Trezor "Cancelled" payload,
+ * BitBox "user abort", Jade ".. rejected"), and we'd rather over-tag
+ * a transport error as DeviceRejected than the reverse — a "your
+ * device rejected this" UI string still makes sense to a user who
+ * had their USB cable unplugged, but a "communication failed" string
+ * is confusing to a user who just hit the X button on their device.
+ */
+export function wrapSdkError(
+  keystore: string,
+  err: unknown,
+): MessageSigningError {
+  if (err instanceof MessageSigningError) {
+    return err;
+  }
+  const errObj = err as { message?: unknown; statusCode?: unknown };
+  const rawMessage =
+    typeof errObj.message === "string" ? errObj.message : String(err);
+  const statusCode =
+    typeof errObj.statusCode === "number" ? errObj.statusCode : null;
+  const lower = rawMessage.toLowerCase();
+  const looksLikeRejection =
+    statusCode === 0x6985 ||
+    lower.includes("cancel") ||
+    lower.includes("reject") ||
+    lower.includes("denied") ||
+    lower.includes("declined") ||
+    lower.includes("aborted by user") ||
+    lower.includes("user abort");
+  return new MessageSigningError({
+    kind: looksLikeRejection ? "DeviceRejected" : "TransportError",
+    keystore,
+    userMessage: looksLikeRejection
+      ? "Signing was rejected on the device."
+      : rawMessage || "Communication with the device failed.",
+    cause: err,
+  });
+}
+
 export function verifyMessageSignature(args: {
   message: string;
   signature: string;

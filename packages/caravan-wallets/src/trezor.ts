@@ -65,7 +65,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { Entry } from "./messages";
+import { Entry, wrapSdkError } from "./messages";
 
 /**
  * What's going on with this TrezorConnect import?
@@ -1148,6 +1148,20 @@ export class TrezorSignMessage extends TrezorInteraction {
       signature: payload.signature,
       expectedPubkey: this.expectedPubkey,
     };
+  }
+
+  /**
+   * Override the base class's run() so that cancellations and transport
+   * failures surface as MessageSigningError (DeviceRejected /
+   * TransportError) rather than the raw `Error(result.payload.error)`
+   * the base class would otherwise throw.
+   */
+  async run(): Promise<Entry> {
+    try {
+      return await super.run();
+    } catch (err) {
+      throw wrapSdkError(TREZOR, err);
+    }
   }
 }
 

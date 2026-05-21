@@ -70,6 +70,45 @@ describe("BitBoxSignMessage", () => {
     await expect(interaction.run()).rejects.toThrowError(MessageSigningError);
   });
 
+  it("run() wraps SDK 'user abort' as DeviceRejected", async () => {
+    const interaction = makeInteraction();
+    const mockBitBox = {
+      btcSignMessage: vi
+        .fn()
+        .mockRejectedValue(new Error("user abort during signing")),
+    };
+    vi.spyOn(interaction, "withDevice").mockImplementation(
+      async (cb: any) => cb(mockBitBox),
+    );
+    try {
+      await interaction.run();
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MessageSigningError);
+      expect((err as MessageSigningError).kind).toBe("DeviceRejected");
+      expect((err as MessageSigningError).keystore).toBe("bitbox");
+    }
+  });
+
+  it("run() wraps unrelated SDK errors as TransportError", async () => {
+    const interaction = makeInteraction();
+    const mockBitBox = {
+      btcSignMessage: vi
+        .fn()
+        .mockRejectedValue(new Error("device disconnected mid-flight")),
+    };
+    vi.spyOn(interaction, "withDevice").mockImplementation(
+      async (cb: any) => cb(mockBitBox),
+    );
+    try {
+      await interaction.run();
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MessageSigningError);
+      expect((err as MessageSigningError).kind).toBe("TransportError");
+    }
+  });
+
   it("uses 'tbtc' coin code on testnet", async () => {
     const interaction = new BitBoxSignMessage({
       network: Network.TESTNET,

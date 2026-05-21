@@ -28,7 +28,7 @@ import {
   INFO,
   DirectKeystoreInteraction,
 } from "./interaction";
-import { Entry, MessageSigningError } from "./messages";
+import { Entry, MessageSigningError, wrapSdkError } from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 
@@ -622,14 +622,19 @@ export class BitBoxSignMessage extends BitBoxInteraction {
 
   async run(): Promise<Entry> {
     return await this.withDevice(async (pairedBitBox) => {
-      const result = await pairedBitBox.btcSignMessage(
-        convertNetwork(this.network),
-        {
-          scriptConfig: { simpleType: "p2wpkh" },
-          keypath: this.bip32Path,
-        },
-        new TextEncoder().encode(this.message),
-      );
+      let result: Awaited<ReturnType<typeof pairedBitBox.btcSignMessage>>;
+      try {
+        result = await pairedBitBox.btcSignMessage(
+          convertNetwork(this.network),
+          {
+            scriptConfig: { simpleType: "p2wpkh" },
+            keypath: this.bip32Path,
+          },
+          new TextEncoder().encode(this.message),
+        );
+      } catch (err) {
+        throw wrapSdkError(BITBOX, err);
+      }
 
       if (
         !result.electrumSig65 ||

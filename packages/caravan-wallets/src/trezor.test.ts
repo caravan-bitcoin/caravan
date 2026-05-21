@@ -9,6 +9,7 @@ import TrezorConnect from "@trezor/connect-web";
 import { ECPair, payments } from "bitcoinjs-lib";
 
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
+import { MessageSigningError } from "./messages";
 import {
   trezorCoin,
   TrezorInteraction,
@@ -509,6 +510,45 @@ describe("trezor", () => {
         signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
         expectedPubkey: EXPECTED_PUBKEY,
       });
+    });
+
+    it("run() wraps Trezor 'Cancelled' as DeviceRejected", async () => {
+      const interaction = interactionBuilder();
+      const signSpy = vi
+        .spyOn(TrezorConnect, "signMessage")
+        .mockResolvedValueOnce({
+          success: false,
+          payload: { error: "Cancelled" },
+        } as any);
+      try {
+        await interaction.run();
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
+        expect((err as MessageSigningError).keystore).toBe("trezor");
+      } finally {
+        signSpy.mockRestore();
+      }
+    });
+
+    it("run() wraps non-cancellation failures as TransportError", async () => {
+      const interaction = interactionBuilder();
+      const signSpy = vi
+        .spyOn(TrezorConnect, "signMessage")
+        .mockResolvedValueOnce({
+          success: false,
+          payload: { error: "Device disconnected during action" },
+        } as any);
+      try {
+        await interaction.run();
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        expect((err as MessageSigningError).kind).toBe("TransportError");
+      } finally {
+        signSpy.mockRestore();
+      }
     });
   });
 });

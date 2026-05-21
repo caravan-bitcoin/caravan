@@ -530,6 +530,45 @@ describe("Jade", () => {
         );
       });
 
+      it("wraps SDK rejection-shaped errors as DeviceRejected", async () => {
+        mockJade.signMessage.mockRejectedValueOnce(
+          new Error("Action rejected by user")
+        );
+        const interaction = new JadeSignMessage({
+          bip32Path: "m/44'/0'/0'",
+          message: "hello",
+          expectedPubkey: DUMMY_PUBKEY,
+          dependencies,
+        });
+        try {
+          await interaction.run();
+          throw new Error("expected throw");
+        } catch (err) {
+          expect(err).toBeInstanceOf(MessageSigningError);
+          expect((err as MessageSigningError).kind).toBe("DeviceRejected");
+          expect((err as MessageSigningError).keystore).toBe("jade");
+        }
+      });
+
+      it("wraps unrelated SDK errors as TransportError", async () => {
+        mockJade.signMessage.mockRejectedValueOnce(
+          new Error("BLE connection dropped")
+        );
+        const interaction = new JadeSignMessage({
+          bip32Path: "m/44'/0'/0'",
+          message: "hello",
+          expectedPubkey: DUMMY_PUBKEY,
+          dependencies,
+        });
+        try {
+          await interaction.run();
+          throw new Error("expected throw");
+        } catch (err) {
+          expect(err).toBeInstanceOf(MessageSigningError);
+          expect((err as MessageSigningError).kind).toBe("TransportError");
+        }
+      });
+
       it("rejects a sig that does not recover to expectedPubkey under either v", async () => {
         const path = "m/44'/0'/0'";
         const seed = mnemonicToSeedSync(BIP39_PHRASE);

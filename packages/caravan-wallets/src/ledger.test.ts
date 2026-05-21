@@ -13,6 +13,7 @@ import {
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
 } from "./ledger";
+import { MessageSigningError } from "./messages";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {
@@ -381,6 +382,57 @@ describe("ledger", () => {
         Buffer.from(s32, "hex"),
       ]).toString("base64");
       expect(entry.signature).toBe(expectedSig);
+    });
+
+    it("legacy Bitcoin app: SDK statusCode 0x6985 wraps as DeviceRejected", async () => {
+      const interaction = interactionBuilder();
+      const rejectErr = Object.assign(
+        new Error("CONDITIONS_OF_USE_NOT_SATISFIED"),
+        { statusCode: 0x6985 }
+      );
+      const mockApp = {
+        signMessage: vi.fn().mockRejectedValue(rejectErr),
+      };
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
+      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
+        callback(mockApp, {
+          setExchangeTimeout: () => {},
+          close: () => {},
+        })
+      );
+
+      try {
+        await interaction.run();
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        expect((err as MessageSigningError).kind).toBe("DeviceRejected");
+        expect((err as MessageSigningError).keystore).toBe("ledger");
+      }
+    });
+
+    it("legacy Bitcoin app: unrelated SDK errors wrap as TransportError", async () => {
+      const interaction = interactionBuilder();
+      const mockApp = {
+        signMessage: vi.fn().mockRejectedValue(new Error("USB disconnected")),
+      };
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(true);
+      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
+        callback(mockApp, {
+          setExchangeTimeout: () => {},
+          close: () => {},
+        })
+      );
+
+      try {
+        await interaction.run();
+        throw new Error("expected throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MessageSigningError);
+        expect((err as MessageSigningError).kind).toBe("TransportError");
+      }
     });
 
     it("v2 Bitcoin app: run() uses AppClient.signMessage(message, path) and passes through base64", async () => {
