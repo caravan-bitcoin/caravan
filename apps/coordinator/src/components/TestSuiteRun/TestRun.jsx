@@ -36,6 +36,7 @@ import {
   ColdcardJSONReader,
   ColdcardPSBTReader,
   ColdcardSigningButtons,
+  ColdcardTextReader,
 } from "../Coldcard";
 import "./TestRun.css";
 import { downloadFile } from "../../utils";
@@ -87,6 +88,16 @@ class TestRunBase extends React.Component {
     downloadFile(body, filename);
   };
 
+  handleDownloadColdcardMessageRequestClick = () => {
+    const { test } = this.props;
+    const body = test.interaction().request();
+    const slug = test
+      .name()
+      .replace(/[^a-z0-9]+/gi, "-")
+      .toLowerCase();
+    downloadFile(body, `${moment().format("HHmm")}-${slug}.txt`);
+  };
+
   handledDownloadWalletConfigClick = () => {
     const { test } = this.props;
     const nameBits = test.name().split(" ");
@@ -129,17 +140,40 @@ Derivation: ${test.params.derivation}
           />
           <CardContent>
             {test.description()}
-            {keystore.type === COLDCARD && !test.unsignedTransaction && (
-              <Box align="center">
-                <ColdcardJSONReader
-                  interaction={test.interaction()}
-                  onReceive={this.startParse}
-                  onStart={this.start}
-                  setError={this.reset}
-                  isTest
-                />
-              </Box>
-            )}
+            {keystore.type === COLDCARD &&
+              !test.unsignedTransaction &&
+              test.interaction().workflow?.[0] !== "request" && (
+                <Box align="center">
+                  <ColdcardJSONReader
+                    interaction={test.interaction()}
+                    onReceive={this.startParse}
+                    onStart={this.start}
+                    setError={this.reset}
+                    isTest
+                  />
+                </Box>
+              )}
+            {keystore.type === COLDCARD &&
+              !test.unsignedTransaction &&
+              test.interaction().workflow?.[0] === "request" && (
+                <Box align="center" style={{ marginTop: "2em" }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={this.handleDownloadColdcardMessageRequestClick}
+                    style={{ marginBottom: "1em" }}
+                  >
+                    Download Request File
+                  </Button>
+                  <ColdcardTextReader
+                    interaction={test.interaction()}
+                    onReceive={this.startParse}
+                    onStart={this.start}
+                    setError={this.reset}
+                    isTest
+                  />
+                </Box>
+              )}
             {keystore.type === COLDCARD && test.unsignedTransaction && (
               <Box align="center" style={{ marginTop: "2em" }}>
                 <ColdcardSigningButtons
