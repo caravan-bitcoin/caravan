@@ -28,6 +28,11 @@ import {
   INFO,
   DirectKeystoreInteraction,
 } from "./interaction";
+import {
+  Entry,
+  MessageSigningError,
+  validateMessage,
+} from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 
@@ -558,6 +563,98 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
         return sigArray;
       }
       return signedPsbt;
+    });
+  }
+}
+
+/**
+ * BitBox sign-message interaction.
+ *
+ * Per BitBox's user-facing doc
+ * (https://support.bitbox.swiss/en_US/sign-bitcoin-message-bitbox02),
+ * message signing is restricted to native-SegWit (P2WPKH, `bc1q...`)
+ * addresses. We sign at the cosigner's per-address path with a P2WPKH
+ * single-key script config — the same "sign as cosigner pubkey" pattern
+ * SeedSigner adopted (see SeedSigner PR #874).
+ *
+ * The bitbox-api `btcSignMessage` returns
+ * `{ sig, recid, electrumSig65 }`. The `electrumSig65` is already the
+ * canonical 65-byte BIP-137 wire form (header + r + s); caravan
+ * base64-encodes it directly. BitBox's header byte uses the Electrum
+ * convention; caravan's loose-mode verifier tolerates any header.
+ */
+export class BitBoxSignMessage extends BitBoxInteraction {
+  network: BitcoinNetwork;
+
+  bip32Path: string;
+
+  message: string;
+
+  expectedPubkey: string;
+
+  constructor({
+    showPairingCode,
+    network,
+    bip32Path,
+    message,
+    expectedPubkey,
+  }: {
+    showPairingCode?: TShowPairingCode;
+    network: BitcoinNetwork;
+    bip32Path: string;
+    message: string;
+    expectedPubkey: string;
+  }) {
+    super({ showPairingCode });
+
+    validateMessage(message, BITBOX);
+
+    this.network = network;
+    this.bip32Path = bip32Path;
+    this.message = message;
+    this.expectedPubkey = expectedPubkey;
+  }
+
+  messages() {
+    const messages = super.messages();
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      text: "Confirm the message on your BitBox device.",
+      code: "bitbox.sign_message",
+    });
+    return messages;
+  }
+
+  async run(): Promise<Entry> {
+    return await this.withDevice(async (pairedBitBox) => {
+      const result = await pairedBitBox.btcSignMessage(
+        convertNetwork(this.network),
+        {
+          scriptConfig: { simpleType: "p2wpkh" },
+          keypath: this.bip32Path,
+        },
+        new TextEncoder().encode(this.message),
+      );
+
+      if (
+        !result.electrumSig65 ||
+        result.electrumSig65.length !== 65
+      ) {
+        throw new MessageSigningError({
+          kind: "MalformedResponse",
+          keystore: BITBOX,
+          userMessage: `Expected 65-byte electrumSig65 from BitBox, got ${
+            result.electrumSig65?.length ?? 0
+          } bytes.`,
+        });
+      }
+
+      return {
+        bip32Path: this.bip32Path,
+        signature: Buffer.from(result.electrumSig65).toString("base64"),
+        expectedPubkey: this.expectedPubkey,
+      };
     });
   }
 }

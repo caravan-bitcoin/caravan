@@ -32,6 +32,7 @@ import {
   BitBoxConfirmMultisigAddress,
   BitBoxRegisterWalletPolicy,
   BitBoxSignMultisigTransaction,
+  BitBoxSignMessage,
 } from "./bitbox";
 import {
   COLDCARD,
@@ -73,6 +74,7 @@ import {
   LedgerRegisterWalletPolicy,
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
+import { MessageSigningError } from "./messages";
 import {
   TREZOR,
   TrezorGetMetadata,
@@ -231,10 +233,10 @@ export function ExportPublicKey({
  * returns a canonical {@link Entry} record (BIP-137 wire form).
  *
  * **Supported keystores:** Ledger (legacy + v2 Bitcoin apps), Trezor,
- * Jade. Each implements BIP-137 per its firmware's native capability.
- * Future BIP-322 support will land as separate per-keystore interaction
- * classes — not as a runtime flag on these classes — once devices
- * implement the protocol.
+ * Jade, BitBox. Each implements BIP-137 per its firmware's native
+ * capability. Future BIP-322 support will land as separate per-keystore
+ * interaction classes — not as a runtime flag on these classes — once
+ * devices implement the protocol.
  */
 export function SignMessage({
   keystore,
@@ -250,6 +252,21 @@ export function SignMessage({
   expectedPubkey: string;
 }) {
   switch (keystore) {
+    case BITBOX:
+      if (!network) {
+        throw new MessageSigningError({
+          kind: "MalformedRequest",
+          keystore: BITBOX,
+          userMessage:
+            "BitBox message signing requires `network` to select the coin code.",
+        });
+      }
+      return new BitBoxSignMessage({
+        network,
+        bip32Path,
+        message,
+        expectedPubkey,
+      });
     case JADE:
       return new JadeSignMessage({
         bip32Path,

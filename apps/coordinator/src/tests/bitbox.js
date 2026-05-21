@@ -5,9 +5,11 @@ import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";
 import addressTests from "./addresses";
 import registrationTests from "./registration";
+import { messageSigningTests } from "./messageSigning";
 
 export default publicKeyTests(BITBOX)
   .concat(extendedPublicKeyTests(BITBOX))
   .concat(signingTests(BITBOX))
   .concat(addressTests(BITBOX))
-  .concat(registrationTests(BITBOX));
+  .concat(registrationTests(BITBOX))
+  .concat(messageSigningTests(BITBOX));
