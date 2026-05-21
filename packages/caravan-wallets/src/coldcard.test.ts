@@ -1,4 +1,5 @@
 import { Network, TEST_FIXTURES, ROOT_FINGERPRINT } from "@caravan/bitcoin";
+import { MessageSigningError } from "@caravan/messages";
 
 import {
   ColdcardExportPublicKey,
@@ -9,7 +10,6 @@ import {
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
 import { INFO, PENDING, ACTIVE, ERROR } from "./interaction";
-import { MessageSigningError } from "./messages";
 
 const { multisigs, transactions } = TEST_FIXTURES;
 

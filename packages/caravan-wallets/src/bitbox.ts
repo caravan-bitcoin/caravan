@@ -15,6 +15,7 @@ import {
   ExtendedPublicKey,
   MultisigAddressType,
 } from "@caravan/bitcoin";
+import { type Entry, MessageSigningError } from "@caravan/messages";
 import {
   BtcCoin,
   BtcMultisigScriptType,
@@ -22,13 +23,13 @@ import {
   PairedBitBox,
 } from 'bitbox-api';
 
+import { wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
   INFO,
   DirectKeystoreInteraction,
 } from "./interaction";
-import { Entry, MessageSigningError, wrapSdkError } from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 

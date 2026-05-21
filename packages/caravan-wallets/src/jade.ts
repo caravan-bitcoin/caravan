@@ -14,6 +14,11 @@ import {
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
 import {
+  type Entry,
+  MessageSigningError,
+  verifyMessageSignature,
+} from "@caravan/messages";
+import {
   Jade,
   JadeInterface,
   SerialTransport,
@@ -28,18 +33,13 @@ import {
   JadeHttpRequestFunction,
 } from "jadets";
 
+import { wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
   ACTIVE,
   INFO,
 } from "./interaction";
-import {
-  Entry,
-  MessageSigningError,
-  verifyMessageSignature,
-  wrapSdkError,
-} from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 export const JADE = "jade";

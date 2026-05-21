@@ -1,0 +1,61 @@
+{
+  "name": "@caravan/messages",
+  "version": "0.0.0",
+  "author": "unchained capital",
+  "license": "MIT",
+  "private": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
+  "files": [
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/index.d.ts"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "description": "Protocol primitives for signing and verifying Bitcoin messages against a known cosigner pubkey — Entry shape, validation, BIP-137 / BIP-322 loose-mode verifier.",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "npm run build -- --watch",
+    "lint": "eslint src/",
+    "ci": "npm run lint && npm run test",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest watch",
+    "generate-fixtures": "tsx scripts/generate-fixtures.ts"
+  },
+  "dependencies": {
+    "bip322-js": "^3.0.0"
+  },
+  "devDependencies": {
+    "@caravan/bitcoin": "*",
+    "@caravan/eslint-config": "*",
+    "@caravan/typescript-config": "*",
+    "@scure/bip32": "^1.7.0",
+    "@scure/bip39": "^1.6.0",
+    "@types/node": "^22.14.1",
+    "bitcoinjs-message": "^2.0.0",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0",
+    "wif": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caravan-bitcoin/caravan",
+    "directory": "packages/messages"
+  }
+}

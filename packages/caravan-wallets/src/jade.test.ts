@@ -8,6 +8,10 @@ import {
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
+import {
+  MessageSigningError,
+  verifyMessageSignature,
+} from "@caravan/messages";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -32,10 +36,6 @@ import {
   walletConfigToJadeDescriptor,
   getSignatureArray,
 } from "./jade";
-import {
-  MessageSigningError,
-  verifyMessageSignature,
-} from "./messages";
 import { MultisigWalletConfig } from "./types";
 
 const BIP39_PHRASE =

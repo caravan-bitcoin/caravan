@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { Network } from "@caravan/bitcoin";
+import { MessageSigningError, validateMessage } from "@caravan/messages";
 import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
@@ -75,7 +76,6 @@ import {
   LedgerRegisterWalletPolicy,
   LedgerV2SignMultisigTransaction,
 } from "./ledger";
-import { MessageSigningError, validateMessage } from "./messages";
 import {
   TREZOR,
   TrezorGetMetadata,
@@ -93,14 +93,7 @@ export const VERSION: string = version;
 
 export { MULTISIG_ROOT } from "./constants";
 
-export {
-  MessageSigningError,
-  validateMessage,
-  verifyMessageSignature,
-  wrapSdkError,
-  MAX_MESSAGE_BYTES,
-} from "./messages";
-export type { Entry, MessageSigningErrorKind } from "./messages";
+export { wrapSdkError } from "./errors";
 
 /**
  * Keystores which support direct interactions.

@@ -42,6 +42,7 @@ import {
   extractFingerprintFromBip380Descriptor,
   Network,
 } from "@caravan/bitcoin";
+import type { Entry } from "@caravan/messages";
 import { translatePSBT } from "@caravan/psbt";
 import {
   GetPublicKey,
@@ -58,6 +59,7 @@ import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import { MULTISIG_ROOT } from "./constants";
+import { wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -65,7 +67,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { Entry, wrapSdkError } from "./messages";
+
 
 /**
  * What's going on with this TrezorConnect import?

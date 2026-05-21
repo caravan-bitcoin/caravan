@@ -1,4 +1,5 @@
 import { TEST_FIXTURES, ROOT_FINGERPRINT, Network } from "@caravan/bitcoin";
+import { MessageSigningError } from "@caravan/messages";
 import { BraidDetails, braidDetailsToWalletConfig } from "@caravan/multisig";
 
 import { PENDING, ACTIVE, INFO, WARNING, ERROR } from "./interaction";
@@ -13,7 +14,6 @@ import {
   LedgerV2SignMultisigTransaction,
   LedgerSignatures,
 } from "./ledger";
-import { MessageSigningError } from "./messages";
 
 function itHasStandardMessages(interactionBuilder) {
   it("has a message about ensuring your device is plugged in", () => {

@@ -1,8 +1,8 @@
 import { Network } from "@caravan/bitcoin";
+import { MessageSigningError } from "@caravan/messages";
 import { describe, it, expect, vi } from "vitest";
 
 import { BitBoxSignMessage } from "./bitbox";
-import { MessageSigningError } from "./messages";
 
 const EXPECTED_PUBKEY =
   "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";

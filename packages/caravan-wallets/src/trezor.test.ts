@@ -5,11 +5,11 @@ import {
   networkData,
   Network,
 } from "@caravan/bitcoin";
+import { MessageSigningError } from "@caravan/messages";
 import TrezorConnect from "@trezor/connect-web";
 import { ECPair, payments } from "bitcoinjs-lib";
 
 import { PENDING, ACTIVE, INFO, ERROR } from "./interaction";
-import { MessageSigningError } from "./messages";
 import {
   trezorCoin,
   TrezorInteraction,

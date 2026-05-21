@@ -23,6 +23,7 @@ import {
   P2WSH,
   BitcoinNetwork,
 } from "@caravan/bitcoin";
+import { type Entry, MessageSigningError } from "@caravan/messages";
 import {
   convertLegacyInput,
   convertLegacyOutput,
@@ -36,7 +37,6 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
-import { Entry, MessageSigningError } from "./messages";
 import { WalletConfigKeyDerivation } from "./types";
 
 export const COLDCARD = "coldcard";

@@ -1,6 +1,7 @@
 import React from "react";
 import { TEST_FIXTURES, deriveChildPublicKey } from "@caravan/bitcoin";
-import { SignMessage, verifyMessageSignature } from "@caravan/wallets";
+import { verifyMessageSignature } from "@caravan/messages";
+import { SignMessage } from "@caravan/wallets";
 import { Box, Table, TableBody, TableRow, TableCell } from "@mui/material";
 
 import Test from "./Test";

@@ -37,6 +37,7 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
+import type { Entry } from "@caravan/messages";
 import { LegacyInput } from "@caravan/multisig";
 import { translatePSBT } from "@caravan/psbt";
 import LedgerBtc from "@ledgerhq/hw-app-btc";
@@ -47,6 +48,7 @@ import TransportU2F from "@ledgerhq/hw-transport-u2f";
 import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
 
+import { wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
@@ -55,7 +57,6 @@ import {
   ERROR,
   DirectKeystoreInteraction,
 } from "./interaction";
-import { Entry, wrapSdkError } from "./messages";
 import { MultisigWalletPolicy } from "./policy";
 import { DeviceError, MultisigWalletConfig } from "./types";
 
