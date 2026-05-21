@@ -12,7 +12,7 @@ type FixtureEntry = {
   description: string;
   bip32Path: string;
   message: string;
-  expectedPubkey: string;
+  pubkey: string;
   unchainedPubkey: string;
   bip137: string;
   bip322: string;
@@ -84,14 +84,14 @@ describe("validateMessage", () => {
 describe("verifyMessageSignature — input validation", () => {
   // Reuses one fixture's pubkey/sig — these tests exercise the verifier's
   // input-shape gate, not the protocol layer.
-  const { expectedPubkey, message, bip137 } = FIXTURES[0];
+  const { pubkey, message, bip137 } = FIXTURES[0];
 
-  it("returns false for non-hex expectedPubkey", () => {
+  it("returns false for non-hex pubkey", () => {
     expect(
       verifyMessageSignature({
         message,
         signature: bip137,
-        expectedPubkey: "not-hex",
+        pubkey: "not-hex",
       }),
     ).toBe(false);
   });
@@ -101,7 +101,7 @@ describe("verifyMessageSignature — input validation", () => {
       verifyMessageSignature({
         message,
         signature: bip137,
-        expectedPubkey: "0123abcd",
+        pubkey: "0123abcd",
       }),
     ).toBe(false);
   });
@@ -111,7 +111,7 @@ describe("verifyMessageSignature — input validation", () => {
       verifyMessageSignature({
         message,
         signature: "not-base64-at-all-!!!",
-        expectedPubkey,
+        pubkey,
       }),
     ).toBe(false);
   });
@@ -129,7 +129,7 @@ describe("verifyMessageSignature — fixture round-trip", () => {
           verifyMessageSignature({
             message: fix.message,
             signature: fix.bip137,
-            expectedPubkey: fix.expectedPubkey,
+            pubkey: fix.pubkey,
           }),
         ).toBe(true);
       });
@@ -139,7 +139,7 @@ describe("verifyMessageSignature — fixture round-trip", () => {
           verifyMessageSignature({
             message: fix.message,
             signature: fix.bip322,
-            expectedPubkey: fix.expectedPubkey,
+            pubkey: fix.pubkey,
           }),
         ).toBe(true);
       });
@@ -149,7 +149,7 @@ describe("verifyMessageSignature — fixture round-trip", () => {
           verifyMessageSignature({
             message: fix.message,
             signature: fix.bip137,
-            expectedPubkey: fix.unchainedPubkey,
+            pubkey: fix.unchainedPubkey,
           }),
         ).toBe(false);
       });
@@ -159,7 +159,7 @@ describe("verifyMessageSignature — fixture round-trip", () => {
           verifyMessageSignature({
             message: `${fix.message} — tampered`,
             signature: fix.bip137,
-            expectedPubkey: fix.expectedPubkey,
+            pubkey: fix.pubkey,
           }),
         ).toBe(false);
       });
@@ -172,7 +172,7 @@ describe("verifyMessageSignature — fixture round-trip", () => {
           verifyMessageSignature({
             message: fix.message,
             signature: tampered.toString("base64"),
-            expectedPubkey: fix.expectedPubkey,
+            pubkey: fix.pubkey,
           }),
         ).toBe(false);
       });

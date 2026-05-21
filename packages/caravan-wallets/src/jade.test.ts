@@ -522,7 +522,7 @@ describe("Jade", () => {
         const interaction = new JadeSignMessage({
           bip32Path: "m/44'/0'/0'",
           message: "hello",
-          expectedPubkey: DUMMY_PUBKEY,
+          pubkey: DUMMY_PUBKEY,
           dependencies,
         });
         await expect(interaction.run()).rejects.toThrowError(
@@ -537,7 +537,7 @@ describe("Jade", () => {
         const interaction = new JadeSignMessage({
           bip32Path: "m/44'/0'/0'",
           message: "hello",
-          expectedPubkey: DUMMY_PUBKEY,
+          pubkey: DUMMY_PUBKEY,
           dependencies,
         });
         try {
@@ -557,7 +557,7 @@ describe("Jade", () => {
         const interaction = new JadeSignMessage({
           bip32Path: "m/44'/0'/0'",
           message: "hello",
-          expectedPubkey: DUMMY_PUBKEY,
+          pubkey: DUMMY_PUBKEY,
           dependencies,
         });
         try {
@@ -569,7 +569,7 @@ describe("Jade", () => {
         }
       });
 
-      it("rejects a sig that does not recover to expectedPubkey under either v", async () => {
+      it("rejects a sig that does not recover to pubkey under either v", async () => {
         const path = "m/44'/0'/0'";
         const seed = mnemonicToSeedSync(BIP39_PHRASE);
         const signingNode = HDKey.fromMasterSeed(seed).derive(path);
@@ -590,7 +590,7 @@ describe("Jade", () => {
           message,
           // sign with `signingNode` but claim `wrongNode` was the signer;
           // neither v candidate should recover to wrongPub.
-          expectedPubkey: wrongPub.toString("hex"),
+          pubkey: wrongPub.toString("hex"),
           dependencies,
         });
 
@@ -599,13 +599,13 @@ describe("Jade", () => {
         );
       });
 
-      it("signs and returns Entry with a canonical sig that verifies against expectedPubkey", async () => {
+      it("signs and returns Entry with a canonical sig that verifies against pubkey", async () => {
         const path = "m/44'/0'/0'";
         const seed = mnemonicToSeedSync(BIP39_PHRASE);
         const node = HDKey.fromMasterSeed(seed).derive(path);
         const priv = Buffer.from(node.privateKey as Uint8Array);
         const pub = Buffer.from(node.publicKey as Uint8Array);
-        const expectedPubkey = pub.toString("hex");
+        const pubkey = pub.toString("hex");
         const message = "Hello, Jade!";
 
         // Synthesize a Jade-style raw EC sig (r||s, no header byte) by
@@ -622,20 +622,20 @@ describe("Jade", () => {
         const interaction = new JadeSignMessage({
           bip32Path: path,
           message,
-          expectedPubkey,
+          pubkey,
           dependencies,
         });
 
         const entry = await interaction.run();
 
         expect(entry.bip32Path).toBe(path);
-        expect(entry.expectedPubkey).toBe(expectedPubkey);
+        expect(entry.pubkey).toBe(pubkey);
         expect(typeof entry.signature).toBe("string");
         expect(
           verifyMessageSignature({
             message,
             signature: entry.signature,
-            expectedPubkey: entry.expectedPubkey,
+            pubkey: entry.pubkey,
           }),
         ).toBe(true);
         expect(mockJade.signMessage).toHaveBeenCalledWith([44, 0, 0], message);

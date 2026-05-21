@@ -793,7 +793,7 @@ describe("ColdcardSignMessage", () => {
     return new ColdcardSignMessage({
       bip32Path: BIP32_PATH,
       message: MESSAGE,
-      expectedPubkey: EXPECTED_PUBKEY,
+      pubkey: EXPECTED_PUBKEY,
     });
   }
 
@@ -822,7 +822,7 @@ describe("ColdcardSignMessage", () => {
     expect(entry).toEqual({
       bip32Path: BIP32_PATH,
       signature: SAMPLE_SIG,
-      expectedPubkey: EXPECTED_PUBKEY,
+      pubkey: EXPECTED_PUBKEY,
     });
   });
 

@@ -587,27 +587,27 @@ export class BitBoxSignMessage extends BitBoxInteraction {
 
   message: string;
 
-  expectedPubkey: string;
+  pubkey: string;
 
   constructor({
     showPairingCode,
     network,
     bip32Path,
     message,
-    expectedPubkey,
+    pubkey,
   }: {
     showPairingCode?: TShowPairingCode;
     network: BitcoinNetwork;
     bip32Path: string;
     message: string;
-    expectedPubkey: string;
+    pubkey: string;
   }) {
     super({ showPairingCode });
 
     this.network = network;
     this.bip32Path = bip32Path;
     this.message = message;
-    this.expectedPubkey = expectedPubkey;
+    this.pubkey = pubkey;
   }
 
   messages() {
@@ -653,7 +653,7 @@ export class BitBoxSignMessage extends BitBoxInteraction {
       return {
         bip32Path: this.bip32Path,
         signature: Buffer.from(result.electrumSig65).toString("base64"),
-        expectedPubkey: this.expectedPubkey,
+        pubkey: this.pubkey,
       };
     });
   }

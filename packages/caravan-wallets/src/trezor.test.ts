@@ -468,7 +468,7 @@ describe("trezor", () => {
         network: Network.MAINNET,
         bip32Path: bip32Path || _bip32Path,
         message: message || "hello world",
-        expectedPubkey: EXPECTED_PUBKEY,
+        pubkey: EXPECTED_PUBKEY,
       });
     }
 
@@ -480,7 +480,7 @@ describe("trezor", () => {
         bip32Path: "m/foo",
         network: Network.MAINNET,
         message: "hello world",
-        expectedPubkey: EXPECTED_PUBKEY,
+        pubkey: EXPECTED_PUBKEY,
       });
       expect(
         interaction.hasMessagesFor({
@@ -508,7 +508,7 @@ describe("trezor", () => {
       expect(entry).toEqual({
         bip32Path: _bip32Path,
         signature: "AfTzwdNDpvK8YjfYG9KOh4nqLnTxRZ2WqYnaQ/c8ku6gZdHQqOzBkjANE",
-        expectedPubkey: EXPECTED_PUBKEY,
+        pubkey: EXPECTED_PUBKEY,
       });
     });
 

@@ -236,13 +236,13 @@ export function SignMessage({
   network,
   bip32Path,
   message,
-  expectedPubkey,
+  pubkey,
 }: {
   keystore: KEYSTORE_TYPES;
   network?: Network | null;
   bip32Path: string;
   message: string;
-  expectedPubkey: string;
+  pubkey: string;
 }) {
   validateMessage(message, keystore);
   switch (keystore) {
@@ -259,19 +259,19 @@ export function SignMessage({
         network,
         bip32Path,
         message,
-        expectedPubkey,
+        pubkey,
       });
     case COLDCARD:
       return new ColdcardSignMessage({
         bip32Path,
         message,
-        expectedPubkey,
+        pubkey,
       });
     case JADE:
       return new JadeSignMessage({
         bip32Path,
         message,
-        expectedPubkey,
+        pubkey,
       });
     case LEDGER:
     case LEDGER_V2:
@@ -280,14 +280,14 @@ export function SignMessage({
       return new LedgerSignMessage({
         bip32Path,
         message,
-        expectedPubkey,
+        pubkey,
       });
     case TREZOR:
       return new TrezorSignMessage({
         network: network ?? null,
         bip32Path,
         message,
-        expectedPubkey,
+        pubkey,
       });
     default:
       return new UnsupportedInteraction({

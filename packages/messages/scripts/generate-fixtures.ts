@@ -44,7 +44,7 @@ function deriveKeypair(path: string): { priv: Buffer; pub: Buffer } {
 
 const entries = FIXTURES.multisigs.map((fixture, idx) => {
   const { priv, pub } = deriveKeypair(fixture.bip32Path);
-  const expectedPubkey = pub.toString("hex");
+  const pubkey = pub.toString("hex");
   const address = BIP322Address.convertPubKeyIntoAddress(pub, "p2wpkh").mainnet;
   const wifKey = wif.encode({
     version: 0x80,
@@ -57,7 +57,7 @@ const entries = FIXTURES.multisigs.map((fixture, idx) => {
     .toString("base64");
   const bip322 = BIP322Signer.sign(wifKey, address, MESSAGE);
 
-  const unchainedPubkey = fixture.publicKeys.find((pk) => pk !== expectedPubkey);
+  const unchainedPubkey = fixture.publicKeys.find((pk) => pk !== pubkey);
   if (!unchainedPubkey) {
     throw new Error(`fixture ${idx} has no non-open_source pubkey`);
   }
@@ -66,7 +66,7 @@ const entries = FIXTURES.multisigs.map((fixture, idx) => {
     description: fixture.description,
     bip32Path: fixture.bip32Path,
     message: MESSAGE,
-    expectedPubkey,
+    pubkey,
     unchainedPubkey,
     bip137,
     bip322,

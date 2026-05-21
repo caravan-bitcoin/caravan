@@ -478,12 +478,12 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
  * (its firmware exposes the signature without protocol-level conformance
  * to BIP-137 or BIP-322). To produce a canonical BIP-137 sig we have to
  * pick the right recovery byte (`v` in {0, 1}); we do that by trying both
- * candidates and checking which one recovers to `expectedPubkey` via the
+ * candidates and checking which one recovers to `pubkey` via the
  * loose-mode verifier in `messages.ts`. Two ECDSA recoveries is cheap.
  */
 function normalizeJadeSignature(
   rawSig: Uint8Array | string,
-  expectedPubkey: string,
+  pubkey: string,
   message: string,
 ): string {
   const sigBuf =
@@ -512,7 +512,7 @@ function normalizeJadeSignature(
     const matches = verifyMessageSignature({
       message,
       signature: candidate,
-      expectedPubkey,
+      pubkey,
     });
     if (matches) {
       return candidate;
@@ -523,7 +523,7 @@ function normalizeJadeSignature(
     kind: "MalformedResponse",
     keystore: JADE,
     userMessage:
-      "Jade signature does not recover to expectedPubkey under either recovery candidate.",
+      "Jade signature does not recover to pubkey under either recovery candidate.",
   });
 }
 
@@ -543,18 +543,18 @@ export class JadeSignMessage extends JadeInteraction {
 
   message: string;
 
-  expectedPubkey: string;
+  pubkey: string;
 
   constructor({
     bip32Path,
     message,
-    expectedPubkey,
+    pubkey,
     network,
     dependencies,
   }: {
     bip32Path: string;
     message: string;
-    expectedPubkey: string;
+    pubkey: string;
     network?: BitcoinNetwork;
     dependencies?: JadeDependencies;
   }) {
@@ -562,7 +562,7 @@ export class JadeSignMessage extends JadeInteraction {
 
     this.bip32Path = bip32Path;
     this.message = message;
-    this.expectedPubkey = expectedPubkey;
+    this.pubkey = pubkey;
   }
 
   async run(): Promise<Entry> {
@@ -588,10 +588,10 @@ export class JadeSignMessage extends JadeInteraction {
         bip32Path: this.bip32Path,
         signature: normalizeJadeSignature(
           rawSig,
-          this.expectedPubkey,
+          this.pubkey,
           this.message,
         ),
-        expectedPubkey: this.expectedPubkey,
+        pubkey: this.pubkey,
       };
     });
   }

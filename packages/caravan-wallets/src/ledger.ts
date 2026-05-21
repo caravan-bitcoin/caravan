@@ -1252,19 +1252,13 @@ function normalizeLedgerSignature(vrs: {
 /**
  * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
  * `bip32Path` on a Ledger device. Returns a canonical `Entry`.
- *
- * BIP-322 is intentionally not supported on this class: the Ledger
- * firmware does not implement it (see sparrowwallet/sparrow#1742). A
- * future per-keystore BIP-322 interaction class can be added separately
- * if/when Ledger firmware adds support; caravan does not model protocol
- * selection as a runtime flag on this class.
  */
 export class LedgerSignMessage extends LedgerBitcoinInteraction {
   bip32Path: string;
 
   message: string;
 
-  expectedPubkey: string;
+  pubkey: string;
 
   bip32ValidationErrorMessage?: LedgerDeviceError;
 
@@ -1278,17 +1272,17 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
   constructor({
     bip32Path,
     message,
-    expectedPubkey,
+    pubkey,
   }: {
     bip32Path: string;
     message: string;
-    expectedPubkey: string;
+    pubkey: string;
   }) {
     super();
 
     this.bip32Path = bip32Path;
     this.message = message;
-    this.expectedPubkey = expectedPubkey;
+    this.pubkey = pubkey;
 
     const bip32PathError = validateBIP32Path(bip32Path);
     if (bip32PathError.length) {
@@ -1364,7 +1358,7 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
         return {
           bip32Path: this.bip32Path,
           signature,
-          expectedPubkey: this.expectedPubkey,
+          pubkey: this.pubkey,
         };
       } finally {
         transport.close();

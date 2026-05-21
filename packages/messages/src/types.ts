@@ -6,7 +6,7 @@
 export type Entry = {
   bip32Path: string;
   signature: string;
-  expectedPubkey: string;
+  pubkey: string;
 };
 
 export type MessageSigningErrorKind =

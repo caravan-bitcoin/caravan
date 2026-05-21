@@ -331,7 +331,7 @@ describe("ledger", () => {
       return new LedgerSignMessage({
         bip32Path,
         message,
-        expectedPubkey: EXPECTED_PUBKEY,
+        pubkey: EXPECTED_PUBKEY,
       });
     }
 
@@ -374,7 +374,7 @@ describe("ledger", () => {
         Buffer.from("hello world", "utf8").toString("hex")
       );
       expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
-      expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
+      expect(entry.pubkey).toBe(EXPECTED_PUBKEY);
       // header = v + 27 + 4 = 32
       const expectedSig = Buffer.concat([
         Buffer.from([32]),
@@ -463,7 +463,7 @@ describe("ledger", () => {
       );
       expect(entry.signature).toBe(expectedSig);
       expect(entry.bip32Path).toBe("m/48'/1'/0'/2'/0/0");
-      expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
+      expect(entry.pubkey).toBe(EXPECTED_PUBKEY);
     });
 
     it("v2 Bitcoin app: SDK errors also wrap as MessageSigningError", async () => {

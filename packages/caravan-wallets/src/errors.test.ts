@@ -57,7 +57,7 @@ describe("SignMessage factory runs validateMessage before constructing", () => {
   // here.
   const oversize = "a".repeat(MAX_MESSAGE_BYTES + 1);
   const bip32Path = "m/84'/0'/0'/0/0";
-  const expectedPubkey =
+  const pubkey =
     "0387cb4929c287665fbda011b1afbebb0e691a5ee11ee9a561fcd6adba266afe03";
 
   it.each([
@@ -75,7 +75,7 @@ describe("SignMessage factory runs validateMessage before constructing", () => {
           network: needsNetwork ? Network.MAINNET : null,
           bip32Path,
           message: oversize,
-          expectedPubkey,
+          pubkey,
         });
         throw new Error("expected throw");
       } catch (err) {

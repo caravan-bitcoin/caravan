@@ -51,7 +51,7 @@ class MessageSigningTest extends Test {
             <TableRow>
               <TableCell>Expected pubkey:</TableCell>
               <TableCell>
-                <code>{this.params.expectedPubkey}</code>
+                <code>{this.params.pubkey}</code>
               </TableCell>
             </TableRow>
             <TableRow>
@@ -70,7 +70,7 @@ class MessageSigningTest extends Test {
       network: this.params.network,
       bip32Path: this.params.bip32Path,
       message: this.params.message,
-      expectedPubkey: this.params.expectedPubkey,
+      pubkey: this.params.pubkey,
     });
   }
 
@@ -83,7 +83,7 @@ class MessageSigningTest extends Test {
     return verifyMessageSignature({
       message: this.params.message,
       signature: entry.signature,
-      expectedPubkey: entry.expectedPubkey,
+      pubkey: entry.pubkey,
     });
   }
 
@@ -91,7 +91,7 @@ class MessageSigningTest extends Test {
     // matches() ignores the expected value (it verifies the actual Entry
     // cryptographically). Returned here so the UI has something to render
     // alongside the actual response.
-    return this.params.expectedPubkey;
+    return this.params.pubkey;
   }
 }
 
@@ -113,7 +113,7 @@ export function messageSigningTests(keystore) {
       );
     }
     const relativePath = fixture.bip32Path.slice(branchPath.length + 1);
-    const expectedPubkey = deriveChildPublicKey(
+    const pubkey = deriveChildPublicKey(
       openSourceNode.base58String,
       relativePath,
       fixture.network,
@@ -125,7 +125,7 @@ export function messageSigningTests(keystore) {
       addressType: fixture.type,
       bip32Path: fixture.bip32Path,
       message: DEFAULT_MESSAGE,
-      expectedPubkey,
+      pubkey,
     });
   });
 }

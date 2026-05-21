@@ -12,7 +12,7 @@ function makeInteraction(message = "hello world") {
     network: Network.MAINNET,
     bip32Path: "m/84'/0'/0'/0/0",
     message,
-    expectedPubkey: EXPECTED_PUBKEY,
+    pubkey: EXPECTED_PUBKEY,
   });
 }
 
@@ -48,7 +48,7 @@ describe("BitBoxSignMessage", () => {
       new TextEncoder().encode("hello world"),
     );
     expect(entry.bip32Path).toBe("m/84'/0'/0'/0/0");
-    expect(entry.expectedPubkey).toBe(EXPECTED_PUBKEY);
+    expect(entry.pubkey).toBe(EXPECTED_PUBKEY);
     expect(entry.signature).toBe(
       Buffer.from(electrumSig65).toString("base64"),
     );
@@ -114,7 +114,7 @@ describe("BitBoxSignMessage", () => {
       network: Network.TESTNET,
       bip32Path: "m/84'/1'/0'/0/0",
       message: "tn msg",
-      expectedPubkey: EXPECTED_PUBKEY,
+      pubkey: EXPECTED_PUBKEY,
     });
     const r32 = Buffer.alloc(32, 0x11);
     const s32 = Buffer.alloc(32, 0x22);
@@ -145,7 +145,7 @@ describe("BitBoxSignMessage", () => {
       network: Network.REGTEST,
       bip32Path: "m/84'/1'/0'/0/0",
       message: "regtest msg",
-      expectedPubkey: EXPECTED_PUBKEY,
+      pubkey: EXPECTED_PUBKEY,
     });
     const r32 = Buffer.alloc(32, 0x33);
     const s32 = Buffer.alloc(32, 0x44);

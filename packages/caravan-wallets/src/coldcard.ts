@@ -658,63 +658,31 @@ Format: ${this.addressType}
 
 /**
  * Coldcard sign-message interaction over SD card / Virtual Disk file
- * exchange — the established BIP-137 flow for Coldcard.
- *
- * Request file: a plain-text file with up to 3 lines per the Coldcard
- * docs:
- *
- *     {message}
- *     {bip32Path}
- *     {addressFormat}   // one of: p2pkh, p2sh-p2wpkh, p2wpkh
- *
- * caravan signs at the cosigner key as P2WPKH single-key (the SeedSigner
- * workaround pattern), so the third line is always "p2wpkh".
- *
- * Response file: Coldcard emits an armored "Bitcoin Signed Message" file
- * with the canonical structure
- *
- *     -----BEGIN BITCOIN SIGNED MESSAGE-----
- *     {message}
- *     -----BEGIN SIGNATURE-----
- *     {bitcoin address}
- *     {base64 BIP-137 signature}
- *     -----END BITCOIN SIGNED MESSAGE-----
- *
- * parse() extracts the base64 signature line from that block and returns
- * a canonical Entry. The signature is the standard 65-byte BIP-137 wire
- * form, base64-encoded; caravan's loose-mode verifier handles Coldcard's
- * header-byte encoding (which uses the segwit-bech32 range for P2WPKH).
- *
- * BIP-322 is intentionally not supported on this class. Coldcard's
- * BIP-322 firmware mode is the "Proof of Reserve" PSBT flow (Mk 5.5.0 /
- * Q 1.4.0Q+), which proves wallet-level UTXO control via the BIP-322
- * FULL form — a different use case from caravan's per-cosigner-key
- * BIP-322 Simple need. A future, separate `ColdcardSignMessageBIP322`
- * (or similarly named) interaction class can wrap the Proof-of-Reserve
- * PSBT flow if/when caravan needs that capability; caravan does not
- * model protocol selection as a runtime flag on this class.
+ * exchange. request() writes a 3-line .txt (message / bip32Path /
+ * "p2wpkh"); parse() extracts the base64 signature from the armored
+ * "Bitcoin Signed Message" file Coldcard returns.
  */
 export class ColdcardSignMessage extends ColdcardInteraction {
   bip32Path: string;
 
   message: string;
 
-  expectedPubkey: string;
+  pubkey: string;
 
   constructor({
     bip32Path,
     message,
-    expectedPubkey,
+    pubkey,
   }: {
     bip32Path: string;
     message: string;
-    expectedPubkey: string;
+    pubkey: string;
   }) {
     super();
 
     this.bip32Path = bip32Path;
     this.message = message;
-    this.expectedPubkey = expectedPubkey;
+    this.pubkey = pubkey;
     this.workflow = ["request", "parse"];
   }
 
@@ -815,7 +783,7 @@ export class ColdcardSignMessage extends ColdcardInteraction {
     return {
       bip32Path: this.bip32Path,
       signature,
-      expectedPubkey: this.expectedPubkey,
+      pubkey: this.pubkey,
     };
   }
 }

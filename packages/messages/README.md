@@ -12,7 +12,7 @@ import {
 
 validateMessage(message, "MY_SOURCE"); // throws MessageSigningError on bad encoding
 
-const ok = verifyMessageSignature({ message, signature, expectedPubkey });
+const ok = verifyMessageSignature({ message, signature, pubkey });
 ```
 
 Hardware-wallet drivers that produce signatures live in `@caravan/wallets`; that package consumes the types here and routes through `SignMessage(...)` to a per-keystore implementation. This package is the recovery / verification side and stays driver-agnostic.

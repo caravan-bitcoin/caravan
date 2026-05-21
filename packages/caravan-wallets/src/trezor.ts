@@ -1051,7 +1051,7 @@ export class TrezorSignMessage extends TrezorInteraction {
 
   message: string;
 
-  expectedPubkey: string;
+  pubkey: string;
 
   bip32ValidationErrorMessage: any;
 
@@ -1059,18 +1059,18 @@ export class TrezorSignMessage extends TrezorInteraction {
     network,
     bip32Path,
     message,
-    expectedPubkey,
+    pubkey,
   }: {
     network: Network | null;
     bip32Path: string;
     message: string;
-    expectedPubkey: string;
+    pubkey: string;
   }) {
     super({ network });
 
     this.bip32Path = bip32Path;
     this.message = message;
-    this.expectedPubkey = expectedPubkey;
+    this.pubkey = pubkey;
 
     this.bip32ValidationErrorMessage = {};
     const bip32PathError = validateBIP32Path(bip32Path);
@@ -1148,7 +1148,7 @@ export class TrezorSignMessage extends TrezorInteraction {
     return {
       bip32Path: this.bip32Path,
       signature: payload.signature,
-      expectedPubkey: this.expectedPubkey,
+      pubkey: this.pubkey,
     };
   }
 

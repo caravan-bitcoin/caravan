@@ -3,7 +3,7 @@
     "description": "testnet P2SH 2-of-2 multisig address",
     "bip32Path": "m/45'/1'/100'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "02a8513d9931896d5d3afc8063148db75d8851fd1fc41b1098ba2a6a766db563d4",
+    "pubkey": "02a8513d9931896d5d3afc8063148db75d8851fd1fc41b1098ba2a6a766db563d4",
     "unchainedPubkey": "03938dd09bf3dd29ddf41f264858accfa40b330c98e0ed27caf77734fac00139ba",
     "bip137": "J61UqPQbBTMr3/drO1HgZixFB38BLtb1nlGG4/B4mojcAL7x7P2QfN/klevhwMiTR4VSeyCsCMg/UXZsWQ4YhpM=",
     "bip322": "AkgwRQIhAJI+GPfE+mG48KGrVHT/axGzVWB/bwiY6gyqktM/F0ugAiBlvJfMfOeLgVay/1kmCkzTnREyJF4NXlYtn1bGHHbV/AEhAqhRPZkxiW1dOvyAYxSNt12IUf0fxBsQmLoqanZttWPU"
@@ -12,7 +12,7 @@
     "description": "testnet P2SH-P2WSH 2-of-2 multisig address",
     "bip32Path": "m/48'/1'/100'/1'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "026aaa7c4697ff439bfd6c7a70abf66253b4e329654b41ee2ad21d68b854e4a422",
+    "pubkey": "026aaa7c4697ff439bfd6c7a70abf66253b4e329654b41ee2ad21d68b854e4a422",
     "unchainedPubkey": "025566585b3a8066b7d0bba4d2b24c3c59a5f527d62c100bbb7073a7cb2565418c",
     "bip137": "J1Y4/KzTWhc/0U4wFI/sIRA/RU/Ew3qWZmlay8AL6lWqICw4SeZWFVg56yjaWPmYaLEOXr/vrtIBEU+oNvwiF0I=",
     "bip322": "AkgwRQIhAOgAB2FTZduXifm8J8vvNbLdiekrBDFMAnfUFl7GXM6+AiArVl3218s1D4Oc8ustgtIXACrnRXG86QJwXNCc7maWbwEhAmqqfEaX/0Ob/Wx6cKv2YlO04yllS0HuKtIdaLhU5KQi"
@@ -21,7 +21,7 @@
     "description": "testnet P2WSH 2-of-2 multisig address",
     "bip32Path": "m/48'/1'/100'/2'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "03bc34c50cf768f802290269c2ddabd086c73514c880cecb6db3f67676a4b72469",
+    "pubkey": "03bc34c50cf768f802290269c2ddabd086c73514c880cecb6db3f67676a4b72469",
     "unchainedPubkey": "035a763e0480f858ef626b649fa0efe9eb647abbf77db54f3af904d2de50c4342d",
     "bip137": "J0PB1MmSO3EEuXTCv+gien++HkmJ3ySeC6E8EBP1Iws+Wmjh9dLyn2ew3vhfOkDuAxdyMYkSzD/3HvXUKjMptII=",
     "bip322": "AkcwRAIgDU9gmqXvX6QDp8eE/iZwIF/BTUfakKGu3tG5zv+1dK8CIH3CGZH23j83ICrG55svSedxsXwup19VuM1Eqr2IAExOASEDvDTFDPdo+AIpAmnC3avQhsc1FMiAzstts/Z2dqS3JGk="
@@ -30,7 +30,7 @@
     "description": "mainnet P2SH 2-of-2 multisig address",
     "bip32Path": "m/45'/0'/100'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "02583c4776b51691f4e036c8e0eb160f3464a2de9ae4c6818b7945c78fc6bace79",
+    "pubkey": "02583c4776b51691f4e036c8e0eb160f3464a2de9ae4c6818b7945c78fc6bace79",
     "unchainedPubkey": "02b024e76d6c2d8c22d9550467e97ced251ead5592529f9c813c1d818f7e89a35a",
     "bip137": "KNgR2zsUOs1eNwvGBo3WVYBnPWnyTRnSTEGHy6wVwBtlK9PEc/+g20o7uapQoJnXJViVKSSm54RdFEm9tzXlnM4=",
     "bip322": "AkcwRAIgZDmnyL1RMziEAqRW01dKvlf6mYfyQ/F94CpH4zvaT1oCIE/y7SGIVh5YjavSUuKefKiAq3LD8B30f46HgVzTXw2RASECWDxHdrUWkfTgNsjg6xYPNGSi3prkxoGLeUXHj8a6znk="
@@ -39,7 +39,7 @@
     "description": "mainnet P2SH-P2WSH 2-of-2 multisig address",
     "bip32Path": "m/48'/0'/100'/1'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "0342997f6fcd7fa4a3c7e290c8867148992e6194742120985c664d9e214461af7c",
+    "pubkey": "0342997f6fcd7fa4a3c7e290c8867148992e6194742120985c664d9e214461af7c",
     "unchainedPubkey": "0328b57c2f65c98ed7cde4bca54cc3a13afa4d47117fd9dae06663a4169e05ef86",
     "bip137": "KDViiILjbF37YzRdXzYZpHq+0o4dWEvnWCU/4IctsXZ1IaKbflvh84hkXaUdOWeDLo+BHtXl8MUQ6N8v9pfhSto=",
     "bip322": "AkcwRAIgGSPgYfBi+waPoa3N5ADf0Pc9DptnWhlfsHrwUlghPo0CIBf+kgfCtD8KCViG6z4m6X0QAyZUsRxfCgv9GoaW6BCLASEDQpl/b81/pKPH4pDIhnFImS5hlHQhIJhcZk2eIURhr3w="
@@ -48,7 +48,7 @@
     "description": "mainnet P2WSH 2-of-2 multisig address",
     "bip32Path": "m/48'/0'/100'/2'/0/0",
     "message": "caravan stage 4a fixture round-trip",
-    "expectedPubkey": "0369e74fc954355b6f7acf9bbec5b861c186852b759a85f92558e420a0202047f4",
+    "pubkey": "0369e74fc954355b6f7acf9bbec5b861c186852b759a85f92558e420a0202047f4",
     "unchainedPubkey": "02e21b7318cfbd482bdbb66441420b9018e5b440bf9b0cdedd427626d81f32605b",
     "bip137": "KFZH4zKAMHgXc592ohaA+MiO3QqVBE9BF/VSJpx/FAV6alOhp+iuuY3aYpDX4aIIBbXhItlakinyujKD8TIhv1s=",
     "bip322": "AkcwRAIgM94WcQ5Qx0vBRZBNyGdueKUKHNTlkbeFjn7BFLt4zCQCIB9NEOz62M7HChIU2gwbd8bweXyvOACst/w859LjKaH2ASEDaedPyVQ1W296z5u+xbhhwYaFK3WahfklWOQgoCAgR/Q="

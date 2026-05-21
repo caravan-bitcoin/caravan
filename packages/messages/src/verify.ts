@@ -2,7 +2,7 @@ import { Verifier, Address } from "bip322-js";
 
 /**
  * Verify a base64 signature against the canonical P2WPKH address
- * derived from `expectedPubkey`. Returns a boolean — never throws.
+ * derived from `pubkey`. Returns a boolean — never throws.
  *
  * Wraps `bip322-js` in loose-verification mode: the BIP-322 spec
  * prohibits BIP-137-style signatures over P2WPKH addresses, but
@@ -18,13 +18,13 @@ import { Verifier, Address } from "bip322-js";
 export function verifyMessageSignature(args: {
   message: string;
   signature: string;
-  expectedPubkey: string;
+  pubkey: string;
 }): boolean {
-  const { message, signature, expectedPubkey } = args;
-  if (!(/^[0-9a-fA-F]+$/).test(expectedPubkey)) {
+  const { message, signature, pubkey } = args;
+  if (!(/^[0-9a-fA-F]+$/).test(pubkey)) {
     return false;
   }
-  const pubkeyBuf = Buffer.from(expectedPubkey, "hex");
+  const pubkeyBuf = Buffer.from(pubkey, "hex");
   if (pubkeyBuf.length !== 33) {
     return false;
   }
