@@ -10,7 +10,7 @@ const DEFAULT_MESSAGE = "caravan message-signing smoke test";
 
 class MessageSigningTest extends Test {
   name() {
-    return `Sign message — ${this.params.network} ${this.params.addressType} (open_source cosigner)`;
+    return `Sign ${this.params.network} ${this.params.type} message`;
   }
 
   description() {
@@ -27,7 +27,7 @@ class MessageSigningTest extends Test {
               <TableCell>Address type:</TableCell>
               <TableCell>
                 <code>
-                  {this.params.addressType} ({this.params.network})
+                  {this.params.type} ({this.params.network})
                 </code>
               </TableCell>
             </TableRow>
@@ -116,7 +116,7 @@ export function messageSigningTests(keystore) {
     return new MessageSigningTest({
       keystore,
       network: fixture.network,
-      addressType: fixture.type,
+      type: fixture.type,
       bip32Path: fixture.bip32Path,
       message: DEFAULT_MESSAGE,
       pubkey,
