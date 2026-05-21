@@ -93,6 +93,9 @@ const BIP39_PHRASE = [
 
 export const ROOT_FINGERPRINT = "f57ec65d";
 
+// Shared message used by signed-message fixtures. The signatures are committed
+// as stable known-good BIP-137 / BIP-322 outputs for the open_source seed at
+// each fixture's bip32Path.
 const SIGNED_MESSAGE_TEXT = "I control this caravan cosigner key";
 
 const NODES = {
