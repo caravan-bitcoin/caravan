@@ -1264,9 +1264,6 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
 
   readonly isLegacySupported = true;
 
-  // Lane A5: AppClient.signMessage(message, path) on the v2 Bitcoin app
-  // returns a base64-encoded BIP-137 sig directly; the legacy Btc app
-  // returns {v,r,s} which normalizeLedgerSignature wraps.
   readonly isV2Supported = true;
 
   constructor({
@@ -1349,9 +1346,6 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
             signature = await app.signMessage(messageBuf, this.bip32Path);
           }
         } catch (err) {
-          // Ledger user-rejection surfaces as statusCode 0x6985; transport
-          // drops and timeouts surface as TransportError-shaped errors.
-          // wrapSdkError classifies via statusCode + message heuristics.
           throw wrapSdkError(LEDGER, err);
         }
 

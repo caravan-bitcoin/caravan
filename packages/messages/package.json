@@ -30,8 +30,7 @@
     "ci": "npm run lint && npm run test",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest watch",
-    "generate-fixtures": "tsx scripts/generate-fixtures.ts"
+    "test:watch": "vitest watch"
   },
   "dependencies": {
     "bip322-js": "^3.0.0"
@@ -40,15 +39,10 @@
     "@caravan/bitcoin": "*",
     "@caravan/eslint-config": "*",
     "@caravan/typescript-config": "*",
-    "@scure/bip32": "^1.7.0",
-    "@scure/bip39": "^1.6.0",
     "@types/node": "^22.14.1",
-    "bitcoinjs-message": "^2.0.0",
     "tsup": "^8.0.2",
-    "tsx": "^4.7.0",
     "typescript": "^5.4.5",
-    "vitest": "^1.4.0",
-    "wif": "^5.0.0"
+    "vitest": "^1.4.0"
   },
   "repository": {
     "type": "git",

@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { TEST_FIXTURES } from "@caravan/bitcoin";
 
 import {
   MAX_MESSAGE_BYTES,
@@ -8,22 +7,20 @@ import {
   verifyMessageSignature,
 } from "./index";
 
-type FixtureEntry = {
+type MultisigFixture = {
   description: string;
   bip32Path: string;
-  message: string;
-  pubkey: string;
-  unchainedPubkey: string;
-  bip137: string;
-  bip322: string;
+  publicKey: string;
+  publicKeys: string[];
+  signedMessages: {
+    message: string;
+    bip137: string;
+    bip322: string;
+  };
 };
 
-const FIXTURES: FixtureEntry[] = JSON.parse(
-  readFileSync(
-    join(__dirname, "..", "test-fixtures", "signatures.json"),
-    "utf8",
-  ),
-);
+const FIXTURES = (TEST_FIXTURES as unknown as { multisigs: MultisigFixture[] })
+  .multisigs;
 
 const NUL = String.fromCharCode(0);
 
@@ -82,13 +79,13 @@ describe("validateMessage", () => {
 });
 
 describe("verifyMessageSignature — input validation", () => {
-  const { pubkey, message, bip137 } = FIXTURES[0];
+  const { publicKey, signedMessages } = FIXTURES[0];
 
   it("returns false for non-hex pubkey", () => {
     expect(
       verifyMessageSignature({
-        message,
-        signature: bip137,
+        message: signedMessages.message,
+        signature: signedMessages.bip137,
         pubkey: "not-hex",
       }),
     ).toBe(false);
@@ -97,8 +94,8 @@ describe("verifyMessageSignature — input validation", () => {
   it("returns false for short (non-33-byte) pubkey", () => {
     expect(
       verifyMessageSignature({
-        message,
-        signature: bip137,
+        message: signedMessages.message,
+        signature: signedMessages.bip137,
         pubkey: "0123abcd",
       }),
     ).toBe(false);
@@ -107,9 +104,9 @@ describe("verifyMessageSignature — input validation", () => {
   it("returns false for garbage signature input", () => {
     expect(
       verifyMessageSignature({
-        message,
+        message: signedMessages.message,
         signature: "not-base64-at-all-!!!",
-        pubkey,
+        pubkey: publicKey,
       }),
     ).toBe(false);
   });
@@ -118,12 +115,16 @@ describe("verifyMessageSignature — input validation", () => {
 describe("verifyMessageSignature — fixture round-trip", () => {
   FIXTURES.forEach((fix) => {
     describe(fix.description, () => {
+      const otherCosignerPubkey = fix.publicKeys.find(
+        (pk) => pk !== fix.publicKey,
+      ) as string;
+
       it("verifies the BIP-137 fixture", () => {
         expect(
           verifyMessageSignature({
-            message: fix.message,
-            signature: fix.bip137,
-            pubkey: fix.pubkey,
+            message: fix.signedMessages.message,
+            signature: fix.signedMessages.bip137,
+            pubkey: fix.publicKey,
           }),
         ).toBe(true);
       });
@@ -131,19 +132,19 @@ describe("verifyMessageSignature — fixture round-trip", () => {
       it("verifies the BIP-322 fixture (loose-mode)", () => {
         expect(
           verifyMessageSignature({
-            message: fix.message,
-            signature: fix.bip322,
-            pubkey: fix.pubkey,
+            message: fix.signedMessages.message,
+            signature: fix.signedMessages.bip322,
+            pubkey: fix.publicKey,
           }),
         ).toBe(true);
       });
 
-      it("rejects the same signature against the unchained cosigner pubkey", () => {
+      it("rejects the same signature against a different cosigner pubkey", () => {
         expect(
           verifyMessageSignature({
-            message: fix.message,
-            signature: fix.bip137,
-            pubkey: fix.unchainedPubkey,
+            message: fix.signedMessages.message,
+            signature: fix.signedMessages.bip137,
+            pubkey: otherCosignerPubkey,
           }),
         ).toBe(false);
       });
@@ -151,22 +152,22 @@ describe("verifyMessageSignature — fixture round-trip", () => {
       it("rejects when the message differs from what was signed", () => {
         expect(
           verifyMessageSignature({
-            message: `${fix.message} — tampered`,
-            signature: fix.bip137,
-            pubkey: fix.pubkey,
+            message: `${fix.signedMessages.message} — tampered`,
+            signature: fix.signedMessages.bip137,
+            pubkey: fix.publicKey,
           }),
         ).toBe(false);
       });
 
       it("rejects a tampered signature", () => {
-        const tampered = Buffer.from(fix.bip137, "base64");
+        const tampered = Buffer.from(fix.signedMessages.bip137, "base64");
         const mid = Math.floor(tampered.length / 2);
         tampered[mid] = 255 - tampered[mid];
         expect(
           verifyMessageSignature({
-            message: fix.message,
+            message: fix.signedMessages.message,
             signature: tampered.toString("base64"),
-            pubkey: fix.pubkey,
+            pubkey: fix.publicKey,
           }),
         ).toBe(false);
       });
