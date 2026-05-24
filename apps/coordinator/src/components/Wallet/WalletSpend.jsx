@@ -205,6 +205,20 @@ class WalletSpend extends React.Component {
             {spendingStep === SPEND_STEP_SIGN && (
               <Grid item md={12}>
                 <Box>
+                  {/* Keep TransactionPreview visible during signing */}
+                  <Box mt={3}>
+                    <TransactionPreview
+                      changeAddress={changeAddress}
+                      changeNode={changeNode}
+                      editTransaction={this.showCreate}
+                      fee={fee}
+                      feeRate={feeRate}
+                      inputs={inputs}
+                      inputsTotalSats={inputsTotalSats}
+                      outputs={outputs}
+                      handleSignTransaction={() => {}}
+                    />
+                  </Box>
                   <WalletSign />
                 </Box>
               </Grid>
