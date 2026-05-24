@@ -9,6 +9,9 @@ import {
   getUnsignedMultisigPsbtV0,
   validateMultisigPsbtSignature,
   translatePSBT,
+  parseSignaturesFromPSBT,
+  parseSignatureArrayFromPSBT,
+  addSignaturesToPSBT,
 } from "./psbt";
 import _ from "lodash";
 import { psbtArgsFromFixture } from "./utils";
@@ -248,5 +251,38 @@ describe("translatePsbt", () => {
       }
       expect(found).toBe(true);
     }
+  });
+});
+
+describe("parseSignaturesFromPSBT", () => {
+  it("should return null for invalid PSBT", () => {
+    expect(parseSignaturesFromPSBT("invalid")).toBeNull();
+  });
+
+  it("should return null for PSBT with no signatures", () => {
+    // Unsigned PSBT from test fixtures
+    const unsignedPsbt = TEST_FIXTURES.transactions[0].psbt;
+    if (unsignedPsbt) {
+      expect(parseSignaturesFromPSBT(unsignedPsbt)).toBeNull();
+    }
+  });
+});
+
+describe("parseSignatureArrayFromPSBT", () => {
+  it("should return null for invalid PSBT", () => {
+    expect(parseSignatureArrayFromPSBT("invalid")).toBeNull();
+  });
+
+  it("should return null for PSBT with no signatures", () => {
+    const unsignedPsbt = TEST_FIXTURES.transactions[0].psbt;
+    if (unsignedPsbt) {
+      expect(parseSignatureArrayFromPSBT(unsignedPsbt)).toBeNull();
+    }
+  });
+});
+
+describe("addSignaturesToPSBT", () => {
+  it("should return null for invalid PSBT", () => {
+    expect(addSignaturesToPSBT("testnet", "invalid", [], [])).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { parseSignatureArrayFromPSBT } from "@caravan/bitcoin";
+import { parseSignatureArrayFromPSBT } from "@caravan/psbt";
 import {
   HERMIT,
   PENDING,
