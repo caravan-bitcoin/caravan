@@ -12,6 +12,7 @@ import {
   getFeeErrorMessage,
   FeeValidationError,
   unsignedMultisigTransaction,
+  estimateMultisigTransactionFeeRate,
   getAddressType,
 } from "@caravan/bitcoin";
 import {
@@ -92,6 +93,7 @@ export const initialState = () => ({
   feeRateError: "",
   fee: "",
   feeError: "",
+  lastEditedFeeField: "rate", // telling user last edited which field fees or feeRate
   finalizedOutputs: false,
   txid: "",
   balanceError: "",
@@ -168,7 +170,17 @@ function deleteOutput(state, action) {
 }
 
 function updateFeeRate(state, action) {
-  const feeRateString = action.value;
+  let feeRateString = action.value;
+
+  // Round to 2 decimal places
+  if (
+    feeRateString &&
+    feeRateString !== "" &&
+    !Number.isNaN(parseFloat(feeRateString))
+  ) {
+    const parsed = parseFloat(feeRateString);
+    feeRateString = String(Math.round((parsed + Number.EPSILON) * 100) / 100);
+  }
 
   // Gets the error type. Useful for conditionally displaying errors.
   const feeRateError = checkFeeRateError(feeRateString);
@@ -192,18 +204,59 @@ function updateFeeRate(state, action) {
     feeRateError: feeRateErrorMessage,
     fee,
     feeError: "",
+    lastEditedFeeField: "rate",
   });
 }
 
 function updateFee(state, action) {
   const feeString = action.value;
-  const feeSats = bitcoinsToSatoshis(feeString);
+  // Safely convert — intermediate typing like "" or "0." must not crash.
+  // bitcoinsToSatoshis returns a string, so wrap it back in BigNumber so
+  // the guards below (isGreaterThan, isNaN) actually behave like numbers.
+  let feeSats;
+  try {
+    const parsed = new BigNumber(feeString);
+    feeSats = parsed.isNaN()
+      ? new BigNumber(0)
+      : new BigNumber(bitcoinsToSatoshis(parsed));
+  } catch (e) {
+    feeSats = new BigNumber(0);
+  }
+
   const feeError = validateFee(feeSats, state.inputsTotalSats);
+
+  // Back-calculate effective fee rate whenever we have a positive fee and
+  // a known input set. Recompute even when validateFee surfaced a
+  // non-fatal error (e.g. fee too high) so the rate field always reflects
+  // the typed amount instead of going stale.
+  let feeRate = state.feeRate;
+  let feeRateError = "";
+  if (
+    state.inputs.length > 0 &&
+    BigNumber.isBigNumber(feeSats) &&
+    !feeSats.isNaN() &&
+    feeSats.isGreaterThan(0)
+  ) {
+    const estimatedRate = estimateMultisigTransactionFeeRate({
+      addressType: state.addressType,
+      numInputs: state.inputs.length,
+      numOutputs: state.outputs.length,
+      m: state.requiredSigners,
+      n: state.totalSigners,
+      feesInSatoshis: feeSats,
+    });
+    const parsedRate = parseFloat(estimatedRate);
+    if (estimatedRate && parsedRate > 0) {
+      feeRate = String(Math.round((parsedRate + Number.EPSILON) * 100) / 100);
+    }
+  }
 
   return updateState(state, {
     fee: feeString,
     feeError,
-    feeRateError: "",
+    feeRate,
+    feeRateError,
+    lastEditedFeeField: "amount",
   });
 }
 
