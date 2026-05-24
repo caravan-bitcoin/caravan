@@ -26,7 +26,7 @@ import {
   ReconstructedUtxos,
   matchPsbtInputsToUtxos,
 } from "utils/uxtoReconstruction";
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt } from "bitcoinjs-lib-v6";
 import { getInputIdentifiersFromPsbt } from "utils/psbtUtils";
 
 /*

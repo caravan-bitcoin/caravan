@@ -79,7 +79,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
     super();
     if (
       [Network.MAINNET, Network.TESTNET, Network.REGTEST].find(
-        (net) => net === network
+        (net) => net === network,
       )
     ) {
       this.network = network;
@@ -238,7 +238,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
         (!data.p2sh_p2wsh_deriv || !data.p2sh_p2wsh))
     ) {
       throw new Error(
-        "Missing required params. Was this file exported from a Coldcard?  If you are using firmware version 4.1.0 please upgrade to 4.1.1 or later."
+        "Missing required params. Was this file exported from a Coldcard?  If you are using firmware version 4.1.0 please upgrade to 4.1.1 or later.",
       );
     }
 
@@ -262,7 +262,7 @@ class ColdcardMultisigSettingsFileParser extends ColdcardInteraction {
       xfpFromWithinXpub !== data.xfp.toLowerCase()
     ) {
       throw new Error(
-        "Computed fingerprint does not match the one in the file."
+        "Computed fingerprint does not match the one in the file.",
       );
     }
 
@@ -443,7 +443,7 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
       } catch (e) {
         console.error("Error building PSBT", e);
         throw new Error(
-          "Unable to build the PSBT from the provided parameters."
+          "Unable to build the PSBT from the provided parameters.",
         );
       }
     }
@@ -521,7 +521,7 @@ export class ColdcardSignMultisigTransaction extends ColdcardInteraction {
     const signatures = parseSignaturesFromPSBT(psbtObject);
     if (!signatures || Object.keys(signatures).length === 0) {
       throw new Error(
-        "No signatures found in the PSBT. Did you upload the right one?"
+        "No signatures found in the PSBT. Did you upload the right one?",
       );
     }
     return signatures;
@@ -595,7 +595,7 @@ export class ColdcardMultisigWalletConfig {
       this.totalSigners = this.jsonConfig.quorum.totalSigners;
     } else {
       throw new Error(
-        "Configuration file needs quorum.requiredSigners and quorum.totalSigners."
+        "Configuration file needs quorum.requiredSigners and quorum.totalSigners.",
       );
     }
 
@@ -652,5 +652,64 @@ Format: ${this.addressType}
     output += xpubs.join("\n");
     output += "\n";
     return output;
+  }
+}
+
+export class ColdcardConfirmMultisigAddress extends ColdcardInteraction {
+  manual: boolean;
+
+  network: string;
+
+  bip32Path: string;
+
+  multisig: any;
+
+  name: string;
+
+  constructor({ network, bip32Path, multisig, name }) {
+    super();
+    this.manual = true;
+    this.network = network;
+    this.bip32Path = bip32Path;
+    this.multisig = multisig;
+    this.name = name;
+  }
+
+  messages() {
+    const messages = super.messages();
+
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.install_multisig_config",
+      text: "Ensure your Coldcard has the multisig wallet installed.",
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.address_explorer",
+      text: `On your Coldcard, go to 'Address Explorer' and select the multisig wallet${
+        this.name ? ` "${this.name}"` : ""
+      }.`,
+    });
+
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.verify_address",
+      text: `Verify the address at path ${this.bip32Path} matches the one shown here.`,
+    });
+
+    return messages;
+  }
+
+  async run(): Promise<any> {
+    return {
+      address: this.multisig.address,
+      serializedPath: this.bip32Path,
+      manual: true,
+      successMessage: `Confirm the address on your Coldcard${this.name ? ` "${this.name}"` : ""}.`,
+    };
   }
 }

@@ -143,12 +143,12 @@ const ConfirmAddress = ({ slice, network }) => {
           value: "",
         });
       }
-      // FIXME - hardcoded to just show up for trezor
       if (
         extendedPublicKeyImporter.method === JADE ||
         extendedPublicKeyImporter.method === BITBOX ||
         extendedPublicKeyImporter.method === TREZOR ||
-        extendedPublicKeyImporter.method === LEDGER
+        extendedPublicKeyImporter.method === LEDGER ||
+        extendedPublicKeyImporter.method === COLDCARD
       ) {
         setInteraction(
           ConfirmMultisigAddress({
@@ -156,6 +156,7 @@ const ConfirmAddress = ({ slice, network }) => {
             network,
             bip32Path: fullBip32Path,
             multisig,
+            name: walletConfig.name,
             walletConfig,
             policyHmac: ledgerPolicyHmac,
           }),
@@ -189,6 +190,7 @@ const ConfirmAddress = ({ slice, network }) => {
           network,
           bip32Path: state.bip32Path,
           multisig,
+          name: walletConfig.name,
           walletConfig,
           policyHmac: state.ledgerPolicyHmac,
         }),
@@ -207,6 +209,10 @@ const ConfirmAddress = ({ slice, network }) => {
     }
 
     dispatch({ type: "SET_ACTIVE" });
+    if (interaction.manual) {
+      return;
+    }
+
     try {
       let confirmed = await interaction.run();
       if (
@@ -231,6 +237,19 @@ const ConfirmAddress = ({ slice, network }) => {
     }
   }
 
+  function completeManualConfirmation() {
+    dispatch({ type: "SET_MESSAGE", value: "Success" });
+  }
+
+  function isManualConfirmationActive() {
+    return (
+      interaction?.manual &&
+      state.interactionState === ACTIVE &&
+      state.interactionMessage === "" &&
+      state.interactionError === ""
+    );
+  }
+
   return (
     <Grid item md={12}>
       <ExtendedPublicKeySelector number={0} onChange={handleKeySelected} />
@@ -253,9 +272,7 @@ const ConfirmAddress = ({ slice, network }) => {
               <MenuItem value={TREZOR}>Trezor</MenuItem>
               <MenuItem value={LEDGER}>Ledger</MenuItem>
               <MenuItem value={BCUR2}>BCUR2</MenuItem>
-              <MenuItem value={COLDCARD} disabled>
-                Coldcard
-              </MenuItem>
+              <MenuItem value={COLDCARD}>Coldcard</MenuItem>
               <MenuItem value={HERMIT} disabled>
                 Hermit
               </MenuItem>
@@ -320,12 +337,25 @@ const ConfirmAddress = ({ slice, network }) => {
           )}
           <Button
             variant="contained"
+            color="primary"
             size="large"
             onClick={confirmOnDevice}
             disabled={state.interactionState === ACTIVE || !state.bip32Path}
           >
-            Confirm
+            Confirm on Device
           </Button>
+          {isManualConfirmationActive() && (
+            <Box mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                onClick={completeManualConfirmation}
+              >
+                I Verified This Address
+              </Button>
+            </Box>
+          )}
           {(state.interactionMessage !== "" ||
             state.interactionError !== "") && (
             <Button size="large" onClick={() => dispatch({ type: "RESET" })}>
