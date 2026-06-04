@@ -1,5 +1,13 @@
 # @caravan/clients
 
+## 1.0.5
+
+### Patch Changes
+
+- [#505](https://github.com/caravan-bitcoin/caravan/pull/505) [`0e5cce8`](https://github.com/caravan-bitcoin/caravan/commit/0e5cce8f6aa20499122491b2fd2d00bf992912b1) Thanks [@bucko13](https://github.com/bucko13)! - Export `callBitcoind` from the package index. Previously only reachable
+  via the internal `./bitcoind` subpath, this is a generic JSON-RPC helper
+  useful for any consumer talking directly to bitcoind.
+
 ## 1.0.4
 
 ### Patch Changes
