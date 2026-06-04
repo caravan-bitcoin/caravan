@@ -3,7 +3,7 @@ import { Box, Typography, CircularProgress } from "@mui/material";
 import { TransactionTable } from "./TransactionsTable";
 import { PaginationControls } from "./PaginationControls";
 import { TransactionFilter } from "./TransactionFilter";
-import { usePendingTransactions } from "clients/transactions";
+import { usePendingTransactions } from "clients/txHistory";
 import {
   useSortedTransactions,
   useTransactionPagination,
