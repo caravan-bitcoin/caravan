@@ -37,10 +37,17 @@ function p2wpkhScript(pubkey: Buffer): Buffer {
 
 describe("BIP375 invalid vectors", () => {
   test.each(bip375Vectors.invalid)("$description", ({ psbt }) => {
+    let thrown: unknown;
     expect(() => {
-      const p = new PsbtV2(psbt);
-      p.validate();
+      try {
+        new PsbtV2(psbt);
+      } catch (e) {
+        thrown = e;
+        throw e;
+      }
     }).toThrow();
+
+    console.log(`  throw reason: ${(thrown as Error).message}`);
   });
 });
 
@@ -241,9 +248,9 @@ describe("BIP375 DLEQ integration", () => {
     proof[0] ^= 1;
     psbt.globalMap.set(proofKey, proof);
 
-    psbt.computeSilentPaymentOutputScripts();
-
-    expect(() => new PsbtV2(psbt.serialize())).toThrow(
+    // The producer verifies DLEQ proofs before deriving, so the tampered proof
+    // is rejected at compute time rather than later on round-trip construction.
+    expect(() => psbt.computeSilentPaymentOutputScripts()).toThrow(
       /Invalid global silent payment DLEQ proof/,
     );
   });
@@ -354,10 +361,116 @@ describe("BIP375 DLEQ integration", () => {
     proof[0] ^= 1;
     psbt.inputMaps[0].set(proofKey, proof);
 
-    psbt.computeSilentPaymentOutputScripts();
-
-    expect(() => new PsbtV2(psbt.serialize())).toThrow(
+    // The producer verifies DLEQ proofs before deriving, so the tampered proof
+    // is rejected at compute time rather than later on round-trip construction.
+    expect(() => psbt.computeSilentPaymentOutputScripts()).toThrow(
       /Invalid input 0 silent payment DLEQ proof/,
     );
+  });
+});
+
+describe("BIP375 signing gate", () => {
+  const inputSecret = hex(
+    "0000000000000000000000000000000000000000000000000000000000000001",
+  );
+  const scanSecret = hex(
+    "0000000000000000000000000000000000000000000000000000000000000002",
+  );
+  const spendSecret = hex(
+    "0000000000000000000000000000000000000000000000000000000000000003",
+  );
+
+  const inputPubkey = pubkeyFromSecret(inputSecret);
+  const scanKey = pubkeyFromSecret(scanSecret);
+  const spendKey = pubkeyFromSecret(spendSecret);
+
+  // 71-byte SIGHASH_ALL dummy sig: only the trailing sighash byte is parsed
+  // by addPartialSig (handleSighashType reads the last byte).
+  const dummySig = Buffer.concat([Buffer.alloc(71, 0), Buffer.from([0x01])]);
+
+  function buildSPPsbt(): PsbtV2 {
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      silentPayment: {
+        bscan: scanKey,
+        bspend: spendKey,
+      },
+    });
+
+    psbt.addGlobalSPECDHShareWithDLEQ(
+      scanKey,
+      inputSecret,
+      Buffer.alloc(32, 0),
+    );
+
+    return psbt;
+  }
+
+  it("signs a valid SP PSBT on the live object after computing scripts", () => {
+    const psbt = buildSPPsbt();
+    psbt.computeSilentPaymentOutputScripts();
+
+    expect(() => psbt.addPartialSig(0, inputPubkey, dummySig)).not.toThrow();
+    expect(psbt.PSBT_IN_PARTIAL_SIG[0].length).toBe(1);
+  });
+
+  it("rejects signing when the SP output script was tampered after computing", () => {
+    const psbt = buildSPPsbt();
+    psbt.computeSilentPaymentOutputScripts();
+
+    const proofKey = KeyType.PSBT_GLOBAL_SP_DLEQ + scanKey.toString("hex");
+    const proof = Buffer.from(psbt.globalMap.get(proofKey) as Buffer);
+    proof[0] ^= 1;
+    psbt.globalMap.set(proofKey, proof);
+
+    expect(() => psbt.addPartialSig(0, inputPubkey, dummySig)).toThrow();
+    // The signature must not have been written.
+    expect(psbt.PSBT_IN_PARTIAL_SIG[0].length).toBe(0);
+  });
+
+  it("allows signing a non-SP PSBT (early-return path is a no-op)", () => {
+    const psbt = new PsbtV2();
+
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 1),
+      outputIndex: 0,
+      witnessUtxo: {
+        amount: 100_000,
+        script: p2wpkhScript(inputPubkey),
+      },
+      bip32Derivation: [
+        {
+          pubkey: inputPubkey,
+          masterFingerprint: Buffer.alloc(4, 0),
+          path: "m/84'/0'/0'/0/0",
+        },
+      ],
+    });
+
+    psbt.addOutput({
+      amount: 50_000,
+      script: p2wpkhScript(spendKey),
+    });
+
+    expect(() => psbt.addPartialSig(0, inputPubkey, dummySig)).not.toThrow();
+    expect(psbt.PSBT_IN_PARTIAL_SIG[0].length).toBe(1);
   });
 });
