@@ -47,6 +47,8 @@ export interface SPInputDescriptor {
   nonWitnessUtxo?: Buffer | null;
   outputIndex?: number | null;
   redeemScript?: Buffer | null;
+  tapInternalKey?: string | null; // PSBT_IN_TAP_INTERNAL_KEY, hex
+  tapLeafScriptKeys?: string[]; // PSBT_IN_TAP_LEAF_SCRIPT entry keys, hex
 }
 
 export type SPInputScriptType =
@@ -207,24 +209,6 @@ export function bip352TaggedHash(tag: string, data: Buffer): Buffer {
 
 // ── Eligible input indices ─────────────────────────────────────────────────
 
-/**
- * Determines which transaction inputs are eligible for silent payment ECDH
- * derivation per BIP352.
- *
- * Eligible input types:
- * - P2TR (Taproot keypath) — `OP_1 <32-byte x-only key>`
- * - P2WPKH — `OP_0 <20-byte hash>`
- * - P2SH-P2WPKH / P2PKH — no witness UTXO present
- *
- * Ineligible input types:
- * - P2WSH — `OP_0 <32-byte hash>` (multisig, multiple keys)
- * - Segwit v2+ — not permitted alongside SP outputs per BIP375
- *
- * @param inputs - One entry per input, in original index order. The array
- *   must be complete and unfiltered so that returned indices correctly
- *   correspond to positions in the original input list.
- * @returns Array of input indices eligible for SP ECDH derivation.
- */
 function readWitnessUtxoScript(witnessUtxo: Buffer): Buffer {
   if (witnessUtxo.length < 9) return Buffer.alloc(0);
   const scriptLen = witnessUtxo[8];
@@ -338,7 +322,25 @@ export function isEligibleInputType(type: SPInputScriptType): boolean {
   );
 }
 
-export function eligibleIndices(inputs: SPInputDescriptor[]): number[] {
+/**
+ * Determines which transaction inputs are eligible for silent payment ECDH
+ * derivation per BIP352.
+ *
+ * Eligible input types:
+ * - P2TR (Taproot keypath) — `OP_1 <32-byte x-only key>`
+ * - P2WPKH — `OP_0 <20-byte hash>`
+ * - P2SH-P2WPKH / P2PKH — no witness UTXO present
+ *
+ * Ineligible input types:
+ * - P2WSH — `OP_0 <32-byte hash>` (multisig, multiple keys)
+ * - Segwit v2+ — not permitted alongside SP outputs per BIP375
+ *
+ * @param inputs - One entry per input, in original index order. The array
+ *   must be complete and unfiltered so that returned indices correctly
+ *   correspond to positions in the original input list.
+ * @returns Array of input indices eligible for SP ECDH derivation.
+ */
+function eligibleIndices(inputs: SPInputDescriptor[]): number[] {
   const eligible: number[] = [];
 
   for (let i = 0; i < inputs.length; i++) {
@@ -348,6 +350,36 @@ export function eligibleIndices(inputs: SPInputDescriptor[]): number[] {
   }
 
   return eligible;
+}
+
+/**
+ * A taproot input spent via script path using the BIP352 NUMS point H as its
+ * internal key is eligible by type but never contributes an ECDH share.
+ */
+function isNumsScriptPathSpend(input: SPInputDescriptor): boolean {
+  if (input.tapInternalKey === BIP352_NUMS_H) {
+    return true;
+  }
+
+  return (input.tapLeafScriptKeys ?? []).some((key) => {
+    const keydata = Buffer.from(key.slice(2), "hex");
+
+    if (keydata.length < 33) {
+      return false;
+    }
+
+    return keydata.subarray(1, 33).toString("hex") === BIP352_NUMS_H;
+  });
+}
+
+/**
+ * Eligible inputs that actually contribute an ECDH share — i.e. eligible by
+ * type and not a NUMS script-path spend.
+ */
+export function contributingIndices(inputs: SPInputDescriptor[]): number[] {
+  return eligibleIndices(inputs).filter(
+    (i) => !isNumsScriptPathSpend(inputs[i]),
+  );
 }
 
 export function hasSegwitV2PlusInput(inputs: SPInputDescriptor[]): boolean {
@@ -362,6 +394,91 @@ export function getTaprootOutputKeyFromWitnessUtxo(
   const scriptPubKey = readWitnessUtxoScript(witnessUtxo);
   if (classifyWitnessScript(scriptPubKey) !== "p2tr") return null;
   return Buffer.concat([Buffer.from([0x02]), scriptPubKey.subarray(2, 34)]);
+}
+
+function hash160(buffer: Buffer): Buffer {
+  const sha = createHash("sha256").update(buffer).digest();
+  return createHash("ripemd160").update(sha).digest();
+}
+
+/**
+ * Returns the public key that should contribute to BIP352 derivation for an
+ * input, but only when it is committed by that input's prevout script.
+ *
+ * `candidatePubkeys` may be sourced from PSBT_IN_BIP32_DERIVATION,
+ * PSBT_IN_PARTIAL_SIG, final script witness, or final scriptSig. This helper
+ * deliberately treats those as untrusted candidates and validates them against
+ * the prevout script before returning one.
+ */
+export function getSilentPaymentPubkeyFromInputDescriptor(
+  input: SPInputDescriptor,
+  candidatePubkeys: Buffer[],
+): Buffer | null {
+  const scriptPubKey = input.witnessUtxo
+    ? readWitnessUtxoScript(input.witnessUtxo)
+    : readNonWitnessUtxoScript(input.nonWitnessUtxo, input.outputIndex);
+
+  if (!scriptPubKey) {
+    return null;
+  }
+
+  const scriptType = classifyInputDescriptor(input);
+
+  if (scriptType === "p2tr") {
+    return input.witnessUtxo
+      ? getTaprootOutputKeyFromWitnessUtxo(input.witnessUtxo)
+      : null;
+  }
+
+  for (const pubkey of candidatePubkeys) {
+    assertValidCompressedPoint(pubkey, "silent payment input pubkey");
+
+    const pubkeyHash = hash160(pubkey);
+
+    if (scriptType === "p2wpkh") {
+      const witnessProgram = scriptPubKey.subarray(2, 22);
+
+      if (pubkeyHash.equals(witnessProgram)) {
+        return pubkey;
+      }
+
+      continue;
+    }
+
+    if (scriptType === "p2pkh_or_unknown_legacy") {
+      const scriptPubkeyHash = scriptPubKey.subarray(3, 23);
+
+      if (pubkeyHash.equals(scriptPubkeyHash)) {
+        return pubkey;
+      }
+
+      continue;
+    }
+
+    if (scriptType === "p2sh_p2wpkh") {
+      if (!input.redeemScript) {
+        continue;
+      }
+
+      const p2shHash = scriptPubKey.subarray(2, 22);
+
+      if (!hash160(input.redeemScript).equals(p2shHash)) {
+        continue;
+      }
+
+      if (classifyWitnessScript(input.redeemScript) !== "p2wpkh") {
+        continue;
+      }
+
+      const redeemWitnessProgram = input.redeemScript.subarray(2, 22);
+
+      if (pubkeyHash.equals(redeemWitnessProgram)) {
+        return pubkey;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function groupSilentPaymentOutputs(
