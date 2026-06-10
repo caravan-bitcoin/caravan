@@ -34,6 +34,7 @@ import {
   getSilentPaymentPubkeyFromInputDescriptor,
   groupSilentPaymentOutputs,
   hasSegwitV2PlusInput,
+  isNumsScriptPathSpend,
   SPInputDescriptor,
   SPOutputEntry,
   sumECDHShares,
@@ -869,12 +870,17 @@ export class PsbtV2 extends PsbtV2Maps {
 
   private getSilentPaymentOutputGroups(
     onlyWithScripts = false,
+    skipLabeled = false,
   ): Map<string, SPOutputEntry[]> {
     const entries: SPOutputEntry[] = [];
 
     for (let i = 0; i < this.outputMaps.length; i++) {
       const info = this.getSilentPaymentOutputInfo(i);
       if (!info) continue;
+
+      if (skipLabeled && this.outputMaps[i].has(KeyType.PSBT_OUT_SP_V0_LABEL)) {
+        continue;
+      }
 
       if (onlyWithScripts) {
         const script = this.outputMaps[i].get(KeyType.PSBT_OUT_SCRIPT);
@@ -887,6 +893,120 @@ export class PsbtV2 extends PsbtV2Maps {
     return groupSilentPaymentOutputs(entries);
   }
 
+  private static isCompressedPubkeyCandidate(candidate: Buffer): boolean {
+    return (
+      candidate.length === 33 &&
+      (candidate[0] === 0x02 || candidate[0] === 0x03)
+    );
+  }
+
+  private static readCompactSize(
+    data: Buffer,
+    offset: number,
+  ): { value: number; offset: number } | null {
+    if (offset >= data.length) return null;
+
+    const first = data[offset];
+
+    if (first < 0xfd) {
+      return { value: first, offset: offset + 1 };
+    }
+
+    if (first === 0xfd) {
+      if (offset + 3 > data.length) return null;
+      return { value: data.readUInt16LE(offset + 1), offset: offset + 3 };
+    }
+
+    if (first === 0xfe) {
+      if (offset + 5 > data.length) return null;
+      return { value: data.readUInt32LE(offset + 1), offset: offset + 5 };
+    }
+
+    if (offset + 9 > data.length) return null;
+
+    const value = data.readBigUInt64LE(offset + 1);
+    if (value > BigInt(Number.MAX_SAFE_INTEGER)) return null;
+
+    return { value: Number(value), offset: offset + 9 };
+  }
+
+  private static parseScriptWitnessStack(witness: Buffer): Buffer[] {
+    const stackCount = PsbtV2.readCompactSize(witness, 0);
+
+    if (!stackCount) {
+      return [];
+    }
+
+    const stack: Buffer[] = [];
+    let offset = stackCount.offset;
+
+    for (let i = 0; i < stackCount.value; i++) {
+      const itemLength = PsbtV2.readCompactSize(witness, offset);
+
+      if (!itemLength) {
+        return [];
+      }
+
+      offset = itemLength.offset;
+
+      if (offset + itemLength.value > witness.length) {
+        return [];
+      }
+
+      stack.push(witness.subarray(offset, offset + itemLength.value));
+      offset += itemLength.value;
+    }
+
+    return offset === witness.length ? stack : [];
+  }
+
+  private static parseScriptPushes(scriptSig: Buffer): Buffer[] {
+    const pushes: Buffer[] = [];
+    let offset = 0;
+
+    while (offset < scriptSig.length) {
+      const opcode = scriptSig[offset++];
+      let length: number;
+
+      if (opcode === 0x00) {
+        pushes.push(Buffer.alloc(0));
+        continue;
+      }
+
+      if (opcode >= 0x01 && opcode <= 0x4b) {
+        length = opcode;
+      } else if (opcode === 0x4c) {
+        if (offset + 1 > scriptSig.length) return [];
+        length = scriptSig[offset++];
+      } else if (opcode === 0x4d) {
+        if (offset + 2 > scriptSig.length) return [];
+        length = scriptSig.readUInt16LE(offset);
+        offset += 2;
+      } else if (opcode === 0x4e) {
+        if (offset + 4 > scriptSig.length) return [];
+        length = scriptSig.readUInt32LE(offset);
+        offset += 4;
+      } else {
+        return [];
+      }
+
+      if (offset + length > scriptSig.length) {
+        return [];
+      }
+
+      pushes.push(scriptSig.subarray(offset, offset + length));
+      offset += length;
+    }
+
+    return pushes;
+  }
+
+  private static getCompressedPubkeysFromPushes(pushes: Buffer[]): Buffer[] {
+    return pushes
+      .filter(PsbtV2.isCompressedPubkeyCandidate)
+      .map((pubkey) => Buffer.from(pubkey));
+  }
+
   private getFinalScriptWitnessPubkeys(inputIndex: number): Buffer[] {
     const witnessHex = this.PSBT_IN_FINAL_SCRIPTWITNESS[inputIndex];
 
@@ -894,18 +1014,9 @@ export class PsbtV2 extends PsbtV2Maps {
       return [];
     }
 
-    const witness = Buffer.from(witnessHex, "hex");
-    const pubkeys: Buffer[] = [];
-
-    for (let i = 0; i <= witness.length - 33; i++) {
-      const candidate = witness.subarray(i, i + 33);
-
-      if (candidate[0] === 0x02 || candidate[0] === 0x03) {
-        pubkeys.push(Buffer.from(candidate));
-      }
-    }
-
-    return pubkeys;
+    return PsbtV2.getCompressedPubkeysFromPushes(
+      PsbtV2.parseScriptWitnessStack(Buffer.from(witnessHex, "hex")),
+    );
   }
 
   private getFinalScriptSigPubkeys(inputIndex: number): Buffer[] {
@@ -915,18 +1026,9 @@ export class PsbtV2 extends PsbtV2Maps {
       return [];
     }
 
-    const scriptSig = Buffer.from(scriptSigHex, "hex");
-    const pubkeys: Buffer[] = [];
-
-    for (let i = 0; i <= scriptSig.length - 33; i++) {
-      const candidate = scriptSig.subarray(i, i + 33);
-
-      if (candidate[0] === 0x02 || candidate[0] === 0x03) {
-        pubkeys.push(Buffer.from(candidate));
-      }
-    }
-
-    return pubkeys;
+    return PsbtV2.getCompressedPubkeysFromPushes(
+      PsbtV2.parseScriptPushes(Buffer.from(scriptSigHex, "hex")),
+    );
   }
 
   private getSilentPaymentCandidatePubkeys(inputIndex: number): Buffer[] {
@@ -1098,20 +1200,7 @@ export class PsbtV2 extends PsbtV2Maps {
     return Buffer.from(sumECDHShares(perInputBuffers).toRawBytes(true));
   }
 
-  /**
-   * Validates all BIP375 silent payment constraints.
-   *
-   * Three phases:
-   * 1. Output map structural checks — always run
-   * 2. Input eligibility checks — only when SP outputs present
-   * 3. ECDH coverage checks — only when SP outputs have PSBT_OUT_SCRIPT set
-   */
-  private validateSilentPayments() {
-    if (!this.hasSilentPaymentOutputs) {
-      return;
-    }
-
-    // ── Output map structural checks ───────────────────────────────────────
+  private validateSilentPaymentOutputMaps(): void {
     for (const [i, outputMap] of this.outputMaps.entries()) {
       const spInfo = outputMap.get(KeyType.PSBT_OUT_SP_V0_INFO);
       const spLabel = outputMap.get(KeyType.PSBT_OUT_SP_V0_LABEL);
@@ -1146,8 +1235,9 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
+  }
 
-    // ── Global map: keydata/valuedata + pairing checks ────────────────────
+  private validateSilentPaymentGlobalFields(): void {
     for (const [key, value] of this.globalMap.entries()) {
       if (key.startsWith(KeyType.PSBT_GLOBAL_SP_ECDH_SHARE)) {
         const scanKey = scanKeyHexFromBIP375Key(
@@ -1181,8 +1271,9 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
+  }
 
-    // ── Input map: keydata/valuedata + pairing checks ─────────────────────
+  private validateSilentPaymentInputFields(): void {
     for (const [i, inputMap] of this.inputMaps.entries()) {
       for (const [key, value] of inputMap.entries()) {
         if (key.startsWith(KeyType.PSBT_IN_SP_ECDH_SHARE)) {
@@ -1218,15 +1309,31 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
+  }
 
-    // ── SP-wide restrictions that apply whenever SP outputs exist ──────────
-    if (hasSegwitV2PlusInput(this.getSilentPaymentInputDescriptors())) {
+  private validateSilentPaymentWideRestrictions(): void {
+    const inputDescriptors = this.getSilentPaymentInputDescriptors();
+
+    if (hasSegwitV2PlusInput(inputDescriptors)) {
       throw Error(
         "A PSBT with PSBT_OUT_SP_V0_INFO must not contain SegWit v2+ inputs.",
       );
     }
 
     for (const [i, inputMap] of this.inputMaps.entries()) {
+      if (isNumsScriptPathSpend(inputDescriptors[i])) {
+        for (const key of inputMap.keys()) {
+          if (
+            key.startsWith(KeyType.PSBT_IN_SP_ECDH_SHARE) ||
+            key.startsWith(KeyType.PSBT_IN_SP_DLEQ)
+          ) {
+            throw Error(
+              `Input ${i} is a NUMS taproot script-path spend and must not have silent payment ECDH/DLEQ data.`,
+            );
+          }
+        }
+      }
+
       const sighash = inputMap.get(KeyType.PSBT_IN_SIGHASH_TYPE);
 
       if (sighash && sighash.length >= 4) {
@@ -1239,22 +1346,36 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
+  }
 
-    const contributingInputs = this.getContributingInputsForSilentPayments();
-
+  private validateComputedSilentPaymentOutputScripts(): void {
     // ECDH coverage is only required per scan key that has a computed SP output
     // script. Scan keys whose outputs are still in progress (no PSBT_OUT_SCRIPT)
-    // may have missing ECDH/DLEQ data
+    // may have missing ECDH/DLEQ data.
+    const outputGroups = this.getSilentPaymentOutputGroups(true, true);
+    if (outputGroups.size === 0) {
+      return;
+    }
+
+    const contributingInputs = this.getContributingInputsForSilentPayments();
+    if (contributingInputs.length === 0) {
+      throw Error(
+        "No contributing inputs for silent payment ECDH derivation.",
+      );
+    }
+
     const inputHash = this.computeSilentPaymentInputHash(contributingInputs);
 
-    for (const [bscanHex, group] of this.getSilentPaymentOutputGroups(true)) {
+    for (const [bscanHex, group] of outputGroups) {
       const ecdhShare = this.resolveAndVerifyScanKeyEcdhShare(
         bscanHex,
         contributingInputs,
       );
 
       if (!ecdhShare) {
-        continue;
+        throw Error(
+          `Missing silent payment ECDH share for scan key ${bscanHex}.`,
+        );
       }
 
       for (let k = 0; k < group.length; k++) {
@@ -1283,6 +1404,25 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
+  }
+
+  /**
+   * Validates all BIP375 silent payment constraints.
+   *
+   * The structural checks always run for SP PSBTs. Expensive ECDH/share
+   * verification is limited to outputs whose scripts have already been
+   * computed and can be compared from public PSBT data.
+   */
+  private validateSilentPayments(): void {
+    if (!this.hasSilentPaymentOutputs) {
+      return;
+    }
+
+    this.validateSilentPaymentOutputMaps();
+    this.validateSilentPaymentGlobalFields();
+    this.validateSilentPaymentInputFields();
+    this.validateSilentPaymentWideRestrictions();
+    this.validateComputedSilentPaymentOutputScripts();
   }
 
   /**
@@ -2238,11 +2378,12 @@ export class PsbtV2 extends PsbtV2Maps {
    * Per BIP375: the Signer must not add a signature until this is true.
    */
   get hasAllSPOutputScripts(): boolean {
-    return this.outputMaps.every(
-      (map) =>
-        !map.has(KeyType.PSBT_OUT_SP_V0_INFO) ||
-        map.has(KeyType.PSBT_OUT_SCRIPT),
-    );
+    return this.outputMaps.every((map) => {
+      if (!map.has(KeyType.PSBT_OUT_SP_V0_INFO)) return true;
+
+      const script = map.get(KeyType.PSBT_OUT_SCRIPT);
+      return !!script && script.length > 0;
+    });
   }
 
   /**
