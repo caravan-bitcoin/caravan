@@ -27,7 +27,6 @@ import {
   assertValidLabel,
   assertValidOutputK,
   assertValidSPV0Info,
-  scanKeyHexFromBIP375Key,
   computeInputHash,
   deriveSilentPaymentOutput,
   contributingIndices,
@@ -893,142 +892,38 @@ export class PsbtV2 extends PsbtV2Maps {
     return groupSilentPaymentOutputs(entries);
   }
 
-  private static isCompressedPubkeyCandidate(candidate: Buffer): boolean {
-    return (
-      candidate.length === 33 &&
-      (candidate[0] === 0x02 || candidate[0] === 0x03)
-    );
-  }
-
-  private static readCompactSize(
-    data: Buffer,
-    offset: number,
-  ): { value: number; offset: number } | null {
-    if (offset >= data.length) return null;
-
-    const first = data[offset];
-
-    if (first < 0xfd) {
-      return { value: first, offset: offset + 1 };
-    }
-
-    if (first === 0xfd) {
-      if (offset + 3 > data.length) return null;
-      return { value: data.readUInt16LE(offset + 1), offset: offset + 3 };
-    }
-
-    if (first === 0xfe) {
-      if (offset + 5 > data.length) return null;
-      return { value: data.readUInt32LE(offset + 1), offset: offset + 5 };
-    }
-
-    if (offset + 9 > data.length) return null;
-
-    const value = data.readBigUInt64LE(offset + 1);
-    if (value > BigInt(Number.MAX_SAFE_INTEGER)) return null;
-
-    return { value: Number(value), offset: offset + 9 };
-  }
-
-  private static parseScriptWitnessStack(witness: Buffer): Buffer[] {
-    const stackCount = PsbtV2.readCompactSize(witness, 0);
-
-    if (!stackCount) {
-      return [];
-    }
-
-    const stack: Buffer[] = [];
-    let offset = stackCount.offset;
-
-    for (let i = 0; i < stackCount.value; i++) {
-      const itemLength = PsbtV2.readCompactSize(witness, offset);
-
-      if (!itemLength) {
-        return [];
-      }
-
-      offset = itemLength.offset;
-
-      if (offset + itemLength.value > witness.length) {
-        return [];
-      }
-
-      stack.push(witness.subarray(offset, offset + itemLength.value));
-      offset += itemLength.value;
-    }
-
-    return offset === witness.length ? stack : [];
-  }
-
-  private static parseScriptPushes(scriptSig: Buffer): Buffer[] {
-    const pushes: Buffer[] = [];
-    let offset = 0;
-
-    while (offset < scriptSig.length) {
-      const opcode = scriptSig[offset++];
-      let length: number;
-
-      if (opcode === 0x00) {
-        pushes.push(Buffer.alloc(0));
-        continue;
-      }
-
-      if (opcode >= 0x01 && opcode <= 0x4b) {
-        length = opcode;
-      } else if (opcode === 0x4c) {
-        if (offset + 1 > scriptSig.length) return [];
-        length = scriptSig[offset++];
-      } else if (opcode === 0x4d) {
-        if (offset + 2 > scriptSig.length) return [];
-        length = scriptSig.readUInt16LE(offset);
-        offset += 2;
-      } else if (opcode === 0x4e) {
-        if (offset + 4 > scriptSig.length) return [];
-        length = scriptSig.readUInt32LE(offset);
-        offset += 4;
-      } else {
-        return [];
-      }
-
-      if (offset + length > scriptSig.length) {
-        return [];
-      }
-
-      pushes.push(scriptSig.subarray(offset, offset + length));
-      offset += length;
-    }
-
-    return pushes;
-  }
-
-  private static getCompressedPubkeysFromPushes(pushes: Buffer[]): Buffer[] {
-    return pushes
-      .filter(PsbtV2.isCompressedPubkeyCandidate)
-      .map((pubkey) => Buffer.from(pubkey));
-  }
-
   private getFinalScriptWitnessPubkeys(inputIndex: number): Buffer[] {
     const witnessHex = this.PSBT_IN_FINAL_SCRIPTWITNESS[inputIndex];
+    if (!witnessHex) return [];
 
-    if (!witnessHex) {
-      return [];
+    const witness = Buffer.from(witnessHex, "hex");
+    const pubkeys: Buffer[] = [];
+
+    for (let i = 0; i <= witness.length - 33; i++) {
+      const candidate = witness.subarray(i, i + 33);
+      if (candidate[0] === 0x02 || candidate[0] === 0x03) {
+        pubkeys.push(Buffer.from(candidate));
+      }
     }
 
-    return PsbtV2.getCompressedPubkeysFromPushes(
-      PsbtV2.parseScriptWitnessStack(Buffer.from(witnessHex, "hex")),
-    );
+    return pubkeys;
   }
 
   private getFinalScriptSigPubkeys(inputIndex: number): Buffer[] {
     const scriptSigHex = this.PSBT_IN_FINAL_SCRIPTSIG[inputIndex];
+    if (!scriptSigHex) return [];
 
-    if (!scriptSigHex) {
-      return [];
+    const scriptSig = Buffer.from(scriptSigHex, "hex");
+    const pubkeys: Buffer[] = [];
+
+    for (let i = 0; i <= scriptSig.length - 33; i++) {
+      const candidate = scriptSig.subarray(i, i + 33);
+      if (candidate[0] === 0x02 || candidate[0] === 0x03) {
+        pubkeys.push(Buffer.from(candidate));
+      }
     }
 
-    return PsbtV2.getCompressedPubkeysFromPushes(
-      PsbtV2.parseScriptPushes(Buffer.from(scriptSigHex, "hex")),
-    );
+    return pubkeys;
   }
 
   private getSilentPaymentCandidatePubkeys(inputIndex: number): Buffer[] {
@@ -1083,13 +978,12 @@ export class PsbtV2 extends PsbtV2Maps {
 
   /**
    * Computes the BIP352 input hash from all outpoints and the aggregate public
-   * key of the contributing inputs. This is strict: callers that validate or
-   * create computed SP output scripts must be able to recover prevout-matched
-   * input pubkeys.
+   * key of the contributing inputs. This is strict because computed SP output
+   * scripts can only be verified when every contributing input has a pubkey that
+   * matches its prevout script.
    */
   private computeSilentPaymentInputHash(contributingInputs: number[]): Buffer {
     const outpoints = this.getAllOutpoints();
-
     if (outpoints.length === 0) {
       throw Error("At least one outpoint is required to compute inputHash.");
     }
@@ -1103,10 +997,11 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   /**
-   * Resolves the ECDH share for a scan key while verifying its DLEQ proof(s)
-   * when the required input pubkey is recoverable. Share/proof pairing is
-   * mandatory, but semantic proof verification can be deferred for in-progress
-   * PSBTs whose input pubkeys are not yet recoverable.
+   * Resolves the ECDH share for a scan key while verifying its DLEQ proof(s).
+   *
+   * Returns the share — either the global share or the sum of per-input shares
+   * — or null when the scan key's output is still in progress (no derivable
+   * share has been contributed yet).
    */
   private resolveAndVerifyScanKeyEcdhShare(
     bscanHex: string,
@@ -1127,25 +1022,27 @@ export class PsbtV2 extends PsbtV2Maps {
 
       const aggregatePubkey =
         this.tryGetInputAggregatePubkey(contributingInputs);
+      if (!aggregatePubkey) {
+        return null;
+      }
 
-      if (aggregatePubkey) {
-        if (
-          !verifySilentPaymentDLEQProof({
-            publicKey: Buffer.from(aggregatePubkey.toRawBytes(true)),
-            scanKey: Buffer.from(bscanHex, "hex"),
-            ecdhShare,
-            proof,
-          })
-        ) {
-          throw Error(
-            `Invalid global silent payment DLEQ proof for scan key ${bscanHex}.`,
-          );
-        }
+      if (
+        !verifySilentPaymentDLEQProof({
+          publicKey: Buffer.from(aggregatePubkey.toRawBytes(true)),
+          scanKey: Buffer.from(bscanHex, "hex"),
+          ecdhShare,
+          proof,
+        })
+      ) {
+        throw Error(
+          `Invalid global silent payment DLEQ proof for scan key ${bscanHex}.`,
+        );
       }
 
       return ecdhShare;
     }
 
+    // At least one contributing input when there is no global share is required
     if (contributingInputs.length === 0) {
       throw Error(
         `Output script set for scan key ${bscanHex} but no contributing inputs can derive it.`,
@@ -1161,11 +1058,12 @@ export class PsbtV2 extends PsbtV2Maps {
 
       if (!ecdhShare) {
         throw Error(
-          `Output script set but contributing input ${i} missing ECDH share for scan key ${bscanHex}`,
+          `Output script set but eligible input ${i} missing ECDH share for scan key ${bscanHex}`,
         );
       }
 
-      const proof = this.inputMaps[i].get(proofKey);
+      const inputPubkey = this.tryGetInputAggregatePubkey([i]);
+      const proof = this.inputMaps[i].get(proofKey) as Buffer;
 
       if (!proof) {
         throw Error(
@@ -1173,21 +1071,23 @@ export class PsbtV2 extends PsbtV2Maps {
         );
       }
 
-      const inputPubkey = this.tryGetInputAggregatePubkey([i]);
+      if (!inputPubkey) {
+        throw Error(
+          `Input ${i} missing public key for silent payment DLEQ verification.`,
+        );
+      }
 
-      if (inputPubkey) {
-        if (
-          !verifySilentPaymentDLEQProof({
-            publicKey: Buffer.from(inputPubkey.toRawBytes(true)),
-            scanKey: Buffer.from(bscanHex, "hex"),
-            ecdhShare,
-            proof,
-          })
-        ) {
-          throw Error(
-            `Invalid input ${i} silent payment DLEQ proof for scan key ${bscanHex}.`,
-          );
-        }
+      if (
+        !verifySilentPaymentDLEQProof({
+          publicKey: Buffer.from(inputPubkey.toRawBytes(true)),
+          scanKey: Buffer.from(bscanHex, "hex"),
+          ecdhShare,
+          proof,
+        })
+      ) {
+        throw Error(
+          `Invalid input ${i} silent payment DLEQ proof for scan key ${bscanHex}.`,
+        );
       }
 
       perInputBuffers.push(ecdhShare);
@@ -1200,7 +1100,20 @@ export class PsbtV2 extends PsbtV2Maps {
     return Buffer.from(sumECDHShares(perInputBuffers).toRawBytes(true));
   }
 
-  private validateSilentPaymentOutputMaps(): void {
+  /**
+   * Validates all BIP375 silent payment constraints.
+   *
+   * Three phases:
+   * 1. Output map structural checks — always run
+   * 2. Input eligibility checks — only when SP outputs present
+   * 3. ECDH coverage checks — only when SP outputs have PSBT_OUT_SCRIPT set
+   */
+  private validateSilentPayments() {
+    if (!this.hasSilentPaymentOutputs) {
+      return;
+    }
+
+    // ── Output map structural checks ───────────────────────────────────────
     for (const [i, outputMap] of this.outputMaps.entries()) {
       const spInfo = outputMap.get(KeyType.PSBT_OUT_SP_V0_INFO);
       const spLabel = outputMap.get(KeyType.PSBT_OUT_SP_V0_LABEL);
@@ -1235,105 +1148,54 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
-  }
 
-  private validateSilentPaymentGlobalFields(): void {
+    // ── Global map: keydata/valuedata + pairing checks ────────────────────
     for (const [key, value] of this.globalMap.entries()) {
       if (key.startsWith(KeyType.PSBT_GLOBAL_SP_ECDH_SHARE)) {
-        const scanKey = scanKeyHexFromBIP375Key(
-          key,
-          KeyType.PSBT_GLOBAL_SP_ECDH_SHARE,
-          "Global ECDH share",
-        );
-
         assertValidECDHShare(value);
-
-        if (!this.globalMap.has(KeyType.PSBT_GLOBAL_SP_DLEQ + scanKey)) {
-          throw Error(
-            `Global ECDH share missing PSBT_GLOBAL_SP_DLEQ for scan key ${scanKey}.`,
-          );
-        }
       }
-
       if (key.startsWith(KeyType.PSBT_GLOBAL_SP_DLEQ)) {
-        const scanKey = scanKeyHexFromBIP375Key(
-          key,
-          KeyType.PSBT_GLOBAL_SP_DLEQ,
-          "Global DLEQ proof",
-        );
-
         assertValidDLEQProof(value);
-
-        if (!this.globalMap.has(KeyType.PSBT_GLOBAL_SP_ECDH_SHARE + scanKey)) {
-          throw Error(
-            `Global DLEQ proof missing PSBT_GLOBAL_SP_ECDH_SHARE for scan key ${scanKey}.`,
-          );
-        }
       }
     }
-  }
 
-  private validateSilentPaymentInputFields(): void {
-    for (const [i, inputMap] of this.inputMaps.entries()) {
-      for (const [key, value] of inputMap.entries()) {
+    // ── Input map: keydata/valuedata + pairing checks ─────────────────────
+    for (const inputMap of this.inputMaps.values()) {
+      for (const [key, value] of inputMap) {
         if (key.startsWith(KeyType.PSBT_IN_SP_ECDH_SHARE)) {
-          const scanKey = scanKeyHexFromBIP375Key(
-            key,
-            KeyType.PSBT_IN_SP_ECDH_SHARE,
-            `Input ${i} ECDH share`,
-          );
-
           assertValidECDHShare(value);
-
-          if (!inputMap.has(KeyType.PSBT_IN_SP_DLEQ + scanKey)) {
-            throw Error(
-              `Input ${i} ECDH share missing PSBT_IN_SP_DLEQ for scan key ${scanKey}.`,
-            );
-          }
         }
-
         if (key.startsWith(KeyType.PSBT_IN_SP_DLEQ)) {
-          const scanKey = scanKeyHexFromBIP375Key(
-            key,
-            KeyType.PSBT_IN_SP_DLEQ,
-            `Input ${i} DLEQ proof`,
-          );
-
           assertValidDLEQProof(value);
-
-          if (!inputMap.has(KeyType.PSBT_IN_SP_ECDH_SHARE + scanKey)) {
-            throw Error(
-              `Input ${i} DLEQ proof missing PSBT_IN_SP_ECDH_SHARE for scan key ${scanKey}.`,
-            );
-          }
         }
       }
     }
-  }
 
-  private validateSilentPaymentWideRestrictions(): void {
-    const inputDescriptors = this.getSilentPaymentInputDescriptors();
+    // ── SP-wide restrictions that apply whenever SP outputs exist ──────────
+    const descriptors = this.getSilentPaymentInputDescriptors();
 
-    if (hasSegwitV2PlusInput(inputDescriptors)) {
+    if (hasSegwitV2PlusInput(descriptors)) {
       throw Error(
         "A PSBT with PSBT_OUT_SP_V0_INFO must not contain SegWit v2+ inputs.",
       );
     }
 
     for (const [i, inputMap] of this.inputMaps.entries()) {
-      if (isNumsScriptPathSpend(inputDescriptors[i])) {
-        for (const key of inputMap.keys()) {
-          if (
-            key.startsWith(KeyType.PSBT_IN_SP_ECDH_SHARE) ||
-            key.startsWith(KeyType.PSBT_IN_SP_DLEQ)
-          ) {
-            throw Error(
-              `Input ${i} is a NUMS taproot script-path spend and must not have silent payment ECDH/DLEQ data.`,
-            );
-          }
+      if (!isNumsScriptPathSpend(descriptors[i])) continue;
+
+      for (const key of inputMap.keys()) {
+        if (
+          key.startsWith(KeyType.PSBT_IN_SP_ECDH_SHARE) ||
+          key.startsWith(KeyType.PSBT_IN_SP_DLEQ)
+        ) {
+          throw Error(
+            `Input ${i} is a NUMS taproot script-path spend and must not have silent payment ECDH/DLEQ data.`,
+          );
         }
       }
+    }
 
+    for (const [i, inputMap] of this.inputMaps.entries()) {
       const sighash = inputMap.get(KeyType.PSBT_IN_SIGHASH_TYPE);
 
       if (sighash && sighash.length >= 4) {
@@ -1346,22 +1208,21 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
-  }
 
-  private validateComputedSilentPaymentOutputScripts(): void {
     // ECDH coverage is only required per scan key that has a computed SP output
     // script. Scan keys whose outputs are still in progress (no PSBT_OUT_SCRIPT)
-    // may have missing ECDH/DLEQ data.
+    // may have missing ECDH/DLEQ data. Labeled outputs are skipped here until
+    // label-aware public recomputation is implemented.
     const outputGroups = this.getSilentPaymentOutputGroups(true, true);
+
     if (outputGroups.size === 0) {
       return;
     }
 
     const contributingInputs = this.getContributingInputsForSilentPayments();
+
     if (contributingInputs.length === 0) {
-      throw Error(
-        "No contributing inputs for silent payment ECDH derivation.",
-      );
+      throw Error("No contributing inputs for silent payment ECDH derivation.");
     }
 
     const inputHash = this.computeSilentPaymentInputHash(contributingInputs);
@@ -1404,25 +1265,6 @@ export class PsbtV2 extends PsbtV2Maps {
         }
       }
     }
-  }
-
-  /**
-   * Validates all BIP375 silent payment constraints.
-   *
-   * The structural checks always run for SP PSBTs. Expensive ECDH/share
-   * verification is limited to outputs whose scripts have already been
-   * computed and can be compared from public PSBT data.
-   */
-  private validateSilentPayments(): void {
-    if (!this.hasSilentPaymentOutputs) {
-      return;
-    }
-
-    this.validateSilentPaymentOutputMaps();
-    this.validateSilentPaymentGlobalFields();
-    this.validateSilentPaymentInputFields();
-    this.validateSilentPaymentWideRestrictions();
-    this.validateComputedSilentPaymentOutputScripts();
   }
 
   /**
@@ -1823,22 +1665,12 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error(`PsbtV2 has no input at ${inputIndex}`);
     }
 
-    if (!pubkey || !sig || sig.length === 0) {
+    if (!pubkey || !sig) {
       throw Error(
         `PsbtV2.addPartialSig() missing argument ${
-          (!pubkey && "pubkey") || ((!sig || sig.length === 0) && "sig")
+          (!pubkey && "pubkey") || (!sig && "sig")
         }`,
       );
-    }
-
-    if (this.hasSilentPaymentOutputs) {
-      const sighashType = sig[sig.length - 1];
-
-      if (sighashType !== SighashType.SIGHASH_ALL) {
-        throw new Error(
-          "Silent payment PSBTs require partial signatures to use SIGHASH_ALL.",
-        );
-      }
     }
 
     const key = `${KeyType.PSBT_IN_PARTIAL_SIG}${pubkey.toString("hex")}`;
@@ -1846,6 +1678,20 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error(
         "PsbtV2 already has a signature for this input with this pubkey",
       );
+    }
+
+    if (this.hasSilentPaymentOutputs) {
+      if (sig.length === 0) {
+        throw Error("PsbtV2.addPartialSig() received empty signature.");
+      }
+
+      const sighashType = sig[sig.length - 1];
+
+      if (sighashType !== SighashType.SIGHASH_ALL) {
+        throw Error(
+          "Silent payment PSBTs require partial signatures to use SIGHASH_ALL.",
+        );
+      }
     }
 
     // Per BIP375: re-verify silent-payment consistency on the live object before

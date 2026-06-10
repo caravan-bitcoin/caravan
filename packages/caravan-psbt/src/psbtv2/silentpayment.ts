@@ -322,65 +322,6 @@ export function isEligibleInputType(type: SPInputScriptType): boolean {
   );
 }
 
-
-function hash160(buffer: Buffer): Buffer {
-  const sha = createHash("sha256").update(buffer).digest();
-  return createHash("ripemd160").update(sha).digest();
-}
-
-/**
- * Returns the public key committed to an input's prevout script from a list of
- * candidate pubkeys, or null when no candidate matches. This prevents callers
- * from using an arbitrary PSBT-provided pubkey for silent-payment DLEQ
- * verification and input_hash derivation.
- */
-export function getSilentPaymentPubkeyFromInputDescriptor(
-  input: SPInputDescriptor,
-  candidatePubkeys: Buffer[],
-): Buffer | null {
-  const scriptPubKey = input.witnessUtxo
-    ? readWitnessUtxoScript(input.witnessUtxo)
-    : readNonWitnessUtxoScript(input.nonWitnessUtxo, input.outputIndex);
-
-  if (!scriptPubKey) return null;
-
-  const scriptType = classifyInputDescriptor(input);
-
-  if (scriptType === "p2tr") {
-    return input.witnessUtxo
-      ? getTaprootOutputKeyFromWitnessUtxo(input.witnessUtxo)
-      : null;
-  }
-
-  for (const pubkey of candidatePubkeys) {
-    assertValidCompressedPoint(pubkey, "silent payment input pubkey");
-    const pubkeyHash = hash160(pubkey);
-
-    if (scriptType === "p2wpkh") {
-      if (pubkeyHash.equals(scriptPubKey.subarray(2, 22))) return pubkey;
-      continue;
-    }
-
-    if (scriptType === "p2pkh_or_unknown_legacy") {
-      if (pubkeyHash.equals(scriptPubKey.subarray(3, 23))) return pubkey;
-      continue;
-    }
-
-    if (scriptType === "p2sh_p2wpkh") {
-      if (!input.redeemScript) continue;
-
-      const p2shHash = scriptPubKey.subarray(2, 22);
-      if (!hash160(input.redeemScript).equals(p2shHash)) continue;
-      if (classifyWitnessScript(input.redeemScript) !== "p2wpkh") continue;
-
-      const redeemWitnessProgram = input.redeemScript.subarray(2, 22);
-      if (pubkeyHash.equals(redeemWitnessProgram)) return pubkey;
-    }
-  }
-
-  return null;
-}
-
 /**
  * Determines which transaction inputs are eligible for silent payment ECDH
  * derivation per BIP352.
@@ -460,15 +401,6 @@ function hash160(buffer: Buffer): Buffer {
   return createHash("ripemd160").update(sha).digest();
 }
 
-/**
- * Returns the public key that should contribute to BIP352 derivation for an
- * input, but only when it is committed by that input's prevout script.
- *
- * `candidatePubkeys` may be sourced from PSBT_IN_BIP32_DERIVATION,
- * PSBT_IN_PARTIAL_SIG, final script witness, or final scriptSig. This helper
- * deliberately treats those as untrusted candidates and validates them against
- * the prevout script before returning one.
- */
 export function getSilentPaymentPubkeyFromInputDescriptor(
   input: SPInputDescriptor,
   candidatePubkeys: Buffer[],
@@ -477,9 +409,7 @@ export function getSilentPaymentPubkeyFromInputDescriptor(
     ? readWitnessUtxoScript(input.witnessUtxo)
     : readNonWitnessUtxoScript(input.nonWitnessUtxo, input.outputIndex);
 
-  if (!scriptPubKey) {
-    return null;
-  }
+  if (!scriptPubKey) return null;
 
   const scriptType = classifyInputDescriptor(input);
 
@@ -491,49 +421,27 @@ export function getSilentPaymentPubkeyFromInputDescriptor(
 
   for (const pubkey of candidatePubkeys) {
     assertValidCompressedPoint(pubkey, "silent payment input pubkey");
-
     const pubkeyHash = hash160(pubkey);
 
     if (scriptType === "p2wpkh") {
-      const witnessProgram = scriptPubKey.subarray(2, 22);
-
-      if (pubkeyHash.equals(witnessProgram)) {
-        return pubkey;
-      }
-
+      if (pubkeyHash.equals(scriptPubKey.subarray(2, 22))) return pubkey;
       continue;
     }
 
     if (scriptType === "p2pkh_or_unknown_legacy") {
-      const scriptPubkeyHash = scriptPubKey.subarray(3, 23);
-
-      if (pubkeyHash.equals(scriptPubkeyHash)) {
-        return pubkey;
-      }
-
+      if (pubkeyHash.equals(scriptPubKey.subarray(3, 23))) return pubkey;
       continue;
     }
 
     if (scriptType === "p2sh_p2wpkh") {
-      if (!input.redeemScript) {
-        continue;
-      }
+      if (!input.redeemScript) continue;
 
       const p2shHash = scriptPubKey.subarray(2, 22);
-
-      if (!hash160(input.redeemScript).equals(p2shHash)) {
-        continue;
-      }
-
-      if (classifyWitnessScript(input.redeemScript) !== "p2wpkh") {
-        continue;
-      }
+      if (!hash160(input.redeemScript).equals(p2shHash)) continue;
+      if (classifyWitnessScript(input.redeemScript) !== "p2wpkh") continue;
 
       const redeemWitnessProgram = input.redeemScript.subarray(2, 22);
-
-      if (pubkeyHash.equals(redeemWitnessProgram)) {
-        return pubkey;
-      }
+      if (pubkeyHash.equals(redeemWitnessProgram)) return pubkey;
     }
   }
 
