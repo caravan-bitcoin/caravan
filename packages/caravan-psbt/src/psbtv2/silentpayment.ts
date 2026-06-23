@@ -11,6 +11,7 @@
 import { secp256k1, schnorr } from "@noble/curves/secp256k1";
 import { createHash } from "crypto";
 import { script } from "bitcoinjs-lib-v6";
+import { taggedHash } from "./functions";
 
 const CURVE_ORDER = secp256k1.CURVE.n;
 const { bytesToNumberBE } = schnorr.utils;
@@ -183,28 +184,6 @@ function assertValidScalar(value: bigint, name: string): void {
   if (value === 0n || value >= CURVE_ORDER) {
     throw new Error(`${name} is not a valid secp256k1 scalar`);
   }
-}
-
-// ── Tagged hash ────────────────────────────────────────────────────────────
-
-/**
- * Computes a BIP340 tagged hash.
- *
- * ```
- * taggedHash(tag, data) = SHA256(SHA256(tag) || SHA256(tag) || data)
- * ```
- *
- * @param tag - ASCII tag string, e.g. `"BIP0352/Inputs"`.
- * @param data - Arbitrary data to hash.
- * @returns 32-byte hash buffer.
- */
-export function bip352TaggedHash(tag: string, data: Buffer): Buffer {
-  const tagHash = createHash("sha256").update(tag).digest();
-  return createHash("sha256")
-    .update(tagHash)
-    .update(tagHash)
-    .update(data)
-    .digest();
 }
 
 // ── Eligible input indices ─────────────────────────────────────────────────
@@ -516,7 +495,7 @@ export function computeInputHash(
   }
   const sorted = [...outpoints].sort(Buffer.compare);
   const data = Buffer.concat([sorted[0], combinedPubkey]);
-  return bip352TaggedHash("BIP0352/Inputs", data);
+  return taggedHash("BIP0352/Inputs", data);
 }
 
 // ── Output script derivation ───────────────────────────────────────────────
@@ -563,7 +542,7 @@ export function deriveSilentPaymentOutput(
   // tweak_k = taggedHash("BIP0352/SharedSecret", ecdhSecret_compressed || k_be32)
   const kBuf = Buffer.allocUnsafe(4);
   kBuf.writeUInt32BE(k, 0);
-  const tweak = bip352TaggedHash(
+  const tweak = taggedHash(
     "BIP0352/SharedSecret",
     Buffer.concat([ecdhSecretBytes, kBuf]),
   );

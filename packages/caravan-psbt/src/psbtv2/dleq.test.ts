@@ -6,7 +6,6 @@ import {
   multiplyCompressedPoint,
   verifyDLEQProof,
 } from "./dleq";
-import { verifySilentPaymentDLEQProof } from "./silentpayment";
 function hex(s: string): Buffer {
   return Buffer.from(s, "hex");
 }

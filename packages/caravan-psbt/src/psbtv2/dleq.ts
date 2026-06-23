@@ -1,20 +1,14 @@
 import { randomBytes } from "crypto";
-
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { sha256 } from "@noble/hashes/sha256";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/abstract/utils";
 import { mod } from "@noble/curves/abstract/modular";
+import { taggedHash } from "./functions";
 
 export type ProjectivePoint = InstanceType<typeof secp256k1.ProjectivePoint>;
 
 const N = secp256k1.CURVE.n;
 const G = secp256k1.ProjectivePoint.BASE;
 const ZERO = secp256k1.ProjectivePoint.ZERO;
-
-function taggedHash(tag: string, msg: Buffer): Buffer {
-  const tagHash = Buffer.from(sha256(Buffer.from(tag, "utf8")));
-  return Buffer.from(sha256(Buffer.concat([tagHash, tagHash, msg])));
-}
 
 function scalarFromPrivateKey(bytes: Buffer, context: string): bigint {
   if (!secp256k1.utils.isValidPrivateKey(bytes)) {
@@ -58,7 +52,7 @@ function pointFromCompressed(bytes: Buffer): ProjectivePoint {
   return secp256k1.ProjectivePoint.fromHex(bytes);
 }
 
-function pointToCompressedBytes(point: typeof G): Buffer {
+function pointToCompressedBytes(point: ProjectivePoint): Buffer {
   if (point.equals(ZERO)) {
     throw new Error("Cannot serialize point at infinity.");
   }
@@ -88,6 +82,28 @@ export function multiplyCompressedPoint(
   return Buffer.from(result.toRawBytes(true));
 }
 
+function getTaggedChallenge(
+  A: ProjectivePoint,
+  B: ProjectivePoint,
+  C: ProjectivePoint,
+  R1: ProjectivePoint,
+  R2: ProjectivePoint,
+  m: Buffer,
+): Buffer {
+  return taggedHash(
+    "BIP0374/challenge",
+    Buffer.concat([
+      pointToCompressedBytes(A),
+      pointToCompressedBytes(B),
+      pointToCompressedBytes(C),
+      pointToCompressedBytes(G),
+      pointToCompressedBytes(R1),
+      pointToCompressedBytes(R2),
+      m,
+    ]),
+  );
+}
+
 export function generateDLEQProof({
   secret,
   basePoint,
@@ -113,7 +129,6 @@ export function generateDLEQProof({
   }
 
   const ABytes = Buffer.from(A.toRawBytes(true));
-  const BBytes = Buffer.from(B.toRawBytes(true));
   const CBytes = Buffer.from(C.toRawBytes(true));
 
   const t = xor32(secret, taggedHash("BIP0374/aux", auxRand));
@@ -136,21 +151,7 @@ export function generateDLEQProof({
     throw new Error("BIP374 nonce produced point at infinity.");
   }
 
-  const R1Bytes = Buffer.from(R1.toRawBytes(true));
-  const R2Bytes = Buffer.from(R2.toRawBytes(true));
-
-  const eBytes = taggedHash(
-    "BIP0374/challenge",
-    Buffer.concat([
-      ABytes,
-      BBytes,
-      CBytes,
-      Buffer.from(G.toRawBytes(true)),
-      R1Bytes,
-      R2Bytes,
-      m,
-    ]),
-  );
+  const eBytes = getTaggedChallenge(A, B, C, R1, R2, m);
 
   const e = bytesToNumberBE(eBytes);
   const s = mod(k + mod(e, N) * a, N);
@@ -158,10 +159,10 @@ export function generateDLEQProof({
   const proof = Buffer.concat([eBytes, Buffer.from(numberToBytesBE(s, 32))]);
 
   if (
-    !verifyDLEQProof({
-      publicKey: ABytes,
-      basePoint,
-      result: CBytes,
+    !verifyDLEQProofForPoints({
+      A,
+      B,
+      C,
       proof,
       message,
     })
@@ -172,31 +173,20 @@ export function generateDLEQProof({
   return proof;
 }
 
-export function verifyDLEQProof({
-  publicKey,
-  basePoint,
-  result,
+function verifyDLEQProofForPoints({
+  A,
+  B,
+  C,
   proof,
   message,
 }: {
-  publicKey: Buffer;
-  basePoint: Buffer;
-  result: Buffer;
+  A: ProjectivePoint;
+  B: ProjectivePoint;
+  C: ProjectivePoint;
   proof: Buffer;
   message?: Buffer;
 }): boolean {
   if (proof.length !== 64) {
-    return false;
-  }
-
-  let A: ProjectivePoint;
-  let B: ProjectivePoint;
-  let C: ProjectivePoint;
-  try {
-    A = pointFromCompressed(publicKey);
-    B = pointFromCompressed(basePoint);
-    C = pointFromCompressed(result);
-  } catch {
     return false;
   }
 
@@ -226,18 +216,36 @@ export function verifyDLEQProof({
   } catch {
     return false;
   }
-  const expectedE = taggedHash(
-    "BIP0374/challenge",
-    Buffer.concat([
-      pointToCompressedBytes(A),
-      pointToCompressedBytes(B),
-      pointToCompressedBytes(C),
-      pointToCompressedBytes(G),
-      pointToCompressedBytes(R1),
-      pointToCompressedBytes(R2),
-      m,
-    ]),
-  );
+
+  const expectedE = getTaggedChallenge(A, B, C, R1, R2, m);
 
   return expectedE.equals(eBytes);
+}
+
+export function verifyDLEQProof({
+  publicKey,
+  basePoint,
+  result,
+  proof,
+  message,
+}: {
+  publicKey: Buffer;
+  basePoint: Buffer;
+  result: Buffer;
+  proof: Buffer;
+  message?: Buffer;
+}): boolean {
+  let A: ProjectivePoint;
+  let B: ProjectivePoint;
+  let C: ProjectivePoint;
+
+  try {
+    A = pointFromCompressed(publicKey);
+    B = pointFromCompressed(basePoint);
+    C = pointFromCompressed(result);
+  } catch {
+    return false;
+  }
+
+  return verifyDLEQProofForPoints({ A, B, C, proof, message });
 }

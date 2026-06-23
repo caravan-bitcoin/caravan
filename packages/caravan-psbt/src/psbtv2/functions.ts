@@ -1,5 +1,6 @@
 import { BufferReader, BufferWriter } from "bufio";
 import { validateBIP32Path } from "@caravan/bitcoin";
+import { sha256 } from "@noble/hashes/sha2";
 import { PSBT_MAGIC_BYTES } from "../constants";
 import { Key, Value, NonUniqueKeyTypeValue, KeyType } from "./types";
 import {
@@ -141,4 +142,9 @@ export function getPsbtVersionNumber(psbt: string | Buffer): number {
   const br = new BufferReader(buf.slice(PSBT_MAGIC_BYTES.length));
   readAndSetKeyPairs(map, br);
   return map.get(KeyType.PSBT_GLOBAL_VERSION)?.readUInt32LE(0) || 0;
+}
+
+export function taggedHash(tag: string, msg: Buffer): Buffer {
+  const tagHash = Buffer.from(sha256(Buffer.from(tag, "utf8")));
+  return Buffer.from(sha256(Buffer.concat([tagHash, tagHash, msg])));
 }
