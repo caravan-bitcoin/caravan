@@ -232,7 +232,7 @@ export class PsbtConversionMaps extends PsbtV2Maps {
         !this.outputMaps[i].has(KeyType.PSBT_OUT_AMOUNT)
       ) {
         console.warn(
-          `Output ${i} is missing SP_INFO, script or amount. Skipping.`,
+          `Output ${i} is missing SP_INFO, previous out script or amount. Skipping.`,
         );
         continue;
       }
