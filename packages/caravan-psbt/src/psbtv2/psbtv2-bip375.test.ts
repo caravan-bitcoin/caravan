@@ -52,7 +52,6 @@ describe("BIP375 invalid vectors", () => {
 });
 
 // ── Valid vectors ──────────────────────────────────────────────────────────
-
 describe("BIP375 valid vectors", () => {
   test.each(bip375Vectors.valid)("$description", ({ psbt, supplementary }) => {
     const p = new PsbtV2(psbt);
@@ -62,12 +61,24 @@ describe("BIP375 valid vectors", () => {
     // ── Output checks ──────────────────────────────────────────────────────
 
     for (const output of supplementary.outputs ?? []) {
-      // Output script
-      if (output.script) {
+      const outputMap = p.outputMaps[output.output_index];
+      expect(outputMap, `output ${output.output_index} exists`).toBeDefined();
+
+      if (
+        "script" in output &&
+        output.script !== null &&
+        output.script !== undefined
+      ) {
+        const script = outputMap.get(KeyType.PSBT_OUT_SCRIPT);
         expect(
-          p.PSBT_OUT_SCRIPT[output.output_index],
+          script?.toString("hex"),
           `output ${output.output_index} script`,
         ).toBe(output.script);
+      } else {
+        expect(
+          outputMap.has(KeyType.PSBT_OUT_SCRIPT),
+          `output ${output.output_index} should not have PSBT_OUT_SCRIPT`,
+        ).toBe(false);
       }
 
       // SP V0 info (bscan || bspend): only check unlabeled outputs.

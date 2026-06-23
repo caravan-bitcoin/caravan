@@ -41,6 +41,7 @@ import {
   verifySilentPaymentDLEQProof,
 } from "src/psbtv2/silentpayment";
 import { ProjectivePoint } from "src/psbtv2/dleq";
+
 /**
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all
@@ -475,12 +476,17 @@ export class PsbtV2 extends PsbtV2Maps {
     return indices;
   }
 
-  get PSBT_OUT_SCRIPT(): string[] {
-    return this.outputMaps.map((map) => {
+  get PSBT_OUT_SCRIPT() {
+    const indices: string[] = [];
+    for (const map of this.outputMaps) {
       const value = map.get(KeyType.PSBT_OUT_SCRIPT);
-      if (!value) return "";
-      return value.toString("hex");
-    });
+      if (!value) {
+        // This should never happen, but it can't be gracefully handled.
+        throw Error("PSBT_OUT_SCRIPT not set for an output");
+      }
+      indices.push(value.toString("hex"));
+    }
+    return indices;
   }
 
   get PSBT_OUT_TAP_INTERNAL_KEY() {
@@ -677,13 +683,11 @@ export class PsbtV2 extends PsbtV2Maps {
         this.PSBT_IN_POR_COMMITMENT[i] ||
         this.PSBT_IN_TAP_KEY_SIG[i] ||
         this.PSBT_IN_TAP_INTERNAL_KEY[i] ||
-        this.PSBT_IN_TAP_MERKLE_ROOT[i] ||
-        // Numbers
+        this.PSBT_IN_TAP_MERKLE_ROOT[i] || // Numbers
         this.PSBT_IN_SIGHASH_TYPE[i] !== null ||
         this.PSBT_IN_SEQUENCE[i] !== null ||
         this.PSBT_IN_REQUIRED_TIME_LOCKTIME[i] !== null ||
-        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] !== null ||
-        // Arrays of non-unique keytype values
+        this.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME[i] !== null || // Arrays of non-unique keytype values
         this.PSBT_IN_PARTIAL_SIG[i].filter((el) => el !== null).length > 0 ||
         this.PSBT_IN_BIP32_DERIVATION[i].filter((el) => el !== null).length >
           0 ||
@@ -823,8 +827,11 @@ export class PsbtV2 extends PsbtV2Maps {
         throw Error("PsbtV2 input is missing PSBT_OUT_AMOUNT");
       }
     }
-    for (const [i, script] of this.PSBT_OUT_SCRIPT.entries()) {
-      if (!script && !this.outputMaps[i].has(KeyType.PSBT_OUT_SP_V0_INFO)) {
+    for (let i = 0; i < this.outputMaps.length; i++) {
+      if (
+        !this.hasNonEmptyOutputScript(i) &&
+        !this.outputMaps[i].has(KeyType.PSBT_OUT_SP_V0_INFO)
+      ) {
         throw Error(
           `PsbtV2 output ${i} is missing PSBT_OUT_SCRIPT and has no ` +
             "PSBT_OUT_SP_V0_INFO. An output must have one or both per BIP375.",
@@ -842,6 +849,11 @@ export class PsbtV2 extends PsbtV2Maps {
       }
     }
     this.validateSilentPayments();
+  }
+
+  private hasNonEmptyOutputScript(outputIndex: number): boolean {
+    const script = this.outputMaps[outputIndex]?.get(KeyType.PSBT_OUT_SCRIPT);
+    return !!script && script.length > 0;
   }
 
   private getSilentPaymentInputDescriptors(): SPInputDescriptor[] {
@@ -881,9 +893,8 @@ export class PsbtV2 extends PsbtV2Maps {
         continue;
       }
 
-      if (onlyWithScripts) {
-        const script = this.outputMaps[i].get(KeyType.PSBT_OUT_SCRIPT);
-        if (!script || script.length === 0) continue;
+      if (onlyWithScripts && !this.hasNonEmptyOutputScript(i)) {
+        continue;
       }
 
       entries.push({ outputIndex: i, ...info });
@@ -1667,9 +1678,7 @@ export class PsbtV2 extends PsbtV2Maps {
 
     if (!pubkey || !sig) {
       throw Error(
-        `PsbtV2.addPartialSig() missing argument ${
-          (!pubkey && "pubkey") || (!sig && "sig")
-        }`,
+        `PsbtV2.addPartialSig() missing argument ${(!pubkey && "pubkey") || (!sig && "sig")}`,
       );
     }
 
