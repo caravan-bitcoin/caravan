@@ -8,6 +8,7 @@ import { useConfirmedTransactions } from "clients/txHistory";
 import { ConfirmedTransactionsView } from "./TableComponents/ConfirmedTransactionsView";
 import { PendingTransactionsView } from "./TableComponents/PendingTransactionsView";
 import { useHandleTransactionExplorerLinkClick } from "./hooks";
+import SignatureAnalyzer from "./SignatureAnalyzer";
 
 const TransactionsTab: React.FC = () => {
   const network = useSelector((state: any) => state.settings.network);
@@ -89,6 +90,11 @@ const TransactionsTab: React.FC = () => {
               id="confirmed-tab"
               aria-controls="completed-tabpanel"
             />
+            <Tab
+              label="Signature audit"
+              id="signature-audit-tab"
+              aria-controls="signature-audit-tabpanel"
+            />
           </Tabs>
         </Box>
       </Box>
@@ -125,6 +131,15 @@ const TransactionsTab: React.FC = () => {
             onClickTransaction={handleExplorerLinkClick}
           />
         )}
+      </div>
+
+      <div
+        role="tabpanel"
+        hidden={tabValue !== 2}
+        id="signature-audit-tabpanel"
+        aria-labelledby="signature-audit-tab"
+      >
+        {tabValue === 2 && <SignatureAnalyzer />}
       </div>
 
       {/* Acceleration Modal - only for pending transactions */}
