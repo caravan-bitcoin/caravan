@@ -10,6 +10,10 @@ jobs:
   validate-changesets:
     name: Validate Changesets
     runs-on: ubuntu-latest
+    # Skip on the automated "Version Packages" release PR: it consumes all
+    # changesets while bumping package versions, so `changeset status` would
+    # (correctly) report changed packages with no changesets and fail.
+    if: github.head_ref != 'changeset-release/main'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
