@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS base
 
 # Install all OS dependencies
 FROM base AS builder
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --yes && \
     apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
@@ -35,6 +35,6 @@ RUN npx turbo run build --filter=caravan-coordinator...
 
 # Serve the production build files via nginx (will be served at http://localhost:80/#
 # in docker vm. Map port 80 to a different port on the host machine to access the app)
-FROM nginx:1.23 AS runner
+FROM nginx:1.31.2 AS runner
 WORKDIR /app
 COPY --from=installer /app/apps/coordinator/build /usr/share/nginx/html/
