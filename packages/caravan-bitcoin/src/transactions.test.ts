@@ -1,12 +1,11 @@
 import { address } from "bitcoinjs-lib-v5";
 
 import { TEST_FIXTURES } from "./fixtures";
-import { generateMultisigFromHex, multisigPublicKeys } from "./multisig";
+import { generateMultisigFromHex } from "./multisig";
 import { networkData, Network } from "./networks";
 import { P2SH } from "./p2sh";
 import { P2SH_P2WSH } from "./p2sh_p2wsh";
 import { P2WSH } from "./p2wsh";
-import { analyzeMultisigTransactionSignatures } from "./signature_analysis";
 import {
   unsignedMultisigTransaction,
   signedMultisigTransaction,
@@ -296,20 +295,6 @@ describe("transactions", () => {
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
-      const [analysis] = analyzeMultisigTransactionSignatures(
-        signedTransactionHex,
-      );
-      expect(analysis.addressType).toEqual(P2SH);
-      expect(analysis.matches).toHaveLength(2);
-      expect(analysis.matches.map(({ signature }) => signature)).toEqual([
-        `${transactionSignature1[0]}01`,
-        `${transactionSignature2[0]}01`,
-      ]);
-      expect(
-        analysis.matches.every(({ publicKey }) =>
-          multisigPublicKeys(multisig).includes(publicKey),
-        ),
-      ).toBe(true);
     });
 
     it("can construct a valid signed P2SH_P2WSH transaction", () => {
@@ -356,21 +341,6 @@ describe("transactions", () => {
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
-      expect(() =>
-        analyzeMultisigTransactionSignatures(signedTransactionHex),
-      ).toThrow(/amount is required/i);
-      const [analysis] = analyzeMultisigTransactionSignatures(
-        signedTransactionHex,
-        [inputs[0].amountSats],
-      );
-      expect(analysis.addressType).toEqual(P2SH_P2WSH);
-      expect(analysis.matches).toHaveLength(2);
-      expect(analysis.unmatchedSignatures).toEqual([]);
-      expect(
-        analysis.matches.every(({ publicKey }) =>
-          multisigPublicKeys(multisig).includes(publicKey),
-        ),
-      ).toBe(true);
     });
 
     it("can construct a valid signed P2WSH transaction", () => {
@@ -418,18 +388,6 @@ describe("transactions", () => {
       );
 
       expect(signedTransaction.toHex()).toEqual(signedTransactionHex);
-      const [analysis] = analyzeMultisigTransactionSignatures(
-        signedTransactionHex,
-        [inputs[0].amountSats],
-      );
-      expect(analysis.addressType).toEqual(P2WSH);
-      expect(analysis.matches).toHaveLength(2);
-      expect(analysis.unmatchedSignatures).toEqual([]);
-      expect(
-        analysis.matches.every(({ publicKey }) =>
-          multisigPublicKeys(multisig).includes(publicKey),
-        ),
-      ).toBe(true);
     });
   });
 });

@@ -1,9 +1,7 @@
-import { payments, script, Transaction } from "bitcoinjs-lib-v5";
+import { secp256k1 } from "@noble/curves/secp256k1";
+import { payments, script, Transaction } from "bitcoinjs-lib-v6";
 
-import { P2SH } from "./p2sh";
-import { P2SH_P2WSH } from "./p2sh_p2wsh";
-import { P2WSH } from "./p2wsh";
-import { isValidSignature } from "./signatures";
+export type FinalizedMultisigAddressType = "P2SH" | "P2SH-P2WSH" | "P2WSH";
 
 export interface MultisigSignatureMatch {
   publicKey: string;
@@ -15,7 +13,7 @@ export interface MultisigSignatureMatch {
 
 export interface MultisigInputSignatureAnalysis {
   inputIndex: number;
-  addressType: typeof P2SH | typeof P2SH_P2WSH | typeof P2WSH;
+  addressType: FinalizedMultisigAddressType;
   scriptHex: string;
   requiredSigners: number;
   totalSigners: number;
@@ -24,7 +22,7 @@ export interface MultisigInputSignatureAnalysis {
 }
 
 interface FinalizedMultisigInput {
-  addressType: typeof P2SH | typeof P2SH_P2WSH | typeof P2WSH;
+  addressType: FinalizedMultisigAddressType;
   multisigScript: Buffer;
   signatures: Buffer[];
 }
@@ -34,12 +32,13 @@ function finalizedMultisigInput(
   inputIndex: number,
 ): FinalizedMultisigInput | null {
   const input = transaction.ins[inputIndex];
-  if (!input) throw new Error(`Transaction has no input at index ${inputIndex}.`);
+  if (!input)
+    throw new Error(`Transaction has no input at index ${inputIndex}.`);
 
   if (input.witness.length > 0) {
     if (input.witness.length < 3) return null;
     return {
-      addressType: input.script.length > 0 ? P2SH_P2WSH : P2WSH,
+      addressType: input.script.length > 0 ? "P2SH-P2WSH" : "P2WSH",
       multisigScript: input.witness[input.witness.length - 1],
       signatures: input.witness.slice(1, -1),
     };
@@ -51,27 +50,34 @@ function finalizedMultisigInput(
   if (!Buffer.isBuffer(multisigScript)) return null;
 
   return {
-    addressType: P2SH,
+    addressType: "P2SH",
     multisigScript,
     signatures: chunks.slice(1, -1).filter(Buffer.isBuffer) as Buffer[],
   };
 }
 
-/**
- * Identify which concrete public key made each signature in a finalized
- * multisig transaction input.
- *
- * SegWit signature hashes commit to the spent output amount, so `amountSats`
- * is required for P2WSH and P2SH-P2WSH inputs. Legacy P2SH inputs do not need
- * it. The public keys are read from the finalized redeem/witness script; a
- * wallet configuration can then attach signer names or root fingerprints.
- */
-export function analyzeMultisigTransactionInputSignatures(
-  transactionHex: string,
+function verifies(
+  signature: Buffer,
+  messageHash: Buffer,
+  publicKey: Buffer,
+): boolean {
+  try {
+    return secp256k1.verify(signature, messageHash, publicKey, {
+      format: "compact",
+      // High-S signatures are non-standard today but remain valid ECDSA. The
+      // analyzer reports historical consensus-valid transactions as well.
+      lowS: false,
+    });
+  } catch (_error) {
+    return false;
+  }
+}
+
+function analyzeInput(
+  transaction: Transaction,
   inputIndex: number,
   amountSats?: number | string | null,
 ): MultisigInputSignatureAnalysis | null {
-  const transaction = Transaction.fromHex(transactionHex);
   const finalized = finalizedMultisigInput(transaction, inputIndex);
   if (!finalized) return null;
 
@@ -79,14 +85,12 @@ export function analyzeMultisigTransactionInputSignatures(
   try {
     multisig = payments.p2ms({ output: finalized.multisigScript });
   } catch (_error) {
-    // Most finalized inputs are not bare multisig scripts. They are outside
-    // the scope of this analyzer rather than malformed transactions.
     return null;
   }
   if (!multisig.m || !multisig.n || !multisig.pubkeys) return null;
   const publicKeys = multisig.pubkeys;
 
-  if (finalized.addressType !== P2SH && amountSats == null) {
+  if (finalized.addressType !== "P2SH" && amountSats == null) {
     throw new Error(
       `The spent output amount is required for SegWit input ${inputIndex}.`,
     );
@@ -105,7 +109,7 @@ export function analyzeMultisigTransactionInputSignatures(
     }
 
     const hash =
-      finalized.addressType === P2SH
+      finalized.addressType === "P2SH"
         ? transaction.hashForSignature(
             inputIndex,
             finalized.multisigScript,
@@ -119,7 +123,7 @@ export function analyzeMultisigTransactionInputSignatures(
           );
 
     const publicKeyIndex = publicKeys.findIndex((publicKey) =>
-      isValidSignature(publicKey, hash, decoded.signature),
+      verifies(decoded.signature, hash, publicKey),
     );
     if (publicKeyIndex < 0) {
       unmatchedSignatures.push(encodedSignature.toString("hex"));
@@ -146,7 +150,16 @@ export function analyzeMultisigTransactionInputSignatures(
   };
 }
 
-/** Analyze every finalized multisig input in a raw transaction. */
+/**
+ * Identify which concrete public key made each signature in every finalized
+ * multisig input in a raw transaction.
+ *
+ * SegWit signature hashes commit to the spent output amount, so the
+ * corresponding `inputAmountsSats` entry is required for P2WSH and
+ * P2SH-P2WSH inputs. Legacy P2SH inputs do not need it. The public keys are
+ * read from the finalized redeem/witness script; a wallet configuration can
+ * then attach signer names or root fingerprints.
+ */
 export function analyzeMultisigTransactionSignatures(
   transactionHex: string,
   inputAmountsSats: Array<number | string | null> = [],
@@ -155,8 +168,8 @@ export function analyzeMultisigTransactionSignatures(
   const analyses: MultisigInputSignatureAnalysis[] = [];
 
   transaction.ins.forEach((_input, inputIndex) => {
-    const analysis = analyzeMultisigTransactionInputSignatures(
-      transactionHex,
+    const analysis = analyzeInput(
+      transaction,
       inputIndex,
       inputAmountsSats[inputIndex],
     );

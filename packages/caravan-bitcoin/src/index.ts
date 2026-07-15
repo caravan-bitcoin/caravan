@@ -16,7 +16,6 @@ export * from "./psbt";
 export * from "./psbtv2";
 export * from "./script";
 export * from "./signatures";
-export * from "./signature_analysis";
 export * from "./transactions";
 export * from "./utils";
 export * from "./types";

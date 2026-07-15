@@ -2,10 +2,8 @@ import React, { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   analyzeMultisigTransactionSignatures,
-  bitcoinsToSatoshis,
   MultisigInputSignatureAnalysis,
-} from "@caravan/bitcoin";
-import { Transaction } from "bitcoinjs-lib";
+} from "@caravan/transactions";
 import {
   Alert,
   Box,
@@ -17,6 +15,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -24,6 +23,7 @@ import {
 } from "@mui/material";
 import { Buffer } from "buffer";
 
+import { fetchTransactionInputAmountsSats } from "clients/transactions";
 import { useGetClient } from "hooks/client";
 import { getWalletSlices } from "selectors/wallet";
 import Copyable from "../../Copyable";
@@ -90,24 +90,9 @@ const SignatureAnalyzer: React.FC = () => {
       const transactionHex = transactionIdPattern.test(value)
         ? await blockchainClient.getTransactionHex(value)
         : value;
-      const transaction = Transaction.fromHex(transactionHex);
-
-      const amounts = await Promise.all(
-        transaction.ins.map(async (input) => {
-          if (input.witness.length === 0) return null;
-          const previousTxId = Buffer.from(input.hash)
-            .reverse()
-            .toString("hex");
-          const previousTransaction =
-            await blockchainClient.getTransaction(previousTxId);
-          const previousOutput = previousTransaction.vout[input.index];
-          if (!previousOutput) {
-            throw new Error(
-              `Could not find output ${input.index} of ${previousTxId}.`,
-            );
-          }
-          return Number(bitcoinsToSatoshis(previousOutput.value).toString());
-        }),
+      const amounts = await fetchTransactionInputAmountsSats(
+        transactionHex,
+        blockchainClient,
       );
 
       setAnalyses(
@@ -181,39 +166,54 @@ const SignatureAnalyzer: React.FC = () => {
                 currently loaded wallet addresses.
               </Alert>
             )}
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Signer</TableCell>
-                  <TableCell>Fingerprint / path</TableCell>
-                  <TableCell>Public key</TableCell>
-                  <TableCell>Signature</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {analysis.matches.map((match) => {
-                  const signer = signerByPublicKey.get(match.publicKey);
-                  return (
-                    <TableRow
-                      key={`${analysis.inputIndex}-${match.signatureIndex}`}
-                    >
-                      <TableCell>{signer?.name || "Not in wallet"}</TableCell>
-                      <TableCell>
-                        {signer
-                          ? `${signer.rootFingerprint} / ${signer.path}`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Copyable text={match.publicKey} code showIcon />
-                      </TableCell>
-                      <TableCell>
-                        <Copyable text={match.signature} code showIcon />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <TableContainer sx={{ maxWidth: "100%", overflowX: "auto" }}>
+              <Table size="small" sx={{ minWidth: 800, tableLayout: "fixed" }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: "15%" }}>Signer</TableCell>
+                    <TableCell sx={{ width: "20%" }}>
+                      Fingerprint / path
+                    </TableCell>
+                    <TableCell sx={{ width: "28%" }}>Public key</TableCell>
+                    <TableCell sx={{ width: "37%" }}>Signature</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analysis.matches.map((match) => {
+                    const signer = signerByPublicKey.get(match.publicKey);
+                    return (
+                      <TableRow
+                        key={`${analysis.inputIndex}-${match.signatureIndex}`}
+                      >
+                        <TableCell sx={{ verticalAlign: "top" }}>
+                          {signer?.name || "Not in wallet"}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            overflowWrap: "anywhere",
+                            verticalAlign: "top",
+                          }}
+                        >
+                          {signer
+                            ? `${signer.rootFingerprint} / ${signer.path}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell
+                          sx={{ wordBreak: "break-all", verticalAlign: "top" }}
+                        >
+                          <Copyable text={match.publicKey} code showIcon />
+                        </TableCell>
+                        <TableCell
+                          sx={{ wordBreak: "break-all", verticalAlign: "top" }}
+                        >
+                          <Copyable text={match.signature} code showIcon />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
             {analysis.unmatchedSignatures.length > 0 && (
               <Alert severity="warning">
                 {analysis.unmatchedSignatures.length} signature(s) could not be

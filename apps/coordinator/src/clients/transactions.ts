@@ -11,6 +11,8 @@ import {
 import { calculateTransactionValue } from "utils/transactionCalculations";
 import { useGetClient } from "hooks/client";
 import { bitcoinsToSatoshis } from "@caravan/bitcoin";
+import { Transaction } from "bitcoinjs-lib";
+import { Buffer } from "buffer";
 
 // Centralized query key factory for all transaction-related queries
 export const transactionKeys = {
@@ -169,6 +171,32 @@ export interface Coin {
   prevTxHex: string;
   slice?: Slice;
 }
+
+/** Fetch the previous-output amounts needed to verify SegWit signatures. */
+export const fetchTransactionInputAmountsSats = async (
+  transactionHex: string,
+  client: BlockchainClient,
+): Promise<Array<number | null>> => {
+  const transaction = Transaction.fromHex(transactionHex);
+
+  return Promise.all(
+    transaction.ins.map(async (input) => {
+      // P2WPKH and key-path Taproot witnesses cannot contain multisig scripts.
+      if (input.witness.length < 3) return null;
+
+      const previousTxId = Buffer.from(input.hash).reverse().toString("hex");
+      const previousTransaction = await client.getTransaction(previousTxId);
+      const previousOutput = previousTransaction.vout[input.index];
+      if (!previousOutput) {
+        throw new Error(
+          `Could not find output ${input.index} of ${previousTxId}.`,
+        );
+      }
+
+      return Number(bitcoinsToSatoshis(previousOutput.value).toString());
+    }),
+  );
+};
 
 // Service function for fetching transaction coins (spendable outputs from prev txs)
 export const fetchTransactionCoins = async (
