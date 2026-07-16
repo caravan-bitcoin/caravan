@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.19.2
+
+### Patch Changes
+
+- [#471](https://github.com/caravan-bitcoin/caravan/pull/471) [`84b9b74`](https://github.com/caravan-bitcoin/caravan/commit/84b9b74bab069e1117392994c678afb058e7a7b8) Thanks [@RIYAKUMARI001](https://github.com/RIYAKUMARI001)! - Fix pending transaction tracking for transactions without change outputs (e.g., "MAX" sends).
+
+- [#518](https://github.com/caravan-bitcoin/caravan/pull/518) [`5481629`](https://github.com/caravan-bitcoin/caravan/commit/5481629b5e63ff1f4e7e01c405637e571d9521a2) Thanks [@Shadouts](https://github.com/Shadouts)! - Updated some docker build dependencies
+
+- Updated dependencies [[`0e5cce8`](https://github.com/caravan-bitcoin/caravan/commit/0e5cce8f6aa20499122491b2fd2d00bf992912b1)]:
+  - @caravan/clients@1.0.5
+
 ## 1.19.1
 
 ### Patch Changes
