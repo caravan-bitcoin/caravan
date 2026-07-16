@@ -90,9 +90,8 @@ jobs:
     name: E2E Tests
     needs: check-e2e
     if: needs.check-e2e.outputs.should-run-e2e == 'true'
-    # The reusable workflow posts test results as a PR comment via
-    # EnricoMi/publish-unit-test-result-action, which needs pull-requests:
-    # write in addition to the checks: write granted at the workflow level.
+    # Permissions required by EnricoMi/publish-unit-test-result-action:
+    # https://github.com/EnricoMi/publish-unit-test-result-action#permissions
     permissions:
       contents: read
       checks: write
