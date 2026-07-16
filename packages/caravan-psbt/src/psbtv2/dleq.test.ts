@@ -6,6 +6,7 @@ import {
   multiplyCompressedPoint,
   verifyDLEQProof,
 } from "./dleq";
+
 function hex(s: string): Buffer {
   return Buffer.from(s, "hex");
 }

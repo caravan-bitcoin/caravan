@@ -600,12 +600,9 @@ export class PsbtV2 extends PsbtV2Maps {
       return false;
     }
 
-    // Per BIP375: if SP outputs are present, all must have a computed
-    // PSBT_OUT_SCRIPT before signing is permitted.
-    if (this.hasSilentPaymentOutputs && !this.hasAllSPOutputScripts) {
-      return false;
-    }
-    return true;
+    // For non-SP transactions this is vacuously true. For SP transactions,
+    // every SP output must have a non-empty PSBT_OUT_SCRIPT before signing.
+    return this.hasAllSPOutputScripts;
   }
 
   /**
@@ -967,7 +964,7 @@ export class PsbtV2 extends PsbtV2Maps {
       );
 
       if (!pubkeyBytes) {
-        continue;
+        return null;
       }
 
       const point = secp256k1.ProjectivePoint.fromHex(pubkeyBytes);
@@ -1135,28 +1132,28 @@ export class PsbtV2 extends PsbtV2Maps {
           `PsbtV2 output ${i} has PSBT_OUT_SP_V0_LABEL but no PSBT_OUT_SP_V0_INFO.`,
         );
       }
-
       if (spInfo) {
         assertValidSPV0Info(spInfo, i);
+      } else {
+        continue;
       }
 
-      if (!spInfo && !script) {
-        throw Error(
-          `PsbtV2 output ${i} is missing PSBT_OUT_SCRIPT and has no ` +
-            "PSBT_OUT_SP_V0_INFO. An output must have one or both per BIP375.",
-        );
-      }
-
-      if (spInfo && script && script.length === 0) {
+      if (
+        outputMap.has(KeyType.PSBT_OUT_SCRIPT) &&
+        !this.hasNonEmptyOutputScript(i)
+      ) {
         throw Error(`PsbtV2 output ${i} has empty PSBT_OUT_SCRIPT.`);
       }
 
-      if (spInfo && script && script.length > 0) {
-        if (this.PSBT_GLOBAL_TX_MODIFIABLE.length > 0) {
-          throw Error(
-            "PSBT_OUT_SCRIPT set for silent payment output but PSBT_GLOBAL_TX_MODIFIABLE is not zeroed.",
-          );
-        }
+      if (
+        spInfo &&
+        script &&
+        script.length > 0 &&
+        this.PSBT_GLOBAL_TX_MODIFIABLE.length > 0
+      ) {
+        throw Error(
+          "PSBT_OUT_SCRIPT set for silent payment output but PSBT_GLOBAL_TX_MODIFIABLE is not zeroed.",
+        );
       }
     }
 
@@ -1547,21 +1544,12 @@ export class PsbtV2 extends PsbtV2Maps {
 
     if (silentPayment) {
       const { bscan, bspend, label } = silentPayment;
-      assertValidBscan(bscan);
-      assertValidBspend(bspend);
-      // Value: bscan || bspend, 66 bytes — no version prefix in field value.
-      const spBw = new BufferWriter();
-      spBw.writeBytes(bscan);
-      spBw.writeBytes(bspend);
-      map.set(KeyType.PSBT_OUT_SP_V0_INFO, spBw.render());
+      const outputIndex = this.outputMaps.length;
+
+      this.setOutputSPInfoOnMap(map, bscan, bspend);
 
       if (label !== undefined) {
-        if (!Number.isInteger(label) || label < 0 || label > 0xffffffff) {
-          throw Error(`label must be a uint32 (0–${0xffffffff}), got ${label}`);
-        }
-        const labelBw = new BufferWriter();
-        labelBw.writeU32(label);
-        map.set(KeyType.PSBT_OUT_SP_V0_LABEL, labelBw.render());
+        this.setOutputSPLabelOnMap(map, outputIndex, label);
       }
     }
 
@@ -1861,40 +1849,62 @@ export class PsbtV2 extends PsbtV2Maps {
   }
 
   // ── Per-output SP methods ─────────────────────────────────────────────────
+  private setOutputSPInfoOnMap(
+    map: Map<Key, Value>,
+    bscan: Buffer,
+    bspend: Buffer,
+  ): void {
+    assertValidBscan(bscan);
+    assertValidBspend(bspend);
 
-  public addOutputSPInfo(
+    const bw = new BufferWriter();
+    bw.writeBytes(bscan);
+    bw.writeBytes(bspend);
+    map.set(KeyType.PSBT_OUT_SP_V0_INFO, bw.render());
+  }
+
+  private setOutputSPLabelOnMap(
+    map: Map<Key, Value>,
+    outputIndex: number,
+    label: number,
+  ): void {
+    if (!map.has(KeyType.PSBT_OUT_SP_V0_INFO)) {
+      throw new Error(
+        `Output ${outputIndex} has no SP info. Call setOutputSPInfo first.`,
+      );
+    }
+
+    assertValidLabel(label, outputIndex);
+
+    const bw = new BufferWriter();
+    bw.writeU32(label);
+    map.set(KeyType.PSBT_OUT_SP_V0_LABEL, bw.render());
+  }
+
+  public setOutputSPInfo(
     outputIndex: number,
     bscan: Buffer,
     bspend: Buffer,
   ): void {
-    if (outputIndex < 0 || outputIndex >= this.outputMaps.length) {
+    const map = this.outputMaps[outputIndex];
+
+    if (!map) {
       throw new Error(
         `outputIndex ${outputIndex} out of range (${this.outputMaps.length} outputs)`,
       );
     }
-    assertValidBscan(bscan);
-    assertValidBspend(bspend);
-    const bw = new BufferWriter();
-    bw.writeBytes(bscan);
-    bw.writeBytes(bspend);
-    this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_INFO, bw.render());
+    this.setOutputSPInfoOnMap(map, bscan, bspend);
   }
 
-  public addOutputSPLabel(outputIndex: number, label: number): void {
-    if (outputIndex < 0 || outputIndex >= this.outputMaps.length) {
+  public setOutputSPLabel(outputIndex: number, label: number): void {
+    const map = this.outputMaps[outputIndex];
+
+    if (!map) {
       throw new Error(
         `outputIndex ${outputIndex} out of range (${this.outputMaps.length} outputs)`,
       );
     }
-    if (!this.outputMaps[outputIndex].has(KeyType.PSBT_OUT_SP_V0_INFO)) {
-      throw new Error(
-        `Output ${outputIndex} has no SP info. Call addOutputSPInfo first.`,
-      );
-    }
-    assertValidLabel(label, outputIndex);
-    const bw = new BufferWriter();
-    bw.writeU32(label);
-    this.outputMaps[outputIndex].set(KeyType.PSBT_OUT_SP_V0_LABEL, bw.render());
+    this.setOutputSPLabelOnMap(map, outputIndex, label);
   }
 
   /**
@@ -2233,12 +2243,11 @@ export class PsbtV2 extends PsbtV2Maps {
    * Per BIP375: the Signer must not add a signature until this is true.
    */
   get hasAllSPOutputScripts(): boolean {
-    return this.outputMaps.every((map) => {
-      if (!map.has(KeyType.PSBT_OUT_SP_V0_INFO)) return true;
-
-      const script = map.get(KeyType.PSBT_OUT_SCRIPT);
-      return !!script && script.length > 0;
-    });
+    return this.outputMaps.every(
+      (map, i) =>
+        !map.has(KeyType.PSBT_OUT_SP_V0_INFO) ||
+        this.hasNonEmptyOutputScript(i),
+    );
   }
 
   /**
@@ -2356,10 +2365,6 @@ export class PsbtV2 extends PsbtV2Maps {
     // ── Step 1: Build the inputHash from outpoints + aggregate pubkey ───────
     const contributing = this.getContributingInputsForSilentPayments();
     const inputHash = this.computeSilentPaymentInputHash(contributing);
-
-    if (!inputHash) {
-      throw new Error("Could not extract public keys from eligible inputs.");
-    }
 
     // ── Step 2: Group SP outputs by Bscan, sort within groups ──────────────
     const scanKeyGroups = this.getSilentPaymentOutputGroups();

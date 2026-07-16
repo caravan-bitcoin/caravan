@@ -128,8 +128,8 @@ export function generateDLEQProof({
     throw new Error("BIP374 proof generation produced point at infinity.");
   }
 
-  const ABytes = Buffer.from(A.toRawBytes(true));
-  const CBytes = Buffer.from(C.toRawBytes(true));
+  const ABytes = pointToCompressedBytes(A);
+  const CBytes = pointToCompressedBytes(C);
 
   const t = xor32(secret, taggedHash("BIP0374/aux", auxRand));
 

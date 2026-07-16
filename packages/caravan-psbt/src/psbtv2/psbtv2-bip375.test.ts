@@ -7,6 +7,7 @@ import { PsbtV2 } from "./psbtv2";
 import bip375Vectors from "../fixtures/bip375_vectors.json";
 import { KeyType } from "src/psbtv2/types";
 import { secp256k1 } from "@noble/curves/secp256k1";
+import { hash160 } from "@caravan/bitcoin";
 
 function hex(s: string): Buffer {
   return Buffer.from(s, "hex");
@@ -21,16 +22,7 @@ function pubkeyFromSecret(secret: Buffer): Buffer {
 }
 
 function p2wpkhScript(pubkey: Buffer): Buffer {
-  // Test-only: use a fixed valid witness program derived from pubkey bytes.
-  // If the repo already has address/script helpers, prefer those.
-  const h = Buffer.from(
-    require("crypto")
-      .createHash("ripemd160")
-      .update(require("crypto").createHash("sha256").update(pubkey).digest())
-      .digest(),
-  );
-
-  return Buffer.concat([Buffer.from([0x00, 0x14]), h]);
+  return Buffer.concat([Buffer.from([0x00, 0x14]), hash160(pubkey)]);
 }
 
 // ── Invalid vectors ────────────────────────────────────────────────────────

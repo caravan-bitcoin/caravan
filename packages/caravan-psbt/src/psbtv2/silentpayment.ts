@@ -9,14 +9,13 @@
  */
 
 import { secp256k1, schnorr } from "@noble/curves/secp256k1";
-import { createHash } from "crypto";
-import { script } from "bitcoinjs-lib-v6";
+import { script, Transaction } from "bitcoinjs-lib-v6";
 import { taggedHash } from "./functions";
 
 const CURVE_ORDER = secp256k1.CURVE.n;
 const { bytesToNumberBE } = schnorr.utils;
 const { OPS } = script;
-import { Transaction } from "bitcoinjs-lib-v6";
+import { hash160 } from "@caravan/bitcoin";
 import {
   generateDLEQProof,
   multiplyCompressedPoint,
@@ -91,28 +90,6 @@ export function assertValidBscan(bscan: Buffer): void {
   assertValidCompressedPoint(bscan, "bscan");
 }
 
-export function parseSilentPaymentScanKeyData(
-  key: string,
-  keyType: string,
-  context: string,
-): Buffer {
-  const scanKey = key.slice(keyType.length);
-  if (!/^[0-9a-fA-F]+$/.test(scanKey)) {
-    throw new Error(`${context} scan keydata must be hex encoded.`);
-  }
-  const bscan = Buffer.from(scanKey, "hex");
-  assertValidBscan(bscan);
-  return bscan;
-}
-
-export function scanKeyHexFromBIP375Key(
-  key: string,
-  keyType: string,
-  context: string,
-): string {
-  return parseSilentPaymentScanKeyData(key, keyType, context).toString("hex");
-}
-
 /**
  * Asserts that a spend public key is a valid 33-byte compressed point.
  *
@@ -173,7 +150,7 @@ export function assertValidLabel(m: number, outputIndex: number): void {
 }
 
 export function assertValidOutputK(k: number, outputIndex: number): void {
-  if (!Number.isInteger(k) || k < 0 || k > 2323) {
+  if (!Number.isInteger(k) || k < 0 || k >= 2323) {
     throw new Error(
       `Silent payment recipient index should be 0 < k < 2323 (Kmax) but was at output ${outputIndex}: ${k}`,
     );
@@ -373,11 +350,6 @@ export function getTaprootOutputKeyFromWitnessUtxo(
   const scriptPubKey = readWitnessUtxoScript(witnessUtxo);
   if (classifyWitnessScript(scriptPubKey) !== "p2tr") return null;
   return Buffer.concat([Buffer.from([0x02]), scriptPubKey.subarray(2, 34)]);
-}
-
-function hash160(buffer: Buffer): Buffer {
-  const sha = createHash("sha256").update(buffer).digest();
-  return createHash("ripemd160").update(sha).digest();
 }
 
 export function getSilentPaymentPubkeyFromInputDescriptor(
