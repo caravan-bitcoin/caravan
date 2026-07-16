@@ -90,10 +90,10 @@ jobs:
     name: E2E Tests
     needs: check-e2e
     if: needs.check-e2e.outputs.should-run-e2e == 'true'
-    # Permissions required by EnricoMi/publish-unit-test-result-action:
+    # Minimal public-repo permissions required by
+    # EnricoMi/publish-unit-test-result-action:
     # https://github.com/EnricoMi/publish-unit-test-result-action#permissions
     permissions:
-      contents: read
       checks: write
       pull-requests: write
     uses: ./.github/workflows/e2e.yml
