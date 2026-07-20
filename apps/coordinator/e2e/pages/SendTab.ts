@@ -78,12 +78,12 @@ export class SendTab {
   }
 
   async addChangeOutput() {
-    await this.page.getByTestId("AddIcon").click();
+    await this.page.getByRole("button", { name: "Add output" }).click();
     await this.page
       .getByLabel("Set to wallet change address")
       .getByRole("button")
       .click();
-    await this.page.getByTestId("AddCircleIcon").click();
+    await this.page.getByTestId("rebalance-button").click();
   }
 
   async previewTransaction() {
