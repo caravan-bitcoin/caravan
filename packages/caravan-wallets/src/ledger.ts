@@ -37,6 +37,7 @@ import {
   PsbtV2,
   ExtendedPublicKey,
 } from "@caravan/bitcoin";
+import type { SignMessageResult } from "@caravan/messages";
 import { LegacyInput } from "@caravan/multisig";
 import { translatePSBT } from "@caravan/psbt";
 import LedgerBtc from "@ledgerhq/hw-app-btc";
@@ -47,6 +48,7 @@ import TransportU2F from "@ledgerhq/hw-transport-u2f";
 import TransportWebUSB from "@ledgerhq/hw-transport-webusb";
 import { AppClient, PsbtV2 as LedgerPsbtV2 } from "ledger-bitcoin";
 
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   ACTIVE,
   PENDING,
@@ -1225,24 +1227,61 @@ export class LedgerSignMultisigTransaction extends LedgerBitcoinInteraction {
 }
 
 /**
- * Returns a signature for a given message by a single public key.
+ * Normalize Ledger's `{v, r, s}` ECDSA signature output into a canonical
+ * BIP-137 base64 65-byte signature.
+ *
+ * Header byte = `v + 39`, the segwit-bech32 (P2WPKH) range. Matches the
+ * address type the verifier derives from the cosigner pubkey.
+ *
+ * `r` and `s` are zero-padded to 32 bytes each — Ledger's SDK returns
+ * them as hex strings and can strip leading zeros, but the BIP-137 wire
+ * form needs fixed-width fields.
+ */
+function normalizeLedgerSignature(vrs: {
+  v: number;
+  r: string;
+  s: string;
+}): string {
+  const headerByte = vrs.v + 39;
+  const sig = Buffer.concat([
+    Buffer.from([headerByte]),
+    Buffer.from(vrs.r.padStart(64, "0"), "hex"),
+    Buffer.from(vrs.s.padStart(64, "0"), "hex"),
+  ]);
+  return sig.toString("base64");
+}
+
+/**
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Ledger device. Returns a canonical `SignMessageResult`.
  */
 export class LedgerSignMessage extends LedgerBitcoinInteraction {
   bip32Path: string;
 
   message: string;
 
+  pubkey: string;
+
   bip32ValidationErrorMessage?: LedgerDeviceError;
 
   readonly isLegacySupported = true;
 
-  readonly isV2Supported = false;
+  readonly isV2Supported = true;
 
-  constructor({ bip32Path, message }: { bip32Path: string; message: string }) {
+  constructor({
+    bip32Path,
+    message,
+    pubkey,
+  }: {
+    bip32Path: string;
+    message: string;
+    pubkey: string;
+  }) {
     super();
+
     this.bip32Path = bip32Path;
     this.message = message;
-    // this.bip32ValidationErrorMessage = false;
+    this.pubkey = pubkey;
 
     const bip32PathError = validateBIP32Path(bip32Path);
     if (bip32PathError.length) {
@@ -1272,30 +1311,57 @@ export class LedgerSignMessage extends LedgerBitcoinInteraction {
       state: ACTIVE,
       level: INFO,
       code: "ledger.sign",
-      // (version is optional)
       text: 'Your Ledger will ask you to "Confirm Message" for signing.',
       action: LEDGER_RIGHT_BUTTON,
     });
-    // TODO: are more messages required?
 
     return messages;
   }
 
   /**
-   * See {@link https://github.com/LedgerHQ/ledger-live/tree/develop/libs/ledgerjs/packages/hw-app-btc#signmessagenew}.
+   * Signs `this.message` with the key at `this.bip32Path` on the Ledger
+   * Bitcoin app. Returns the canonical `SignMessageResult` shape.
+   *
+   * Two app generations:
+   * - Legacy `Btc.signMessage(path, messageHex)` returns `{v, r, s}`;
+   *   normalizeLedgerSignature wraps with a header byte.
+   * - v2 `AppClient.signMessage(message: Buffer, path: string)` returns a
+   *   base64 BIP-137 signature directly. (Note the reversed positional
+   *   order vs the legacy SDK.)
    */
-  async run() {
-    // check app version support first
+  async run(): Promise<SignMessageResult> {
     await super.run();
     return this.withApp(async (app, transport) => {
       try {
-        // TODO: what would be an appropriate amount of time to wait for a
-        // signature?
         transport.setExchangeTimeout(20000);
 
-        const vrs = await app.signMessageNew(this.bip32Path, this.message);
+        let signature: string;
+        try {
+          if (await this.isLegacyApp()) {
+            const messageHex = Buffer.from(this.message, "utf8").toString(
+              "hex",
+            );
+            const vrs = await app.signMessage(this.bip32Path, messageHex);
+            signature = normalizeLedgerSignature(vrs);
+          } else {
+            const messageBuf = Buffer.from(this.message, "utf8");
+            signature = await app.signMessage(messageBuf, this.bip32Path);
+          }
+        } catch (err) {
+          throw wrapSdkError(LEDGER, err);
+        }
 
-        return vrs;
+        assertSignatureVerifies(LEDGER, {
+          message: this.message,
+          signature,
+          pubkey: this.pubkey,
+        });
+
+        return {
+          bip32Path: this.bip32Path,
+          signature,
+          pubkey: this.pubkey,
+        };
       } finally {
         transport.close();
       }

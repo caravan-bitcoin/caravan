@@ -320,14 +320,44 @@ describe("ledger", () => {
   });
 
   describe("LedgerSignMessage", () => {
-    function interactionBuilder(
-      bip32Path = "m/48'/1'/0'/2'/0/0",
-      message = "hello world"
-    ) {
+    const FIXTURE = TEST_FIXTURES.multisigs[0];
+    const EXPECTED_PUBKEY = FIXTURE.publicKey;
+    const PATH = FIXTURE.bip32Path;
+    const MESSAGE = FIXTURE.signedMessages.message;
+
+    // Decode the BIP-137 fixture into the {v, r, s} shape Ledger's legacy
+    // Btc app returns. The fixture's header byte is in the P2WPKH range
+    // (39+v), which is also what normalizeLedgerSignature produces — so
+    // the normalized output byte-matches the fixture exactly.
+    const FIXTURE_SIG_BYTES = Buffer.from(
+      FIXTURE.signedMessages.bip137,
+      "base64"
+    );
+    const FIXTURE_V = FIXTURE_SIG_BYTES[0] - 39;
+    const FIXTURE_R_HEX = FIXTURE_SIG_BYTES.subarray(1, 33).toString("hex");
+    const FIXTURE_S_HEX = FIXTURE_SIG_BYTES.subarray(33, 65).toString("hex");
+
+    function interactionBuilder(bip32Path = PATH, message = MESSAGE) {
       return new LedgerSignMessage({
         bip32Path,
         message,
+        pubkey: EXPECTED_PUBKEY,
       });
+    }
+
+    function mountLedgerApp(
+      interaction: LedgerSignMessage,
+      mockApp: { signMessage: ReturnType<typeof vi.fn> },
+      { isLegacy }: { isLegacy: boolean }
+    ) {
+      vi.spyOn(interaction, "isAppSupported").mockResolvedValue(true);
+      vi.spyOn(interaction, "isLegacyApp").mockResolvedValue(isLegacy);
+      vi.spyOn(interaction, "withApp").mockImplementation((callback: any) =>
+        callback(mockApp, {
+          setExchangeTimeout: () => {},
+          close: () => {},
+        })
+      );
     }
 
     itHasAppMessages(interactionBuilder);
@@ -340,6 +370,138 @@ describe("ledger", () => {
           code: "ledger.bip32_path.path_error",
         })
       ).toBe(true);
+    });
+
+    it("legacy Bitcoin app: run() normalizes {v,r,s} into BIP-137 base64 wrapped in SignMessageResult", async () => {
+      const interaction = interactionBuilder();
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue({
+          v: FIXTURE_V,
+          r: FIXTURE_R_HEX,
+          s: FIXTURE_S_HEX,
+        }),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
+
+      const entry = await interaction.run();
+
+      expect(mockApp.signMessage).toHaveBeenCalledWith(
+        PATH,
+        Buffer.from(MESSAGE, "utf8").toString("hex")
+      );
+      expect(entry).toEqual({
+        bip32Path: PATH,
+        pubkey: EXPECTED_PUBKEY,
+        signature: FIXTURE.signedMessages.bip137,
+      });
+    });
+
+    it("legacy Bitcoin app: pads r and s to 32 bytes when SDK strips leading zeros", async () => {
+      const interaction = interactionBuilder();
+      // simulate a leading-zero strip: shave the first hex char off r
+      const stripped = FIXTURE_R_HEX.replace(/^0/, "");
+      // only run this case if the fixture's r actually has a leading
+      // zero to strip; otherwise the test isn't meaningful
+      if (stripped.length === FIXTURE_R_HEX.length) {
+        return;
+      }
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue({
+          v: FIXTURE_V,
+          r: stripped,
+          s: FIXTURE_S_HEX,
+        }),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
+      const entry = await interaction.run();
+      expect(entry.signature).toBe(FIXTURE.signedMessages.bip137);
+    });
+
+    it("throws MalformedResponse if the device returns a non-verifying sig", async () => {
+      const interaction = interactionBuilder();
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue({
+          v: 0,
+          r: "00".repeat(32),
+          s: "00".repeat(32),
+        }),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: true });
+
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "MalformedResponse",
+        keystore: "ledger",
+      });
+    });
+
+    it("legacy Bitcoin app: SDK statusCode 0x6985 wraps as DeviceRejected", async () => {
+      const interaction = interactionBuilder();
+      mountLedgerApp(
+        interaction,
+        {
+          signMessage: vi.fn().mockRejectedValue(
+            Object.assign(new Error("CONDITIONS_OF_USE_NOT_SATISFIED"), {
+              statusCode: 0x6985,
+            })
+          ),
+        },
+        { isLegacy: true }
+      );
+
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "DeviceRejected",
+        keystore: "ledger",
+      });
+    });
+
+    it("legacy Bitcoin app: unrelated SDK errors wrap as TransportError", async () => {
+      const interaction = interactionBuilder();
+      mountLedgerApp(
+        interaction,
+        { signMessage: vi.fn().mockRejectedValue(new Error("USB disconnected")) },
+        { isLegacy: true }
+      );
+
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "TransportError",
+      });
+    });
+
+    it("v2 Bitcoin app: run() uses AppClient.signMessage(message, path) and passes through base64", async () => {
+      const interaction = interactionBuilder();
+      const mockApp = {
+        signMessage: vi.fn().mockResolvedValue(FIXTURE.signedMessages.bip137),
+      };
+      mountLedgerApp(interaction, mockApp, { isLegacy: false });
+
+      const entry = await interaction.run();
+
+      expect(mockApp.signMessage).toHaveBeenCalledWith(
+        Buffer.from(MESSAGE, "utf8"),
+        PATH
+      );
+      expect(entry).toEqual({
+        bip32Path: PATH,
+        pubkey: EXPECTED_PUBKEY,
+        signature: FIXTURE.signedMessages.bip137,
+      });
+    });
+
+    it("v2 Bitcoin app: SDK errors also wrap as MessageSigningError", async () => {
+      const interaction = interactionBuilder();
+      mountLedgerApp(
+        interaction,
+        {
+          signMessage: vi.fn().mockRejectedValue(
+            Object.assign(new Error("user rejected"), { statusCode: 0x6985 })
+          ),
+        },
+        { isLegacy: false }
+      );
+
+      await expect(interaction.run()).rejects.toMatchObject({
+        kind: "DeviceRejected",
+      });
     });
   });
 

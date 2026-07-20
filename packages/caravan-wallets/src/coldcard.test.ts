@@ -1,9 +1,11 @@
 import { Network, TEST_FIXTURES, ROOT_FINGERPRINT } from "@caravan/bitcoin";
+import { MessageSigningError } from "@caravan/messages";
 
 import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardSignMessage,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import { coldcardFixtures } from "./fixtures/coldcard.fixtures";
@@ -776,5 +778,135 @@ describe("ColdcardMultisigWalletConfig", () => {
     expect(() =>
       interactionBuilder({ jsonConfig: jsonMissingAddressType })
     ).toThrow("Configuration file needs addressType.");
+  });
+});
+
+describe("ColdcardSignMessage", () => {
+  const FIXTURE = TEST_FIXTURES.multisigs[0];
+  const EXPECTED_PUBKEY = FIXTURE.publicKey;
+  const BIP32_PATH = FIXTURE.bip32Path;
+  const MESSAGE = FIXTURE.signedMessages.message;
+  const SAMPLE_SIG = FIXTURE.signedMessages.bip137;
+
+  function builder() {
+    return new ColdcardSignMessage({
+      bip32Path: BIP32_PATH,
+      message: MESSAGE,
+      pubkey: EXPECTED_PUBKEY,
+    });
+  }
+
+  it("request() returns a 3-line .txt with message, path, p2wpkh", () => {
+    expect(builder().request()).toBe(
+      `${MESSAGE}\n${BIP32_PATH}\np2wpkh\n`
+    );
+  });
+
+  it("workflow advertises both request and parse steps", () => {
+    expect(builder().workflow).toEqual(["request", "parse"]);
+  });
+
+  it("parse() extracts the base64 signature from the armored Coldcard file", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qfakecoldcardaddress0000000000000000000",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+      "",
+    ].join("\n");
+
+    const entry = builder().parse(file);
+    expect(entry).toEqual({
+      bip32Path: BIP32_PATH,
+      signature: SAMPLE_SIG,
+      pubkey: EXPECTED_PUBKEY,
+    });
+  });
+
+  it("parse() handles CRLF line endings", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\r\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
+  });
+
+  it("parse() throws MalformedResponse on empty input", () => {
+    expect(() => builder().parse("")).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse when SIGNATURE delimiter is missing", () => {
+    expect(() =>
+      builder().parse("not a coldcard file\nsome other content")
+    ).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse when address+signature lines are missing", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse if the signature slot isn't base64-shaped", () => {
+    // Simulate a degenerate output where some extra metadata line ends
+    // up in the signature slot (e.g. a wrapped address or a comment).
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      "definitely not a base64 signature",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
+  });
+
+  it("parse() throws MalformedResponse if the signature is too short to be BIP-137", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      // 44 chars: valid base64 shape, but too short for a 65-byte sig.
+      "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(() => builder().parse(file)).toThrowError(MessageSigningError);
+  });
+
+  it("parse() tolerates surrounding whitespace on the signature line", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "bc1qaddress",
+      `   ${SAMPLE_SIG}   `,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
+  });
+
+  it("parse() tolerates blank lines between the marker and the address", () => {
+    const file = [
+      "-----BEGIN BITCOIN SIGNED MESSAGE-----",
+      MESSAGE,
+      "-----BEGIN SIGNATURE-----",
+      "",
+      "bc1qaddress",
+      "",
+      SAMPLE_SIG,
+      "-----END BITCOIN SIGNED MESSAGE-----",
+    ].join("\n");
+    expect(builder().parse(file).signature).toBe(SAMPLE_SIG);
   });
 });

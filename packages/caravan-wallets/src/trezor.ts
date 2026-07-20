@@ -42,6 +42,7 @@ import {
   extractFingerprintFromBip380Descriptor,
   Network,
 } from "@caravan/bitcoin";
+import type { SignMessageResult } from "@caravan/messages";
 import { translatePSBT } from "@caravan/psbt";
 import {
   GetPublicKey,
@@ -58,6 +59,7 @@ import { BigNumber } from "bignumber.js";
 import { ECPair, payments, Payment } from "bitcoinjs-lib";
 
 import { MULTISIG_ROOT } from "./constants";
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -65,6 +67,7 @@ import {
   INFO,
   ERROR,
 } from "./interaction";
+
 
 /**
  * What's going on with this TrezorConnect import?
@@ -1034,19 +1037,34 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
 }
 
 /**
- * Returns a signature for a message given a bip32 path.
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Trezor device. Returns a canonical `SignMessageResult`.
  */
 export class TrezorSignMessage extends TrezorInteraction {
   bip32Path: string;
 
   message: string;
 
+  pubkey: string;
+
   bip32ValidationErrorMessage: any;
 
-  constructor({ network = "", bip32Path = "", message = "" }) {
-    super({ network: Network[network] });
+  constructor({
+    network,
+    bip32Path,
+    message,
+    pubkey,
+  }: {
+    network: Network | null;
+    bip32Path: string;
+    message: string;
+    pubkey: string;
+  }) {
+    super({ network });
+
     this.bip32Path = bip32Path;
     this.message = message;
+    this.pubkey = pubkey;
 
     this.bip32ValidationErrorMessage = {};
     const bip32PathError = validateBIP32Path(bip32Path);
@@ -1101,9 +1119,6 @@ export class TrezorSignMessage extends TrezorInteraction {
     return messages;
   }
 
-  /**
-   * See {@link https://github.com/trezor/connect/blob/v8/docs/methods/signMessage.md}.
-   */
   connectParams() {
     return [
       TrezorConnect.signMessage,
@@ -1112,6 +1127,40 @@ export class TrezorSignMessage extends TrezorInteraction {
         message: this.message,
       },
     ];
+  }
+
+  /**
+   * TrezorConnect.signMessage returns `{address, signature}` where
+   * `signature` is already a base64-encoded BIP-137 signature. Map it
+   * into the canonical SignMessageResult shape.
+   */
+  parsePayload(payload: { address: string; signature: string }): SignMessageResult {
+    return {
+      bip32Path: this.bip32Path,
+      signature: payload.signature,
+      pubkey: this.pubkey,
+    };
+  }
+
+  /**
+   * Override the base class's run() so that cancellations and transport
+   * failures surface as MessageSigningError (DeviceRejected /
+   * TransportError) rather than the raw `Error(result.payload.error)`
+   * the base class would otherwise throw.
+   */
+  async run(): Promise<SignMessageResult> {
+    let entry: SignMessageResult;
+    try {
+      entry = await super.run();
+    } catch (err) {
+      throw wrapSdkError(TREZOR, err);
+    }
+    assertSignatureVerifies(TREZOR, {
+      message: this.message,
+      signature: entry.signature,
+      pubkey: entry.pubkey,
+    });
+    return entry;
   }
 }
 
