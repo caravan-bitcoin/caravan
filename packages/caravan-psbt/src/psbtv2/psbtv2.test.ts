@@ -2325,11 +2325,7 @@ describe("PsbtV2.combine", () => {
         // Stub handleSighashType so addPartialSig doesn't throw on sighash
         // validation.
         thisPsbt.handleSighashType = vi.fn();
-        thisPsbt.addPartialSig(
-          0,
-          Buffer.from([0x01]),
-          Buffer.from([0x02]),
-        );
+        thisPsbt.addPartialSig(0, Buffer.from([0x01]), Buffer.from([0x02]));
       }
 
       return { thisPsbt, otherPsbt };
