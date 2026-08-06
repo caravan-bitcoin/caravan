@@ -126,7 +126,7 @@ management software.
 - [Ledger Nano X](https://www.ledger.com/products/ledger-nano-x)
 
 - [Coldcard Mk2, Mk3, & Mk4](https://coldcard.com/)
-  - ⚠️ **Security warning (July 2026):** Coinkite disclosed a firmware flaw reducing generated-seed entropy on Coldcard Mk3 (firmware 4.0.1–5.0.3) and pre-fix Mk4/Q. Update to fixed firmware, generate a new seed and move funds — see the [Coinkite advisory](https://blog.coinkite.com/coldcard-mk3-seed-generation-warning/).
+  - **Security warning (July 2026):** Coinkite disclosed a firmware flaw reducing generated-seed entropy on Coldcard Mk3 (firmware 4.0.1-5.0.3) and pre-fix Mk4/Q. Update to fixed firmware, generate a new seed and move funds - see the [Coinkite advisory](https://blog.coinkite.com/coldcard-mk3-seed-generation-warning/).
 
 - [Hermit](https://github.com/unchained-capital/hermit)
 
