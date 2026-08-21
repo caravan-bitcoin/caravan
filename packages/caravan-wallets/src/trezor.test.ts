@@ -65,6 +65,16 @@ function itThrowsAnErrorOnAnUnsuccessfulRequest(interactionBuilder) {
 }
 
 describe("trezor", () => {
+  describe("trezorCoin", () => {
+    it("returns Trezor Connect coin shortcuts", () => {
+      expect(trezorCoin(Network.MAINNET)).toBe("btc");
+      expect(trezorCoin(Network.TESTNET)).toBe("test");
+      expect(new TrezorInteraction({ network: Network.MAINNET }).trezorCoin).toBe(
+        "btc",
+      );
+    });
+  });
+
   describe("TrezorInteraction", () => {
     function interactionBuilder() {
       return new TrezorInteraction({ network: Network.MAINNET });
