@@ -291,7 +291,7 @@ export class TrezorInteraction extends DirectKeystoreInteraction {
 
     if (TREZOR_DEV && method === TrezorConnect.signTransaction) {
       await TrezorConnect.blockchainSetCustomBackend({
-        coin: "Regtest",
+        coin: "regtest",
         blockchainLink: {
           type: "blockbook",
           url: [TREZOR_BLOCKBOOK_URL],
@@ -905,19 +905,25 @@ export class TrezorConfirmMultisigAddress extends TrezorInteraction {
    */
   messages() {
     const messages = super.messages();
+    let coinLabel = "Testnet";
+    if (this.network === Network.MAINNET) {
+      coinLabel = "Bitcoin";
+    } else if (TREZOR_DEV) {
+      coinLabel = "Regtest";
+    }
 
     if (this.publicKey) {
       messages.push({
         state: ACTIVE,
         level: INFO,
-        text: `Confirm in the Trezor Connect window that you want to ‘Export multiple ${this.trezorCoin} addresses’. You may be prompted to enter your PIN. You may also receive a warning about your selected BIP32 path.`,
+        text: `Confirm in the Trezor Connect window that you want to ‘Export multiple ${coinLabel} addresses’. You may be prompted to enter your PIN. You may also receive a warning about your selected BIP32 path.`,
         code: "trezor.connect.confirm_address",
       });
     } else {
       messages.push({
         state: ACTIVE,
         level: INFO,
-        text: `Confirm in the Trezor Connect window that you want to 'Export ${this.trezorCoin} address'.  You may be prompted to enter your PIN.`,
+        text: `Confirm in the Trezor Connect window that you want to 'Export ${coinLabel} address'.  You may be prompted to enter your PIN.`,
         code: "trezor.connect.confirm_address",
       });
     }
@@ -1116,11 +1122,11 @@ export class TrezorSignMessage extends TrezorInteraction {
 }
 
 /**
- * Returns the Trezor API version of the given network.
+ * Returns the Trezor Connect coin shortcut (`btc`, `test`, or `regtest`) for the given network.
  */
 export function trezorCoin(network: Network | null) {
-  const testnet_network = TREZOR_DEV ? "Regtest" : "Testnet";
-  return network === Network.MAINNET ? "Bitcoin" : testnet_network;
+  const testnet_network = TREZOR_DEV ? "regtest" : "test";
+  return network === Network.MAINNET ? "btc" : testnet_network;
 }
 
 function trezorInput(input, bip32Path) {
