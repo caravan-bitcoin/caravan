@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- [#530](https://github.com/caravan-bitcoin/caravan/pull/530) [`d3ca0b1`](https://github.com/caravan-bitcoin/caravan/commit/d3ca0b196a0e28065bcfe2d29debf95fb6b34bd7) Thanks [@Rob-Ferguson](https://github.com/Rob-Ferguson)! - Fix Trezor Connect coin params for Suite 26.8+ by returning shortcuts (`btc`, `test`, `regtest`) from `trezorCoin()` instead of names (`Bitcoin`, `Testnet`, `Regtest`).
+
 ## 0.10.1
 
 ### Patch Changes
