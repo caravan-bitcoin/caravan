@@ -98,17 +98,27 @@ export function parseDerivationPathNodesToBytes(path: string): Buffer {
  * separator (keyLen 0x00 byte).
  */
 export function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
-  const nextByte: Buffer = br.readBytes(1);
-  if (nextByte.equals(PSBT_MAP_SEPARATOR)) {
+  const keyLen = br.readVarint();
+  if (keyLen === 0) {
     return;
   }
 
-  const keyLen = nextByte.readUInt8(0);
   const key = br.readBytes(keyLen);
   const value = br.readVarBytes();
 
   map.set(key.toString("hex"), value);
   readAndSetKeyPairs(map, br);
+}
+
+export function readCompactSize(value: Buffer): number {
+  const br = new BufferReader(value);
+  const result = br.readVarint();
+
+  if (br.left() !== 0) {
+    throw Error("Invalid CompactSize value");
+  }
+
+  return result;
 }
 
 /**

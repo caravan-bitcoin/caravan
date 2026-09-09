@@ -903,6 +903,62 @@ describe("PsbtV2", () => {
     expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(0);
     expect(psbt.PSBT_GLOBAL_FALLBACK_LOCKTIME).toBe(0);
   });
+
+  test.each([252, 253, 256])(
+    "Round trips a PSBTv2 with %i outputs",
+    (outputCount) => {
+      const psbt = new PsbtV2();
+
+      for (let i = 0; i < outputCount; i++) {
+        psbt.addOutput({ amount: i + 1, script: Buffer.from([0x51]) });
+      }
+
+      const parsed = new PsbtV2(psbt.serialize());
+      expect(parsed.PSBT_GLOBAL_OUTPUT_COUNT).toBe(outputCount);
+      expect(parsed.PSBT_OUT_AMOUNT).toHaveLength(outputCount);
+    },
+  );
+
+  it("Rejects output maps beyond the declared count", () => {
+    const psbt = new PsbtV2();
+    for (let i = 0; i < 256; i++) {
+      psbt.addOutput({ amount: i + 1, script: Buffer.from([0x51]) });
+    }
+
+    const valid = psbt.serialize("hex");
+    const malformed = valid.replace("010503fd0001", "01050100");
+    expect(malformed).not.toBe(valid);
+    expect(() => new PsbtV2(malformed)).toThrow(/unexpected data/);
+  });
+
+  it("Round trips 256 inputs", () => {
+    const psbt = new PsbtV2();
+    for (let i = 0; i < 256; i++) {
+      const previousTxId = Buffer.alloc(32);
+      previousTxId.writeUInt32LE(i);
+      psbt.addInput({ previousTxId, outputIndex: 0 });
+    }
+
+    const parsed = new PsbtV2(psbt.serialize());
+    expect(parsed.PSBT_GLOBAL_INPUT_COUNT).toBe(256);
+    expect(parsed.PSBT_IN_PREVIOUS_TXID).toHaveLength(256);
+  });
+
+  it("Round trips a CompactSize map key length", () => {
+    const psbt = new PsbtV2();
+    psbt.setProprietaryValue(
+      "global",
+      Buffer.alloc(253, 1),
+      Buffer.from([1]),
+      Buffer.from([1]),
+      Buffer.from([1]),
+    );
+
+    const serialized = psbt.serialize("hex");
+    const parsed = new PsbtV2(serialized);
+    expect(parsed.PSBT_GLOBAL_PROPRIETARY[0].key).toMatch(/^fcfdfd00/);
+    expect(parsed.serialize("hex")).toBe(serialized);
+  });
 });
 
 describe("PsbtV2.isReadyForConstructor", () => {
@@ -1186,6 +1242,22 @@ describe("PsbtV2.FromV0", () => {
     const psbt = PsbtV2.FromV0(vect.hex, true);
     expect(psbt.PSBT_GLOBAL_INPUT_COUNT).toBe(vect.inputs);
     expect(psbt.PSBT_GLOBAL_OUTPUT_COUNT).toBe(vect.outputs);
+  });
+
+  it("preserves 300 outputs through v0 and v2 conversions", () => {
+    const original = new Psbt();
+    original.addInput({ hash: Buffer.alloc(32), index: 0 });
+
+    for (let i = 0; i < 300; i++) {
+      original.addOutput({ script: Buffer.from([0x51]), value: i + 1 });
+    }
+
+    const psbtv2 = PsbtV2.FromV0(original.toBuffer());
+    const reparsed = new PsbtV2(psbtv2.serialize());
+    const converted = Psbt.fromHex(reparsed.toV0("hex"));
+
+    expect(reparsed.PSBT_GLOBAL_OUTPUT_COUNT).toBe(300);
+    expect(converted.txOutputs).toEqual(original.txOutputs);
   });
 
   test.each(
@@ -1811,6 +1883,16 @@ describe("PsbtV2.toV0", () => {
       expect(psbtv0Serialized.indexOf(unsignedTxn)).toBeGreaterThanOrEqual(16);
     },
   );
+
+  it("preserves a multi-byte transaction version", () => {
+    const psbt = new PsbtV2();
+    psbt.PSBT_GLOBAL_TX_VERSION = 258;
+    psbt.addInput({ previousTxId: Buffer.alloc(32), outputIndex: 0 });
+    psbt.addOutput({ amount: 1, script: Buffer.from([0x51]) });
+
+    const converted = Psbt.fromHex(psbt.toV0("hex"));
+    expect(converted.data.getTransaction().readInt32LE(0)).toBe(258);
+  });
 });
 
 describe("PsbtV2 addInput", () => {
@@ -2325,11 +2407,7 @@ describe("PsbtV2.combine", () => {
         // Stub handleSighashType so addPartialSig doesn't throw on sighash
         // validation.
         thisPsbt.handleSighashType = vi.fn();
-        thisPsbt.addPartialSig(
-          0,
-          Buffer.from([0x01]),
-          Buffer.from([0x02]),
-        );
+        thisPsbt.addPartialSig(0, Buffer.from([0x01]), Buffer.from([0x02]));
       }
 
       return { thisPsbt, otherPsbt };
