@@ -905,7 +905,7 @@ describe("PsbtV2", () => {
   });
 
   test.each([252, 253, 256])(
-    "Round trips a PSBTv2 with %i outputs",
+    "Serializes and parses a PSBTv2 count of %i outputs",
     (outputCount) => {
       const psbt = new PsbtV2();
 

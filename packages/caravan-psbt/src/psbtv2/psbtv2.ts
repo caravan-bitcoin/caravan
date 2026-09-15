@@ -15,8 +15,8 @@ import {
   getOptionalMappedBytesAsHex,
   getOptionalMappedBytesAsUInt,
   parseDerivationPathNodesToBytes,
-  readCompactSize,
 } from "./functions";
+import { readCompactSize } from "@caravan/bitcoin";
 import { PsbtConversionMaps, PsbtV2Maps } from "./psbtv2maps";
 import { bufferize } from "../functions";
 /**

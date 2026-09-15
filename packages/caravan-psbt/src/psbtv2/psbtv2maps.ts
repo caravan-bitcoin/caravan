@@ -1,7 +1,8 @@
 import { BufferReader, BufferWriter } from "bufio";
 import { Transaction } from "bitcoinjs-lib-v6";
+import { readCompactSize } from "@caravan/bitcoin";
 
-import { readAndSetKeyPairs, readCompactSize, serializeMap } from "./functions";
+import { readAndSetKeyPairs, serializeMap } from "./functions";
 import { Key, KeyType, V0KeyTypes, Value } from "./types";
 import { PSBT_MAGIC_BYTES } from "../constants";
 import { bufferize } from "../functions";
@@ -211,7 +212,14 @@ export class PsbtConversionMaps extends PsbtV2Maps {
         .get(KeyType.PSBT_GLOBAL_FALLBACK_LOCKTIME)
         ?.readUInt32LE() || 0;
 
-    for (let i = 0; i < this.inputMaps.length; i++) {
+    const numInputs = readCompactSize(
+      this.globalMap.get(KeyType.PSBT_GLOBAL_INPUT_COUNT) as Buffer,
+    );
+    const numOutputs = readCompactSize(
+      this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT) as Buffer,
+    );
+
+    for (let i = 0; i < numInputs; i++) {
       if (!this.inputMaps[i].has(KeyType.PSBT_IN_PREVIOUS_TXID)) {
         console.warn(`Input ${i} is missing previous txid. Skipping.`);
         continue;
@@ -224,7 +232,7 @@ export class PsbtConversionMaps extends PsbtV2Maps {
       );
     }
 
-    for (let i = 0; i < this.outputMaps.length; i++) {
+    for (let i = 0; i < numOutputs; i++) {
       if (
         !this.outputMaps[i].has(KeyType.PSBT_OUT_SCRIPT) ||
         !this.outputMaps[i].has(KeyType.PSBT_OUT_AMOUNT)

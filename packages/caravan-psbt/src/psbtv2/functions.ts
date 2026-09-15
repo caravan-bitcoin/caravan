@@ -110,17 +110,6 @@ export function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
   readAndSetKeyPairs(map, br);
 }
 
-export function readCompactSize(value: Buffer): number {
-  const br = new BufferReader(value);
-  const result = br.readVarint();
-
-  if (br.left() !== 0) {
-    throw Error("Invalid CompactSize value");
-  }
-
-  return result;
-}
-
 /**
  * Serializes a Map containing keypairs, includes keylen, and writes to the
  * BufferWriter.

@@ -7,6 +7,8 @@
  * Defining BIPs:
  * https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki
+ *
+ * @deprecated Use PsbtV2 from @caravan/psbt instead.
  */
 
 import { Psbt } from "bitcoinjs-lib-v5";
@@ -14,7 +16,7 @@ import { BufferReader, BufferWriter } from "bufio";
 
 import { validateBIP32Path } from "./paths";
 import { PSBT_MAGIC_BYTES } from "./psbt";
-import { validateHex, validBase64 } from "./utils";
+import { readCompactSize, validateHex, validBase64 } from "./utils";
 
 /*
 Global Types
@@ -220,17 +222,6 @@ function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
 
   map.set(key.toString("hex"), value);
   readAndSetKeyPairs(map, br);
-}
-
-function readCompactSize(value: Buffer): number {
-  const br = new BufferReader(value);
-  const result = br.readVarint();
-
-  if (br.left() !== 0) {
-    throw Error("Invalid CompactSize value");
-  }
-
-  return result;
 }
 
 // Serializes a Map containing keypairs, includes keylen, and writes to the

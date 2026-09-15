@@ -6,6 +6,7 @@ import {
   bitcoinsToSatoshis,
   hash160,
   compactSize,
+  readCompactSize,
 } from "./utils";
 
 describe("utils", () => {
@@ -139,6 +140,23 @@ describe("utils", () => {
       expect(compactSize(252)).toEqual(1);
       expect(compactSize(0xffff)).toEqual(3);
       expect(compactSize(0xffffffff)).toEqual(5);
+    });
+  });
+
+  describe("readCompactSize", () => {
+    it.each([
+      [Buffer.from("fc", "hex"), 252],
+      [Buffer.from("fdfd00", "hex"), 253],
+      [Buffer.from("fd0001", "hex"), 256],
+      [Buffer.from("fe00000100", "hex"), 65536],
+    ])("decodes %s", (value, expected) => {
+      expect(readCompactSize(value)).toBe(expected);
+    });
+
+    it("rejects trailing bytes", () => {
+      expect(() => readCompactSize(Buffer.from("0100", "hex"))).toThrow(
+        "Invalid CompactSize value",
+      );
     });
   });
 });
