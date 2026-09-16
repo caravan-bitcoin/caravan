@@ -1,4 +1,25 @@
 /**
+ * ============================================================================
+ * DEPRECATED MODULE - DO NOT USE. DO NOT ADD FEATURES OR FIXES HERE.
+ * ============================================================================
+ *
+ * This module is an abandoned copy of the PsbtV2 implementation. It was left
+ * behind when the psbt code was extracted into its own package and it has not
+ * received a functional change since June 2024. Use `@caravan/psbt` instead:
+ *
+ *     import { PsbtV2, getPsbtVersionNumber } from "@caravan/psbt";
+ *
+ * The maintained implementation is a superset of this one. Everything exported
+ * here exists there, so migration is an import change.
+ *
+ * It also carries bugs which have since been fixed in `@caravan/psbt`. Notably,
+ * `addInput` silently discards a `sequence` of 0, and BIP0370 reads an absent
+ * PSBT_IN_SEQUENCE as 0xffffffff. An input intended to be replaceable or
+ * relative-timelocked is therefore written as final, which changes the sighash
+ * preimage and invalidates signatures over that input.
+ *
+ * ----------------------------------------------------------------------------
+ *
  * The PsbtV2 class is intended to represent an easily modifiable and
  * serializable psbt of version 2 conforming to BIP0174. Getters exist for all
  * BIP-defined keytypes. Very few setters and modifier methods exist. As they
@@ -7,6 +28,9 @@
  * Defining BIPs:
  * https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
  * https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki
+ *
+ * @deprecated Use `@caravan/psbt` instead. This module is an unmaintained copy
+ * which is missing later fixes and features, and it will be removed.
  */
 
 import { Psbt } from "bitcoinjs-lib-v5";
@@ -138,7 +162,7 @@ function bufferize(psbt: string | Buffer): Buffer {
 // keys as an array of string (hex encoded) values.
 function getNonUniqueKeyTypeValues(
   maps: Map<Key, Value> | Map<Key, Value>[],
-  keytype: KeyType
+  keytype: KeyType,
 ) {
   if (Array.isArray(maps)) {
     // It's a set of input or output maps, so recursively check each map and set
@@ -146,7 +170,7 @@ function getNonUniqueKeyTypeValues(
     const values: NonUniqueKeyTypeValue[][] = maps.map(
       (map) =>
         // TODO: Figure out a better way to type this
-        getNonUniqueKeyTypeValues(map, keytype) as NonUniqueKeyTypeValue[]
+        getNonUniqueKeyTypeValues(map, keytype) as NonUniqueKeyTypeValue[],
     );
 
     return values;
@@ -168,7 +192,7 @@ function getNonUniqueKeyTypeValues(
 // strings.
 function getOptionalMappedBytesAsHex(
   maps: Map<Key, Value>[],
-  keytype: KeyType
+  keytype: KeyType,
 ) {
   return maps.map((map) => map.get(keytype)?.toString("hex") ?? null);
 }
@@ -177,7 +201,7 @@ function getOptionalMappedBytesAsHex(
 // numbers.
 function getOptionalMappedBytesAsUInt(
   maps: Map<Key, Value>[],
-  keytype: KeyType
+  keytype: KeyType,
 ) {
   return maps.map((map) => map.get(keytype)?.readUInt32LE(0) ?? null);
 }
@@ -241,9 +265,14 @@ function serializeMap(map: Map<Key, Value>, bw: BufferWriter): void {
   bw.writeBytes(PSBT_MAP_SEPARATOR);
 }
 
-// This is provided for utility to allow for mapping, map copying, and
-// serialization operations for psbts. This does almost no validation, so do not
-// rely on it for ensuring a valid psbt.
+/**
+ * This is provided for utility to allow for mapping, map copying, and
+ * serialization operations for psbts. This does almost no validation, so do not
+ * rely on it for ensuring a valid psbt.
+ *
+ * @deprecated Use `PsbtV2Maps` from `@caravan/psbt` instead. This copy is
+ * unmaintained and will be removed.
+ */
 export abstract class PsbtV2Maps {
   // These maps directly correspond to the maps defined in BIP0174
   protected globalMap: Map<Key, Value> = new Map();
@@ -324,7 +353,7 @@ export abstract class PsbtV2Maps {
 
   private copyMaps(
     from: readonly ReadonlyMap<string, Buffer>[],
-    to: Map<string, Buffer>[]
+    to: Map<string, Buffer>[],
   ) {
     from.forEach((m, index) => {
       const to_index = new Map<Key, Value>();
@@ -339,6 +368,16 @@ export abstract class PsbtV2Maps {
   }
 }
 
+/**
+ * @deprecated Use `PsbtV2` from `@caravan/psbt` instead:
+ *
+ *     import { PsbtV2 } from "@caravan/psbt";
+ *
+ * This copy is unmaintained, is missing the BIP0370 role-readiness guards,
+ * `toV0`, `combine`, `setInputSequence` and `isRBFSignaled`, and drops a
+ * `sequence` of 0 in `addInput`. See the notice at the top of this module. It
+ * will be removed.
+ */
 export class PsbtV2 extends PsbtV2Maps {
   constructor(psbt?: Buffer | string) {
     super(psbt);
@@ -375,7 +414,7 @@ export class PsbtV2 extends PsbtV2Maps {
       // value and BIP0370 specifies that it cannot be less than 2.
       // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#cite_note-3
       throw Error(
-        `PsbtV2 cannot have a global tx version less than 2. Version ${version} specified.`
+        `PsbtV2 cannot have a global tx version less than 2. Version ${version} specified.`,
       );
     }
 
@@ -486,7 +525,7 @@ export class PsbtV2 extends PsbtV2Maps {
     let workingVersion = version;
     if (workingVersion < 2) {
       console.warn(
-        `PsbtV2 cannot have a global version less than 2. Version ${workingVersion} specified. Setting to version 2.`
+        `PsbtV2 cannot have a global version less than 2. Version ${workingVersion} specified. Setting to version 2.`,
       );
       workingVersion = 2;
     }
@@ -499,7 +538,7 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_GLOBAL_PROPRIETARY() {
     return getNonUniqueKeyTypeValues(
       this.globalMap,
-      KeyType.PSBT_GLOBAL_PROPRIETARY
+      KeyType.PSBT_GLOBAL_PROPRIETARY,
     );
   }
 
@@ -510,70 +549,70 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_IN_NON_WITNESS_UTXO() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_NON_WITNESS_UTXO
+      KeyType.PSBT_IN_NON_WITNESS_UTXO,
     );
   }
 
   get PSBT_IN_WITNESS_UTXO() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_WITNESS_UTXO
+      KeyType.PSBT_IN_WITNESS_UTXO,
     );
   }
 
   get PSBT_IN_PARTIAL_SIG(): NonUniqueKeyTypeValue[][] {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_PARTIAL_SIG
+      KeyType.PSBT_IN_PARTIAL_SIG,
     ) as NonUniqueKeyTypeValue[][];
   }
 
   get PSBT_IN_SIGHASH_TYPE() {
     return getOptionalMappedBytesAsUInt(
       this.inputMaps,
-      KeyType.PSBT_IN_SIGHASH_TYPE
+      KeyType.PSBT_IN_SIGHASH_TYPE,
     );
   }
 
   get PSBT_IN_REDEEM_SCRIPT() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_REDEEM_SCRIPT
+      KeyType.PSBT_IN_REDEEM_SCRIPT,
     );
   }
 
   get PSBT_IN_WITNESS_SCRIPT() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_WITNESS_SCRIPT
+      KeyType.PSBT_IN_WITNESS_SCRIPT,
     );
   }
 
   get PSBT_IN_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_BIP32_DERIVATION
+      KeyType.PSBT_IN_BIP32_DERIVATION,
     );
   }
 
   get PSBT_IN_FINAL_SCRIPTSIG() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_FINAL_SCRIPTSIG
+      KeyType.PSBT_IN_FINAL_SCRIPTSIG,
     );
   }
 
   get PSBT_IN_FINAL_SCRIPTWITNESS() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_FINAL_SCRIPTWITNESS
+      KeyType.PSBT_IN_FINAL_SCRIPTWITNESS,
     );
   }
 
   get PSBT_IN_POR_COMMITMENT() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_POR_COMMITMENT
+      KeyType.PSBT_IN_POR_COMMITMENT,
     );
   }
 
@@ -620,70 +659,70 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_IN_SEQUENCE() {
     return getOptionalMappedBytesAsUInt(
       this.inputMaps,
-      KeyType.PSBT_IN_SEQUENCE
+      KeyType.PSBT_IN_SEQUENCE,
     );
   }
 
   get PSBT_IN_REQUIRED_TIME_LOCKTIME() {
     return getOptionalMappedBytesAsUInt(
       this.inputMaps,
-      KeyType.PSBT_IN_REQUIRED_TIME_LOCKTIME
+      KeyType.PSBT_IN_REQUIRED_TIME_LOCKTIME,
     );
   }
 
   get PSBT_IN_REQUIRED_HEIGHT_LOCKTIME() {
     return getOptionalMappedBytesAsUInt(
       this.inputMaps,
-      KeyType.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME
+      KeyType.PSBT_IN_REQUIRED_HEIGHT_LOCKTIME,
     );
   }
 
   get PSBT_IN_TAP_KEY_SIG() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_KEY_SIG
+      KeyType.PSBT_IN_TAP_KEY_SIG,
     );
   }
 
   get PSBT_IN_TAP_SCRIPT_SIG() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_SCRIPT_SIG
+      KeyType.PSBT_IN_TAP_SCRIPT_SIG,
     );
   }
 
   get PSBT_IN_TAP_LEAF_SCRIPT() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_LEAF_SCRIPT
+      KeyType.PSBT_IN_TAP_LEAF_SCRIPT,
     );
   }
 
   get PSBT_IN_TAP_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_BIP32_DERIVATION
+      KeyType.PSBT_IN_TAP_BIP32_DERIVATION,
     );
   }
 
   get PSBT_IN_TAP_INTERNAL_KEY() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_INTERNAL_KEY
+      KeyType.PSBT_IN_TAP_INTERNAL_KEY,
     );
   }
 
   get PSBT_IN_TAP_MERKLE_ROOT() {
     return getOptionalMappedBytesAsHex(
       this.inputMaps,
-      KeyType.PSBT_IN_TAP_MERKLE_ROOT
+      KeyType.PSBT_IN_TAP_MERKLE_ROOT,
     );
   }
 
   get PSBT_IN_PROPRIETARY() {
     return getNonUniqueKeyTypeValues(
       this.inputMaps,
-      KeyType.PSBT_IN_PROPRIETARY
+      KeyType.PSBT_IN_PROPRIETARY,
     );
   }
 
@@ -694,21 +733,21 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_OUT_REDEEM_SCRIPT() {
     return getOptionalMappedBytesAsHex(
       this.outputMaps,
-      KeyType.PSBT_OUT_REDEEM_SCRIPT
+      KeyType.PSBT_OUT_REDEEM_SCRIPT,
     );
   }
 
   get PSBT_OUT_WITNESS_SCRIPT() {
     return getOptionalMappedBytesAsHex(
       this.outputMaps,
-      KeyType.PSBT_OUT_WITNESS_SCRIPT
+      KeyType.PSBT_OUT_WITNESS_SCRIPT,
     );
   }
 
   get PSBT_OUT_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.outputMaps,
-      KeyType.PSBT_OUT_BIP32_DERIVATION
+      KeyType.PSBT_OUT_BIP32_DERIVATION,
     );
   }
 
@@ -741,28 +780,28 @@ export class PsbtV2 extends PsbtV2Maps {
   get PSBT_OUT_TAP_INTERNAL_KEY() {
     return getOptionalMappedBytesAsHex(
       this.outputMaps,
-      KeyType.PSBT_OUT_TAP_INTERNAL_KEY
+      KeyType.PSBT_OUT_TAP_INTERNAL_KEY,
     );
   }
 
   get PSBT_OUT_TAP_TREE() {
     return getOptionalMappedBytesAsHex(
       this.outputMaps,
-      KeyType.PSBT_OUT_TAP_TREE
+      KeyType.PSBT_OUT_TAP_TREE,
     );
   }
 
   get PSBT_OUT_TAP_BIP32_DERIVATION() {
     return getNonUniqueKeyTypeValues(
       this.outputMaps,
-      KeyType.PSBT_OUT_TAP_BIP32_DERIVATION
+      KeyType.PSBT_OUT_TAP_BIP32_DERIVATION,
     );
   }
 
   get PSBT_OUT_PROPRIETARY() {
     return getNonUniqueKeyTypeValues(
       this.outputMaps,
-      KeyType.PSBT_OUT_PROPRIETARY
+      KeyType.PSBT_OUT_PROPRIETARY,
     );
   }
 
@@ -942,7 +981,7 @@ export class PsbtV2 extends PsbtV2Maps {
     // https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki#constructor
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS])) {
       throw Error(
-        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified."
+        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified.",
       );
     }
     const map = new Map<Key, Value>();
@@ -1008,7 +1047,7 @@ export class PsbtV2 extends PsbtV2Maps {
   }) {
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.OUTPUTS])) {
       throw Error(
-        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified."
+        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified.",
       );
     }
     const map = new Map<Key, Value>();
@@ -1049,7 +1088,7 @@ export class PsbtV2 extends PsbtV2Maps {
   public deleteInput(index: number) {
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.INPUTS])) {
       throw Error(
-        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified."
+        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE inputs cannot be modified.",
       );
     }
     const newInputs = this.inputMaps.filter((_, i) => i !== index);
@@ -1061,7 +1100,7 @@ export class PsbtV2 extends PsbtV2Maps {
   public deleteOutput(index: number) {
     if (!this.isModifiable([PsbtGlobalTxModifiableBits.OUTPUTS])) {
       throw Error(
-        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified."
+        "PsbtV2.PSBT_GLOBAL_TX_MODIFIABLE outputs cannot be modified.",
       );
       // Alternatively, an output could be removed, but depending on the sighash
       // flags for each signature, it might prompt removing all sigs.
@@ -1105,14 +1144,14 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error(
         `PsbtV2.addPartialSig() missing argument ${
           (!pubkey && "pubkey") || (!sig && "sig")
-        }`
+        }`,
       );
     }
 
     const key = `${KeyType.PSBT_IN_PARTIAL_SIG}${pubkey.toString("hex")}`;
     if (this.inputMaps[inputIndex].has(key)) {
       throw Error(
-        "PsbtV2 already has a signature for this input with this pubkey"
+        "PsbtV2 already has a signature for this input with this pubkey",
       );
     }
 
@@ -1140,12 +1179,12 @@ export class PsbtV2 extends PsbtV2Maps {
       // Pubkey has been provided to remove a specific sig on the input.
       const key = `${KeyType.PSBT_IN_PARTIAL_SIG}${pubkey.toString("hex")}`;
       const sig = this.PSBT_IN_PARTIAL_SIG[inputIndex].find(
-        (el) => el.key === key
+        (el) => el.key === key,
       );
 
       if (!sig) {
         throw Error(
-          `PsbtV2 input has no signature from pubkey ${pubkey.toString("hex")}`
+          `PsbtV2 input has no signature from pubkey ${pubkey.toString("hex")}`,
         );
       }
 
@@ -1169,7 +1208,7 @@ export class PsbtV2 extends PsbtV2Maps {
 
     if (!(sighashVal & SighashType.SIGHASH_ANYONECANPAY)) {
       modifiable = modifiable.filter(
-        (val) => val !== PsbtGlobalTxModifiableBits.INPUTS
+        (val) => val !== PsbtGlobalTxModifiableBits.INPUTS,
       );
     } else {
       // Unset SIGHASH_ANYONECANPAY bit for simpler comparisons
@@ -1179,7 +1218,7 @@ export class PsbtV2 extends PsbtV2Maps {
     // Can't use bitwise the whole way because SIGHASH_SINGLE is a 3.
     if (sighashVal !== SighashType.SIGHASH_NONE) {
       modifiable = modifiable.filter(
-        (val) => val !== PsbtGlobalTxModifiableBits.OUTPUTS
+        (val) => val !== PsbtGlobalTxModifiableBits.OUTPUTS,
       );
     }
     if (
@@ -1219,7 +1258,7 @@ export class PsbtV2 extends PsbtV2Maps {
       psbtv2.addGlobalXpub(
         globalXpub.extendedPubkey,
         globalXpub.masterFingerprint,
-        globalXpub.path
+        globalXpub.path,
       );
     }
 
@@ -1280,6 +1319,9 @@ export class PsbtV2 extends PsbtV2Maps {
  * of psbt validity.
  * @param {string | Buffer} psbt - hex, base64 or buffer of psbt
  * @returns {number} version number
+ *
+ * @deprecated Use `getPsbtVersionNumber` from `@caravan/psbt` instead. This
+ * copy is unmaintained and will be removed.
  */
 export function getPsbtVersionNumber(psbt: string | Buffer): number {
   const map = new Map<Key, Value>();

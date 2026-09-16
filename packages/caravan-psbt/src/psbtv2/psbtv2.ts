@@ -948,8 +948,8 @@ export class PsbtV2 extends PsbtV2Maps {
     bw.writeI32(outputIndex);
     map.set(KeyType.PSBT_IN_OUTPUT_INDEX, bw.render());
 
-    if (sequence) {
-      bw.writeI32(sequence);
+    if (sequence !== undefined) {
+      bw.writeU32(sequence);
       map.set(KeyType.PSBT_IN_SEQUENCE, bw.render());
     }
     if (nonWitnessUtxo) {
