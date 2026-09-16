@@ -27,8 +27,8 @@ jobs:
           node-version: 24
           cache: 'npm'
 
-      - name: Pin npm to 11.16.0
-        run: npm install -g npm@11.16.0
+      - name: Pin npm to 11.14.1
+        run: npm install -g npm@11.14.1
 
       - name: Install dependencies
         run: npm ci

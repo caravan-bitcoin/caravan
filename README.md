@@ -108,12 +108,12 @@ lockfiles and to support the supply-chain install cooldown (see below):
 {
   "engines": {
     "node": ">=24",
-    "npm": ">=11.16.0"
+    "npm": ">=11.10"
   }
 }
 ```
 
-The `packageManager` field pins the exact npm version (`npm@11.16.0`) so
+The `packageManager` field pins the exact npm version (`npm@11.14.1`) so
 contributors using Corepack get a consistent installer.
 
 #### Setup

@@ -3,7 +3,7 @@
   "private": true,
   "engines": {
     "node": ">=24",
-    "npm": ">=11.16.0"
+    "npm": ">=11.10"
   },
   "scripts": {
     "preinstall": "node scripts/check-node-versions.js",
@@ -58,7 +58,7 @@
     "tiny-secp256k1": "1.1.6",
     "ws": "8.20.1"
   },
-  "packageManager": "npm@11.16.0",
+  "packageManager": "npm@11.14.1",
   "workspaces": [
     "apps/*",
     "packages/*"
