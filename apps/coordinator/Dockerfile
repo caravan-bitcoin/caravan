@@ -1,8 +1,5 @@
 # Caravan coordinator app is platform agnostic, the build platform output can be reused.
-#
-# Pinned to an exact patch rather than floating on `node:24` so the bundled npm
-# is predictable.
-FROM --platform=$BUILDPLATFORM node:24.21.0-bookworm-slim AS base
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS base
 
 # Install all OS dependencies
 FROM base AS builder
