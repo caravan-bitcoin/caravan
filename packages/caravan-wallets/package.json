@@ -84,7 +84,7 @@
     "@trezor/connect-web": "^9.6.0",
     "bignumber.js": "^8.1.1",
     "bitbox-api": "^0.10.0",
-    "bitcoinjs-lib": "5.1.10",
+    "bitcoinjs-lib": "^5.1.10",
     "bowser": "^2.6.1",
     "core-js": "^2.6.10",
     "jadets": "^1.1.20",
