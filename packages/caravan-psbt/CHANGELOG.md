@@ -1,5 +1,16 @@
 # @caravan/psbt
 
+## 2.1.1
+
+### Patch Changes
+
+- [#533](https://github.com/caravan-bitcoin/caravan/pull/533) [`5f9e53f`](https://github.com/caravan-bitcoin/caravan/commit/5f9e53ff1a61a1bf1330966eb3444e5f435247e7) Thanks [@jpcummins](https://github.com/jpcummins)! - Fix PSBTv2 CompactSize encoding and parsing.
+
+- [#534](https://github.com/caravan-bitcoin/caravan/pull/534) [`4b90396`](https://github.com/caravan-bitcoin/caravan/commit/4b903961411aa5775e65690acaf3d0ec39cd2de2) Thanks [@Shadouts](https://github.com/Shadouts)! - cleaned up a bugged truthy check
+
+- Updated dependencies [[`5f9e53f`](https://github.com/caravan-bitcoin/caravan/commit/5f9e53ff1a61a1bf1330966eb3444e5f435247e7), [`4b90396`](https://github.com/caravan-bitcoin/caravan/commit/4b903961411aa5775e65690acaf3d0ec39cd2de2)]:
+  - @caravan/bitcoin@0.4.6
+
 ## 2.1.0
 
 ### Minor Changes

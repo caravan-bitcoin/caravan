@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.6
+
+### Patch Changes
+
+- [#533](https://github.com/caravan-bitcoin/caravan/pull/533) [`5f9e53f`](https://github.com/caravan-bitcoin/caravan/commit/5f9e53ff1a61a1bf1330966eb3444e5f435247e7) Thanks [@jpcummins](https://github.com/jpcummins)! - Fix PSBTv2 CompactSize encoding and parsing.
+
+- [#534](https://github.com/caravan-bitcoin/caravan/pull/534) [`4b90396`](https://github.com/caravan-bitcoin/caravan/commit/4b903961411aa5775e65690acaf3d0ec39cd2de2) Thanks [@Shadouts](https://github.com/Shadouts)! - Deprecate the `psbtv2` module. `PsbtV2`, `PsbtV2Maps` and `getPsbtVersionNumber` exported from `@caravan/bitcoin` are an unmaintained copy of the implementation in `@caravan/psbt` and should be imported from there instead. These exports will be removed in a future major release.
+
 ## 0.4.5
 
 ### Patch Changes
