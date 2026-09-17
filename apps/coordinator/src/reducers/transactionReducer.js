@@ -48,6 +48,7 @@ import {
   SET_SPEND_STEP,
   SPEND_STEP_CREATE,
   SET_ENABLE_RBF,
+  SET_BROADCASTING,
 } from "../actions/transactionActions";
 import { RESET_NODES_SPEND } from "../actions/walletActions";
 import { Transaction } from "bitcoinjs-lib";
@@ -106,6 +107,7 @@ export const initialState = () => ({
   signingKeys: [0, 0], // default 2 required signers
   spendingStep: SPEND_STEP_CREATE,
   unsignedPSBT: "",
+  broadcasting: false,
   transactions: {
     transactions: [],
     isLoading: false, // Array to store actual transactions
@@ -455,6 +457,8 @@ export default (state = initialState(), action) => {
       return updateState(state);
     case SET_TXID:
       return updateState(state, { txid: action.value });
+    case SET_BROADCASTING:
+      return updateState(state, { broadcasting: action.value });
     case SET_IS_WALLET:
       return updateState(state, { isWallet: true });
     case RESET_TRANSACTION:
