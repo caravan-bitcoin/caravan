@@ -15,8 +15,6 @@ import {
 } from "@caravan/bitcoin";
 import {
   Jade,
-  JadeInterface,
-  SerialTransport,
   IJade,
   IJadeInterface,
   JadeTransport,
@@ -34,6 +32,8 @@ import {
   ACTIVE,
   INFO,
 } from "./interaction";
+import { JadeRpcInterface } from "./jadeRpc";
+import { JadeSerialTransport } from "./jadeSerial";
 import { MultisigWalletConfig } from "./types";
 
 export const JADE = "jade";
@@ -140,9 +140,10 @@ export class JadeInteraction extends DirectKeystoreInteraction {
     super();
     this.network = network ?? (DEFAULT_NETWORK as BitcoinNetwork);
 
-    // Dependency injections or default to an instance from jadets
-    this.transport = dependencies?.transport ?? new SerialTransport({}); 
-    this.ijade = dependencies?.jadeInterface ?? new JadeInterface(this.transport);
+    // jadets JadeInterface/SerialTransport mishandle timeouts, multipart
+    // sign_psbt replies, and DTR/RTS. Use Caravan wrappers by default.
+    this.transport = dependencies?.transport ?? new JadeSerialTransport({});
+    this.ijade = dependencies?.jadeInterface ?? new JadeRpcInterface(this.transport);
     this.jade = dependencies?.jade ?? new Jade(this.ijade);
   }
 
