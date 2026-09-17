@@ -38,7 +38,6 @@
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@vitest/coverage-istanbul": "^3.2.4",
     "@vitest/ui": "^3.2.4",
-    "bitcoinjs-lib": "5.2.0",
     "esbuild": "^0.25.3",
     "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "husky": "^9.1.7",
