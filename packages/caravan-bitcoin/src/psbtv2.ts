@@ -38,7 +38,7 @@ import { BufferReader, BufferWriter } from "bufio";
 
 import { validateBIP32Path } from "./paths";
 import { PSBT_MAGIC_BYTES } from "./psbt";
-import { validateHex, validBase64 } from "./utils";
+import { readCompactSize, validateHex, validBase64 } from "./utils";
 
 /*
 Global Types
@@ -234,12 +234,11 @@ function parseDerivationPathNodesToBytes(path: string): Buffer {
 // Takes a BufferReader and a Map then reads keypairs until it gets to a map
 // separator (keyLen 0x00 byte);
 function readAndSetKeyPairs(map: Map<Key, Buffer>, br: BufferReader) {
-  const nextByte: Buffer = br.readBytes(1);
-  if (nextByte.equals(PSBT_MAP_SEPARATOR)) {
+  const keyLen = br.readVarint();
+  if (keyLen === 0) {
     return;
   }
 
-  const keyLen = nextByte.readUInt8(0);
   const key = br.readBytes(keyLen);
   const value = br.readVarBytes();
 
@@ -303,8 +302,9 @@ export abstract class PsbtV2Maps {
     }
 
     // Build inputMaps
-    const inputCount =
-      this.globalMap.get(KeyType.PSBT_GLOBAL_INPUT_COUNT)?.readUInt8(0) ?? 0;
+    const inputCount = readCompactSize(
+      this.globalMap.get(KeyType.PSBT_GLOBAL_INPUT_COUNT) as Buffer,
+    );
     for (let i = 0; i < inputCount; i++) {
       const map = new Map<Key, Value>();
       readAndSetKeyPairs(map, br);
@@ -312,12 +312,17 @@ export abstract class PsbtV2Maps {
     }
 
     // Build outputMaps
-    const outputCount =
-      this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT)?.readUInt8(0) ?? 0;
+    const outputCount = readCompactSize(
+      this.globalMap.get(KeyType.PSBT_GLOBAL_OUTPUT_COUNT) as Buffer,
+    );
     for (let i = 0; i < outputCount; i++) {
       const map = new Map<Key, Value>();
       readAndSetKeyPairs(map, br);
       this.outputMaps.push(map);
+    }
+
+    if (br.left() !== 0) {
+      throw Error("Provided PsbtV2 has unexpected data after its output maps.");
     }
   }
 
@@ -448,12 +453,12 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error("PSBT_GLOBAL_INPUT_COUNT not set");
     }
 
-    return val.readUInt8(0);
+    return readCompactSize(val);
   }
 
   set PSBT_GLOBAL_INPUT_COUNT(count: number) {
     const bw = new BufferWriter();
-    bw.writeU8(count);
+    bw.writeVarint(count);
     this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
   }
 
@@ -464,12 +469,12 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error("PSBT_GLOBAL_OUTPUT_COUNT not set");
     }
 
-    return val.readUInt8(0);
+    return readCompactSize(val);
   }
 
   set PSBT_GLOBAL_OUTPUT_COUNT(count: number) {
     const bw = new BufferWriter();
-    bw.writeU8(count);
+    bw.writeVarint(count);
     this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 
@@ -1002,7 +1007,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
     if (witnessUtxo) {
       bw.writeI64(witnessUtxo.amount);
-      bw.writeU8(witnessUtxo.script.length);
+      bw.writeVarint(witnessUtxo.script.length);
       bw.writeBytes(witnessUtxo.script);
       map.set(KeyType.PSBT_IN_WITNESS_UTXO, bw.render());
     }

@@ -16,6 +16,7 @@ import {
   getOptionalMappedBytesAsUInt,
   parseDerivationPathNodesToBytes,
 } from "./functions";
+import { readCompactSize } from "@caravan/bitcoin";
 import { PsbtConversionMaps, PsbtV2Maps } from "./psbtv2maps";
 import { bufferize } from "../functions";
 /**
@@ -108,7 +109,7 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error("PSBT_GLOBAL_INPUT_COUNT not set");
     }
 
-    return val.readUInt8(0);
+    return readCompactSize(val);
   }
 
   get PSBT_GLOBAL_OUTPUT_COUNT() {
@@ -118,7 +119,7 @@ export class PsbtV2 extends PsbtV2Maps {
       throw Error("PSBT_GLOBAL_OUTPUT_COUNT not set");
     }
 
-    return val.readUInt8(0);
+    return readCompactSize(val);
   }
 
   get PSBT_GLOBAL_TX_MODIFIABLE() {
@@ -958,7 +959,7 @@ export class PsbtV2 extends PsbtV2Maps {
     }
     if (witnessUtxo) {
       bw.writeI64(witnessUtxo.amount);
-      bw.writeU8(witnessUtxo.script.length);
+      bw.writeVarint(witnessUtxo.script.length);
       bw.writeBytes(witnessUtxo.script);
       map.set(KeyType.PSBT_IN_WITNESS_UTXO, bw.render());
     }
@@ -1254,7 +1255,7 @@ export class PsbtV2 extends PsbtV2Maps {
 
     const bw = new BufferWriter();
     bw.writeBytes(Buffer.from(keyType, "hex"));
-    bw.writeU8(identifier.length);
+    bw.writeVarint(identifier.length);
     bw.writeBytes(identifier);
     bw.writeBytes(subkeyType);
     bw.writeBytes(subkeyData);
@@ -1422,7 +1423,7 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   private updateGlobalInputCount() {
     const bw = new BufferWriter();
-    bw.writeU8(this.inputMaps.length);
+    bw.writeVarint(this.inputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_INPUT_COUNT, bw.render());
   }
 
@@ -1431,7 +1432,7 @@ export class PsbtV2 extends PsbtV2Maps {
    */
   private updateGlobalOutputCount() {
     const bw = new BufferWriter();
-    bw.writeU8(this.outputMaps.length);
+    bw.writeVarint(this.outputMaps.length);
     this.globalMap.set(KeyType.PSBT_GLOBAL_OUTPUT_COUNT, bw.render());
   }
 

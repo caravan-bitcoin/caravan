@@ -5,6 +5,7 @@
 
 import { BigNumber } from "bignumber.js";
 import { crypto } from "bitcoinjs-lib-v5";
+import { BufferReader } from "bufio";
 
 // Without this, BigNumber will report strings as exponentials. 16 places covers
 // all possible values in satoshis.
@@ -108,4 +109,15 @@ export function compactSize(size: number) {
   } else {
     throw new Error(`Invalid size ${size}`);
   }
+}
+
+export function readCompactSize(value: Buffer): number {
+  const br = new BufferReader(value);
+  const result = br.readVarint();
+
+  if (br.left() !== 0) {
+    throw Error("Invalid CompactSize value");
+  }
+
+  return result;
 }
