@@ -1896,6 +1896,8 @@ describe("PsbtV2.toV0", () => {
 });
 
 describe("PsbtV2 addInput", () => {
+  silenceDescribe("error", "warn");
+
   let psbt: PsbtV2;
   const updateGlobalInputCountSpy = vi.spyOn(
     PsbtV2.prototype as any,
@@ -1921,6 +1923,65 @@ describe("PsbtV2 addInput", () => {
     expect(inputCount).toBe(2);
     // Once, for creation and once for each call to addInput
     expect(updateGlobalInputCountSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("sets PSBT_IN_SEQUENCE when the provided sequence is 0", () => {
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0),
+      outputIndex: 0,
+      sequence: 0,
+    });
+
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(0);
+    // BIP370 treats a missing PSBT_IN_SEQUENCE as 0xffffffff, which would make
+    // the input final instead of replaceable and would stop nLockTime from
+    // being enforced.
+    expect(psbt.isRBFSignaled).toBe(true);
+  });
+
+  it("omits PSBT_IN_SEQUENCE when no sequence is provided", () => {
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0),
+      outputIndex: 0,
+    });
+
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(null);
+  });
+
+  it("sets sequences which exceed the signed 32-bit range", () => {
+    psbt.addInput({
+      previousTxId: Buffer.alloc(32, 0),
+      outputIndex: 0,
+      sequence: 0xfffffffd,
+    });
+
+    expect(psbt.PSBT_IN_SEQUENCE[0]).toBe(0xfffffffd);
+  });
+
+  it("preserves a sequence of 0 when converting a psbtv0 and back", () => {
+    // A sequence of 0 signals both RBF and, for txn version 2, a BIP68
+    // relative locktime. If addInput drops it, the sequence materializes as
+    // bitcoinjs' default 0xffffffff in the unsigned txn built by toV0, which
+    // changes the txid and invalidates any signatures on the input.
+    const psbtv0 = new Psbt();
+    psbtv0.addInput({
+      hash: Buffer.alloc(32, 1),
+      index: 0,
+      sequence: 0,
+    });
+    psbtv0.addOutput({
+      script: Buffer.from(
+        "0014b0a3af144208412693ca7d166852b52db0aef06e",
+        "hex",
+      ),
+      value: 900000000,
+    });
+
+    const psbtv2 = PsbtV2.FromV0(psbtv0.toBase64());
+    expect(psbtv2.PSBT_IN_SEQUENCE[0]).toBe(0);
+
+    const roundTripped = Psbt.fromHex(psbtv2.toV0("hex"));
+    expect(roundTripped.txInputs[0].sequence).toBe(0);
   });
 });
 
