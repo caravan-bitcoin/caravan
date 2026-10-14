@@ -193,6 +193,12 @@ const NODES = {
     rootFingerprint: ROOT_FINGERPRINT,
   },
 
+  "m/45'/1'/0'/0": {
+    pub: "03e2d99911e6d56c7f134026324c42b38efbe3689b1122326b23871d3234a058e9",
+    tpub: "tpubDEeGXbhQg9q8VeyM3urXTzHdVLAVAsA73scCfj4PYfVA7Ro6B1Zxi8JE2UV7nnMSvhJRfYG5cqjXSn2MbEWFcARoXXjhWUdRoutUCTFqoSf",
+    rootFingerprint: ROOT_FINGERPRINT,
+  },
+
   "m/45'/1'/0'/0/0": {
     pub: "037226e92491b2cf9691152fc2e9a0a7cff8f9ab7ad1b24b6f6506d7c8bf18911b",
     tpub: "tpubDFqzhdm1iDvKkHNwVMxFnWZjBX4m1QQK4qNELiux6RXteZdPidpymFeWFKm5koNvjTiwPZb4i456pW5JBymaCcKumuhN7DYLwX9wwGAJ71H",
