@@ -1,4 +1,4 @@
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { isValidSignature } from "@caravan/bitcoin";
 import { payments, script, Transaction } from "bitcoinjs-lib-v6";
 
 export type FinalizedMultisigAddressType = "P2SH" | "P2SH-P2WSH" | "P2WSH";
@@ -56,23 +56,6 @@ function finalizedMultisigInput(
   };
 }
 
-function verifies(
-  signature: Buffer,
-  messageHash: Buffer,
-  publicKey: Buffer,
-): boolean {
-  try {
-    return secp256k1.verify(signature, messageHash, publicKey, {
-      format: "compact",
-      // High-S signatures are non-standard today but remain valid ECDSA. The
-      // analyzer reports historical consensus-valid transactions as well.
-      lowS: false,
-    });
-  } catch (_error) {
-    return false;
-  }
-}
-
 function analyzeInput(
   transaction: Transaction,
   inputIndex: number,
@@ -123,7 +106,7 @@ function analyzeInput(
           );
 
     const publicKeyIndex = publicKeys.findIndex((publicKey) =>
-      verifies(decoded.signature, hash, publicKey),
+      isValidSignature(publicKey, hash, decoded.signature),
     );
     if (publicKeyIndex < 0) {
       unmatchedSignatures.push(encodedSignature.toString("hex"));
