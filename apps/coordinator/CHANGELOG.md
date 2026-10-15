@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.20.0
+
+### Minor Changes
+
+- [#517](https://github.com/caravan-bitcoin/caravan/pull/517) [`8e75811`](https://github.com/caravan-bitcoin/caravan/commit/8e7581115b8289b6dce4954f732d59d722884ea7) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Add bitcoinjs-lib v6 utilities for identifying the public key behind each signature in finalized P2SH, P2SH-P2WSH, and P2WSH multisig transaction inputs.
+
+### Patch Changes
+
+- [#538](https://github.com/caravan-bitcoin/caravan/pull/538) [`ddd399e`](https://github.com/caravan-bitcoin/caravan/commit/ddd399e7418bd28057693fa4cc88c2c8e8d1110f) Thanks [@Shadouts](https://github.com/Shadouts)! - Fixes test #8 by adding the required fixture.
+
+- Updated dependencies [[`8e75811`](https://github.com/caravan-bitcoin/caravan/commit/8e7581115b8289b6dce4954f732d59d722884ea7)]:
+  - @caravan/transactions@1.1.0
+
 ## 1.19.2
 
 ### Patch Changes
