@@ -24,7 +24,6 @@ import {
   bytesToBase64,
   MultisigDescriptor,
   SignerDescriptor,
-  ReceiveOptions,
   JadeHttpRequestFunction,
 } from "jadets";
 
@@ -391,13 +390,19 @@ export class JadeConfirmMultisigAddress extends JadeInteraction {
         return getRelativeBip32Sequence(childPath, this.bip32Path);
       });
 
-      const opts: ReceiveOptions = {
+      // jadets sends get_receive_address with a 5 second timeout, but Jade
+      // holds the reply until the user confirms the address on the device.
+      const requestId = Math.floor(Math.random() * 1e6).toString();
+      const request = this.ijade.buildRequest(requestId, "get_receive_address", {
+        network: this.rpcNetwork,
         paths,
-        multisigName,
-      };
-
-      const multisigAddress = await jade.getReceiveAddress(this.rpcNetwork, opts);
-      return multisigAddress;
+        multisig_name: multisigName,
+      });
+      const reply = await this.ijade.makeRPCCall(request, true);
+      if (reply.error) {
+        throw new Error(`RPC Error ${reply.error.code}: ${reply.error.message}`);
+      }
+      return reply.result;
     });
   }
 }
