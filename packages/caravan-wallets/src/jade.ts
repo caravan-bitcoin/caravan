@@ -14,6 +14,10 @@ import {
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
 import {
+  type SignMessageResult,
+  MessageSigningError,
+} from "@caravan/messages";
+import {
   Jade,
   JadeInterface,
   SerialTransport,
@@ -28,6 +32,7 @@ import {
   JadeHttpRequestFunction,
 } from "jadets";
 
+import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
   DirectKeystoreInteraction,
   PENDING,
@@ -464,32 +469,63 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
   }
 }
 
+/**
+ * Sign a Bitcoin Signed Message (BIP-137) with the cosigner key at
+ * `bip32Path` on a Jade device. Returns a canonical `SignMessageResult`.
+ */
 export class JadeSignMessage extends JadeInteraction {
-
   bip32Path: string;
- 
+
   message: string;
-  
-  constructor({ 
-    bip32Path, 
-    message, 
+
+  pubkey: string;
+
+  constructor({
+    bip32Path,
+    message,
+    pubkey,
     network,
-    dependencies 
-  }: { 
-    bip32Path: string; 
+    dependencies,
+  }: {
+    bip32Path: string;
     message: string;
+    pubkey: string;
     network?: BitcoinNetwork;
     dependencies?: JadeDependencies;
   }) {
     super(network, dependencies);
+
     this.bip32Path = bip32Path;
     this.message = message;
+    this.pubkey = pubkey;
   }
-  
-  async run() {
+
+  async run(): Promise<SignMessageResult> {
     return await this.withDevice(async (jade: IJade) => {
       const path = bip32PathToSequence(this.bip32Path);
-      return await jade.signMessage(path, this.message);
+      let signature: unknown;
+      try {
+        signature = await jade.signMessage(path, this.message);
+      } catch (err) {
+        throw wrapSdkError(JADE, err);
+      }
+      if (typeof signature !== "string") {
+        throw new MessageSigningError({
+          kind: "MalformedResponse",
+          keystore: JADE,
+          userMessage: `Expected base64 signature string from Jade, got ${typeof signature}.`,
+        });
+      }
+      assertSignatureVerifies(JADE, {
+        message: this.message,
+        signature,
+        pubkey: this.pubkey,
+      });
+      return {
+        bip32Path: this.bip32Path,
+        signature,
+        pubkey: this.pubkey,
+      };
     });
   }
 }

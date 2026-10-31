@@ -31,7 +31,7 @@ const ColdcardFileReaderBase = ({
     if (hasError) return; // do not continue if the bip32path is invalid
     if (singleAcceptedFile(acceptedFiles, rejectedFiles)) {
       const file = acceptedFiles[0];
-      if (fileType === "JSON") {
+      if (fileType === "JSON" || fileType === "TXT") {
         onReceive(await file.text());
       } else {
         // With PSBT files, the actual spec says it should be stored in binary.
@@ -103,7 +103,9 @@ const ColdcardFileReaderBase = ({
         >
           <UploadIcon classes={{ root: styles.uploadIcon }} />
           <p className={styles.instruction}>
-            {fileType === "JSON" ? "Upload The XPUB" : "Upload Signed PSBT"}
+            {fileType === "JSON" && "Upload The XPUB"}
+            {fileType === "TXT" && "Upload Signed Message File"}
+            {fileType === "PSBT" && "Upload Signed PSBT"}
           </p>
         </Dropzone>
       </Box>
@@ -161,5 +163,11 @@ export const ColdcardPSBTReader = (props) => {
       fileType="PSBT"
       validFileFormats=".psbt"
     />
+  );
+};
+
+export const ColdcardTextReader = (props) => {
+  return (
+    <ColdcardFileReaderBase {...props} fileType="TXT" validFileFormats=".txt" />
   );
 };

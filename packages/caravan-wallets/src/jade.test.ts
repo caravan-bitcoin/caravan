@@ -5,11 +5,11 @@ import {
   ExtendedPublicKey,
   getPsbtVersionNumber,
   PsbtV2,
+  TEST_FIXTURES,
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
 import { IJade, IJadeInterface, JadeTransport } from "jadets";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mock, MockProxy } from "vitest-mock-extended";
 
 import {
@@ -29,19 +29,19 @@ import {
 } from "./jade";
 import { MultisigWalletConfig } from "./types";
 
-// Mock modules
-vi.mock("@caravan/bitcoin", () => ({
-  ExtendedPublicKey: {
-    fromBase58: vi.fn(),
-  },
-  getPsbtVersionNumber: vi.fn(),
-  PsbtV2: vi.fn(),
-  bip32PathToSequence: vi.fn(),
-  bip32SequenceToPath: vi.fn(),
-  P2SH: "P2SH",
-  P2WSH: "P2WSH",
-  P2SH_P2WSH: "P2SH_P2WSH",
-}));
+vi.mock("@caravan/bitcoin", async () => {
+  const actual = await vi.importActual<typeof import("@caravan/bitcoin")>(
+    "@caravan/bitcoin",
+  );
+  return {
+    ...actual,
+    ExtendedPublicKey: { fromBase58: vi.fn() },
+    getPsbtVersionNumber: vi.fn(),
+    PsbtV2: vi.fn(),
+    bip32PathToSequence: vi.fn(),
+    bip32SequenceToPath: vi.fn(),
+  };
+});
 
 vi.mock("@caravan/bip32", () => ({
   getRelativeBip32Sequence: vi.fn(),
@@ -503,26 +503,77 @@ describe("Jade", () => {
     });
 
     describe("JadeSignMessage", () => {
-      it("signs message using jade.signMessage", async () => {
-        const expectedSignature = Buffer.from("test_signature");
-        const testMessage = "Hello, Jade!";
-        const testPath = "m/44'/0'/0'";
-        mockJade.signMessage.mockResolvedValueOnce(
-          Buffer.from(expectedSignature)
-        );
+      const DUMMY_PUBKEY = `02${"00".repeat(32)}`;
 
+      it("rejects non-string SDK output with MalformedResponse", async () => {
+        mockJade.signMessage.mockResolvedValueOnce(Buffer.alloc(32) as any);
         const interaction = new JadeSignMessage({
-          bip32Path: testPath,
-          message: testMessage,
+          bip32Path: "m/44'/0'/0'",
+          message: "hello",
+          pubkey: DUMMY_PUBKEY,
           dependencies,
         });
+        await expect(interaction.run()).rejects.toMatchObject({
+          kind: "MalformedResponse",
+          keystore: "jade",
+        });
+      });
 
-        const result = await interaction.run();
+      it.each([
+        ["Action rejected by user", "DeviceRejected"],
+        ["BLE connection dropped", "TransportError"],
+      ])("wraps SDK '%s' as %s", async (errorText, expectedKind) => {
+        mockJade.signMessage.mockRejectedValueOnce(new Error(errorText));
+        const interaction = new JadeSignMessage({
+          bip32Path: "m/44'/0'/0'",
+          message: "hello",
+          pubkey: DUMMY_PUBKEY,
+          dependencies,
+        });
+        await expect(interaction.run()).rejects.toMatchObject({
+          kind: expectedKind,
+          keystore: "jade",
+        });
+      });
 
-        expect(result).toEqual(expectedSignature);
+      it("rejects a sig that does not verify against pubkey", async () => {
+        // Sign with open_source but claim a different cosigner's pubkey.
+        const fixture = TEST_FIXTURES.multisigs[0];
+        mockJade.signMessage.mockResolvedValueOnce(
+          fixture.signedMessages.bip137 as any,
+        );
+        const interaction = new JadeSignMessage({
+          bip32Path: fixture.bip32Path,
+          message: fixture.signedMessages.message,
+          pubkey: fixture.publicKeys.find((pk) => pk !== fixture.publicKey)!,
+          dependencies,
+        });
+        await expect(interaction.run()).rejects.toMatchObject({
+          kind: "MalformedResponse",
+          keystore: "jade",
+        });
+      });
+
+      it("returns the base64 sig string Jade emits", async () => {
+        const fixture = TEST_FIXTURES.multisigs[0];
+        mockJade.signMessage.mockResolvedValueOnce(
+          fixture.signedMessages.bip137 as any,
+        );
+        const interaction = new JadeSignMessage({
+          bip32Path: fixture.bip32Path,
+          message: fixture.signedMessages.message,
+          pubkey: fixture.publicKey,
+          dependencies,
+        });
+        const entry = await interaction.run();
+        expect(entry).toEqual({
+          bip32Path: fixture.bip32Path,
+          pubkey: fixture.publicKey,
+          signature: fixture.signedMessages.bip137,
+        });
         expect(mockJade.signMessage).toHaveBeenCalledWith(
-          [44, 0, 0],
-          testMessage
+          [45, 1, 100, 0, 0],
+          fixture.signedMessages.message,
         );
       });
     });
@@ -537,7 +588,7 @@ describe("Jade", () => {
             "wsh(multi(k))"
           );
           expect(
-            variantFromAddressType("P2SH_P2WSH" as MultisigAddressType)
+            variantFromAddressType("P2SH-P2WSH" as MultisigAddressType)
           ).toBe("sh(wsh(multi(k)))");
         });
 

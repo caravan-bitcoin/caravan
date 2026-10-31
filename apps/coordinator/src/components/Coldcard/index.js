@@ -1,4 +1,13 @@
-import { ColdcardJSONReader, ColdcardPSBTReader } from "./ColdcardFileReader";
+import {
+  ColdcardJSONReader,
+  ColdcardPSBTReader,
+  ColdcardTextReader,
+} from "./ColdcardFileReader";
 import ColdcardSigningButtons from "./ColdcardSigningButtons";
 
-export { ColdcardSigningButtons, ColdcardJSONReader, ColdcardPSBTReader };
+export {
+  ColdcardSigningButtons,
+  ColdcardJSONReader,
+  ColdcardPSBTReader,
+  ColdcardTextReader,
+};
