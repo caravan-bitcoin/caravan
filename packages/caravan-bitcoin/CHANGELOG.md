@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.7
+
+### Patch Changes
+
+- [#511](https://github.com/caravan-bitcoin/caravan/pull/511) [`2303478`](https://github.com/caravan-bitcoin/caravan/commit/2303478cbf7e15d85326e2d1d5eaa528e43bebec) Thanks [@bucko13](https://github.com/bucko13)! - Add pre-computed BIP-137 and BIP-322 signatures to each `TEST_FIXTURES.multisigs` entry under a new `signedMessages: { message, bip137, bip322 }` field. Signed at the entry's `bip32Path` with the open_source seed; consumers can verify the signatures without re-signing in-test.
+
 ## 0.4.6
 
 ### Patch Changes
