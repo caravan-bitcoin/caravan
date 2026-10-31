@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.20.0
+
+### Minor Changes
+
+- [#517](https://github.com/caravan-bitcoin/caravan/pull/517) [`8e75811`](https://github.com/caravan-bitcoin/caravan/commit/8e7581115b8289b6dce4954f732d59d722884ea7) Thanks [@cc-unchained](https://github.com/cc-unchained)! - Add bitcoinjs-lib v6 utilities for identifying the public key behind each signature in finalized P2SH, P2SH-P2WSH, and P2WSH multisig transaction inputs.
+
+- [#511](https://github.com/caravan-bitcoin/caravan/pull/511) [`948c273`](https://github.com/caravan-bitcoin/caravan/commit/948c2730ad519780dbfb257efe8ee3f9dcfd70f1) Thanks [@bucko13](https://github.com/bucko13)! - Add a message-signing category to the `/#/test` keystore test suite, exercising per-cosigner BIP-137 signing on Ledger, Trezor, Jade, and Coldcard. Includes a new Coldcard SD-card UX (download request `.txt`, upload signed `.txt`) and a `ColdcardTextReader` for the signed-message file.
+
+### Patch Changes
+
+- [#538](https://github.com/caravan-bitcoin/caravan/pull/538) [`ddd399e`](https://github.com/caravan-bitcoin/caravan/commit/ddd399e7418bd28057693fa4cc88c2c8e8d1110f) Thanks [@Shadouts](https://github.com/Shadouts)! - Fixes test #8 by adding the required fixture.
+
+- Updated dependencies [[`8e75811`](https://github.com/caravan-bitcoin/caravan/commit/8e7581115b8289b6dce4954f732d59d722884ea7), [`2303478`](https://github.com/caravan-bitcoin/caravan/commit/2303478cbf7e15d85326e2d1d5eaa528e43bebec), [`9e10c2b`](https://github.com/caravan-bitcoin/caravan/commit/9e10c2ba17400ee800565358fe78c3e496309be3)]:
+  - @caravan/transactions@1.1.0
+  - @caravan/bitcoin@0.4.7
+  - @caravan/wallets@1.0.0
+  - @caravan/psbt@2.1.2
+
 ## 1.19.2
 
 ### Patch Changes
