@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- [#540](https://github.com/caravan-bitcoin/caravan/pull/540) [`c4c4a4d`](https://github.com/caravan-bitcoin/caravan/commit/c4c4a4d8139bb2d8fde48a41856962d74b0bb62e) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Stop Jade address confirmation from timing out. jadets sends `get_receive_address` with a 5 second timeout, but the Jade holds the reply until the user confirms the address on the device. `JadeConfirmMultisigAddress` now sends the call without a timeout.
+
 ## 1.0.0
 
 ### Major Changes
