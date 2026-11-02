@@ -429,11 +429,20 @@ describe("Jade", () => {
         ],
       };
 
+      beforeEach(() => {
+        mockJadeInterface.buildRequest.mockImplementation(
+          (id, method, params) => ({ id, method, params })
+        );
+      });
+
       it("confirms address for existing multisig", async () => {
         const existingName = "existing_multisig";
         const expectedAddress = "bc1q_test_address";
         mockJade.getMultiSigName.mockResolvedValueOnce(existingName);
-        mockJade.getReceiveAddress.mockResolvedValueOnce(expectedAddress);
+        mockJadeInterface.makeRPCCall.mockResolvedValueOnce({
+          id: "1",
+          result: expectedAddress,
+        });
 
         const interaction = new JadeConfirmMultisigAddress({
           bip32Path: "m/48'/0'/0'/2'/0/0",
@@ -444,12 +453,18 @@ describe("Jade", () => {
         const result = await interaction.run();
 
         expect(result).toBe(expectedAddress);
-        expect(mockJade.getReceiveAddress).toHaveBeenCalledWith(
-          "mainnet",
-          expect.objectContaining({
-            multisigName: existingName,
-            paths: expect.any(Array),
-          })
+        expect(mockJade.getReceiveAddress).not.toHaveBeenCalled();
+        expect(mockJadeInterface.makeRPCCall).toHaveBeenCalledWith(
+          {
+            id: expect.any(String),
+            method: "get_receive_address",
+            params: {
+              network: "mainnet",
+              paths: [[0, 1]],
+              multisig_name: existingName,
+            },
+          },
+          true
         );
       });
 
@@ -457,7 +472,10 @@ describe("Jade", () => {
         const expectedAddress = "bc1q_new_address";
         // eslint-disable-next-line no-undefined
         mockJade.getMultiSigName.mockResolvedValueOnce(undefined);
-        mockJade.getReceiveAddress.mockResolvedValueOnce(expectedAddress);
+        mockJadeInterface.makeRPCCall.mockResolvedValueOnce({
+          id: "1",
+          result: expectedAddress,
+        });
 
         const interaction = new JadeConfirmMultisigAddress({
           bip32Path: "m/48'/0'/0'/2'/0/0",
@@ -469,7 +487,25 @@ describe("Jade", () => {
 
         expect(result).toBe(expectedAddress);
         expect(mockJade.registerMultisig).toHaveBeenCalled();
-        expect(mockJade.getReceiveAddress).toHaveBeenCalled();
+        expect(mockJadeInterface.makeRPCCall).toHaveBeenCalled();
+      });
+
+      it("throws the Jade RPC error when the user declines", async () => {
+        mockJadeInterface.makeRPCCall.mockResolvedValueOnce({
+          id: "1",
+          error: { code: -32000, message: "User declined to confirm address" },
+        });
+
+        const interaction = new JadeConfirmMultisigAddress({
+          bip32Path: "m/48'/0'/0'/2'/0/0",
+          walletConfig,
+          dependencies,
+        });
+
+        await expect(interaction.run()).rejects.toThrow(
+          "RPC Error -32000: User declined to confirm address"
+        );
+        expect(mockJade.disconnect).toHaveBeenCalled();
       });
     });
 
