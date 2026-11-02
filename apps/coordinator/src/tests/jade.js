@@ -5,9 +5,11 @@ import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";
 import addressTests from "./addresses";
 import registrationTests from "./registration";
+import { messageSigningTests } from "./messageSigning";
 
 export default publicKeyTests(JADE)
   .concat(extendedPublicKeyTests(JADE))
   .concat(signingTests(JADE))
   .concat(addressTests(JADE))
-  .concat(registrationTests(JADE));
+  .concat(registrationTests(JADE))
+  .concat(messageSigningTests(JADE));

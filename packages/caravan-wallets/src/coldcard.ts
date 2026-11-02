@@ -23,12 +23,14 @@ import {
   P2WSH,
   BitcoinNetwork,
 } from "@caravan/bitcoin";
+import { type SignMessageResult, MessageSigningError } from "@caravan/messages";
 import {
   convertLegacyInput,
   convertLegacyOutput,
   getUnsignedMultisigPsbtV0,
 } from "@caravan/psbt";
 
+import { assertSignatureVerifies } from "./errors";
 import {
   IndirectKeystoreInteraction,
   PENDING,
@@ -652,5 +654,143 @@ Format: ${this.addressType}
     output += xpubs.join("\n");
     output += "\n";
     return output;
+  }
+}
+
+/**
+ * Coldcard sign-message interaction over SD card / Virtual Disk file
+ * exchange. request() writes a 3-line .txt (message / bip32Path /
+ * "p2wpkh"); parse() extracts the base64 signature from the armored
+ * "Bitcoin Signed Message" file Coldcard returns.
+ */
+export class ColdcardSignMessage extends ColdcardInteraction {
+  bip32Path: string;
+
+  message: string;
+
+  pubkey: string;
+
+  constructor({
+    bip32Path,
+    message,
+    pubkey,
+  }: {
+    bip32Path: string;
+    message: string;
+    pubkey: string;
+  }) {
+    super();
+
+    this.bip32Path = bip32Path;
+    this.message = message;
+    this.pubkey = pubkey;
+    this.workflow = ["request", "parse"];
+  }
+
+  messages() {
+    const messages = super.messages();
+    messages.push({
+      state: PENDING,
+      level: INFO,
+      code: "coldcard.download_sign_message_file",
+      text: "Download and save this text file to your SD card.",
+    });
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.sign_message",
+      text: "On the Coldcard: Advanced > File Management > Sign Text File. Confirm the message and sign.",
+    });
+    messages.push({
+      state: ACTIVE,
+      level: INFO,
+      code: "coldcard.upload_signed_message_file",
+      text: "Upload the signed message file produced by your Coldcard below.",
+    });
+    return messages;
+  }
+
+  /**
+   * Build the .txt request file for Coldcard's sign-text-file flow.
+   * Three lines: message, BIP-32 path, address format (always p2wpkh
+   * since we sign per cosigner pubkey as single-key).
+   */
+  request(): string {
+    return `${this.message}\n${this.bip32Path}\np2wpkh\n`;
+  }
+
+  /**
+   * Parse the armored "Bitcoin Signed Message" file Coldcard returns
+   * over SD card. Extract the base64 signature and wrap as an SignMessageResult.
+   *
+   * The signature line is identified as the second non-empty
+   * non-delimiter line after BEGIN SIGNATURE (first is the address,
+   * second is the base64 sig). To survive minor format variations
+   * (extra blank lines, address-line wrapping), we also validate the
+   * candidate matches a base64 shape covering the BIP-137 65-byte
+   * wire form — 87 base64 chars plus one `=` padding char, or with
+   * trailing whitespace stripped.
+   */
+  parse(file: string): SignMessageResult {
+    if (typeof file !== "string" || file.length === 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: "Empty Coldcard signed-message file.",
+      });
+    }
+
+    const lines = file.split(/\r?\n/);
+    const sigStart = lines.findIndex((l) => l.includes("BEGIN SIGNATURE"));
+    if (sigStart < 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage:
+          "Coldcard signed-message file is missing the '-----BEGIN SIGNATURE-----' delimiter.",
+      });
+    }
+    const afterMarker = lines
+      .slice(sigStart + 1)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.includes("-----"));
+    if (afterMarker.length < 2) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage:
+          "Coldcard signed-message file does not contain both an address line and a signature line.",
+      });
+    }
+    const signature = afterMarker[1];
+    if (signature.length === 0) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: "Coldcard returned an empty signature line.",
+      });
+    }
+    // 65-byte BIP-137 → 88 base64 chars (87 + one `=`). Allow 80-120
+    // window so any caravan-incompatible-but-still-base64 sig fails
+    // the verifier downstream rather than crashing here.
+    if (!(/^[A-Za-z0-9+/]{80,120}={0,2}$/).test(signature)) {
+      throw new MessageSigningError({
+        kind: "MalformedResponse",
+        keystore: COLDCARD,
+        userMessage: `Coldcard signature line is not base64-shaped (got "${signature.slice(0, 16)}…").`,
+      });
+    }
+
+    assertSignatureVerifies(COLDCARD, {
+      message: this.message,
+      signature,
+      pubkey: this.pubkey,
+    });
+
+    return {
+      bip32Path: this.bip32Path,
+      signature,
+      pubkey: this.pubkey,
+    };
   }
 }

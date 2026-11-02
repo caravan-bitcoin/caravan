@@ -561,3 +561,4 @@ export class BitBoxSignMultisigTransaction extends BitBoxInteraction {
     });
   }
 }
+

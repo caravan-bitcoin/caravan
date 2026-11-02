@@ -6,6 +6,8 @@ import { signingTests } from "./signing";
 import addressTests from "./addresses";
 import registrationTests from "./registration";
 
+// BitBox firmware does not support message signing at caravan's
+// multisig-purpose cosigner paths; messageSigningTests is omitted.
 export default publicKeyTests(BITBOX)
   .concat(extendedPublicKeyTests(BITBOX))
   .concat(signingTests(BITBOX))

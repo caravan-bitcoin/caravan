@@ -5,9 +5,11 @@ import extendedPublicKeyTests from "./extendedPublicKeys";
 import { signingTests } from "./signing";
 import addressTests from "./addresses";
 import registrationTests from "./registration";
+import { messageSigningTests } from "./messageSigning";
 
 export default publicKeyTests(LEDGER)
   .concat(extendedPublicKeyTests(LEDGER))
   .concat(signingTests(LEDGER))
   .concat(addressTests(LEDGER))
-  .concat(registrationTests(LEDGER));
+  .concat(registrationTests(LEDGER))
+  .concat(messageSigningTests(LEDGER));

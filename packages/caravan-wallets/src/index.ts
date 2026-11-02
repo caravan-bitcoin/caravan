@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { Network } from "@caravan/bitcoin";
+import { validateMessage } from "@caravan/messages";
 import {
   braidDetailsToWalletConfig,
   MultisigWalletConfig,
@@ -38,6 +39,7 @@ import {
   ColdcardExportPublicKey,
   ColdcardExportExtendedPublicKey,
   ColdcardSignMultisigTransaction,
+  ColdcardSignMessage,
   ColdcardMultisigWalletConfig,
 } from "./coldcard";
 import {
@@ -89,6 +91,16 @@ import {
 export const VERSION: string = version;
 
 export { MULTISIG_ROOT } from "./constants";
+
+export { wrapSdkError } from "./errors";
+
+// Re-export so consumers don't need to depend on the internal
+// @caravan/messages package directly.
+export {
+  MessageSigningError,
+  type MessageSigningErrorKind,
+  type SignMessageResult,
+} from "@caravan/messages";
 
 /**
  * Keystores which support direct interactions.
@@ -214,35 +226,63 @@ export function ExportPublicKey({
 }
 
 /**
- * Return an interaction class for signing a message by the given `keystore`
- * for the given `bip32Path`.
+ * Return an interaction class for signing a message with the cosigner
+ * key at `bip32Path` on the given `keystore`. The interaction's `.run()`
+ * returns a canonical `SignMessageResult` (BIP-137 wire form).
  *
- * **Supported keystores:** Ledger, Trezor
+ * Supported keystores: Ledger (legacy + v2 Bitcoin apps), Trezor,
+ * Jade, BitBox, Coldcard.
  */
 export function SignMessage({
   keystore,
+  network,
   bip32Path,
   message,
+  pubkey,
 }: {
   keystore: KEYSTORE_TYPES;
+  network?: Network | null;
   bip32Path: string;
   message: string;
+  pubkey: string;
 }) {
+  validateMessage(message, keystore);
   switch (keystore) {
+    case COLDCARD:
+      return new ColdcardSignMessage({
+        bip32Path,
+        message,
+        pubkey,
+      });
     case JADE:
       return new JadeSignMessage({
         bip32Path,
         message,
+        pubkey,
       });
     case LEDGER:
+    case LEDGER_V2:
+      // LedgerSignMessage dispatches internally on the running app
+      // version (legacy Bitcoin app vs v2). Both paths produce BIP-137.
       return new LedgerSignMessage({
         bip32Path,
         message,
+        pubkey,
       });
     case TREZOR:
       return new TrezorSignMessage({
+        network: network ?? null,
         bip32Path,
         message,
+        pubkey,
+      });
+    case BITBOX:
+      // BitBox firmware's sign_message accepts only BIP-49/BIP-84 paths
+      // under simpleType script configs; caravan's multisig cosigner
+      // paths (BIP-45 / BIP-48) are rejected as InvalidInput.
+      return new UnsupportedInteraction({
+        code: "unsupported",
+        text: "BitBox firmware does not support message signing at multisig-derived cosigner paths.",
       });
     default:
       return new UnsupportedInteraction({

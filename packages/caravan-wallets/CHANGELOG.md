@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- [#511](https://github.com/caravan-bitcoin/caravan/pull/511) [`9e10c2b`](https://github.com/caravan-bitcoin/caravan/commit/9e10c2ba17400ee800565358fe78c3e496309be3) Thanks [@bucko13](https://github.com/bucko13)! - Per-cosigner message signing across Ledger, Trezor, Jade, and Coldcard. `SignMessage` normalizes each SDK's native output into `SignMessageResult = {bip32Path, signature, pubkey}` and surfaces SDK errors as `MessageSigningError`. Each `.run()` verifies the returned signature against the cosigner `pubkey` before yielding a result. Breaking: `SignMessage` requires `pubkey` and `.run()` now returns `SignMessageResult`; the verifier, the result type, and the error taxonomy live in the new internal `@caravan/messages` package. BitBox is not supported — its firmware refuses `sign_message` at multisig-purpose cosigner paths (BIP-45/48); only BIP-49/84 are accepted.
+
+### Patch Changes
+
+- Updated dependencies [[`2303478`](https://github.com/caravan-bitcoin/caravan/commit/2303478cbf7e15d85326e2d1d5eaa528e43bebec)]:
+  - @caravan/bitcoin@0.4.7
+  - @caravan/psbt@2.1.2
+
 ## 0.11.0
 
 ### Minor Changes
