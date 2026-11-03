@@ -141,6 +141,23 @@ const TREZOR_DEV =
   env_variables.REACT_APP_TREZOR_DEV ||
   env_variables.VITE_TREZOR_DEV;
 
+const ROOT_FINGERPRINT_ERROR =
+  "Unable to extract root fingerprint from Trezor response.";
+
+/**
+ * Trezor Suite desktop sends Connect 9 errors as `{ message, code }` instead of
+ * `{ error }` until a Suite release ships trezor/trezor-suite@ac82c87807.
+ */
+export function trezorErrorMessage(payload: {
+  error?: string;
+  message?: string;
+  code?: string;
+} | undefined): string {
+  return (
+    payload?.error || payload?.message || payload?.code || "Unknown Trezor error"
+  );
+}
+
 const TREZOR_APP_NAME = env_variables.TREZOR_APP_NAME || "Caravan";
 
 try {
@@ -305,7 +322,7 @@ export class TrezorInteraction extends DirectKeystoreInteraction {
     if (typeof method === "function") {
       const result = await method(params);
       if (!result.success) {
-        throw new Error(result.payload.error);
+        throw new Error(trezorErrorMessage(result.payload));
       }
       return this.parsePayload(result.payload);
     } else {
@@ -578,9 +595,7 @@ export class TrezorExportHDNode extends TrezorInteraction {
       ? this._extractFingerprintFromBundle(payload)
       : this._extractFingerprintFromNode(payload);
     if (!xfp) {
-      throw new Error(
-        "Unable to extract root fingerprint from Trezor response.",
-      );
+      throw new Error(ROOT_FINGERPRINT_ERROR);
     }
     return xfp;
   }
@@ -624,6 +639,9 @@ export class TrezorExportHDNode extends TrezorInteraction {
     try {
       return await super.run();
     } catch (e) {
+      // Only a missing descriptor (Model One) needs the bundle call. Any other error,
+      // like a cancel, would open a second Trezor prompt.
+      if ((e as Error)?.message !== ROOT_FINGERPRINT_ERROR) throw e;
       return await this._fallbackRunForModelOne();
     }
   }
@@ -637,7 +655,7 @@ export class TrezorExportHDNode extends TrezorInteraction {
     } as BundledParams<GetPublicKey>;
     const result = await method(params);
     if (!result.success) {
-      throw new Error(result.payload.error);
+      throw new Error(trezorErrorMessage(result.payload));
     }
     return this.parsePayload(result.payload);
   }

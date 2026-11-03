@@ -83,6 +83,27 @@ describe("trezor", () => {
     itHasStandardMessages(interactionBuilder);
     itThrowsAnErrorOnAnUnsuccessfulRequest(interactionBuilder);
 
+    it("reads the error text Trezor Suite desktop sends as message", async () => {
+      const interaction = interactionBuilder();
+      interaction.connectParams = () => [
+        () => ({
+          success: false,
+          payload: { message: "All backends are down", code: "Method_Interrupted" },
+        }),
+        {},
+      ];
+      await expect(interaction.run()).rejects.toThrow("All backends are down");
+    });
+
+    it("falls back to the error code when there's no text", async () => {
+      const interaction = interactionBuilder();
+      interaction.connectParams = () => [
+        () => ({ success: false, payload: { code: "Method_Cancel" } }),
+        {},
+      ];
+      await expect(interaction.run()).rejects.toThrow("Method_Cancel");
+    });
+
     it("sets the default method to throw an error", async () => {
       try {
         await interactionBuilder().run();
@@ -217,6 +238,44 @@ describe("trezor", () => {
 
     itHasStandardMessages(interactionBuilder);
     itThrowsAnErrorOnAnUnsuccessfulRequest(interactionBuilder);
+
+    it("doesn't retry after a cancel", async () => {
+      const spy = vi.spyOn(TrezorConnect, "getPublicKey").mockResolvedValue({
+        success: false,
+        payload: { error: "Canceled" },
+      } as any);
+      await expect(interactionBuilder().run()).rejects.toThrow("Canceled");
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    it("retries with a bundle call when the response has no descriptor", async () => {
+      const spy = vi
+        .spyOn(TrezorConnect, "getPublicKey")
+        .mockResolvedValueOnce({
+          success: true,
+          payload: { publicKey: "foobar", serializedPath: bip32Path },
+        } as any)
+        .mockResolvedValueOnce({
+          success: true,
+          payload: [
+            { publicKey: "foobar", serializedPath: bip32Path },
+            { publicKey: "root", serializedPath: "m/45'", fingerprint: 0xf57ec65d },
+          ],
+        } as any);
+      const interaction = new TrezorExportPublicKey({
+        bip32Path,
+        network: Network.MAINNET,
+        includeXFP: true,
+      });
+      await expect(interaction.run()).resolves.toEqual({
+        publicKey: "foobar",
+        rootFingerprint: "f57ec65d",
+      });
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect((spy.mock.calls[1][0] as any).bundle).toHaveLength(2);
+      spy.mockRestore();
+    });
 
     it("parses out the public key from the response payload", () => {
       expect(
