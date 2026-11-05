@@ -1352,7 +1352,11 @@ describe("PsbtV2.addPartialSig", () => {
     psbt.PSBT_GLOBAL_TX_MODIFIABLE = ["INPUTS", "OUTPUTS"];
     psbt.addInput({ previousTxId: Buffer.from([0x00]), outputIndex: 0 });
 
-    psbt.addPartialSig(0, Buffer.from([0x00]), Buffer.from([0x00]));
+    // The rollback is atomic but no longer silent: swallowing the error left
+    // callers believing the signature had been added.
+    expect(() =>
+      psbt.addPartialSig(0, Buffer.from([0x00]), Buffer.from([0x00])),
+    ).toThrow();
     expect(psbt.PSBT_GLOBAL_TX_MODIFIABLE).toEqual(["INPUTS", "OUTPUTS"]);
     expect(psbt.PSBT_IN_PARTIAL_SIG[0].length).toBe(0);
   });
