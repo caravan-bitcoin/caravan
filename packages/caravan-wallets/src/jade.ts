@@ -24,8 +24,6 @@ import {
   IJade,
   IJadeInterface,
   JadeTransport,
-  RPCRequest,
-  RPCResponse,
   base64ToBytes,
   bytesToBase64,
   MultisigDescriptor,
@@ -426,61 +424,6 @@ function parsePsbt(psbt: string): PsbtV2 {
   }
 }
 
-function sendJadeRequest(
-  transport: JadeTransport,
-  request: RPCRequest,
-): Promise<RPCResponse> {
-  return new Promise((resolve, reject) => {
-    const onMessage = (msg: RPCResponse) => {
-      if (msg?.id !== request.id) return;
-      transport.removeListener("message", onMessage);
-      resolve(msg);
-    };
-    transport.onMessage(onMessage);
-    transport.sendMessage(request).catch((err) => {
-      transport.removeListener("message", onMessage);
-      reject(err);
-    });
-  });
-}
-
-function jadeResultOrThrow(reply: RPCResponse) {
-  if (reply.error) {
-    throw new Error(`RPC Error ${reply.error.code}: ${reply.error.message}`);
-  }
-  return reply.result;
-}
-
-// jadets skips the last chunk of a multipart sign_psbt reply and sends
-// get_extended_data without the fields Jade requires, so Jade never returns
-// the signed PSBT. Jade's seqnum is 1-based.
-async function jadeSignPsbt(
-  transport: JadeTransport,
-  network: string,
-  psbt: Uint8Array,
-): Promise<Uint8Array> {
-  const signRequest: RPCRequest = {
-    id: "cv1",
-    method: "sign_psbt",
-    params: { network, psbt },
-  };
-  const first = await sendJadeRequest(transport, signRequest);
-  const chunks: Uint8Array[] = [jadeResultOrThrow(first)];
-  const seqlen = first.seqlen ?? 1;
-
-  for (let seqnum = 2; seqnum <= seqlen; seqnum++) {
-    // eslint-disable-next-line no-await-in-loop -- Jade sends each chunk only after it is requested
-    const reply = await sendJadeRequest(transport, {
-      id: `cv${seqnum}`,
-      method: "get_extended_data",
-      params: { origid: signRequest.id, orig: "sign_psbt", seqnum, seqlen },
-    });
-    chunks.push(jadeResultOrThrow(reply));
-  }
-
-  return Buffer.concat(chunks);
-}
-
 export class JadeSignMultisigTransaction extends JadeInteraction {
   private walletConfig: MultisigWalletConfig;
 
@@ -511,8 +454,7 @@ export class JadeSignMultisigTransaction extends JadeInteraction {
   async run() {
     return await this.withDevice(
       async (jade: IJade) => {
-        const signedPSBT = await jadeSignPsbt(
-          this.transport,
+        const signedPSBT = await jade.signPSBT(
           this.rpcNetwork,
           this.unsignedPsbt,
         );
