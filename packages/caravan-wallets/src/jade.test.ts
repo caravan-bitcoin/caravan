@@ -571,7 +571,8 @@ describe("Jade", () => {
           { origid: signRequest.id, orig: "sign_psbt", seqnum: 2, seqlen: 3 },
           { origid: signRequest.id, orig: "sign_psbt", seqnum: 3, seqlen: 3 },
         ]);
-        expect(extended.every((r) => r.id !== signRequest.id)).toBe(true);
+        const ids = [signRequest, ...extended].map((r) => r.id);
+        expect(new Set(ids).size).toBe(ids.length);
       });
 
       it("throws the device error", async () => {
