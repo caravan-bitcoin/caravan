@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+### Patch Changes
+
+- [#545](https://github.com/caravan-bitcoin/caravan/pull/545) [`47f6cb4`](https://github.com/caravan-bitcoin/caravan/commit/47f6cb46fa65d3846a0ad4761c7df9fb38870649) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Fix Jade signing when the signed PSBT comes back in more than one chunk. Jade stayed on "Processing" or failed with `Expected chunk 2, got undefined`. `JadeSignMultisigTransaction` now requests every chunk itself instead of relying on jadets.
+
 ## 1.0.1
 
 ### Patch Changes
