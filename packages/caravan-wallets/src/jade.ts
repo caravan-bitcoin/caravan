@@ -426,13 +426,6 @@ function parsePsbt(psbt: string): PsbtV2 {
   }
 }
 
-// Jade caps request ids at 16 characters.
-let jadeRequestCount = 0;
-const nextJadeRequestId = () => {
-  jadeRequestCount += 1;
-  return `cv${jadeRequestCount}`;
-};
-
 function sendJadeRequest(
   transport: JadeTransport,
   request: RPCRequest,
@@ -467,7 +460,7 @@ async function jadeSignPsbt(
   psbt: Uint8Array,
 ): Promise<Uint8Array> {
   const signRequest: RPCRequest = {
-    id: nextJadeRequestId(),
+    id: "cv1",
     method: "sign_psbt",
     params: { network, psbt },
   };
@@ -478,7 +471,7 @@ async function jadeSignPsbt(
   for (let seqnum = 2; seqnum <= seqlen; seqnum++) {
     // eslint-disable-next-line no-await-in-loop -- Jade sends each chunk only after it is requested
     const reply = await sendJadeRequest(transport, {
-      id: nextJadeRequestId(),
+      id: `cv${seqnum}`,
       method: "get_extended_data",
       params: { origid: signRequest.id, orig: "sign_psbt", seqnum, seqlen },
     });
