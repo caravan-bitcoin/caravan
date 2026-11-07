@@ -575,6 +575,23 @@ describe("Jade", () => {
         expect(new Set(ids).size).toBe(ids.length);
       });
 
+      it("works when Buffer.concat rejects plain Uint8Arrays", async () => {
+        const concat = vi.spyOn(Buffer, "concat").mockImplementation(() => {
+          throw new TypeError('"list" argument must be an Array of Buffers');
+        });
+        replyWith((request) =>
+          (request.method === "sign_psbt"
+            ? { seqnum: 1, seqlen: 2, result: new Uint8Array([1]) }
+            : { seqnum: 2, seqlen: 2, result: new Uint8Array([2]) }),
+        );
+
+        try {
+          expect(Array.from((await sign()) as Uint8Array)).toEqual([1, 2]);
+        } finally {
+          concat.mockRestore();
+        }
+      });
+
       it("throws the device error", async () => {
         replyWith(() => ({ error: { code: -32000, message: "User declined" } }));
 

@@ -478,7 +478,15 @@ async function jadeSignPsbt(
     chunks.push(jadeResultOrThrow(reply));
   }
 
-  return Buffer.concat(chunks);
+  // Not Buffer.concat: cbor2 returns plain Uint8Arrays, and the buffer@4
+  // polyfill some browser apps bundle rejects anything that isn't a Buffer.
+  const signed = new Uint8Array(chunks.reduce((len, c) => len + c.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    signed.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return signed;
 }
 
 export class JadeSignMultisigTransaction extends JadeInteraction {
