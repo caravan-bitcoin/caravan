@@ -517,24 +517,69 @@ describe("Jade", () => {
         extendedPublicKeys: [],
       };
 
-      it("signs PSBT and returns signed bytes", async () => {
-        const signedBytes = new Uint8Array([4, 5, 6]);
-        mockJade.signPSBT.mockResolvedValueOnce(signedBytes);
+      const replyWith = (reply: (request: any) => any) => {
+        let listener: ((msg: any) => void) | undefined;
+        mockTransport.onMessage.mockImplementation((cb) => {
+          listener = cb;
+        });
+        mockTransport.sendMessage.mockImplementation(async (request) => {
+          const msg = { id: request.id, ...reply(request) };
+          queueMicrotask(() => listener?.(msg));
+        });
+      };
 
-        const interaction = new JadeSignMultisigTransaction({
+      const sign = () =>
+        new JadeSignMultisigTransaction({
           walletConfig,
           psbt: "base64psbt",
           returnSignatureArray: false,
           dependencies,
+        }).run();
+
+      it("signs PSBT and returns signed bytes", async () => {
+        replyWith(() => ({ result: new Uint8Array([4, 5, 6]) }));
+
+        const result = await sign();
+
+        expect(Array.from(result as Uint8Array)).toEqual([4, 5, 6]);
+        expect(mockTransport.sendMessage).toHaveBeenCalledTimes(1);
+        expect(mockTransport.sendMessage.mock.calls[0][0]).toMatchObject({
+          method: "sign_psbt",
+          params: { network: "mainnet" },
         });
+        expect(mockJade.signPSBT).not.toHaveBeenCalled();
+      });
 
-        const result = await interaction.run();
-
-        expect(result).toBe(signedBytes);
-        expect(mockJade.signPSBT).toHaveBeenCalledWith(
-          "mainnet",
-          expect.any(Uint8Array)
+      it("fetches every chunk of a multipart signed PSBT", async () => {
+        replyWith((request) =>
+          (request.method === "sign_psbt"
+            ? { seqnum: 1, seqlen: 3, result: new Uint8Array([1]) }
+            : {
+                seqnum: request.params.seqnum,
+                seqlen: 3,
+                result: new Uint8Array([request.params.seqnum]),
+              }),
         );
+
+        const result = await sign();
+
+        expect(Array.from(result as Uint8Array)).toEqual([1, 2, 3]);
+        const [signRequest, ...extended] = mockTransport.sendMessage.mock.calls.map(
+          (call) => call[0],
+        );
+        expect(extended.map((r) => r.params)).toEqual([
+          { origid: signRequest.id, orig: "sign_psbt", seqnum: 2, seqlen: 3 },
+          { origid: signRequest.id, orig: "sign_psbt", seqnum: 3, seqlen: 3 },
+        ]);
+        const ids = [signRequest, ...extended].map((r) => r.id);
+        expect(new Set(ids).size).toBe(ids.length);
+      });
+
+      it("throws the device error", async () => {
+        replyWith(() => ({ error: { code: -32000, message: "User declined" } }));
+
+        await expect(sign()).rejects.toThrow("RPC Error -32000: User declined");
+        expect(mockJade.disconnect).toHaveBeenCalled();
       });
     });
 
