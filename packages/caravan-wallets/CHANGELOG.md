@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3
+
+### Patch Changes
+
+- [#547](https://github.com/caravan-bitcoin/caravan/pull/547) [`9d98024`](https://github.com/caravan-bitcoin/caravan/commit/9d980240044e9518134758bc0961375fcc5ccaf1) Thanks [@Shadouts](https://github.com/Shadouts)! - Revert a51322 to restore Jade Plus functionality.
+
 ## 1.0.2
 
 ### Patch Changes
