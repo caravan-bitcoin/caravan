@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.3
+
+### Patch Changes
+
+- [#549](https://github.com/caravan-bitcoin/caravan/pull/549) [`6a8d9fb`](https://github.com/caravan-bitcoin/caravan/commit/6a8d9fbda4c48a0058d9fd28808b08272350f3d6) Thanks [@jbrauck-unchained](https://github.com/jbrauck-unchained)! - Fix Jade signing when the signed PSBT comes back in more than one chunk. Jade stayed on "Processing" or failed with `Expected chunk 2, got undefined`. `JadeSignMultisigTransaction` now requests every chunk itself instead of relying on jadets.
+
+  This is #545 again without `Buffer.concat`. Apps that bundle the buffer@4 polyfill rejected the plain `Uint8Array` chunks with `"list" argument must be an Array of Buffers`, which broke every Jade signature in those apps.
+
+- [#547](https://github.com/caravan-bitcoin/caravan/pull/547) [`9d98024`](https://github.com/caravan-bitcoin/caravan/commit/9d980240044e9518134758bc0961375fcc5ccaf1) Thanks [@Shadouts](https://github.com/Shadouts)! - Revert a51322 to restore Jade Plus functionality.
+
 ## 1.0.2
 
 ### Patch Changes
