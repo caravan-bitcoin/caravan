@@ -62,6 +62,7 @@
   },
   "scripts": {
     "build": "tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
+    "prebuild": "node scripts/build-info.mjs",
     "build:ci": "npm run check && tsc && __GIT_SHA__=`git rev-parse --short HEAD` vite build",
     "check": "npm run lint && npm run test:ci",
     "ci": "npm run lint && npm run test:ci",
