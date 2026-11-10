@@ -9,7 +9,7 @@ import {
   bip32PathToSequence,
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
-import { IJade, IJadeInterface, JadeTransport } from "jadets";
+import { IJade, IJadeInterface, JadeTransport } from "@caravan/jadets";
 import { mock, MockProxy } from "vitest-mock-extended";
 
 import {
@@ -51,7 +51,7 @@ vi.mock("crypto", () => ({
   randomBytes: vi.fn(() => Buffer.from("abcd1234", "hex")),
 }));
 
-vi.mock("jadets", () => {
+vi.mock("@caravan/jadets", () => {
   const MockJade = vi.fn();
   const MockJadeInterface = vi.fn();
   const MockSerialTransport = vi.fn();

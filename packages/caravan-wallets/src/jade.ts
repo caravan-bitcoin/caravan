@@ -14,10 +14,6 @@ import {
   bip32SequenceToPath,
 } from "@caravan/bitcoin";
 import {
-  type SignMessageResult,
-  MessageSigningError,
-} from "@caravan/messages";
-import {
   Jade,
   JadeInterface,
   SerialTransport,
@@ -31,7 +27,11 @@ import {
   MultisigDescriptor,
   SignerDescriptor,
   JadeHttpRequestFunction,
-} from "jadets";
+} from "@caravan/jadets";
+import {
+  type SignMessageResult,
+  MessageSigningError,
+} from "@caravan/messages";
 
 import { assertSignatureVerifies, wrapSdkError } from "./errors";
 import {
